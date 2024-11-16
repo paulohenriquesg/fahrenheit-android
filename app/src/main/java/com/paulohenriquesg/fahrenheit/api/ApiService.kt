@@ -1,9 +1,12 @@
 package com.paulohenriquesg.fahrenheit.api
 
+import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface ApiService {
     @POST("login")
@@ -11,4 +14,20 @@ interface ApiService {
 
     @GET("api/libraries")
     fun getLibraries(): Call<LibrariesResponse>
+
+    @GET("api/libraries/{libraryId}/items")
+    fun getLibraryItems(
+        @Path("libraryId") libraryId: String,
+        @Query("sort") sort: String = "media.metadata.title",
+        @Query("limit") limit: Int? = null,
+        @Query("page") page: Int? = null,
+        @Query("desc") desc: Boolean? = null
+
+    ): Call<LibraryItemsResponse>
+
+    @GET("api/items/{itemId}/cover")
+    fun getItemCover(
+        @Path("itemId") itemId: String,
+        @Query("format") format: String = "jpg"
+    ): Call<ResponseBody>
 }

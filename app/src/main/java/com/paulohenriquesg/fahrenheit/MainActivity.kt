@@ -2,26 +2,37 @@ package com.paulohenriquesg.fahrenheit
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,18 +52,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.Item
 import com.paulohenriquesg.fahrenheit.api.LibrariesResponse
 import com.paulohenriquesg.fahrenheit.api.Library
+import com.paulohenriquesg.fahrenheit.api.LibraryItemsResponse
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -85,6 +103,8 @@ fun MainScreen(username: String) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var libraries by remember { mutableStateOf(listOf<Library>()) }
+    var libraryItems by remember { mutableStateOf(listOf<Item>()) }
+    val listState = rememberLazyListState()
 
     // Retrieve base URL and token from SharedPreferences
     val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
@@ -94,7 +114,8 @@ fun MainScreen(username: String) {
     if (host == null) {
         // Show error and redirect to login
         LaunchedEffect(Unit) {
-            Toast.makeText(context, "Host is not configured. Please log in.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Host is not configured. Please log in.", Toast.LENGTH_LONG)
+                .show()
             val intent = Intent(context, LoginActivity::class.java)
             context.startActivity(intent)
             (context as ComponentActivity).finish()
@@ -108,9 +129,35 @@ fun MainScreen(username: String) {
     LaunchedEffect(Unit) {
         val apiService = ApiClient.create(host, token)
         apiService.getLibraries().enqueue(object : Callback<LibrariesResponse> {
-            override fun onResponse(call: Call<LibrariesResponse>, response: Response<LibrariesResponse>) {
+            override fun onResponse(
+                call: Call<LibrariesResponse>,
+                response: Response<LibrariesResponse>
+            ) {
                 if (response.isSuccessful) {
                     libraries = response.body()?.libraries ?: emptyList()
+
+                    if (libraries.isNotEmpty()) {
+                        val firstLibraryId = libraries[0].id
+                        apiService.getLibraryItems(firstLibraryId)
+                            .enqueue(object : Callback<LibraryItemsResponse> {
+                                override fun onResponse(
+                                    call: Call<LibraryItemsResponse>,
+                                    response: Response<LibraryItemsResponse>
+                                ) {
+                                    if (response.isSuccessful) {
+                                        // Handle the library items response
+                                        libraryItems = response.body()?.results ?: emptyList()
+                                    }
+                                }
+
+                                override fun onFailure(
+                                    call: Call<LibraryItemsResponse>,
+                                    t: Throwable
+                                ) {
+                                    // Handle error
+                                }
+                            })
+                    }
                 }
             }
 
@@ -223,7 +270,7 @@ fun MainScreen(username: String) {
                 modifier = Modifier
                     .fillMaxSize()
                     .onKeyEvent { keyEvent ->
-                        if (keyEvent.key.keyCode == Key.DirectionLeft.keyCode) {
+                        if (keyEvent.key.keyCode == Key.DirectionLeft.keyCode && !listState.isScrollInProgress) {
                             scope.launch { drawerState.open() }
                             true
                         } else {
@@ -231,13 +278,92 @@ fun MainScreen(username: String) {
                         }
                     }
             ) {
-                IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                IconButton(onClick = { if (!listState.isScrollInProgress) scope.launch { drawerState.open() } }) {
                     Icon(Icons.Filled.Menu, contentDescription = "Open Menu")
                 }
                 Greeting(username)
+                LibraryItemsList(libraryItems, host, token, listState)
             }
         }
     )
+}
+
+@Composable
+fun LibraryItemsList(libraryItems: List<Item>, host: String, token: String?, listState: LazyListState) {
+    val context = LocalContext.current
+
+    LazyRow(
+        state = listState,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        items(libraryItems) { item ->
+            LibraryItemCard(item, host, token) { clickedItem ->
+                // Handle item click
+                // For example, navigate to a detail screen or show a toast
+                Toast.makeText(context, "Clicked: ${clickedItem.media.metadata.title}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+}
+
+@Composable
+fun LibraryItemCard(item: Item, host: String, token: String?, onClick: (Item) -> Unit) {
+    val context = LocalContext.current
+    var coverImage by remember { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(item.id) {
+        withContext(Dispatchers.IO) {
+            val apiService = ApiClient.create(host, token)
+            val response = apiService.getItemCover(item.id).execute()
+            if (response.isSuccessful) {
+                response.body()?.let { responseBody ->
+                    val inputStream = responseBody.byteStream()
+                    coverImage = BitmapFactory.decodeStream(inputStream)
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Failed to load cover image", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    Card(
+        modifier = Modifier
+            .padding(8.dp)
+            .width(200.dp)
+            .height(300.dp)
+            .clickable { onClick(item) },
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            coverImage?.let {
+                Image(
+                    bitmap = it.asImageBitmap(),
+                    contentDescription = item.media.metadata.title,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                )
+            } ?: Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .background(Color.Gray)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = item.media.metadata.title,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
 }
 
 @Composable

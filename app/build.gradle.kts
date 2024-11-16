@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.fahrenheit"
+    namespace = "com.paulohenriquesg.fahrenheit"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.fahrenheit"
+        applicationId = "com.paulohenriquesg.fahrenheit"
         minSdk = 25
         targetSdk = 34
         versionCode = 1
@@ -44,7 +44,10 @@ dependencies {
     implementation(libs.converter.gson)
 
     // handle api logs
-    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+    implementation(libs.logging.interceptor)
+
+    // handle cards
+    implementation("io.coil-kt:coil-compose:2.2.2")
 
     // handle UI
     implementation(libs.androidx.material3)
