@@ -100,7 +100,7 @@ class LoginActivity : ComponentActivity() {
                     val loginResponse = response.body()
                     // Handle successful login
                     if (loginResponse != null) {
-                        saveToLocalStorage(host, username, loginResponse.token)
+                        saveToLocalStorage(host, loginResponse.user.username, loginResponse.user.token)
                         Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
                         // Redirect to MainActivity
                         val intent = Intent(this@LoginActivity, MainActivity::class.java)
