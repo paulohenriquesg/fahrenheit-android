@@ -43,6 +43,9 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
 
+    // handle api logs
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+
     // handle UI
     implementation(libs.androidx.material3)
     implementation(libs.androidx.tv.material.v100alpha01)
