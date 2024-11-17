@@ -31,15 +31,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemDeviceInfo
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemRequest
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemResponse
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
@@ -67,6 +71,7 @@ class PlayerActivity : ComponentActivity() {
                     } else {
                         GlobalMediaPlayer.getInstance().start()
                         isPlaying = true
+                        startProgressUpdateCoroutine(podcastId, episodeId)
                     }
                 }
 
@@ -113,6 +118,32 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    private fun startProgressUpdateCoroutine(podcastId: String?, episodeId: String?) {
+        val apiClient = ApiClient.getApiService()
+        val mediaPlayer = GlobalMediaPlayer.getInstance()
+
+        lifecycleScope.launch {
+            while (isPlaying) {
+                delay(5000L)
+                val currentTimeState = mediaPlayer.currentPosition / 1000f
+                val totalTime = mediaPlayer.duration / 1000f
+                val request = MediaProgressRequest(currentTime = currentTimeState, duration = totalTime)
+                apiClient?.userCreateOrUpdateMediaProgress(podcastId!!, episodeId!!, request)
+                    ?.enqueue(object : Callback<Void> {
+                        override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                            if (!response.isSuccessful) {
+                                Toast.makeText(this@PlayerActivity, "Failed to update media progress", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                        override fun onFailure(call: Call<Void>, t: Throwable) {
+                            Toast.makeText(this@PlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    })
+            }
+        }
+    }
+
     private fun fetchMediaProgress(libraryItemId: String, episodeId: String) {
         val apiClient = ApiClient.getApiService()
         if (apiClient != null) {
@@ -124,6 +155,23 @@ class PlayerActivity : ComponentActivity() {
                     ) {
                         if (response.isSuccessful) {
                             mediaProgress = response.body()
+                    } else if (response.code() == 404) {
+                        // Call userCreateOrUpdateMediaProgress if 404
+                        val request = MediaProgressRequest(currentTime = 0f, duration = 0f)
+                        apiClient.userCreateOrUpdateMediaProgress(libraryItemId, episodeId, request)
+                            .enqueue(object : Callback<Void> {
+                                override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                                    if (response.isSuccessful) {
+                                        // Handle successful creation
+                                    } else {
+                                        Toast.makeText(this@PlayerActivity, "Failed to create media progress", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+
+                                override fun onFailure(call: Call<Void>, t: Throwable) {
+                                    Toast.makeText(this@PlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            })
                         } else {
                             Toast.makeText(this@PlayerActivity, "Failed to load media progress", Toast.LENGTH_SHORT).show()
                         }
