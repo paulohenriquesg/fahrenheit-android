@@ -37,4 +37,15 @@ interface ApiService {
         @Path("itemId") itemId: String,
         @Query("format") format: String = "jpg"
     ): Call<ResponseBody>
+
+    @POST("api/items/{libraryItemId}/play/{episodeId}")
+    fun playLibraryItem(
+        @Path("libraryItemId") libraryItemId: String,
+        @Path("episodeId") episodeId: String? = null,
+        @Query("deviceInfo") deviceInfo: PlayLibraryItemDeviceInfo? = null,
+        @Query("forceDirectPlay") forceDirectPlay: Boolean = false,
+        @Query("forceTranscode") forceTranscode: Boolean = false,
+        @Query("supportedMimeTypes") supportedMimeTypes: List<String> = emptyList(),
+        @Query("mediaPlayer") mediaPlayer: String = "Fahrenheit"
+    ): Call<PlayLibraryItemResponse>
 }

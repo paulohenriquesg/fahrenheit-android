@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemResponse
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -80,9 +81,9 @@ class PlayerActivity : ComponentActivity() {
                 PlaybackStateCompat.Builder()
                     .setActions(
                         PlaybackStateCompat.ACTION_PLAY or
-                        PlaybackStateCompat.ACTION_PAUSE or
-                        PlaybackStateCompat.ACTION_PLAY_PAUSE or
-                        PlaybackStateCompat.ACTION_STOP
+                                PlaybackStateCompat.ACTION_PAUSE or
+                                PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                                PlaybackStateCompat.ACTION_STOP
                     )
                     .build()
             )
@@ -96,7 +97,8 @@ class PlayerActivity : ComponentActivity() {
                         isPlaying = newIsPlaying
                     }
                 } else {
-                    Toast.makeText(this, "Podcast or Episode ID is missing", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Podcast or Episode ID is missing", Toast.LENGTH_SHORT)
+                        .show()
                     finish()
                 }
             }
@@ -122,9 +124,16 @@ class PlayerActivity : ComponentActivity() {
 }
 
 @Composable
-fun PlayerScreen(podcastId: String, episodeId: String, mediaSession: MediaSessionCompat, isPlaying: Boolean, onPlayPause: (Boolean) -> Unit) {
+fun PlayerScreen(
+    podcastId: String,
+    episodeId: String,
+    mediaSession: MediaSessionCompat,
+    isPlaying: Boolean,
+    onPlayPause: (Boolean) -> Unit
+) {
     var episode by remember { mutableStateOf<Episode?>(null) }
     var coverImage by remember { mutableStateOf<Bitmap?>(null) }
+    var audioFileUrl by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(podcastId, episodeId) {
@@ -134,22 +143,78 @@ fun PlayerScreen(podcastId: String, episodeId: String, mediaSession: MediaSessio
         loadCoverImage(context, podcastId) { bitmap ->
             coverImage = bitmap
         }
+        startPlaying(context, podcastId, episodeId) { url ->
+            audioFileUrl = url
+        }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(16.dp)) {
         coverImage?.let {
             Image(
                 bitmap = it.asImageBitmap(),
                 contentDescription = episode?.title ?: "Cover Image",
-                modifier = Modifier.fillMaxWidth().height(200.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
         episode?.let {
             Text(text = it.title, style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
-            MediaPlayerController(it.enclosure?.url ?: "", mediaSession, isPlaying, onPlayPause)
+            audioFileUrl?.let { url ->
+                MediaPlayerController(url, mediaSession, isPlaying, onPlayPause)
+            } ?: Text(text = "Loading audio...")
         } ?: Text(text = "Loading...")
+    }
+}
+
+private fun startPlaying(
+    context: Context,
+    libraryItemId: String,
+    episodeId: String,
+    callback: (String?) -> Unit
+) {
+    val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    val host = sharedPreferences.getString("host", null)
+    val token = sharedPreferences.getString("token", null)
+
+    if (host != null && token != null) {
+        val apiService = ApiClient.create(host, token)
+            .playLibraryItem(
+                libraryItemId = libraryItemId,
+                episodeId = episodeId,
+                deviceInfo = null,
+                forceDirectPlay = true,
+                forceTranscode = false,
+                supportedMimeTypes = emptyList(),
+                mediaPlayer = "Fahrenheit"
+            )
+            .enqueue(object : Callback<PlayLibraryItemResponse> {
+                override fun onResponse(
+                    call: Call<PlayLibraryItemResponse>,
+                    response: Response<PlayLibraryItemResponse>
+                ) {
+                    if (response.isSuccessful) {
+                        val playLibraryItemResponse = response.body()
+                        val audioFileUrl =
+                            playLibraryItemResponse?.libraryItem?.media?.episodes?.firstOrNull()?.audioTrack?.contentUrl
+
+                        val fullUrl = if (audioFileUrl != null) "$host$audioFileUrl?token=$token" else null
+                        callback(fullUrl)
+                    } else {
+                        callback(null)
+                    }
+                }
+
+                override fun onFailure(call: Call<PlayLibraryItemResponse>, t: Throwable) {
+                    callback(null)
+                }
+            })
+    } else {
+        callback(null)
     }
 }
 
@@ -173,7 +238,8 @@ private fun loadEpisodeDetails(
                 if (response.isSuccessful) {
                     callback(response.body())
                 } else {
-                    Toast.makeText(context, "Failed to load episode details", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Failed to load episode details", Toast.LENGTH_SHORT)
+                        .show()
                 }
             }
 
