@@ -103,26 +103,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun fetchLibraryItems(libraryId: String, updateItems: (List<LibraryItem>) -> Unit) {
-        val context = this
-        val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        val host = sharedPreferences.getString("host", null)
-        val token = sharedPreferences.getString("token", null)
-
-        if (host != null && token != null) {
-            val apiService = ApiClient.create(host, token)
-            apiService.getLibraryItems(libraryId).enqueue(object : Callback<LibraryItemsResponse> {
+        val apiClient = ApiClient.getApiService()
+        if (apiClient != null) {
+            apiClient.getLibraryItems(libraryId).enqueue(object : Callback<LibraryItemsResponse> {
                 override fun onResponse(call: Call<LibraryItemsResponse>, response: Response<LibraryItemsResponse>) {
                     if (response.isSuccessful) {
                         val libraryItems = response.body()?.results
                         // Update the UI with the fetched library items
                         updateUIWithLibraryItems(libraryItems, updateItems)
                     } else {
-                        Toast.makeText(context, "Failed to load library items", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, "Failed to load library items", Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<LibraryItemsResponse>, t: Throwable) {
-                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
         }
@@ -145,12 +140,8 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
     val listState = rememberLazyListState()
     var isRowLayout by remember { mutableStateOf(true) }
 
-    // Retrieve base URL and token from SharedPreferences
-    val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-    val host = sharedPreferences.getString("host", null)
-    val token = sharedPreferences.getString("token", null)
-
-    if (host == null) {
+    val apiClient = ApiClient.getApiService()
+    if (apiClient == null) {
         // Show error and redirect to login
         LaunchedEffect(Unit) {
             Toast.makeText(context, "Host is not configured. Please log in.", Toast.LENGTH_LONG)
@@ -164,8 +155,7 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
 
     // Fetch libraries from the API
     LaunchedEffect(Unit) {
-        val apiService = ApiClient.create(host, token)
-        apiService.getLibraries().enqueue(object : Callback<LibrariesResponse> {
+        apiClient.getLibraries().enqueue(object : Callback<LibrariesResponse> {
             override fun onResponse(
                 call: Call<LibrariesResponse>,
                 response: Response<LibrariesResponse>
@@ -330,9 +320,9 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
                     modifier = Modifier.align(Alignment.Center)
                 ) {
                     if (isRowLayout) {
-                        LibraryItemsRow(libraryItems, host, token, listState)
+                        LibraryItemsRow(libraryItems, listState)
                     } else {
-                        LibraryItemsFluid(libraryItems, host, token)
+                        LibraryItemsFluid(libraryItems)
                     }
                 }
             }
@@ -341,7 +331,7 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
 }
 
 @Composable
-fun LibraryItemsRow(libraryItems: List<LibraryItem>, host: String, token: String?, listState: LazyListState) {
+fun LibraryItemsRow(libraryItems: List<LibraryItem>, listState: LazyListState) {
     val context = LocalContext.current
 
     LazyRow(
@@ -351,7 +341,7 @@ fun LibraryItemsRow(libraryItems: List<LibraryItem>, host: String, token: String
             .padding(16.dp)
     ) {
         items(libraryItems) { item ->
-            LibraryItemCard(item, host, token) { clickedItem ->
+            LibraryItemCard(item) { clickedItem ->
                 val intent = DetailActivity.createIntent(context, clickedItem.id)
                 context.startActivity(intent)
             }
@@ -361,7 +351,7 @@ fun LibraryItemsRow(libraryItems: List<LibraryItem>, host: String, token: String
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun LibraryItemsFluid(libraryItems: List<LibraryItem>, host: String, token: String?) {
+fun LibraryItemsFluid(libraryItems: List<LibraryItem>) {
     val context = LocalContext.current
 
     LazyVerticalGrid(
@@ -375,8 +365,6 @@ fun LibraryItemsFluid(libraryItems: List<LibraryItem>, host: String, token: Stri
 
             LibraryItemCard(
                 item = item,
-                host = host,
-                token = token,
                 onClick = { clickedItem ->
                     val intent = DetailActivity.createIntent(context, clickedItem.id)
                     context.startActivity(intent)
@@ -387,22 +375,24 @@ fun LibraryItemsFluid(libraryItems: List<LibraryItem>, host: String, token: Stri
 }
 
 @Composable
-fun LibraryItemCard(item: LibraryItem, host: String, token: String?, onClick: (LibraryItem) -> Unit) {
+fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
     val context = LocalContext.current
     var coverImage by remember { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(item.id) {
         withContext(Dispatchers.IO) {
-            val apiService = ApiClient.create(host, token)
-            val response = apiService.getItemCover(item.id).execute()
-            if (response.isSuccessful) {
-                response.body()?.let { responseBody ->
-                    val inputStream = responseBody.byteStream()
-                    coverImage = BitmapFactory.decodeStream(inputStream)
-                }
-            } else {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Failed to load cover image", Toast.LENGTH_SHORT).show()
+            val apiClient = ApiClient.getApiService()
+            if (apiClient != null) {
+                val response = apiClient.getItemCover(item.id).execute()
+                if (response.isSuccessful) {
+                    response.body()?.let { responseBody ->
+                        val inputStream = responseBody.byteStream()
+                        coverImage = BitmapFactory.decodeStream(inputStream)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Failed to load cover image", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }

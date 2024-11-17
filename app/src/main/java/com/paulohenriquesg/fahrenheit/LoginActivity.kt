@@ -93,32 +93,34 @@ class LoginActivity : ComponentActivity() {
 
     private fun handleLogin(host: String, username: String, password: String) {
         val loginRequest = LoginRequest(username, password, host)
-        val apiService = ApiClient.create(host)
-        apiService.login(loginRequest).enqueue(object : Callback<LoginResponse> {
-            override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
-                if (response.isSuccessful) {
-                    val loginResponse = response.body()
-                    // Handle successful login
-                    if (loginResponse != null) {
-                        saveToLocalStorage(host, loginResponse.user.username, loginResponse.user.token)
-                        Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
-                        // Redirect to MainActivity
-                        val intent = Intent(this@LoginActivity, MainActivity::class.java)
-                        startActivity(intent)
-                        finish()
+        val apiService = ApiClient.getApiService()
+        if (apiService != null) {
+            apiService.login(loginRequest).enqueue(object : Callback<LoginResponse> {
+                override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
+                    if (response.isSuccessful) {
+                        val loginResponse = response.body()
+                        // Handle successful login
+                        if (loginResponse != null) {
+                            saveToLocalStorage(host, loginResponse.user.username, loginResponse.user.token)
+                            Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
+                            // Redirect to MainActivity
+                            val intent = Intent(this@LoginActivity, MainActivity::class.java)
+                            startActivity(intent)
+                            finish()
+                        }
+                    } else {
+                        // Handle login failure
+                        Toast.makeText(this@LoginActivity, "Login failed", Toast.LENGTH_SHORT).show()
                     }
-                } else {
-                    // Handle login failure
-                    Toast.makeText(this@LoginActivity, "Login failed", Toast.LENGTH_SHORT).show()
                 }
-            }
 
-            override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
-                // Log the error message
-                Log.e("LoginActivity", "Network error", t)
-                Toast.makeText(this@LoginActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
+                override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
+                    // Log the error message
+                    Log.e("LoginActivity", "Network error", t)
+                    Toast.makeText(this@LoginActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+        }
     }
 
     private fun saveToLocalStorage(host: String, username: String, token: String) {

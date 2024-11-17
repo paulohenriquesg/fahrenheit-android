@@ -165,13 +165,9 @@ class DetailActivity : ComponentActivity() {
         itemId: String,
         callback: (LibraryItemResponse?) -> Unit
     ) {
-        val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        val host = sharedPreferences.getString("host", null)
-        val token = sharedPreferences.getString("token", null)
-
-        if (host != null && token != null) {
-            val apiService = ApiClient.create(host, token)
-            apiService.getLibraryItem(itemId).enqueue(object : Callback<LibraryItemResponse> {
+        val apiClient = ApiClient.getApiService()
+        if (apiClient != null) {
+            apiClient.getLibraryItem(itemId).enqueue(object : Callback<LibraryItemResponse> {
                 override fun onResponse(
                     call: Call<LibraryItemResponse>,
                     response: Response<LibraryItemResponse>
@@ -197,14 +193,10 @@ class DetailActivity : ComponentActivity() {
         itemId: String,
         callback: (Bitmap?) -> Unit
     ) {
-        val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        val host = sharedPreferences.getString("host", null)
-        val token = sharedPreferences.getString("token", null)
-
-        if (host != null && token != null) {
-            val apiService = ApiClient.create(host, token)
+        val apiClient = ApiClient.getApiService();
+        if (apiClient != null) {
             withContext(Dispatchers.IO) {
-                val response = apiService.getItemCover(itemId).execute()
+                val response = apiClient.getItemCover(itemId).execute()
                 if (response.isSuccessful) {
                     response.body()?.let { responseBody ->
                         val inputStream = responseBody.byteStream()

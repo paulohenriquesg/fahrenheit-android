@@ -181,11 +181,8 @@ private fun startPlaying(
     episodeId: String,
     callback: (String?) -> Unit
 ) {
-    val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-    val host = sharedPreferences.getString("host", null)
-    val token = sharedPreferences.getString("token", null)
-
-    if (host != null && token != null) {
+    val apiClient = ApiClient.getApiService()
+    if (apiClient != null) {
         val deviceInfo = PlayLibraryItemDeviceInfo(
             deviceId = "Fire Stick",
             clientName = "Fahrenheit",
@@ -202,12 +199,7 @@ private fun startPlaying(
             mediaPlayer = "unknown"
         )
 
-        val apiService = ApiClient.create(host, token)
-            .playLibraryItem(
-                libraryItemId = libraryItemId,
-                episodeId = episodeId,
-                request = request   
-            )
+        apiClient.playLibraryItem(libraryItemId, episodeId, request)
             .enqueue(object : Callback<PlayLibraryItemResponse> {
                 override fun onResponse(
                     call: Call<PlayLibraryItemResponse>,
@@ -218,7 +210,7 @@ private fun startPlaying(
                         val audioFileUrl =
                             playLibraryItemResponse?.libraryItem?.media?.episodes?.firstOrNull()?.audioTrack?.contentUrl
 
-                        val fullUrl = if (audioFileUrl != null) "$host$audioFileUrl?token=$token" else null
+                        val fullUrl = if (audioFileUrl != null) ApiClient.generateFullUrl("$audioFileUrl") else null
                         callback(fullUrl)
                     } else {
                         callback(null)
@@ -240,13 +232,9 @@ private fun loadEpisodeDetails(
     episodeId: String,
     callback: (LibraryItemResponse?) -> Unit
 ) {
-    val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-    val host = sharedPreferences.getString("host", null)
-    val token = sharedPreferences.getString("token", null)
-
-    if (host != null && token != null) {
-        val apiService = ApiClient.create(host, token)
-        apiService.getLibraryItem(podcastId).enqueue(object : Callback<LibraryItemResponse> {
+    val apiClient = ApiClient.getApiService()
+    if (apiClient != null) {
+        apiClient.getLibraryItem(podcastId).enqueue(object : Callback<LibraryItemResponse> {
             override fun onResponse(
                 call: Call<LibraryItemResponse>,
                 response: Response<LibraryItemResponse>
@@ -271,14 +259,10 @@ private suspend fun loadCoverImage(
     podcastId: String,
     callback: (Bitmap?) -> Unit
 ) {
-    val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-    val host = sharedPreferences.getString("host", null)
-    val token = sharedPreferences.getString("token", null)
-
-    if (host != null && token != null) {
-        val apiService = ApiClient.create(host, token)
+    val apiClient = ApiClient.getApiService()
+    if (apiClient != null) {
         withContext(Dispatchers.IO) {
-            val response = apiService.getItemCover(podcastId).execute()
+            val response = apiClient.getItemCover(podcastId).execute()
             if (response.isSuccessful) {
                 response.body()?.let { responseBody ->
                     val inputStream = responseBody.byteStream()
