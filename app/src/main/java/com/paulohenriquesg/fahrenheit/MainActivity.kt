@@ -298,7 +298,7 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
             }
         },
         content = {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .onKeyEvent { keyEvent ->
@@ -310,17 +310,30 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
                         }
                     }
             ) {
-                IconButton(onClick = { if (!listState.isScrollInProgress) scope.launch { drawerState.open() } }) {
+                IconButton(
+                    onClick = { if (!listState.isScrollInProgress) scope.launch { drawerState.open() } },
+                    modifier = Modifier.align(Alignment.TopStart)
+                ) {
                     Icon(Icons.Filled.Menu, contentDescription = "Open Menu")
                 }
-                Button(onClick = { isRowLayout = !isRowLayout }) {
+                Button(
+                    onClick = { isRowLayout = !isRowLayout },
+                    modifier = Modifier.align(Alignment.TopCenter)
+                ) {
                     Text(text = if (isRowLayout) "Switch to Fluid Layout" else "Switch to Row Layout")
                 }
-                Greeting(username)
-                if (isRowLayout) {
-                    LibraryItemsRow(libraryItems, host, token, listState)
-                } else {
-                    LibraryItemsFluid(libraryItems, host, token)
+                Greeting(
+                    name = username,
+                    modifier = Modifier.align(Alignment.TopEnd)
+                )
+                Column(
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    if (isRowLayout) {
+                        LibraryItemsRow(libraryItems, host, token, listState)
+                    } else {
+                        LibraryItemsFluid(libraryItems, host, token)
+                    }
                 }
             }
         }
