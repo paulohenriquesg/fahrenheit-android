@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,11 +29,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
 import androidx.tv.material3.Card
@@ -74,6 +77,7 @@ class DetailActivity : ComponentActivity() {
         var itemDetail by remember { mutableStateOf<LibraryItemResponse?>(null) }
         var coverImage by remember { mutableStateOf<Bitmap?>(null) }
         var episodes by remember { mutableStateOf<List<Episode>>(emptyList()) }
+    var expanded by remember { mutableStateOf(false) }
 
         val context = LocalContext.current
 
@@ -110,6 +114,11 @@ class DetailActivity : ComponentActivity() {
                 Column {
                     itemDetail?.let {
                         Text(text = it.media.metadata.title, style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    ) {
                         val description = it.media.metadata.description ?: "No description available"
                         val annotatedDescription = remember(description) {
                             buildAnnotatedString {
@@ -118,7 +127,22 @@ class DetailActivity : ComponentActivity() {
                                 )
                             }
                         }
-                        Text(text = annotatedDescription, style = MaterialTheme.typography.bodyLarge, color = Color.White)
+                        Text(
+                            text = if (expanded) annotatedDescription else buildAnnotatedString { append(annotatedDescription.text.take(100)) },
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White,
+                            maxLines = if (expanded) Int.MAX_VALUE else 5,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = if (expanded) "View Less" else "View More",
+                            color = Color.Blue,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .clickable { expanded = !expanded }
+                                .padding(top = 8.dp)
+                        )
+                    }
                     } ?: Text(text = "Loading...", color = Color.White)
                 }
             }
