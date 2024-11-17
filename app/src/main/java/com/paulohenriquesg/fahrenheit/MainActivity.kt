@@ -75,6 +75,11 @@ import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import androidx.compose.material3.Button
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalTvMaterial3Api::class)
@@ -138,6 +143,7 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
     var libraries by remember { mutableStateOf(listOf<Library>()) }
     var libraryItems by remember { mutableStateOf(listOf<LibraryItem>()) }
     val listState = rememberLazyListState()
+    var isRowLayout by remember { mutableStateOf(true) }
 
     // Retrieve base URL and token from SharedPreferences
     val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
@@ -307,15 +313,22 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
                 IconButton(onClick = { if (!listState.isScrollInProgress) scope.launch { drawerState.open() } }) {
                     Icon(Icons.Filled.Menu, contentDescription = "Open Menu")
                 }
+                Button(onClick = { isRowLayout = !isRowLayout }) {
+                    Text(text = if (isRowLayout) "Switch to Fluid Layout" else "Switch to Row Layout")
+                }
                 Greeting(username)
-                LibraryItemsList(libraryItems, host, token, listState)
+                if (isRowLayout) {
+                    LibraryItemsRow(libraryItems, host, token, listState)
+                } else {
+                    LibraryItemsFluid(libraryItems, host, token)
+                }
             }
         }
     )
 }
 
 @Composable
-fun LibraryItemsList(libraryItems: List<LibraryItem>, host: String, token: String?, listState: LazyListState) {
+fun LibraryItemsRow(libraryItems: List<LibraryItem>, host: String, token: String?, listState: LazyListState) {
     val context = LocalContext.current
 
     LazyRow(
@@ -329,6 +342,33 @@ fun LibraryItemsList(libraryItems: List<LibraryItem>, host: String, token: Strin
                 val intent = DetailActivity.createIntent(context, clickedItem.id)
                 context.startActivity(intent)
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun LibraryItemsFluid(libraryItems: List<LibraryItem>, host: String, token: String?) {
+    val context = LocalContext.current
+
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 150.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        items(libraryItems.size) { index ->
+            val item = libraryItems[index]
+
+            LibraryItemCard(
+                item = item,
+                host = host,
+                token = token,
+                onClick = { clickedItem ->
+                    val intent = DetailActivity.createIntent(context, clickedItem.id)
+                    context.startActivity(intent)
+                }
+            )
         }
     }
 }
