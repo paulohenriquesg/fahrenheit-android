@@ -3,7 +3,7 @@ package com.paulohenriquesg.fahrenheit.api
 import com.google.gson.annotations.SerializedName
 
 data class LibraryItemsResponse(
-    @SerializedName("results") val results: List<Item>,
+    @SerializedName("results") val results: List<LibraryItem>,
     @SerializedName("total") val total: Int,
     @SerializedName("limit") val limit: Int,
     @SerializedName("page") val page: Int,
@@ -16,7 +16,7 @@ data class LibraryItemsResponse(
     @SerializedName("include") val include: String
 )
 
-data class Item(
+data class LibraryItem(
     @SerializedName("id") val id: String,
     @SerializedName("ino") val ino: String,
     @SerializedName("libraryId") val libraryId: String,

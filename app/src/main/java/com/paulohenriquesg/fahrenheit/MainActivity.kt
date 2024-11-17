@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
-import com.paulohenriquesg.fahrenheit.api.Item
+import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibrariesResponse
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryItemsResponse
@@ -90,20 +90,52 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
-                    MainScreen(username ?: "User")
+                    MainScreen(username ?: "User", ::fetchLibraryItems)
                 }
             }
+        }
+    }
+
+    private fun fetchLibraryItems(libraryId: String, updateItems: (List<LibraryItem>) -> Unit) {
+        val context = this
+        val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val host = sharedPreferences.getString("host", null)
+        val token = sharedPreferences.getString("token", null)
+
+        if (host != null && token != null) {
+            val apiService = ApiClient.create(host, token)
+            apiService.getLibraryItems(libraryId).enqueue(object : Callback<LibraryItemsResponse> {
+                override fun onResponse(call: Call<LibraryItemsResponse>, response: Response<LibraryItemsResponse>) {
+                    if (response.isSuccessful) {
+                        val libraryItems = response.body()?.results
+                        // Update the UI with the fetched library items
+                        updateUIWithLibraryItems(libraryItems, updateItems)
+                    } else {
+                        Toast.makeText(context, "Failed to load library items", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<LibraryItemsResponse>, t: Throwable) {
+                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+        }
+    }
+
+    private fun updateUIWithLibraryItems(items: List<LibraryItem>?, updateItems: (List<LibraryItem>) -> Unit) {
+        items?.let {
+            updateItems(it)
         }
     }
 }
 
 @Composable
-fun MainScreen(username: String) {
+fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var libraries by remember { mutableStateOf(listOf<Library>()) }
-    var libraryItems by remember { mutableStateOf(listOf<Item>()) }
+    var libraryItems by remember { mutableStateOf(listOf<LibraryItem>()) }
     val listState = rememberLazyListState()
 
     // Retrieve base URL and token from SharedPreferences
@@ -123,8 +155,6 @@ fun MainScreen(username: String) {
         return
     }
 
-//    val baseUrl = "$host"
-
     // Fetch libraries from the API
     LaunchedEffect(Unit) {
         val apiService = ApiClient.create(host, token)
@@ -137,26 +167,9 @@ fun MainScreen(username: String) {
                     libraries = response.body()?.libraries ?: emptyList()
 
                     if (libraries.isNotEmpty()) {
-                        val firstLibraryId = libraries[0].id
-                        apiService.getLibraryItems(firstLibraryId)
-                            .enqueue(object : Callback<LibraryItemsResponse> {
-                                override fun onResponse(
-                                    call: Call<LibraryItemsResponse>,
-                                    response: Response<LibraryItemsResponse>
-                                ) {
-                                    if (response.isSuccessful) {
-                                        // Handle the library items response
-                                        libraryItems = response.body()?.results ?: emptyList()
-                                    }
-                                }
-
-                                override fun onFailure(
-                                    call: Call<LibraryItemsResponse>,
-                                    t: Throwable
-                                ) {
-                                    // Handle error
-                                }
-                            })
+                        fetchLibraryItems(libraries[0].id) { items ->
+                            libraryItems = items
+                        }
                     }
                 }
             }
@@ -185,7 +198,9 @@ fun MainScreen(username: String) {
                 Row(
                     modifier = Modifier
                         .padding(16.dp)
-                        .clickable { /* Handle Home click */ },
+                        .clickable {
+                            scope.launch { drawerState.close() }
+                        },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Filled.Home, contentDescription = "Home")
@@ -195,7 +210,9 @@ fun MainScreen(username: String) {
                 Row(
                     modifier = Modifier
                         .padding(16.dp)
-                        .clickable { /* Handle Profile click */ },
+                        .clickable {
+                            scope.launch { drawerState.close() }
+                        },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Filled.Person, contentDescription = "Profile")
@@ -205,7 +222,9 @@ fun MainScreen(username: String) {
                 Row(
                     modifier = Modifier
                         .padding(16.dp)
-                        .clickable { /* Handle Settings click */ },
+                        .clickable {
+                            scope.launch { drawerState.close() }
+                        },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Filled.Settings, contentDescription = "Settings")
@@ -231,7 +250,12 @@ fun MainScreen(username: String) {
                     Row(
                         modifier = Modifier
                             .padding(16.dp)
-                            .clickable { /* Handle library item click */ },
+                            .clickable {
+                                fetchLibraryItems(library.id) { items ->
+                                    libraryItems = items
+                                }
+                                scope.launch { drawerState.close() }
+                            },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(library.name)
@@ -289,7 +313,7 @@ fun MainScreen(username: String) {
 }
 
 @Composable
-fun LibraryItemsList(libraryItems: List<Item>, host: String, token: String?, listState: LazyListState) {
+fun LibraryItemsList(libraryItems: List<LibraryItem>, host: String, token: String?, listState: LazyListState) {
     val context = LocalContext.current
 
     LazyRow(
@@ -309,7 +333,7 @@ fun LibraryItemsList(libraryItems: List<Item>, host: String, token: String?, lis
 }
 
 @Composable
-fun LibraryItemCard(item: Item, host: String, token: String?, onClick: (Item) -> Unit) {
+fun LibraryItemCard(item: LibraryItem, host: String, token: String?, onClick: (LibraryItem) -> Unit) {
     val context = LocalContext.current
     var coverImage by remember { mutableStateOf<Bitmap?>(null) }
 
@@ -335,7 +359,10 @@ fun LibraryItemCard(item: Item, host: String, token: String?, onClick: (Item) ->
             .padding(8.dp)
             .width(200.dp)
             .height(300.dp)
-            .clickable { onClick(item) },
+            .clickable {
+                val intent = DetailActivity.createIntent(context, item.id)
+                context.startActivity(intent)
+            },
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(
@@ -378,6 +405,6 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Composable
 fun MainScreenPreview() {
     FahrenheitTheme {
-        MainScreen("Android")
+        MainScreen("Android", { _, _ -> })
     }
 }

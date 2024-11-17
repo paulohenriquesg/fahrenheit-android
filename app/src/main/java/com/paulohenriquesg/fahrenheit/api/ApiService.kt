@@ -25,6 +25,13 @@ interface ApiService {
 
     ): Call<LibraryItemsResponse>
 
+    @GET("api/items/{itemId}")
+    fun getLibraryItem(
+        @Path("itemId") itemId: String,
+        @Query("expanded") expanded: Int = 1,
+        @Query("include") include: String = "progress,rssfeed,authors,downloads"
+    ): Call<LibraryItemResponse>
+
     @GET("api/items/{itemId}/cover")
     fun getItemCover(
         @Path("itemId") itemId: String,
