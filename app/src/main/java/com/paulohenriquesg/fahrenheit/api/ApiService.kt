@@ -4,6 +4,7 @@ import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -22,7 +23,8 @@ interface ApiService {
         @Query("limit") limit: Int? = null,
         @Query("page") page: Int? = null,
         @Query("desc") desc: Boolean? = null,
-        @Query("include") include: String = "rssfeed,numEpisodesIncomplete"
+        @Query("include") include: String = "rssfeed,numEpisodesIncomplete",
+        @Query("minified") minified: Int = 0
     ): Call<LibraryItemsResponse>
 
     @GET("api/items/{itemId}")
@@ -44,4 +46,17 @@ interface ApiService {
         @Path("episodeId") episodeId: String? = null,
         @Body request: PlayLibraryItemRequest
     ): Call<PlayLibraryItemResponse>
+
+    @PATCH("api/me/progress/{libraryItemId}/{episodeId}")
+    fun userCreateOrUpdateMediaProgress(
+        @Path("libraryItemId") libraryItemId: String,
+        @Path("episodeId") episodeId: String,
+        @Body request: MediaProgressRequest
+    ): Call<Void>
+
+    @GET("api/me/progress/{libraryItemId}/{episodeId}")
+    fun userGetMediaProgress(
+        @Path("libraryItemId") libraryItemId: String,
+        @Path("episodeId") episodeId: String
+    ): Call<MediaProgressResponse>
 }

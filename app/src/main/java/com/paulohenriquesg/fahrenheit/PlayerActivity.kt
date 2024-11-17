@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemDeviceInfo
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemRequest
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemResponse
@@ -42,12 +44,12 @@ import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import android.os.Build
 
 
 class PlayerActivity : ComponentActivity() {
     private lateinit var mediaSession: MediaSessionCompat
     private var isPlaying by mutableStateOf(false)
+    private var mediaProgress by mutableStateOf<MediaProgressResponse?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,7 +99,9 @@ class PlayerActivity : ComponentActivity() {
         setContent {
             FahrenheitTheme {
                 if (podcastId != null && episodeId != null) {
-                    PlayerScreen(podcastId, episodeId, mediaSession, isPlaying) { newIsPlaying ->
+                    fetchMediaProgress(podcastId, episodeId)
+
+                    PlayerScreen(podcastId, episodeId, mediaSession, isPlaying, mediaProgress) { newIsPlaying ->
                         isPlaying = newIsPlaying
                     }
                 } else {
@@ -106,6 +110,29 @@ class PlayerActivity : ComponentActivity() {
                     finish()
                 }
             }
+        }
+    }
+
+    private fun fetchMediaProgress(libraryItemId: String, episodeId: String) {
+        val apiClient = ApiClient.getApiService()
+        if (apiClient != null) {
+            apiClient.userGetMediaProgress(libraryItemId, episodeId)
+                .enqueue(object : Callback<MediaProgressResponse> {
+                    override fun onResponse(
+                        call: Call<MediaProgressResponse>,
+                        response: Response<MediaProgressResponse>
+                    ) {
+                        if (response.isSuccessful) {
+                            mediaProgress = response.body()
+                        } else {
+                            Toast.makeText(this@PlayerActivity, "Failed to load media progress", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
+                    override fun onFailure(call: Call<MediaProgressResponse>, t: Throwable) {
+                        Toast.makeText(this@PlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    }
+                })
         }
     }
 
@@ -133,11 +160,12 @@ fun PlayerScreen(
     episodeId: String,
     mediaSession: MediaSessionCompat,
     isPlaying: Boolean,
+    mediaProgress: MediaProgressResponse?,
     onPlayPause: (Boolean) -> Unit
 ) {
     var episode by remember { mutableStateOf<Episode?>(null) }
     var coverImage by remember { mutableStateOf<Bitmap?>(null) }
-    var audioFileUrl by remember { mutableStateOf<String?>(null) }
+    var playLibraryItemResponse by remember { mutableStateOf<PlayLibraryItemResponse?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(podcastId, episodeId) {
@@ -147,8 +175,8 @@ fun PlayerScreen(
         loadCoverImage(context, podcastId) { bitmap ->
             coverImage = bitmap
         }
-        startPlaying(context, podcastId, episodeId) { url ->
-            audioFileUrl = url
+        playLibraryItem(podcastId, episodeId) { response ->
+            playLibraryItemResponse = response
         }
     }
 
@@ -168,18 +196,25 @@ fun PlayerScreen(
         episode?.let {
             Text(text = it.title, style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
-            audioFileUrl?.let { url ->
-                MediaPlayerController(url, mediaSession, isPlaying, onPlayPause)
-            } ?: Text(text = "Loading audio...")
+            val contentUrl = ApiClient.generateFullUrl(it.audioTrack?.contentUrl?: "")
+            if (contentUrl != null) {
+                MediaPlayerController(
+                    contentUrl,
+                    mediaSession,
+                    isPlaying,
+                    onPlayPause,
+                    mediaProgress?.duration ?: episode?.audioTrack?.duration?.toFloat() ?: 0f,
+                    mediaProgress?.currentTime ?: 0f
+                )
+            }
         } ?: Text(text = "Loading...")
     }
 }
 
-private fun startPlaying(
-    context: Context,
+private fun playLibraryItem(
     libraryItemId: String,
     episodeId: String,
-    callback: (String?) -> Unit
+    callback: (PlayLibraryItemResponse?) -> Unit
 ) {
     val apiClient = ApiClient.getApiService()
     if (apiClient != null) {
@@ -206,12 +241,7 @@ private fun startPlaying(
                     response: Response<PlayLibraryItemResponse>
                 ) {
                     if (response.isSuccessful) {
-                        val playLibraryItemResponse = response.body()
-                        val audioFileUrl =
-                            playLibraryItemResponse?.libraryItem?.media?.episodes?.firstOrNull()?.audioTrack?.contentUrl
-
-                        val fullUrl = if (audioFileUrl != null) ApiClient.generateFullUrl("$audioFileUrl") else null
-                        callback(fullUrl)
+                        callback(response.body())
                     } else {
                         callback(null)
                     }

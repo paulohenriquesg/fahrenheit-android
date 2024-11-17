@@ -27,13 +27,20 @@ import java.util.Locale
 
 
 @Composable
-fun MediaPlayerController(url: String, mediaSession: MediaSessionCompat, isPlaying: Boolean, onPlayPause: (Boolean) -> Unit) {
+fun MediaPlayerController(
+    url: String,
+    mediaSession: MediaSessionCompat,
+    isPlaying: Boolean,
+    onPlayPause: (Boolean) -> Unit,
+    duration: Float = 0f,
+    currentTime: Float = 0f,
+) {
     Log.d("MediaPlayerController", "URL: $url")
 
     val mediaPlayer = remember { GlobalMediaPlayer.getInstance() }
-    var progress by remember { mutableStateOf(0f) }
-    var currentTime by remember { mutableStateOf(0) }
-    var totalTime by remember { mutableStateOf(0) }
+    var progress by remember { mutableStateOf(if (duration > 0) currentTime / duration else 0f) }
+    var currentTimeState by remember { mutableStateOf(currentTime) }
+    var totalTime by remember { mutableStateOf(duration) }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(url) {
@@ -41,8 +48,9 @@ fun MediaPlayerController(url: String, mediaSession: MediaSessionCompat, isPlayi
             setDataSource(url)
             setOnPreparedListener {
                 totalTime = duration
-                currentTime = 0
-                progress = 0f
+                currentTimeState = currentTime
+                progress = if (duration > 0) currentTime / duration else 0f
+                seekTo((currentTime * 1000).toInt()) // Seek to the currentTime position
             }
             prepareAsync()
         }
@@ -53,8 +61,8 @@ fun MediaPlayerController(url: String, mediaSession: MediaSessionCompat, isPlayi
             mediaPlayer.start()
             coroutineScope.launch {
                 while (isPlaying) {
-                    currentTime = mediaPlayer.currentPosition
-                    progress = if (totalTime > 0) currentTime / totalTime.toFloat() else 0f
+                    currentTimeState = mediaPlayer.currentPosition / 1000f
+                    progress = if (totalTime > 0) currentTimeState / totalTime else 0f
                     delay(1000L)
                 }
             }
@@ -67,14 +75,16 @@ fun MediaPlayerController(url: String, mediaSession: MediaSessionCompat, isPlayi
         Row(
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
-            Button(onClick = {
-                if (isPlaying) {
-                    mediaPlayer.pause()
-                } else {
-                    mediaPlayer.start()
-                }
-                onPlayPause(!isPlaying)
-            },
+            Button(
+                onClick = {
+                    if (isPlaying) {
+                        mediaPlayer.pause()
+                    } else {
+                        mediaPlayer.start()
+                        mediaPlayer.seekTo((currentTimeState * 1000).toInt()) // Seek to the currentTime position
+                    }
+                    onPlayPause(!isPlaying)
+                },
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(if (isPlaying) "Pause" else "Play")
@@ -100,8 +110,8 @@ fun MediaPlayerController(url: String, mediaSession: MediaSessionCompat, isPlayi
             value = progress,
             onValueChange = { newValue ->
                 progress = newValue
-                mediaPlayer.seekTo((newValue * totalTime).toInt())
-                currentTime = mediaPlayer.currentPosition
+                mediaPlayer.seekTo((newValue * totalTime * 1000).toInt())
+                currentTimeState = mediaPlayer.currentPosition / 1000f
             },
             modifier = Modifier.padding(top = 16.dp)
         )
@@ -110,11 +120,11 @@ fun MediaPlayerController(url: String, mediaSession: MediaSessionCompat, isPlayi
             modifier = Modifier.padding(top = 8.dp)
         ) {
             Text(
-                text = "Current Time: ${formatTime(currentTime)}",
+                text = "Current Time: ${formatTime(currentTimeState.toInt()*1000)}",
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = "Total Time: ${formatTime(totalTime)}",
+                text = "Total Time: ${formatTime(totalTime.toInt()*1000)}",
                 modifier = Modifier.weight(1f)
             )
         }

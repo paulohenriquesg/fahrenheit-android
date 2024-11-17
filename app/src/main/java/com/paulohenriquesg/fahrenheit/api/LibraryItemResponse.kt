@@ -56,6 +56,7 @@ data class Episode(
     @SerializedName("enclosure") val enclosure: Enclosure?,
     @SerializedName("pubDate") val pubDate: String,
     @SerializedName("audioFile") val audioFile: AudioFile?,
+    @SerializedName("audioTrack") val audioTrack: AudioTrack?,
     @SerializedName("publishedAt") val publishedAt: Long,
     @SerializedName("addedAt") val addedAt: Long,
     @SerializedName("updatedAt") val updatedAt: Long
@@ -92,6 +93,17 @@ data class AudioFile(
     @SerializedName("embeddedCoverArt") val embeddedCoverArt: String?,
     @SerializedName("metaTags") val metaTags: MetaTags,
     @SerializedName("mimeType") val mimeType: String
+)
+
+data class AudioTrack(
+    @SerializedName("index") val index: Int,
+    @SerializedName("startOffset") val startOffset: Double,
+    @SerializedName("duration") val duration: Double,
+    @SerializedName("title") val title: String,
+    @SerializedName("contentUrl") val contentUrl: String,
+    @SerializedName("mimeType") val mimeType: String,
+    @SerializedName("codec") val codec: String,
+    @SerializedName("metadata") val metadata: AudioFileMetadata
 )
 
 data class AudioFileMetadata(
