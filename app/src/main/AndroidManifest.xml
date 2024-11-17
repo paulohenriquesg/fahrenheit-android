@@ -39,6 +39,7 @@
         </activity>
 
         <activity android:name=".DetailActivity" />
+        <activity android:name=".PlayerActivity" />
     </application>
 
 </manifest>

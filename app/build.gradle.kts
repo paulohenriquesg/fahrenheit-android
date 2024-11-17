@@ -49,6 +49,10 @@ dependencies {
     // handle cards
     implementation("io.coil-kt:coil-compose:2.2.2")
 
+    // handle media controls and player
+    implementation("androidx.media:media:1.6.0")
+    implementation("androidx.media2:media2-session:1.2.1")
+
     // handle UI
     implementation(libs.androidx.material3)
     implementation(libs.androidx.tv.material.v100alpha01)

@@ -9,6 +9,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.buildAnnotatedString
@@ -37,7 +40,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.Episode
-import com.paulohenriquesg.fahrenheit.api.LibraryItemMedia
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.Dispatchers
@@ -88,26 +90,43 @@ class DetailActivity : ComponentActivity() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color.Black)
                 .padding(16.dp)
         ) {
-            coverImage?.let {
-                Image(
-                    bitmap = it.asImageBitmap(),
-                    contentDescription = itemDetail?.media?.metadata?.title ?: "Cover Image",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            ) {
+                coverImage?.let {
+                    Image(
+                        bitmap = it.asImageBitmap(),
+                        contentDescription = itemDetail?.media?.metadata?.title ?: "Cover Image",
+                        modifier = Modifier
+                            .size(200.dp) // Adjust the size to keep the image big
+                            .padding(end = 16.dp)
+                    )
+                }
+                Column {
+                    itemDetail?.let {
+                        Text(text = it.media.metadata.title, style = MaterialTheme.typography.titleLarge, color = Color.White)
+                        val description = it.media.metadata.description ?: "No description available"
+                        val annotatedDescription = remember(description) {
+                            buildAnnotatedString {
+                                append(
+                                    HtmlCompat.fromHtml(description, HtmlCompat.FROM_HTML_MODE_COMPACT).toString()
+                                )
+                            }
+                        }
+                        Text(text = annotatedDescription, style = MaterialTheme.typography.bodyLarge, color = Color.White)
+                    } ?: Text(text = "Loading...", color = Color.White)
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            itemDetail?.let {
-                MediaDetails(it.media)
-            } ?: Text(text = "Loading...")
 
             Spacer(modifier = Modifier.height(16.dp))
             itemDetail?.media?.episodes?.let { episodes ->
                 if (episodes.isNotEmpty()) {
-                    Text(text = "Episodes", style = MaterialTheme.typography.titleMedium)
+                    Text(text = "Episodes", style = MaterialTheme.typography.titleMedium, color = Color.White)
                     LazyColumn {
                         items(episodes) { episode ->
                             EpisodeCard(episode, coverImage)
@@ -118,19 +137,11 @@ class DetailActivity : ComponentActivity() {
         }
     }
 
-    @Composable
-    fun MediaDetails(media: LibraryItemMedia) {
-        Text(text = "Title: ${media.metadata.title}", style = MaterialTheme.typography.titleLarge)
-        val description = media.metadata.description ?: "No description available"
-        val annotatedDescription = remember(description) {
-            buildAnnotatedString {
-                append(HtmlCompat.fromHtml(description, HtmlCompat.FROM_HTML_MODE_COMPACT).toString())
-            }
-        }
-        Text(text = annotatedDescription, style = MaterialTheme.typography.bodyLarge)
-    }
-
-    private fun loadItemDetails(context: Context, itemId: String, callback: (LibraryItemResponse?) -> Unit) {
+    private fun loadItemDetails(
+        context: Context,
+        itemId: String,
+        callback: (LibraryItemResponse?) -> Unit
+    ) {
         val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         val host = sharedPreferences.getString("host", null)
         val token = sharedPreferences.getString("token", null)
@@ -138,22 +149,31 @@ class DetailActivity : ComponentActivity() {
         if (host != null && token != null) {
             val apiService = ApiClient.create(host, token)
             apiService.getLibraryItem(itemId).enqueue(object : Callback<LibraryItemResponse> {
-                override fun onResponse(call: Call<LibraryItemResponse>, response: Response<LibraryItemResponse>) {
+                override fun onResponse(
+                    call: Call<LibraryItemResponse>,
+                    response: Response<LibraryItemResponse>
+                ) {
                     if (response.isSuccessful) {
                         callback(response.body())
                     } else {
-                        Toast.makeText(context, "Failed to load item details", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Failed to load item details", Toast.LENGTH_SHORT)
+                            .show()
                     }
                 }
 
                 override fun onFailure(call: Call<LibraryItemResponse>, t: Throwable) {
-                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT)
+                        .show()
                 }
             })
         }
     }
 
-    private suspend fun loadCoverImage(context: Context, itemId: String, callback: (Bitmap?) -> Unit) {
+    private suspend fun loadCoverImage(
+        context: Context,
+        itemId: String,
+        callback: (Bitmap?) -> Unit
+    ) {
         val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         val host = sharedPreferences.getString("host", null)
         val token = sharedPreferences.getString("token", null)
@@ -169,7 +189,8 @@ class DetailActivity : ComponentActivity() {
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Failed to load cover image", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Failed to load cover image", Toast.LENGTH_SHORT)
+                            .show()
                     }
                 }
             }
@@ -178,14 +199,25 @@ class DetailActivity : ComponentActivity() {
 
     @Composable
     fun EpisodeCard(episode: Episode, coverImage: Bitmap?) {
+        val context = LocalContext.current
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
-                    onClick = { /* Handle click */ }
-
+                .padding(vertical = 8.dp)
+                .clickable {
+                    val intent = PlayerActivity.createIntent(context, episode.libraryItemId, episode.id)
+                    context.startActivity(intent)
+                },
+            onClick = {
+                val intent = PlayerActivity.createIntent(context, episode.libraryItemId, episode.id)
+                context.startActivity(intent)
+            }
         ) {
-            Row(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier
+                    .padding(16.dp)
+            ) {
                 coverImage?.let {
                     Image(
                         bitmap = it.asImageBitmap(),
@@ -197,13 +229,16 @@ class DetailActivity : ComponentActivity() {
                 }
                 Column {
                     Text(text = episode.title, style = MaterialTheme.typography.titleMedium)
-                    Text(text = formatPubDate(episode.pubDate), style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = formatPubDate(episode.pubDate),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }
     }
 
-    fun formatPubDate(pubDate: String): String {
+    private fun formatPubDate(pubDate: String): String {
         val parser = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.getDefault())
         val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         return parser.parse(pubDate)?.let { formatter.format(it) } ?: pubDate
