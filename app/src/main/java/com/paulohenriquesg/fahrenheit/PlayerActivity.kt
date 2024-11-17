@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemDeviceInfo
+import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemRequest
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemResponse
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +42,8 @@ import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import android.os.Build
+
 
 class PlayerActivity : ComponentActivity() {
     private lateinit var mediaSession: MediaSessionCompat
@@ -182,15 +186,27 @@ private fun startPlaying(
     val token = sharedPreferences.getString("token", null)
 
     if (host != null && token != null) {
+        val deviceInfo = PlayLibraryItemDeviceInfo(
+            deviceId = "Fire Stick",
+            clientName = "Fahrenheit",
+            clientVersion = "0.0.1",
+            manufacturer = "Amazon",
+            model = Build.MODEL,
+            sdkVersion = 25
+        )
+        val request = PlayLibraryItemRequest(
+            deviceInfo = deviceInfo,
+            forceDirectPlay = false,
+            forceTranscode = false,
+            supportedMimeTypes = emptyList(),
+            mediaPlayer = "unknown"
+        )
+
         val apiService = ApiClient.create(host, token)
             .playLibraryItem(
                 libraryItemId = libraryItemId,
                 episodeId = episodeId,
-                deviceInfo = null,
-                forceDirectPlay = true,
-                forceTranscode = false,
-                supportedMimeTypes = emptyList(),
-                mediaPlayer = "Fahrenheit"
+                request = request   
             )
             .enqueue(object : Callback<PlayLibraryItemResponse> {
                 override fun onResponse(

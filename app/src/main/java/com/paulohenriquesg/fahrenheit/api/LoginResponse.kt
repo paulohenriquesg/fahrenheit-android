@@ -1,4 +1,3 @@
-// LoginResponse.kt
 package com.paulohenriquesg.fahrenheit.api
 
 import com.google.gson.annotations.SerializedName

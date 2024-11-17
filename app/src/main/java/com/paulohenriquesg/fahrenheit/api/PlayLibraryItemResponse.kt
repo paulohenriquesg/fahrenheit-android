@@ -46,12 +46,12 @@ data class PlayLibraryItemMediaMetadata(
 )
 
 data class PlayLibraryItemDeviceInfo(
-    @SerializedName("deviceId") val deviceId: String,
-    @SerializedName("clientName") val clientName: String,
-    @SerializedName("clientVersion") val clientVersion: String,
-    @SerializedName("manufacturer") val manufacturer: String,
-    @SerializedName("model") val model: String,
-    @SerializedName("sdkVersion") val sdkVersion: Int
+    @SerializedName("deviceId") val deviceId: String?,
+    @SerializedName("clientName") val clientName: String?,
+    @SerializedName("clientVersion") val clientVersion: String?,
+    @SerializedName("manufacturer") val manufacturer: String?,
+    @SerializedName("model") val model: String?,
+    @SerializedName("sdkVersion") val sdkVersion: Int?
 )
 
 data class PlayLibraryItemAudioTrack(
