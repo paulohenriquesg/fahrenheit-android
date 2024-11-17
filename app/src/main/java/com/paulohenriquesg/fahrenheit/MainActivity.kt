@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Home
@@ -63,9 +64,9 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
-import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibrariesResponse
 import com.paulohenriquesg.fahrenheit.api.Library
+import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibraryItemsResponse
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.Dispatchers
@@ -324,9 +325,8 @@ fun LibraryItemsList(libraryItems: List<LibraryItem>, host: String, token: Strin
     ) {
         items(libraryItems) { item ->
             LibraryItemCard(item, host, token) { clickedItem ->
-                // Handle item click
-                // For example, navigate to a detail screen or show a toast
-                Toast.makeText(context, "Clicked: ${clickedItem.media.metadata.title}", Toast.LENGTH_SHORT).show()
+                val intent = DetailActivity.createIntent(context, clickedItem.id)
+                context.startActivity(intent)
             }
         }
     }
@@ -354,41 +354,55 @@ fun LibraryItemCard(item: LibraryItem, host: String, token: String?, onClick: (L
         }
     }
 
-    Card(
+    Box(
         modifier = Modifier
             .padding(8.dp)
             .width(200.dp)
             .height(300.dp)
-            .clickable {
-                val intent = DetailActivity.createIntent(context, item.id)
-                context.startActivity(intent)
-            },
-        elevation = CardDefaults.cardElevation(4.dp)
+            .clickable { onClick(item) }
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Card(
+            elevation = CardDefaults.cardElevation(4.dp)
         ) {
-            coverImage?.let {
-                Image(
-                    bitmap = it.asImageBitmap(),
-                    contentDescription = item.media.metadata.title,
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                coverImage?.let {
+                    Image(
+                        bitmap = it.asImageBitmap(),
+                        contentDescription = item.media.metadata.title,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                    )
+                } ?: Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
+                        .background(Color.Gray)
                 )
-            } ?: Box(
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = item.media.metadata.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        if (item.mediaType == "podcast" && item.numEpisodesIncomplete != null) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(Color.Gray)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = item.media.metadata.title,
-                style = MaterialTheme.typography.titleLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                    .align(Alignment.TopEnd)
+                    .background(Color.Red, shape = RoundedCornerShape(50))
+                    .padding(8.dp)
+            ) {
+                Text(
+                    text = if (item.numEpisodesIncomplete > 99) "99+" else item.numEpisodesIncomplete.toString(),
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }

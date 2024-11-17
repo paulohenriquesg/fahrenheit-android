@@ -35,7 +35,8 @@ data class LibraryItem(
     @SerializedName("media") val media: Media,
     @SerializedName("numFiles") val numFiles: Int,
     @SerializedName("size") val size: Long,
-    @SerializedName("collapsedSeries") val collapsedSeries: CollapsedSeries?
+    @SerializedName("collapsedSeries") val collapsedSeries: CollapsedSeries?,
+    @SerializedName("numEpisodesIncomplete") val numEpisodesIncomplete: Int?
 )
 
 data class Media(

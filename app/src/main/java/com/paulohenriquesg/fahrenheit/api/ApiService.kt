@@ -21,8 +21,8 @@ interface ApiService {
         @Query("sort") sort: String = "media.metadata.title",
         @Query("limit") limit: Int? = null,
         @Query("page") page: Int? = null,
-        @Query("desc") desc: Boolean? = null
-
+        @Query("desc") desc: Boolean? = null,
+        @Query("include") include: String = "rssfeed,numEpisodesIncomplete"
     ): Call<LibraryItemsResponse>
 
     @GET("api/items/{itemId}")
