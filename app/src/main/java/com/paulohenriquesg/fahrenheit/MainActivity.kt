@@ -191,6 +191,7 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
         drawerContent = {
             Column(
                 modifier = Modifier
+                    .width(300.dp) // Set a fixed width for the drawer
                     .background(Color.White) // Set the background color to white
                     .fillMaxSize()
             ) {
