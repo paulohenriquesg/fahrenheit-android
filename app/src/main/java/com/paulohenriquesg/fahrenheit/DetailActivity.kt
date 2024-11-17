@@ -9,7 +9,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -94,7 +93,6 @@ class DetailActivity : ComponentActivity() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
                 .padding(16.dp)
         ) {
             Row(
@@ -113,7 +111,7 @@ class DetailActivity : ComponentActivity() {
                 }
                 Column {
                     itemDetail?.let {
-                        Text(text = it.media.metadata.title, style = MaterialTheme.typography.titleLarge, color = Color.White)
+                        Text(text = it.media.metadata.title, style = MaterialTheme.typography.titleLarge)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -130,7 +128,6 @@ class DetailActivity : ComponentActivity() {
                         Text(
                             text = if (expanded) annotatedDescription else buildAnnotatedString { append(annotatedDescription.text.take(100)) },
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White,
                             maxLines = if (expanded) Int.MAX_VALUE else 5,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -143,19 +140,21 @@ class DetailActivity : ComponentActivity() {
                                 .padding(top = 8.dp)
                         )
                     }
-                    } ?: Text(text = "Loading...", color = Color.White)
+                    } ?: Text(text = "Loading...")
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
             itemDetail?.media?.episodes?.let { episodes ->
                 if (episodes.isNotEmpty()) {
-                    Text(text = "Episodes", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                    Text(text = "Episodes", style = MaterialTheme.typography.titleMedium)
                     LazyColumn {
                         items(episodes) { episode ->
                             EpisodeCard(episode, coverImage)
                         }
                     }
+                } else {
+                    Text(text = "No Episodes", style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
