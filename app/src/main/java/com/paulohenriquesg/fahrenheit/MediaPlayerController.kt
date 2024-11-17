@@ -50,6 +50,7 @@ fun MediaPlayerController(url: String, mediaSession: MediaSessionCompat, isPlayi
 
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
+            mediaPlayer.start()
             coroutineScope.launch {
                 while (isPlaying) {
                     currentTime = mediaPlayer.currentPosition
@@ -57,6 +58,8 @@ fun MediaPlayerController(url: String, mediaSession: MediaSessionCompat, isPlayi
                     delay(1000L)
                 }
             }
+        } else {
+            mediaPlayer.pause()
         }
     }
 
@@ -67,10 +70,8 @@ fun MediaPlayerController(url: String, mediaSession: MediaSessionCompat, isPlayi
             Button(onClick = {
                 if (isPlaying) {
                     mediaPlayer.pause()
-                    mediaSession.controller.transportControls.pause()
                 } else {
                     mediaPlayer.start()
-                    mediaSession.controller.transportControls.play()
                 }
                 onPlayPause(!isPlaying)
             },
