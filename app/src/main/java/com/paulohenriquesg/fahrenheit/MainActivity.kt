@@ -177,6 +177,13 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
         })
     }
 
+    // Function to scroll to the first item
+    fun scrollToFirstItem() {
+        scope.launch {
+            listState.scrollToItem(0)
+        }
+    }
+
     // Handle back button press
     BackHandler(enabled = drawerState.isOpen) {
         scope.launch { drawerState.close() }
@@ -251,6 +258,7 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
                             .clickable {
                                 fetchLibraryItems(library.id) { items ->
                                     libraryItems = items
+                                    scrollToFirstItem() // Scroll to the first item when switching libraries
                                 }
                                 scope.launch { drawerState.close() }
                             },
@@ -377,7 +385,7 @@ fun LibraryItemsFluid(libraryItems: List<LibraryItem>) {
 @Composable
 fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
     val context = LocalContext.current
-    var coverImage by remember { mutableStateOf<Bitmap?>(null) }
+    var coverImage by remember(item.id) { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(item.id) {
         withContext(Dispatchers.IO) {
