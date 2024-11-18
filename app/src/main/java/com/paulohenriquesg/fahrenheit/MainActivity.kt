@@ -422,7 +422,8 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
             .clickable { onClick(item) }
     ) {
         Card(
-            elevation = CardDefaults.cardElevation(4.dp)
+            elevation = CardDefaults.cardElevation(4.dp),
+            modifier = Modifier.fillMaxSize()
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
