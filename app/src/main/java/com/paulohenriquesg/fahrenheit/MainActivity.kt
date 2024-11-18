@@ -77,8 +77,11 @@ import retrofit2.Callback
 import retrofit2.Response
 import androidx.compose.material3.Button
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 
 
 class MainActivity : ComponentActivity() {
@@ -455,8 +458,10 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .background(Color.Red, shape = RoundedCornerShape(50))
-                    .padding(8.dp)
+                    .size(24.dp) // Set a fixed size for the badge
+                    .background(Color.Red, shape = CircleShape)
+                    .clip(CircleShape),
+                contentAlignment = Alignment.Center // Center the text within the badge
             ) {
                 Text(
                     text = if (item.numEpisodesIncomplete > 99) "99+" else item.numEpisodesIncomplete.toString(),
