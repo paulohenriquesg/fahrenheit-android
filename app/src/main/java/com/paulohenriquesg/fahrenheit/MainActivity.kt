@@ -137,6 +137,7 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
     val context = LocalContext.current
     var libraries by remember { mutableStateOf(listOf<Library>()) }
     var libraryItems by remember { mutableStateOf(listOf<LibraryItem>()) }
+    var currentLibraryName by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     var isRowLayout by remember { mutableStateOf(true) }
 
@@ -164,6 +165,7 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
                     libraries = response.body()?.libraries ?: emptyList()
 
                     if (libraries.isNotEmpty()) {
+                        currentLibraryName = libraries[0].name
                         fetchLibraryItems(libraries[0].id) { items ->
                             libraryItems = items
                         }
@@ -256,6 +258,7 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
                         modifier = Modifier
                             .padding(16.dp)
                             .clickable {
+                                currentLibraryName = library.name
                                 fetchLibraryItems(library.id) { items ->
                                     libraryItems = items
                                     scrollToFirstItem() // Scroll to the first item when switching libraries
@@ -327,6 +330,11 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
                 Column(
                     modifier = Modifier.align(Alignment.Center)
                 ) {
+                    Text(
+                        text = currentLibraryName,
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(16.dp)
+                    )
                     if (isRowLayout) {
                         LibraryItemsRow(libraryItems, listState)
                     } else {
