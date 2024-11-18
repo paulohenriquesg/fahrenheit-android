@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -145,16 +146,28 @@ class DetailActivity : ComponentActivity() {
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            itemDetail?.media?.episodes?.let { episodes ->
-                if (episodes.isNotEmpty()) {
-                    Text(text = "Episodes", style = MaterialTheme.typography.titleMedium)
-                    LazyColumn {
-                        items(episodes) { episode ->
-                            EpisodeCard(episode, coverImage)
+        if (itemDetail?.mediaType == "book") {
+                Button(
+                    onClick = {
+                    val intent = BookPlayerActivity.createIntent(context, itemId)
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Play Book")
+                }
+            } else {
+                itemDetail?.media?.episodes?.let { episodes ->
+                    if (episodes.isNotEmpty()) {
+                        Text(text = "Episodes", style = MaterialTheme.typography.titleMedium)
+                        LazyColumn {
+                            items(episodes) { episode ->
+                                EpisodeCard(episode, coverImage)
+                            }
                         }
+                    } else {
+                        Text(text = "No Episodes", style = MaterialTheme.typography.bodyLarge)
                     }
-                } else {
-                    Text(text = "No Episodes", style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
@@ -193,7 +206,7 @@ class DetailActivity : ComponentActivity() {
         itemId: String,
         callback: (Bitmap?) -> Unit
     ) {
-        val apiClient = ApiClient.getApiService();
+        val apiClient = ApiClient.getApiService()
         if (apiClient != null) {
             withContext(Dispatchers.IO) {
                 val response = apiClient.getItemCover(itemId).execute()

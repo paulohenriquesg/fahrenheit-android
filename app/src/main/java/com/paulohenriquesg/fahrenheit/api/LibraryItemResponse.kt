@@ -28,14 +28,18 @@ data class LibraryItemResponse(
 )
 
 data class LibraryItemMedia (
+    @SerializedName("id") val id: String,
     @SerializedName("libraryItemId") val libraryItemId: String,
     @SerializedName("metadata") val metadata: LibraryItemMetadata,
     @SerializedName("coverPath") val coverPath: String,
     @SerializedName("tags") val tags: List<String>,
+    @SerializedName("audioFiles") val audioFiles: List<AudioFile>,
     @SerializedName("chapters") val chapters: List<Chapter>?,
     @SerializedName("duration") val duration: Double?,
     @SerializedName("size") val size: Long,
     @SerializedName("episodes") val episodes: List<Episode>?,
+    @SerializedName("tracks") val tracks: List<Track>,
+    @SerializedName("ebookFile") val ebookFile: String?,
     @SerializedName("autoDownloadEpisodes") val autoDownloadEpisodes: Boolean?,
     @SerializedName("autoDownloadSchedule") val autoDownloadSchedule: String?,
     @SerializedName("lastEpisodeCheck") val lastEpisodeCheck: Long?,
@@ -89,7 +93,7 @@ data class AudioFile(
     @SerializedName("timeBase") val timeBase: String,
     @SerializedName("channels") val channels: Int,
     @SerializedName("channelLayout") val channelLayout: String,
-    @SerializedName("chapters") val chapters: List<Any>,
+    @SerializedName("chapters") val chapters: List<Chapter>,
     @SerializedName("embeddedCoverArt") val embeddedCoverArt: String?,
     @SerializedName("metaTags") val metaTags: MetaTags,
     @SerializedName("mimeType") val mimeType: String
@@ -122,9 +126,14 @@ data class MetaTags(
     @SerializedName("tagArtist") val tagArtist: String,
     @SerializedName("tagGenre") val tagGenre: String,
     @SerializedName("tagTitle") val tagTitle: String,
+    @SerializedName("tagGrouping") val tagGrouping: String,
     @SerializedName("tagTrack") val tagTrack: String,
     @SerializedName("tagAlbumArtist") val tagAlbumArtist: String,
-    @SerializedName("tagComposer") val tagComposer: String
+    @SerializedName("tagDate") val tagDate: String,
+    @SerializedName("tagComposer") val tagComposer: String,
+    @SerializedName("tagComment") val tagComment: String,
+    @SerializedName("tagDescription") val tagDescription: String,
+    @SerializedName("tagEncoder") val tagEncoder: String
 )
 
 data class Chapter(

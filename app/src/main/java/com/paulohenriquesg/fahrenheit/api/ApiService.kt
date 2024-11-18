@@ -59,4 +59,15 @@ interface ApiService {
         @Path("libraryItemId") libraryItemId: String,
         @Path("episodeId") episodeId: String
     ): Call<MediaProgressResponse>
+
+    @PATCH("api/me/progress/{libraryItemId}")
+    fun userCreateOrUpdateMediaProgress(
+        @Path("libraryItemId") libraryItemId: String,
+        @Body request: MediaProgressRequest
+    ): Call<Void>
+
+    @GET("api/me/progress/{libraryItemId}")
+    fun userGetMediaProgress(
+        @Path("libraryItemId") libraryItemId: String,
+    ): Call<MediaProgressResponse>
 }

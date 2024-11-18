@@ -41,6 +41,7 @@
 
         <activity android:name=".DetailActivity" />
         <activity android:name=".PlayerActivity" />
+        <activity android:name=".BookPlayerActivity" />
     </application>
 
 </manifest>
