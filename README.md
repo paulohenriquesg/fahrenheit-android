@@ -24,5 +24,5 @@ And, to be clear I'm not affiliated with Audiobookshelf in any way.
 - [x] List library items (books and podcasts)
 - [x] Vew library item details (book and podcast)
 - [x] View available episodes for a podcast
-- [x] Play library item (only podcasts for now)
+- [x] Play library item (podcasts and books) - very basic UI
 - [x] Sync play progress with Audiobookshelf server
