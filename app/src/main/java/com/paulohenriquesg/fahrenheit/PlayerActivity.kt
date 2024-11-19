@@ -223,7 +223,7 @@ fun PlayerScreen(
         loadCoverImage(context, podcastId) { bitmap ->
             coverImage = bitmap
         }
-        playLibraryItem(podcastId, episodeId) { response ->
+        playLibraryItem(context, podcastId, episodeId) { response ->
             playLibraryItemResponse = response
         }
     }
@@ -260,6 +260,7 @@ fun PlayerScreen(
 }
 
 private fun playLibraryItem(
+    context: Context,
     libraryItemId: String,
     episodeId: String,
     callback: (PlayLibraryItemResponse?) -> Unit
@@ -268,7 +269,7 @@ private fun playLibraryItem(
     if (apiClient != null) {
         val deviceInfo = PlayLibraryItemDeviceInfo(
             deviceId = "Fire Stick",
-            clientName = "Fahrenheit",
+            clientName = context.getString(R.string.app_name),
             clientVersion = "0.0.1",
             manufacturer = "Amazon",
             model = Build.MODEL,
