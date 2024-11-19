@@ -1,4 +1,4 @@
-name: Build on Tag
+name: Build and Release APK
 
 on:
   push:
@@ -19,10 +19,26 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set GITHUB_REF environment variable
-        run: echo "GITHUB_REF=${GITHUB_REF}" >> $GITHUB_ENV
+      - name: Build APK
+        run: ./gradlew assembleRelease
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
-          GITHUB_REF: ${{ github.ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: true
+
+      - name: Upload APK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/release/app-release.apk
+          asset_name: app-release.apk
+          asset_content_type: application/vnd.android.package-archive
