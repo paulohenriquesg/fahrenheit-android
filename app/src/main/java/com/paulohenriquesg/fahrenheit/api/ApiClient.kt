@@ -26,6 +26,10 @@ object ApiClient {
         return apiService
     }
 
+    fun getApiServiceForLogin(host: String): ApiService {
+        return create(host)
+    }
+
     fun generateFullUrl(path: String): String? {
         return if (host != null && token != null) {
             "$host$path?token=$token"
