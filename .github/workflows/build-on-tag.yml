@@ -35,7 +35,7 @@ jobs:
       - name: List APK files
         run: ls -la app/build/outputs/apk/release/
 
-      - name: Create Release
+      - name: Create Release from tag
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -43,6 +43,17 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: true
+
+      - name: Create latest release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: latest
+          release_name: Latest Release
           draft: false
           prerelease: true
 
