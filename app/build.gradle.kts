@@ -13,7 +13,7 @@ android {
         minSdk = 25
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = System.getenv("GITHUB_REF")?.split("/")?.last() ?: "1.0"
 
     }
 
