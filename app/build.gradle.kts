@@ -53,7 +53,6 @@ dependencies {
     // handle extra icons
     implementation("androidx.compose.material:material-icons-extended:1.0.5")
 
-
     // handle API
     implementation(libs.retrofit)
     implementation(libs.converter.gson)

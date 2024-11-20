@@ -82,7 +82,6 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalTvMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,10 +90,12 @@ class MainActivity : ComponentActivity() {
         // Retrieve username from SharedPreferences
         val sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         val username = sharedPreferences.getString("username", "User")
+        val isDarkTheme = sharedPreferences.getBoolean("dark_theme", false)
 
         setContent {
-            FahrenheitTheme {
+            FahrenheitTheme(isInDarkTheme = isDarkTheme) {
                 Surface(
+                    color = MaterialTheme.colorScheme.background,
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
@@ -232,6 +233,8 @@ fun MainScreen(username: String, fetchLibraryItems: (String, (List<LibraryItem>)
                     modifier = Modifier
                         .padding(16.dp)
                         .clickable {
+                            val intent = SettingsActivity.createIntent(context)
+                            context.startActivity(intent)
                             scope.launch { drawerState.close() }
                         },
                     verticalAlignment = Alignment.CenterVertically
@@ -484,6 +487,9 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Composable
 fun MainScreenPreview() {
     FahrenheitTheme {
-        MainScreen("Android", { _, _ -> })
+        MainScreen(
+            "Android",
+            { _, _ -> }
+        )
     }
 }
