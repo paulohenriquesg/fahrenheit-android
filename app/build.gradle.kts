@@ -19,10 +19,10 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file(System.getenv("KEYSTORE_FILE"))
-            storePassword = System.getenv("KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("KEY_ALIAS")
-            keyPassword = System.getenv("KEY_PASSWORD")
+            storeFile = file(System.getenv("KEYSTORE_FILE") ?: "path/to/local/keystore.jks")
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "localKeystorePassword"
+            keyAlias = System.getenv("KEY_ALIAS") ?: "localKeyAlias"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "localKeyPassword"
         }
     }
 
@@ -50,6 +50,10 @@ android {
 }
 
 dependencies {
+    // handle extra icons
+    implementation("androidx.compose.material:material-icons-extended:1.0.5")
+
+
     // handle API
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
