@@ -33,7 +33,7 @@
         </activity>
 
         <activity
-            android:name="com.paulohenriquesg.fahrenheit.LoginActivity"
+            android:name="com.paulohenriquesg.fahrenheit.login.LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
