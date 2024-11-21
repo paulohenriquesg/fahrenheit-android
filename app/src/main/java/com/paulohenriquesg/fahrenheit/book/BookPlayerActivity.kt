@@ -1,10 +1,10 @@
-package com.paulohenriquesg.fahrenheit
+// BookPlayerActivity.kt
+package com.paulohenriquesg.fahrenheit.book
 
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
@@ -31,14 +31,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import com.paulohenriquesg.fahrenheit.GlobalMediaPlayer
+import com.paulohenriquesg.fahrenheit.MediaPlayerController
 import com.paulohenriquesg.fahrenheit.api.ApiClient
-import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
-import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemDeviceInfo
-import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemRequest
-import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemResponse
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -48,17 +46,19 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-
-class PlayerActivity : ComponentActivity() {
-    private lateinit var mediaSession: MediaSessionCompat
+class BookPlayerActivity : ComponentActivity() {
     private var isPlaying by mutableStateOf(false)
     private var mediaProgress by mutableStateOf<MediaProgressResponse?>(null)
+    private lateinit var mediaSession: MediaSessionCompat
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val podcastId = intent.getStringExtra(EXTRA_PODCAST_ID)
-        val episodeId = intent.getStringExtra(EXTRA_EPISODE_ID)
+        mediaSession = MediaSessionCompat(this, "BookPlayerActivity")
+
+
+        val bookId = intent.getStringExtra(EXTRA_BOOK_ID)
 
         mediaSession = MediaSessionCompat(this, "PlayerActivity").apply {
             setCallback(object : MediaSessionCompat.Callback() {
@@ -70,7 +70,7 @@ class PlayerActivity : ComponentActivity() {
                     } else {
                         GlobalMediaPlayer.getInstance().start()
                         isPlaying = true
-                        startProgressUpdateCoroutine(podcastId, episodeId)
+                        startProgressUpdateCoroutine(bookId ?: "")
                     }
                 }
 
@@ -102,22 +102,21 @@ class PlayerActivity : ComponentActivity() {
 
         setContent {
             FahrenheitTheme {
-                if (podcastId != null && episodeId != null) {
-                    fetchMediaProgress(podcastId, episodeId)
+                if (bookId != null) {
+                    fetchMediaProgress(bookId)
 
-                    PlayerScreen(podcastId, episodeId, mediaSession, isPlaying, mediaProgress) { newIsPlaying ->
+                    BookPlayerScreen(bookId, mediaSession, isPlaying, mediaProgress) { newIsPlaying ->
                         isPlaying = newIsPlaying
                     }
                 } else {
-                    Toast.makeText(this, "Podcast or Episode ID is missing", Toast.LENGTH_SHORT)
-                        .show()
+                    Toast.makeText(this, "Book ID is missing", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             }
         }
     }
 
-    private fun startProgressUpdateCoroutine(podcastId: String?, episodeId: String?) {
+    private fun startProgressUpdateCoroutine(bookId: String) {
         val apiClient = ApiClient.getApiService()
         val mediaPlayer = GlobalMediaPlayer.getInstance()
 
@@ -127,26 +126,26 @@ class PlayerActivity : ComponentActivity() {
                 val currentTimeState = mediaPlayer.currentPosition / 1000f
                 val totalTime = mediaPlayer.duration / 1000f
                 val request = MediaProgressRequest(currentTime = currentTimeState, duration = totalTime)
-                apiClient?.userCreateOrUpdateMediaProgress(podcastId!!, episodeId!!, request)
+                apiClient?.userCreateOrUpdateMediaProgress(bookId, request= request)
                     ?.enqueue(object : Callback<Void> {
                         override fun onResponse(call: Call<Void>, response: Response<Void>) {
                             if (!response.isSuccessful) {
-                                Toast.makeText(this@PlayerActivity, "Failed to update media progress", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@BookPlayerActivity, "Failed to update media progress", Toast.LENGTH_SHORT).show()
                             }
                         }
 
                         override fun onFailure(call: Call<Void>, t: Throwable) {
-                            Toast.makeText(this@PlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@BookPlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
                         }
                     })
             }
         }
     }
 
-    private fun fetchMediaProgress(libraryItemId: String, episodeId: String) {
+    private fun fetchMediaProgress(libraryItemId: String) {
         val apiClient = ApiClient.getApiService()
         if (apiClient != null) {
-            apiClient.userGetMediaProgress(libraryItemId, episodeId)
+            apiClient.userGetMediaProgress(libraryItemId= libraryItemId)
                 .enqueue(object : Callback<MediaProgressResponse> {
                     override fun onResponse(
                         call: Call<MediaProgressResponse>,
@@ -154,76 +153,63 @@ class PlayerActivity : ComponentActivity() {
                     ) {
                         if (response.isSuccessful) {
                             mediaProgress = response.body()
-                    } else if (response.code() == 404) {
-                        // Call userCreateOrUpdateMediaProgress if 404
-                        val request = MediaProgressRequest(currentTime = 0f, duration = 0f)
-                        apiClient.userCreateOrUpdateMediaProgress(libraryItemId, episodeId, request)
-                            .enqueue(object : Callback<Void> {
-                                override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                                    if (response.isSuccessful) {
-                                        // Handle successful creation
-                                    } else {
-                                        Toast.makeText(this@PlayerActivity, "Failed to create media progress", Toast.LENGTH_SHORT).show()
+                        } else if (response.code() == 404) {
+                            val request = MediaProgressRequest(currentTime = 0f, duration = 0f)
+                            apiClient.userCreateOrUpdateMediaProgress(libraryItemId= libraryItemId, request = request)
+                                .enqueue(object : Callback<Void> {
+                                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                                        if (response.isSuccessful) {
+                                            // Handle successful creation
+                                        } else {
+                                            Toast.makeText(this@BookPlayerActivity, "Failed to create media progress", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
-                                }
 
-                                override fun onFailure(call: Call<Void>, t: Throwable) {
-                                    Toast.makeText(this@PlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
-                                }
-                            })
+                                    override fun onFailure(call: Call<Void>, t: Throwable) {
+                                        Toast.makeText(this@BookPlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                })
                         } else {
-                            Toast.makeText(this@PlayerActivity, "Failed to load media progress", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@BookPlayerActivity, "Failed to load media progress", Toast.LENGTH_SHORT).show()
                         }
                     }
 
                     override fun onFailure(call: Call<MediaProgressResponse>, t: Throwable) {
-                        Toast.makeText(this@PlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@BookPlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
                     }
                 })
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        mediaSession.release()
-    }
-
     companion object {
-        private const val EXTRA_PODCAST_ID = "podcast_id"
-        private const val EXTRA_EPISODE_ID = "episode_id"
+        private const val EXTRA_BOOK_ID = "book_id"
 
-        fun createIntent(context: Context, podcastId: String, episodeId: String): Intent {
-            return Intent(context, PlayerActivity::class.java).apply {
-                putExtra(EXTRA_PODCAST_ID, podcastId)
-                putExtra(EXTRA_EPISODE_ID, episodeId)
+        fun createIntent(context: Context, bookId: String): Intent {
+            return Intent(context, BookPlayerActivity::class.java).apply {
+                putExtra(EXTRA_BOOK_ID, bookId)
             }
         }
     }
 }
 
 @Composable
-fun PlayerScreen(
-    podcastId: String,
-    episodeId: String,
+fun BookPlayerScreen(
+    bookId: String,
     mediaSession: MediaSessionCompat,
     isPlaying: Boolean,
     mediaProgress: MediaProgressResponse?,
     onPlayPause: (Boolean) -> Unit
 ) {
-    var episode by remember { mutableStateOf<Episode?>(null) }
+    var bookDetail by remember { mutableStateOf<LibraryItemResponse?>(null) }
     var coverImage by remember { mutableStateOf<Bitmap?>(null) }
-    var playLibraryItemResponse by remember { mutableStateOf<PlayLibraryItemResponse?>(null) }
     val context = LocalContext.current
 
-    LaunchedEffect(podcastId, episodeId) {
-        loadEpisodeDetails(context, podcastId, episodeId) { response ->
-            episode = response?.media?.episodes?.find { it.id == episodeId }
+    LaunchedEffect(bookId) {
+        loadBookDetails(context, bookId) { response ->
+            bookDetail = response
         }
-        loadCoverImage(context, podcastId) { bitmap ->
+        loadCoverImage(context, bookId) { bitmap ->
             coverImage = bitmap
-        }
-        playLibraryItem(context, podcastId, episodeId) { response ->
-            playLibraryItemResponse = response
         }
     }
 
@@ -233,24 +219,24 @@ fun PlayerScreen(
         coverImage?.let {
             Image(
                 bitmap = it.asImageBitmap(),
-                contentDescription = episode?.title ?: "Cover Image",
+                contentDescription = bookDetail?.media?.metadata?.title ?: "Cover Image",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        episode?.let {
-            Text(text = it.title, style = MaterialTheme.typography.titleLarge)
+        bookDetail?.let {
+            Text(text = it.media.metadata.title, style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
-            val contentUrl = ApiClient.generateFullUrl(it.audioTrack?.contentUrl?: "")
+            val contentUrl = it.media.tracks.firstOrNull()?.contentUrl?.let { url -> ApiClient.generateFullUrl(url) }
             if (contentUrl != null) {
                 MediaPlayerController(
                     contentUrl,
                     mediaSession,
                     isPlaying,
                     onPlayPause,
-                    mediaProgress?.duration ?: episode?.audioTrack?.duration?.toFloat() ?: 0f,
+                    mediaProgress?.duration ?: bookDetail?.media?.duration?.toFloat() ?: 0f,
                     mediaProgress?.currentTime ?: 0f
                 )
             }
@@ -258,61 +244,14 @@ fun PlayerScreen(
     }
 }
 
-private fun playLibraryItem(
+private fun loadBookDetails(
     context: Context,
-    libraryItemId: String,
-    episodeId: String,
-    callback: (PlayLibraryItemResponse?) -> Unit
-) {
-    val apiClient = ApiClient.getApiService()
-    if (apiClient != null) {
-        val deviceInfo = PlayLibraryItemDeviceInfo(
-            deviceId = "Fire Stick",
-            clientName = context.getString(R.string.app_name),
-            clientVersion = "0.0.1",
-            manufacturer = "Amazon",
-            model = Build.MODEL,
-            sdkVersion = 25
-        )
-        val request = PlayLibraryItemRequest(
-            deviceInfo = deviceInfo,
-            forceDirectPlay = false,
-            forceTranscode = false,
-            supportedMimeTypes = emptyList(),
-            mediaPlayer = "unknown"
-        )
-
-        apiClient.playLibraryItem(libraryItemId, episodeId, request)
-            .enqueue(object : Callback<PlayLibraryItemResponse> {
-                override fun onResponse(
-                    call: Call<PlayLibraryItemResponse>,
-                    response: Response<PlayLibraryItemResponse>
-                ) {
-                    if (response.isSuccessful) {
-                        callback(response.body())
-                    } else {
-                        callback(null)
-                    }
-                }
-
-                override fun onFailure(call: Call<PlayLibraryItemResponse>, t: Throwable) {
-                    callback(null)
-                }
-            })
-    } else {
-        callback(null)
-    }
-}
-
-private fun loadEpisodeDetails(
-    context: Context,
-    podcastId: String,
-    episodeId: String,
+    bookId: String,
     callback: (LibraryItemResponse?) -> Unit
 ) {
     val apiClient = ApiClient.getApiService()
     if (apiClient != null) {
-        apiClient.getLibraryItem(podcastId).enqueue(object : Callback<LibraryItemResponse> {
+        apiClient.getLibraryItem(bookId).enqueue(object : Callback<LibraryItemResponse> {
             override fun onResponse(
                 call: Call<LibraryItemResponse>,
                 response: Response<LibraryItemResponse>
@@ -320,8 +259,7 @@ private fun loadEpisodeDetails(
                 if (response.isSuccessful) {
                     callback(response.body())
                 } else {
-                    Toast.makeText(context, "Failed to load episode details", Toast.LENGTH_SHORT)
-                        .show()
+                    Toast.makeText(context, "Failed to load book details", Toast.LENGTH_SHORT).show()
                 }
             }
 
@@ -334,13 +272,13 @@ private fun loadEpisodeDetails(
 
 private suspend fun loadCoverImage(
     context: Context,
-    podcastId: String,
+    bookId: String,
     callback: (Bitmap?) -> Unit
 ) {
     val apiClient = ApiClient.getApiService()
     if (apiClient != null) {
         withContext(Dispatchers.IO) {
-            val response = apiClient.getItemCover(podcastId).execute()
+            val response = apiClient.getItemCover(bookId).execute()
             if (response.isSuccessful) {
                 response.body()?.let { responseBody ->
                     val inputStream = responseBody.byteStream()

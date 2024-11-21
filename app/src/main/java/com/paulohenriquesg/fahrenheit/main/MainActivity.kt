@@ -1,4 +1,4 @@
-package com.paulohenriquesg.fahrenheit
+package com.paulohenriquesg.fahrenheit.main
 
 import android.content.Context
 import android.content.Intent
@@ -75,6 +75,7 @@ import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibraryItemsResponse
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
+import com.paulohenriquesg.fahrenheit.settings.SettingsActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.Dispatchers

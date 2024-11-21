@@ -5,7 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import com.paulohenriquesg.fahrenheit.MainActivity
+import com.paulohenriquesg.fahrenheit.main.MainActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 

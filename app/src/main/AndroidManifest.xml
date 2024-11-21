@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.paulohenriquesg.fahrenheit"
-    xmlns:tools="http://schemas.android.com/tools">
+    package="com.paulohenriquesg.fahrenheit">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -22,7 +21,7 @@
         android:theme="@style/Theme.Fahrenheit"
         android:usesCleartextTraffic="true">
         <activity
-            android:name="com.paulohenriquesg.fahrenheit.MainActivity"
+            android:name="com.paulohenriquesg.fahrenheit.main.MainActivity"
             android:exported="true">
 <!--            <intent-filter>-->
 <!--                <action android:name="android.intent.action.MAIN" />-->
@@ -41,10 +40,10 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".SettingsActivity" />
-        <activity android:name=".DetailActivity" />
-        <activity android:name=".PlayerActivity" />
-        <activity android:name=".BookPlayerActivity" />
+        <activity android:name=".settings.SettingsActivity" />
+        <activity android:name=".main.DetailActivity" />
+        <activity android:name=".podcast.PlayerActivity" />
+        <activity android:name=".book.BookPlayerActivity" />
     </application>
 
 </manifest>

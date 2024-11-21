@@ -1,4 +1,4 @@
-package com.paulohenriquesg.fahrenheit
+package com.paulohenriquesg.fahrenheit.main
 
 import android.content.Context
 import android.content.Intent
@@ -44,6 +44,8 @@ import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.book.BookPlayerActivity
+import com.paulohenriquesg.fahrenheit.podcast.PlayerActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

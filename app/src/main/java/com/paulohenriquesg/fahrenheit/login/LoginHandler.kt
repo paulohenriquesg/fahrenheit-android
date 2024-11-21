@@ -5,10 +5,10 @@ import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.MutableState
-import com.paulohenriquesg.fahrenheit.MainActivity
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LoginRequest
 import com.paulohenriquesg.fahrenheit.api.LoginResponse
+import com.paulohenriquesg.fahrenheit.main.MainActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import retrofit2.Call
 import retrofit2.Callback
