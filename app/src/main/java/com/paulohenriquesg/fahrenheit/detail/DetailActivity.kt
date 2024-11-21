@@ -1,4 +1,4 @@
-package com.paulohenriquesg.fahrenheit.main
+package com.paulohenriquesg.fahrenheit.detail
 
 import android.content.Context
 import android.content.Intent
@@ -52,6 +52,7 @@ import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -269,9 +270,19 @@ class DetailActivity : ComponentActivity() {
     }
 
     private fun formatPubDate(pubDate: String): String {
-        val parser = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.getDefault())
+        val formats = listOf(
+            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.getDefault()),
+            SimpleDateFormat("yyyy", Locale.getDefault())
+        )
         val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        return parser.parse(pubDate)?.let { formatter.format(it) } ?: pubDate
+        for (format in formats) {
+            try {
+                return format.parse(pubDate)?.let { formatter.format(it) } ?: pubDate
+            } catch (e: ParseException) {
+                // Continue to the next format
+            }
+        }
+        return pubDate // Return the original date string if no format matches
     }
 
     companion object {
