@@ -21,18 +21,17 @@ object ApiClient {
         host = userPreferences.host
         token = userPreferences.token
 
-        if (host != null && token != null) {
-            if (!host!!.startsWith("http://") && !host!!.startsWith("https://")) {
-                // Clear shared preferences
-                sharedPreferencesHandler.clearPreferences()
-                // Navigate to login screen
-                val intent = Intent(context, LoginActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                context.startActivity(intent)
-            } else {
-                apiService = create(host!!, token!!)
-            }
+        if (!host!!.startsWith("http://") && !host!!.startsWith("https://")) {
+            // Clear shared preferences
+            sharedPreferencesHandler.clearPreferences()
+            // Navigate to login screen
+            val intent = Intent(context, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            context.startActivity(intent)
+        } else {
+            apiService = create(host!!, token!!)
         }
+
     }
 
     fun getApiService(): ApiService? {
