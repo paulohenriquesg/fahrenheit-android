@@ -1,7 +1,6 @@
 // LoginScreen.kt
 package com.paulohenriquesg.fahrenheit.login
 
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -36,13 +35,16 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.paulohenriquesg.fahrenheit.R
+import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 
 @Composable
 fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> Unit) {
     val context = LocalContext.current
-    val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-    var host by remember { mutableStateOf(sharedPreferences.getString("host", "") ?: "") }
-    var username by remember { mutableStateOf(sharedPreferences.getString("username", "") ?: "") }
+    val sharedPreferencesHandler = SharedPreferencesHandler(context)
+    val userPreferences = sharedPreferencesHandler.getUserPreferences()
+
+    var host by remember { mutableStateOf(userPreferences.host) }
+    var username by remember { mutableStateOf(userPreferences.username) }
     var password by remember { mutableStateOf("") }
     var isLoading = remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current

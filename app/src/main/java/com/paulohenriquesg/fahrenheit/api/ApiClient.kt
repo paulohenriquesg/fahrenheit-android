@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.api
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.logging.HttpLoggingInterceptor
@@ -13,9 +14,10 @@ object ApiClient {
     private var token: String? = null
 
     fun initialize(context: Context) {
-        val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        host = sharedPreferences.getString("host", null)
-        token = sharedPreferences.getString("token", null)
+        val sharedPreferencesHandler = SharedPreferencesHandler(context)
+        val userPreferences = sharedPreferencesHandler.getUserPreferences()
+        host = userPreferences.host
+        token = userPreferences.token
 
         if (host != null && token != null) {
             apiService = create(host!!, token!!)

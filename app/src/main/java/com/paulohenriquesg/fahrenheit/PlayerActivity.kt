@@ -1,4 +1,3 @@
-// PlayerActivity.kt
 package com.paulohenriquesg.fahrenheit
 
 import android.content.Context

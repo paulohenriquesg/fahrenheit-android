@@ -74,6 +74,9 @@ import com.paulohenriquesg.fahrenheit.api.LibrariesResponse
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibraryItemsResponse
+import com.paulohenriquesg.fahrenheit.login.LoginActivity
+import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
+import com.paulohenriquesg.fahrenheit.storage.UserPreferences
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -87,19 +90,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Retrieve username from SharedPreferences
-        val sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        val username = sharedPreferences.getString("username", "User")
-        val isDarkTheme = sharedPreferences.getBoolean("dark_theme", false)
+        // Use SharedPreferencesHandler to retrieve user preferences
+        val sharedPreferencesHandler = SharedPreferencesHandler(this)
+        val userPreferences = sharedPreferencesHandler.getUserPreferences()
 
         setContent {
-            FahrenheitTheme(isInDarkTheme = isDarkTheme) {
+            FahrenheitTheme(isInDarkTheme = userPreferences.darkTheme) {
                 Surface(
                     color = MaterialTheme.colorScheme.background,
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
-                    MainScreen(username ?: "User", ::fetchLibraryItems)
+                    MainScreen(userPreferences.username, ::fetchLibraryItems)
                 }
             }
         }

@@ -9,11 +9,13 @@ import com.paulohenriquesg.fahrenheit.MainActivity
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LoginRequest
 import com.paulohenriquesg.fahrenheit.api.LoginResponse
+import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
 class LoginHandler(private val context: Context) {
+    private val sharedPreferencesHandler = SharedPreferencesHandler(context)
 
     fun handleLogin(
         host: String,
@@ -78,11 +80,11 @@ class LoginHandler(private val context: Context) {
     }
 
     private fun saveToLocalStorage(host: String, username: String, token: String) {
-        val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
-        editor.putString("host", host)
-        editor.putString("username", username)
-        editor.putString("token", token)
-        editor.apply()
+        val userPreferences = sharedPreferencesHandler.getUserPreferences().copy(
+            host = host,
+            username = username,
+            token = token
+        )
+        sharedPreferencesHandler.saveUserPreferences(userPreferences)
     }
 }

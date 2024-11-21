@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.paulohenriquesg.fahrenheit.MainActivity
+import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 
 class LoginActivity : ComponentActivity() {
@@ -18,10 +19,11 @@ class LoginActivity : ComponentActivity() {
 
         loginHandler = LoginHandler(this)
 
-        // Check if host exists in local storage
-        val sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        val host = sharedPreferences.getString("host", null)
-        if (host != null) {
+        // Use SharedPreferencesHandler to check if host exists in local storage
+        val sharedPreferencesHandler = SharedPreferencesHandler(this)
+        val userPreferences = sharedPreferencesHandler.getUserPreferences()
+        val host = userPreferences.host
+        if (host.isNotEmpty()) {
             // Redirect to MainActivity
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
