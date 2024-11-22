@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.paulohenriquesg.fahrenheit.api.Chapter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -34,6 +35,7 @@ fun MediaPlayerController(
     onPlayPause: (Boolean) -> Unit,
     duration: Float = 0f,
     currentTime: Float = 0f,
+    chapters: List<Chapter>? = null
 ) {
     Log.d("MediaPlayerController", "URL: $url")
 
@@ -115,6 +117,22 @@ fun MediaPlayerController(
             },
             modifier = Modifier.padding(top = 16.dp)
         )
+
+        chapters?.let {
+            Row(
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                it.forEach { track ->
+                    val trackPosition = track.start / totalTime
+                    Text(
+                        text = "|",
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = (trackPosition * 100).dp)
+                    )
+                }
+            }
+        }
 
         Row(
             modifier = Modifier.padding(top = 8.dp)

@@ -237,7 +237,8 @@ fun BookPlayerScreen(
                     isPlaying,
                     onPlayPause,
                     mediaProgress?.duration ?: bookDetail?.media?.duration?.toFloat() ?: 0f,
-                    mediaProgress?.currentTime ?: 0f
+                    mediaProgress?.currentTime ?: 0f,
+                    it.media.chapters
                 )
             }
         } ?: Text(text = "Loading...")
