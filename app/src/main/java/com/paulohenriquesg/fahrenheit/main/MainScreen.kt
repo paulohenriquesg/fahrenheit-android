@@ -11,15 +11,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Podcasts
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
@@ -40,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -72,6 +77,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
     var currentLibraryName by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     var isRowLayout by remember { mutableStateOf(true) }
+    var selectedItem by remember { mutableStateOf<String?>(null) }
 
     val apiClient = ApiClient.getApiService()
     if (apiClient == null) {
@@ -94,7 +100,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 response: Response<LibrariesResponse>
             ) {
                 if (response.isSuccessful) {
-                    libraries = response.body()?.libraries ?: emptyList()
+                    libraries = response.body()?.libraries?.sortedBy { it.displayOrder } ?: emptyList()
 
                     if (libraries.isNotEmpty()) {
                         currentLibraryName = libraries[0].name
@@ -136,8 +142,10 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
 
                 Row(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .padding(16.dp)
                         .clickable {
+                            selectedItem = "Home"
                             scope.launch { drawerState.close() }
                         },
                     verticalAlignment = Alignment.CenterVertically
@@ -148,8 +156,10 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 }
                 Row(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .padding(16.dp)
                         .clickable {
+                            selectedItem = "Profile"
                             scope.launch { drawerState.close() }
                         },
                     verticalAlignment = Alignment.CenterVertically
@@ -160,8 +170,10 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 }
                 Row(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .padding(16.dp)
                         .clickable {
+                            selectedItem = "Settings"
                             val intent = SettingsActivity.createIntent(context)
                             context.startActivity(intent)
                             scope.launch { drawerState.close() }
@@ -177,11 +189,15 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
 
                 Row(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .padding(16.dp)
-                        .clickable { /* Handle Libraries click */ },
+                        .clickable {
+                            selectedItem = "Libraries"
+            selectedItem = null // Unselect the item
+                        },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.Settings, contentDescription = "Libraries")
+                    Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = "Libraries")
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Libraries")
                 }
@@ -190,17 +206,24 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 libraries.forEach { library ->
                     Row(
                         modifier = Modifier
+                            .fillMaxWidth()
                             .padding(16.dp)
                             .clickable {
+                                selectedItem = library.name
                                 currentLibraryName = library.name
                                 fetchLibraryItems(library.id) { items ->
                                     libraryItems = items
                                     scrollToFirstItem() // Scroll to the first item when switching libraries
                                 }
-                                scope.launch { drawerState.close() }
+                scope.launch {
+                    drawerState.close()
+                    selectedItem = null // Unselect the item
+                }
                             },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Icon(getIconForMediaType(library.mediaType), contentDescription = library.name)
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(library.name)
                     }
                 }
@@ -211,13 +234,16 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
 
                 Row(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .padding(16.dp)
                         .clickable {
                             // Handle Logout click
+                            selectedItem = "Logout"
                             sharedPreferencesHandler.clearPreferences()
                             val intent = Intent(context, LoginActivity::class.java)
                             context.startActivity(intent)
                             (context as ComponentActivity).finish()
+            selectedItem = null // Unselect the item
                         },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -273,4 +299,17 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
             }
         }
     )
+}
+
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Text(text = "Hello, $name!", modifier = modifier)
+}
+
+fun getIconForMediaType(mediaType: String): ImageVector {
+    return when (mediaType) {
+        "book" -> Icons.Filled.Book
+        "podcast" -> Icons.Filled.Podcasts
+        else -> Icons.Filled.Book // default icon
+    }
 }

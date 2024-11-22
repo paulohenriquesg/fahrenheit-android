@@ -121,7 +121,6 @@ class DetailActivity : ComponentActivity() {
                             .fillMaxWidth()
                             .padding(top = 8.dp)
                     ) {
-                        @Suppress("UNUSED_EXPRESSION")
                         val description = it.media.metadata.description ?: "No description available"
                         val annotatedDescription = remember(description) {
                             buildAnnotatedString {
