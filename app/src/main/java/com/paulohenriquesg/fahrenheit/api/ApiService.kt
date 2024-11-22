@@ -23,7 +23,7 @@ interface ApiService {
         @Query("limit") limit: Int? = null,
         @Query("page") page: Int? = null,
         @Query("desc") desc: Boolean? = null,
-        @Query("include") include: String = "rssfeed,numEpisodesIncomplete",
+        @Query("include", encoded = true) include: String = "rssfeed,numEpisodesIncomplete",
         @Query("minified") minified: Int = 0
     ): Call<LibraryItemsResponse>
 
@@ -31,7 +31,7 @@ interface ApiService {
     fun getLibraryItem(
         @Path("itemId") itemId: String,
         @Query("expanded") expanded: Int = 1,
-        @Query("include") include: String = "progress,rssfeed,authors,downloads"
+        @Query("include", encoded = true) include: String = "progress,rssfeed,authors,downloads"
     ): Call<LibraryItemResponse>
 
     @GET("api/items/{itemId}/cover")
