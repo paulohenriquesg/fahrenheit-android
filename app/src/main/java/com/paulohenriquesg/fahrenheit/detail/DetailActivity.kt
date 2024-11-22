@@ -79,15 +79,13 @@ class DetailActivity : ComponentActivity() {
     fun DetailScreen(itemId: String) {
         var itemDetail by remember { mutableStateOf<LibraryItemResponse?>(null) }
         var coverImage by remember { mutableStateOf<Bitmap?>(null) }
-        var episodes by remember { mutableStateOf<List<Episode>>(emptyList()) }
-    var expanded by remember { mutableStateOf(false) }
+        var expanded by remember { mutableStateOf(false) }
 
         val context = LocalContext.current
 
         LaunchedEffect(itemId) {
             loadItemDetails(context, itemId) { response ->
                 itemDetail = response
-                episodes = response?.media?.episodes.orEmpty()
             }
             loadCoverImage(context, itemId) { bitmap ->
                 coverImage = bitmap
@@ -116,43 +114,43 @@ class DetailActivity : ComponentActivity() {
                 Column {
                     itemDetail?.let {
                         Text(text = it.media.metadata.title, style = MaterialTheme.typography.titleLarge)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
-                    ) {
-                        val description = it.media.metadata.description ?: "No description available"
-                        val annotatedDescription = remember(description) {
-                            buildAnnotatedString {
-                                append(
-                                    HtmlCompat.fromHtml(description, HtmlCompat.FROM_HTML_MODE_COMPACT).toString()
-                                )
-                            }
-                        }
-                        Text(
-                            text = if (expanded) annotatedDescription else buildAnnotatedString { append(annotatedDescription.text.take(100)) },
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = if (expanded) Int.MAX_VALUE else 5,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = if (expanded) "View Less" else "View More",
-                            color = Color.Blue,
+                        Box(
                             modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .clickable { expanded = !expanded }
+                                .fillMaxWidth()
                                 .padding(top = 8.dp)
-                        )
-                    }
+                        ) {
+                        val description = it.media.metadata.description ?: "No description available"
+                            val annotatedDescription = remember(description) {
+                                buildAnnotatedString {
+                                    append(
+                                    HtmlCompat.fromHtml(description, HtmlCompat.FROM_HTML_MODE_COMPACT).toString()
+                                    )
+                                }
+                            }
+                            Text(
+                            text = if (expanded) annotatedDescription else buildAnnotatedString { append(annotatedDescription.text.take(100)) },
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = if (expanded) Int.MAX_VALUE else 5,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = if (expanded) "View Less" else "View More",
+                                color = Color.Blue,
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .clickable { expanded = !expanded }
+                                    .padding(top = 8.dp)
+                            )
+                        }
                     } ?: Text(text = "Loading...")
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-        if (itemDetail?.mediaType == "book") {
+            if (itemDetail?.mediaType == "book") {
                 Button(
                     onClick = {
-                    val intent = BookPlayerActivity.createIntent(context, itemId)
+                        val intent = BookPlayerActivity.createIntent(context, itemId)
                         context.startActivity(intent)
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -160,7 +158,7 @@ class DetailActivity : ComponentActivity() {
                     Text(text = "Play Book")
                 }
             } else {
-                itemDetail?.media?.episodes?.let { episodes ->
+                itemDetail?.media?.episodes?.sortedByDescending { it.publishedAt }?.let { episodes ->
                     if (episodes.isNotEmpty()) {
                         Text(text = "Episodes", style = MaterialTheme.typography.titleMedium)
                         LazyColumn {
