@@ -13,6 +13,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,9 +27,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.paulohenriquesg.fahrenheit.GlobalMediaPlayer
@@ -45,6 +49,7 @@ import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+
 
 class BookPlayerActivity : ComponentActivity() {
     private var isPlaying by mutableStateOf(false)
@@ -227,7 +232,30 @@ fun BookPlayerScreen(
         }
         Spacer(modifier = Modifier.height(8.dp))
         bookDetail?.let {
-            Text(text = it.media.metadata.title, style = MaterialTheme.typography.titleLarge)
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = it.media.metadata.title,
+        style = MaterialTheme.typography.titleLarge
+                )
+                it.media.metadata.seriesName.let { seriesName ->
+                    Text(
+                        text = "($seriesName)",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontStyle = FontStyle.Italic,
+                            color = Color.Gray.copy(alpha = 0.7f)
+                        ),
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+            }
+            it.media.metadata.authorName?.let { authorName ->
+                Text(text = "Author: $authorName", style = MaterialTheme.typography.bodyMedium)
+            }
+            it.media.metadata.narratorName?.let { narratorName ->
+                Text(text = "Narrator: $narratorName", style = MaterialTheme.typography.bodyMedium)
+            }
             Spacer(modifier = Modifier.height(8.dp))
             val contentUrl = it.media.tracks.firstOrNull()?.contentUrl?.let { url -> ApiClient.generateFullUrl(url) }
             if (contentUrl != null) {
