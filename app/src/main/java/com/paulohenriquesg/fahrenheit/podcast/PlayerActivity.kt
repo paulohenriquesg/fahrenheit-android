@@ -156,7 +156,12 @@ class PlayerActivity : ComponentActivity() {
                         response: Response<MediaProgressResponse>
                     ) {
                         if (response.isSuccessful) {
-                            mediaProgress = if (response.body()?.episodeId == episodeId) response.body() else null
+                            val responseBody = response.body()
+                            if (responseBody?.episodeId == responseBody?.mediaItemId) {
+                                mediaProgress = responseBody
+                            } else {
+                                mediaProgress = null
+                            }
                         } else if (response.code() == 404) {
                             // Call userCreateOrUpdateMediaProgress if 404
                             val request = MediaProgressRequest(currentTime = 0f, duration = 0f)
