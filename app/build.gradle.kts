@@ -51,7 +51,7 @@ android {
 
 dependencies {
     // handle extra icons
-    implementation("androidx.compose.material:material-icons-extended:1.0.5")
+    implementation(libs.androidx.material.icons.extended)
 
     // handle API
     implementation(libs.retrofit)
@@ -61,11 +61,11 @@ dependencies {
     implementation(libs.logging.interceptor)
 
     // handle cards
-    implementation("io.coil-kt:coil-compose:2.2.2")
+    implementation(libs.coil.compose)
 
     // handle media controls and player
-    implementation("androidx.media:media:1.6.0")
-    implementation("androidx.media2:media2-session:1.2.1")
+    implementation(libs.androidx.media)
+    implementation(libs.androidx.media2.session)
 
     // handle UI
     implementation(libs.androidx.material3)
