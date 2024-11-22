@@ -112,7 +112,12 @@ class BookPlayerActivity : ComponentActivity() {
                 if (bookId != null) {
                     fetchMediaProgress(bookId)
 
-                    BookPlayerScreen(bookId, mediaSession, isPlaying, mediaProgress) { newIsPlaying ->
+                    BookPlayerScreen(
+                        bookId,
+                        mediaSession,
+                        isPlaying,
+                        mediaProgress
+                    ) { newIsPlaying ->
                         isPlaying = newIsPlaying
                     }
                 } else {
@@ -132,17 +137,26 @@ class BookPlayerActivity : ComponentActivity() {
                 delay(5000L)
                 val currentTimeState = mediaPlayer.currentPosition / 1000f
                 val totalTime = mediaPlayer.duration / 1000f
-                val request = MediaProgressRequest(currentTime = currentTimeState, duration = totalTime)
-                apiClient?.userCreateOrUpdateMediaProgress(bookId, request= request)
+                val request =
+                    MediaProgressRequest(currentTime = currentTimeState, duration = totalTime)
+                apiClient?.userCreateOrUpdateMediaProgress(bookId, request = request)
                     ?.enqueue(object : Callback<Void> {
                         override fun onResponse(call: Call<Void>, response: Response<Void>) {
                             if (!response.isSuccessful) {
-                                Toast.makeText(this@BookPlayerActivity, "Failed to update media progress", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@BookPlayerActivity,
+                                    "Failed to update media progress",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
 
                         override fun onFailure(call: Call<Void>, t: Throwable) {
-                            Toast.makeText(this@BookPlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@BookPlayerActivity,
+                                "Network error: ${t.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     })
             }
@@ -152,7 +166,7 @@ class BookPlayerActivity : ComponentActivity() {
     private fun fetchMediaProgress(libraryItemId: String) {
         val apiClient = ApiClient.getApiService()
         if (apiClient != null) {
-            apiClient.userGetMediaProgress(libraryItemId= libraryItemId)
+            apiClient.userGetMediaProgress(libraryItemId = libraryItemId)
                 .enqueue(object : Callback<MediaProgressResponse> {
                     override fun onResponse(
                         call: Call<MediaProgressResponse>,
@@ -162,27 +176,49 @@ class BookPlayerActivity : ComponentActivity() {
                             mediaProgress = response.body()
                         } else if (response.code() == 404) {
                             val request = MediaProgressRequest(currentTime = 0f, duration = 0f)
-                            apiClient.userCreateOrUpdateMediaProgress(libraryItemId= libraryItemId, request = request)
+                            apiClient.userCreateOrUpdateMediaProgress(
+                                libraryItemId = libraryItemId,
+                                request = request
+                            )
                                 .enqueue(object : Callback<Void> {
-                                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                                    override fun onResponse(
+                                        call: Call<Void>,
+                                        response: Response<Void>
+                                    ) {
                                         if (response.isSuccessful) {
                                             // Handle successful creation
                                         } else {
-                                            Toast.makeText(this@BookPlayerActivity, "Failed to create media progress", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                this@BookPlayerActivity,
+                                                "Failed to create media progress",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     }
 
                                     override fun onFailure(call: Call<Void>, t: Throwable) {
-                                        Toast.makeText(this@BookPlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            this@BookPlayerActivity,
+                                            "Network error: ${t.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 })
                         } else {
-                            Toast.makeText(this@BookPlayerActivity, "Failed to load media progress", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@BookPlayerActivity,
+                                "Failed to load media progress",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
 
                     override fun onFailure(call: Call<MediaProgressResponse>, t: Throwable) {
-                        Toast.makeText(this@BookPlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@BookPlayerActivity,
+                            "Network error: ${t.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 })
         }
@@ -220,59 +256,70 @@ fun BookPlayerScreen(
         }
     }
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
         ) {
-        coverImage?.let {
-            Image(
-                bitmap = it.asImageBitmap(),
-                contentDescription = bookDetail?.media?.metadata?.title ?: "Cover Image",
-                modifier = Modifier
-                    .size(200.dp) // Adjust the size to keep the image big
-                    .padding(end = 16.dp)
-            )
-        }
+            coverImage?.let {
+                Image(
+                    bitmap = it.asImageBitmap(),
+                    contentDescription = bookDetail?.media?.metadata?.title ?: "Cover Image",
+                    modifier = Modifier
+                        .size(200.dp) // Adjust the size to keep the image big
+                        .padding(end = 16.dp)
+                )
+            }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-        bookDetail?.let {
-                Text(
-                    text = it.media.metadata.title,
-        style = MaterialTheme.typography.titleLarge
-                )
-                it.media.metadata.seriesName?.let { seriesName ->
+                bookDetail?.let {
                     Text(
-                        text = "($seriesName)",
+                        text = it.media.metadata.title,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        text = it.media.metadata.seriesName?.takeIf { it.isNotEmpty() }?.let { seriesName ->
+                            "($seriesName)"
+                        } ?: "",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontStyle = FontStyle.Italic,
                             color = Color.Gray.copy(alpha = 0.7f)
                         ),
                         modifier = Modifier.padding(start = 4.dp)
                     )
-                }
-            it.media.metadata.authorName?.let { authorName ->
-                Text(text = "Author: $authorName", style = MaterialTheme.typography.bodyMedium)
-            }
-            it.media.metadata.narratorName?.let { narratorName ->
-                Text(text = "Narrator: $narratorName", style = MaterialTheme.typography.bodyMedium)
-            }
-            if (isPlaying) {
-                val currentChapter = it.media.chapters?.firstOrNull { chapter ->
-                    (mediaProgress?.currentTime ?: 0f) in chapter.start..chapter.end
-                }
-                currentChapter?.let { chapter ->
-                    Text(text = "Current Chapter: ${chapter.title}", style = MaterialTheme.typography.bodyMedium)
-                }
-            }
+                    it.media.metadata.authorName?.let { authorName ->
+                        Text(
+                            text = "Author: $authorName",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    it.media.metadata.narratorName?.let { narratorName ->
+                        Text(
+                            text = "Narrator: $narratorName",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    val currentChapter = it.media.chapters?.firstOrNull { chapter ->
+                        (mediaProgress?.currentTime ?: 0f) in chapter.start..chapter.end
+                    }
+                    currentChapter?.let { chapter ->
+                        Text(
+                            text = "Current Chapter: ${chapter.title}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 } ?: Text(text = "Loading...")
             }
         }
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         bookDetail?.let {
-            val contentUrl = it.media.tracks.firstOrNull()?.contentUrl?.let { url -> ApiClient.generateFullUrl(url) }
+            val contentUrl = it.media.tracks.firstOrNull()?.contentUrl?.let { url ->
+                ApiClient.generateFullUrl(url)
+            }
             if (contentUrl != null) {
                 MediaPlayerController(
                     contentUrl,
@@ -303,7 +350,8 @@ private fun loadBookDetails(
                 if (response.isSuccessful) {
                     callback(response.body())
                 } else {
-                    Toast.makeText(context, "Failed to load book details", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Failed to load book details", Toast.LENGTH_SHORT)
+                        .show()
                 }
             }
 

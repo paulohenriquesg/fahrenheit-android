@@ -2,9 +2,12 @@ package com.paulohenriquesg.fahrenheit
 
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,12 +23,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.paulohenriquesg.fahrenheit.api.Chapter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
-
 
 @Composable
 fun MediaPlayerController(
@@ -43,6 +50,7 @@ fun MediaPlayerController(
     var progress by remember { mutableStateOf(if (duration > 0) currentTime / duration else 0f) }
     var currentTimeState by remember { mutableStateOf(currentTime) }
     var totalTime by remember { mutableStateOf(duration) }
+    var sliderSize by remember { mutableStateOf(IntSize.Zero) }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(url) {
@@ -108,28 +116,25 @@ fun MediaPlayerController(
             }
         }
 
-        Slider(
-            value = progress,
-            onValueChange = { newValue ->
-                progress = newValue
-                mediaPlayer.seekTo((newValue * totalTime * 1000).toInt())
-                currentTimeState = mediaPlayer.currentPosition / 1000f
-            },
-            modifier = Modifier.padding(top = 16.dp)
-        )
+        Box(modifier = Modifier.padding(top = 16.dp)) {
+            Slider(
+                value = progress,
+                onValueChange = { newValue ->
+                    progress = newValue
+                    mediaPlayer.seekTo((newValue * totalTime * 1000).toInt())
+                    currentTimeState = mediaPlayer.currentPosition / 1000f
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        sliderSize = coordinates.size
+                    }
+            )
 
-        chapters?.let {
-            Row(
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
-                it.forEach { track ->
-                    val trackPosition = track.start / totalTime
-                    Text(
-                        text = "|",
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = (trackPosition * 100).dp)
-                    )
+            Canvas(modifier = Modifier.matchParentSize()) {
+                chapters?.dropLast(1)?.forEach { chapter ->
+                    val percentage = (chapter.end / totalTime) * 100
+                    drawLineAtPercentage(percentage.toFloat(), sliderSize.width, 4.dp.toPx())
                 }
             }
         }
@@ -138,15 +143,25 @@ fun MediaPlayerController(
             modifier = Modifier.padding(top = 8.dp)
         ) {
             Text(
-                text = "Current Time: ${formatTime(currentTimeState.toInt()*1000)}",
+                text = "Current Time: ${formatTime(currentTimeState.toInt() * 1000)}",
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = "Total Time: ${formatTime(totalTime.toInt()*1000)}",
+                text = "Total Time: ${formatTime(totalTime.toInt() * 1000)}",
                 modifier = Modifier.weight(1f)
             )
         }
     }
+}
+
+fun DrawScope.drawLineAtPercentage(percentage: Float, sliderWidth: Int, trackHeight: Float) {
+    val position = (percentage / 100) * sliderWidth
+    drawLine(
+        color = Color.Gray,
+        start = Offset(x = position, y = (size.height - trackHeight) / 2),
+        end = Offset(x = position, y = (size.height + trackHeight) / 2),
+        strokeWidth = 2f
+    )
 }
 
 fun formatTime(milliseconds: Int): String {
