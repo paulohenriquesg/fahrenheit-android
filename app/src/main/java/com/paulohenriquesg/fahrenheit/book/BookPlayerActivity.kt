@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -221,25 +223,27 @@ fun BookPlayerScreen(
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
+        ) {
         coverImage?.let {
             Image(
                 bitmap = it.asImageBitmap(),
                 contentDescription = bookDetail?.media?.metadata?.title ?: "Cover Image",
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
+                    .size(200.dp) // Adjust the size to keep the image big
+                    .padding(end = 16.dp)
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
         bookDetail?.let {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Text(
                     text = it.media.metadata.title,
         style = MaterialTheme.typography.titleLarge
                 )
-                it.media.metadata.seriesName.let { seriesName ->
+                it.media.metadata.seriesName?.let { seriesName ->
                     Text(
                         text = "($seriesName)",
                         style = MaterialTheme.typography.bodyMedium.copy(
@@ -249,14 +253,25 @@ fun BookPlayerScreen(
                         modifier = Modifier.padding(start = 4.dp)
                     )
                 }
-            }
             it.media.metadata.authorName?.let { authorName ->
                 Text(text = "Author: $authorName", style = MaterialTheme.typography.bodyMedium)
             }
             it.media.metadata.narratorName?.let { narratorName ->
                 Text(text = "Narrator: $narratorName", style = MaterialTheme.typography.bodyMedium)
             }
+            if (isPlaying) {
+                val currentChapter = it.media.chapters?.firstOrNull { chapter ->
+                    mediaProgress?.currentTime ?: 0f in chapter.start..chapter.end
+                }
+                currentChapter?.let { chapter ->
+                    Text(text = "Current Chapter: ${chapter.title}", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+                } ?: Text(text = "Loading...")
+            }
+        }
             Spacer(modifier = Modifier.height(8.dp))
+        bookDetail?.let {
             val contentUrl = it.media.tracks.firstOrNull()?.contentUrl?.let { url -> ApiClient.generateFullUrl(url) }
             if (contentUrl != null) {
                 MediaPlayerController(
