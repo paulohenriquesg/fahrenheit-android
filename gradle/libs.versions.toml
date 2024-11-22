@@ -24,7 +24,6 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
-androidx-material-icons-extended-v175 = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtendedVersion" }
 androidx-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 androidx-media = { module = "androidx.media:media", version.ref = "media" }
 androidx-media2-session = { module = "androidx.media2:media2-session", version.ref = "media2Session" }
