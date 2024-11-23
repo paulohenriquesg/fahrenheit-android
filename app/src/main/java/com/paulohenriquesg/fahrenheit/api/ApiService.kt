@@ -40,6 +40,9 @@ interface ApiService {
         @Query("format") format: String = "jpg"
     ): Call<ResponseBody>
 
+    @GET("/book_placeholder.jpg")
+    fun getDefaultItemCover(): Call<ResponseBody>
+
     @POST("api/items/{libraryItemId}/play/{episodeId}")
     fun playLibraryItem(
         @Path("libraryItemId") libraryItemId: String,
