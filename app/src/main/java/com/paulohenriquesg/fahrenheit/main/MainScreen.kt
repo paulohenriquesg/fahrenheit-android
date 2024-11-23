@@ -45,9 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.paulohenriquesg.fahrenheit.api.ApiClient
@@ -100,7 +97,8 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 response: Response<LibrariesResponse>
             ) {
                 if (response.isSuccessful) {
-                    libraries = response.body()?.libraries?.sortedBy { it.displayOrder } ?: emptyList()
+                    libraries =
+                        response.body()?.libraries?.sortedBy { it.displayOrder } ?: emptyList()
 
                     if (libraries.isNotEmpty()) {
                         currentLibraryName = libraries[0].name
@@ -193,7 +191,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                         .padding(16.dp)
                         .clickable {
                             selectedItem = "Libraries"
-            selectedItem = null // Unselect the item
+                            selectedItem = null // Unselect the item
                         },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -215,14 +213,17 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                                     libraryItems = items
                                     scrollToFirstItem() // Scroll to the first item when switching libraries
                                 }
-                scope.launch {
-                    drawerState.close()
-                    selectedItem = null // Unselect the item
-                }
+                                scope.launch {
+                                    drawerState.close()
+                                    selectedItem = null // Unselect the item
+                                }
                             },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(getIconForMediaType(library.mediaType), contentDescription = library.name)
+                        Icon(
+                            getIconForMediaType(library.mediaType),
+                            contentDescription = library.name
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(library.name)
                     }
@@ -243,7 +244,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                             val intent = Intent(context, LoginActivity::class.java)
                             context.startActivity(intent)
                             (context as ComponentActivity).finish()
-            selectedItem = null // Unselect the item
+                            selectedItem = null // Unselect the item
                         },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -257,14 +258,14 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .onKeyEvent { keyEvent ->
-                        if (keyEvent.key.keyCode == Key.DirectionLeft.keyCode && !listState.isScrollInProgress) {
-                            scope.launch { drawerState.open() }
-                            true
-                        } else {
-                            false
-                        }
-                    }
+//                    .onKeyEvent { keyEvent ->
+//                        if (keyEvent.key.keyCode == Key.DirectionLeft.keyCode && !listState.isScrollInProgress && !listState.canScrollBackward) {
+//                            scope.launch { drawerState.open() }
+//                            true
+//                        } else {
+//                            false
+//                        }
+//                    }
             ) {
                 IconButton(
                     onClick = { if (!listState.isScrollInProgress) scope.launch { drawerState.open() } },
