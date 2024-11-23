@@ -19,7 +19,7 @@ fun LibraryItemsFluid(libraryItems: List<LibraryItem>) {
     val context = LocalContext.current
 
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 150.dp),
+        columns = GridCells.Adaptive(minSize = 200.dp),
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
