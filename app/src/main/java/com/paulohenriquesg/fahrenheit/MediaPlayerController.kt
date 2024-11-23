@@ -44,7 +44,7 @@ fun MediaPlayerController(
     currentTime: Float = 0f,
     chapters: List<Chapter>? = null
 ) {
-    Log.d("MediaPlayerController", "URL: $url")
+    Log.i("MediaPlayerController", "URL: $url")
 
     val mediaPlayer = remember { GlobalMediaPlayer.getInstance() }
     var progress by remember { mutableStateOf(if (duration > 0) currentTime / duration else 0f) }

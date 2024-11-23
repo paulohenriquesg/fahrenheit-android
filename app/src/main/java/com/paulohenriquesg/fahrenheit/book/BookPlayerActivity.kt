@@ -308,7 +308,7 @@ fun BookPlayerScreen(
                     mediaSession,
                     isPlaying,
                     onPlayPause,
-                    mediaProgress?.duration ?: bookDetail?.media?.duration?.toFloat() ?: 0f,
+                    mediaProgress?.duration?.takeIf { it >= 0 } ?: bookDetail?.media?.duration?.toFloat() ?: 0f,
                     mediaProgress?.currentTime ?: 0f,
                     it.media.chapters
                 )
