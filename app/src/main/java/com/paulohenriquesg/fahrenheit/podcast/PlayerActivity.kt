@@ -150,7 +150,7 @@ class PlayerActivity : ComponentActivity() {
                     ) {
                         if (response.isSuccessful) {
                             val responseBody = response.body()
-                            if (responseBody?.episodeId == responseBody?.mediaItemId) {
+                            if (responseBody?.episodeId == episodeId) {
                                 mediaProgress = responseBody
                             } else {
                                 mediaProgress = null
