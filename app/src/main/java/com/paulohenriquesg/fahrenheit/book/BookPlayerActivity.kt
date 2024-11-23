@@ -3,15 +3,12 @@ package com.paulohenriquesg.fahrenheit.book
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -43,27 +38,23 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
+import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-
 
 class BookPlayerActivity : ComponentActivity() {
     private var isPlaying by mutableStateOf(false)
     private var mediaProgress by mutableStateOf<MediaProgressResponse?>(null)
     private lateinit var mediaSession: MediaSessionCompat
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         mediaSession = MediaSessionCompat(this, "BookPlayerActivity")
-
 
         val bookId = intent.getStringExtra(EXTRA_BOOK_ID)
 
@@ -244,15 +235,11 @@ fun BookPlayerScreen(
     onPlayPause: (Boolean) -> Unit
 ) {
     var bookDetail by remember { mutableStateOf<LibraryItemResponse?>(null) }
-    var coverImage by remember { mutableStateOf<Bitmap?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(bookId) {
         loadBookDetails(context, bookId) { response ->
             bookDetail = response
-        }
-        loadCoverImage(context, bookId) { bitmap ->
-            coverImage = bitmap
         }
     }
 
@@ -265,15 +252,10 @@ fun BookPlayerScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
         ) {
-            coverImage?.let {
-                Image(
-                    bitmap = it.asImageBitmap(),
-                    contentDescription = bookDetail?.media?.metadata?.title ?: "Cover Image",
-                    modifier = Modifier
-                        .size(200.dp) // Adjust the size to keep the image big
-                        .padding(end = 16.dp)
+            CoverImage(
+                itemId = bookId,
+                    contentDescription = bookDetail?.media?.metadata?.title ?: "Cover Image"
                 )
-            }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 bookDetail?.let {
@@ -359,28 +341,5 @@ private fun loadBookDetails(
                 Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
-    }
-}
-
-private suspend fun loadCoverImage(
-    context: Context,
-    bookId: String,
-    callback: (Bitmap?) -> Unit
-) {
-    val apiClient = ApiClient.getApiService()
-    if (apiClient != null) {
-        withContext(Dispatchers.IO) {
-            val response = apiClient.getItemCover(bookId).execute()
-            if (response.isSuccessful) {
-                response.body()?.let { responseBody ->
-                    val inputStream = responseBody.byteStream()
-                    callback(BitmapFactory.decodeStream(inputStream))
-                }
-            } else {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Failed to load cover image", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
     }
 }
