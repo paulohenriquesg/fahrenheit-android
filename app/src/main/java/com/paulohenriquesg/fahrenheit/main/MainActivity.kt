@@ -9,10 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import com.paulohenriquesg.fahrenheit.ui.theme.ThemeViewModel
 
 class MainActivity : ComponentActivity() {
     private lateinit var mainHandler: MainHandler
@@ -28,7 +30,8 @@ class MainActivity : ComponentActivity() {
         val userPreferences = sharedPreferencesHandler.getUserPreferences()
 
         setContent {
-            FahrenheitTheme(isInDarkTheme = userPreferences.darkTheme) {
+            val themeViewModel: ThemeViewModel = viewModel()
+            FahrenheitTheme(themeViewModel = themeViewModel) {
                 Surface(
                     color = MaterialTheme.colorScheme.background,
                     modifier = Modifier.fillMaxSize(),

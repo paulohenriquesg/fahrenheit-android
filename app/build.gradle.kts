@@ -70,6 +70,10 @@ dependencies {
     // handle UI
     implementation(libs.androidx.material3)
     implementation(libs.androidx.tv.material.v100alpha01)
+    implementation("androidx.activity:activity-compose:1.7.2")
+    implementation("androidx.compose.ui:ui:1.5.1")
+    implementation("androidx.compose.material3:material3:1.1.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
