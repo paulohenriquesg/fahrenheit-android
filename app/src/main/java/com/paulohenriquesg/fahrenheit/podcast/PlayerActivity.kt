@@ -2,8 +2,6 @@ package com.paulohenriquesg.fahrenheit.podcast
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.session.MediaSessionCompat
@@ -11,11 +9,9 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +23,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
@@ -42,15 +37,13 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemDeviceInfo
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemRequest
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemResponse
+import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-
 
 class PlayerActivity : ComponentActivity() {
     private lateinit var mediaSession: MediaSessionCompat
@@ -219,16 +212,12 @@ fun PlayerScreen(
     onPlayPause: (Boolean) -> Unit
 ) {
     var episode by remember { mutableStateOf<Episode?>(null) }
-    var coverImage by remember { mutableStateOf<Bitmap?>(null) }
     var playLibraryItemResponse by remember { mutableStateOf<PlayLibraryItemResponse?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(podcastId, episodeId) {
         loadEpisodeDetails(context, podcastId, episodeId) { response ->
             episode = response?.media?.episodes?.find { it.id == episodeId }
-        }
-        loadCoverImage(context, podcastId) { bitmap ->
-            coverImage = bitmap
         }
         playLibraryItem(context, podcastId, episodeId) { response ->
             playLibraryItemResponse = response
@@ -238,15 +227,11 @@ fun PlayerScreen(
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)) {
-        coverImage?.let {
-            Image(
-                bitmap = it.asImageBitmap(),
+        CoverImage(
+            itemId = podcastId,
                 contentDescription = episode?.title ?: "Cover Image",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
+            size = 200.dp
             )
-        }
         Spacer(modifier = Modifier.height(8.dp))
         episode?.let {
             Text(text = it.title, style = MaterialTheme.typography.titleLarge)
@@ -337,28 +322,5 @@ private fun loadEpisodeDetails(
                 Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
-    }
-}
-
-private suspend fun loadCoverImage(
-    context: Context,
-    podcastId: String,
-    callback: (Bitmap?) -> Unit
-) {
-    val apiClient = ApiClient.getApiService()
-    if (apiClient != null) {
-        withContext(Dispatchers.IO) {
-            val response = apiClient.getItemCover(podcastId).execute()
-            if (response.isSuccessful) {
-                response.body()?.let { responseBody ->
-                    val inputStream = responseBody.byteStream()
-                    callback(BitmapFactory.decodeStream(inputStream))
-                }
-            } else {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Failed to load cover image", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
     }
 }
