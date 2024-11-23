@@ -284,7 +284,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 )
                 Column(
                     modifier = Modifier
-                        .align(Alignment.Center)
+                        .align(Alignment.TopCenter)
                         .padding(top = 30.dp) // Add padding to avoid overlap with the menu icon
                 ) {
                     Text(
