@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,13 +19,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun CoverImage(itemId: String, contentDescription: String) {
+fun CoverImage(itemId: String, contentDescription: String, size: Dp = 200.dp) {
     val context = LocalContext.current
     var coverImage by remember(itemId) { mutableStateOf<Bitmap?>(null) }
 
@@ -64,13 +66,12 @@ fun CoverImage(itemId: String, contentDescription: String) {
             bitmap = it.asImageBitmap(),
             contentDescription = contentDescription,
             modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
+                .size(size)
         )
     } ?: Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(size)
             .background(Color.Gray)
     )
 }
