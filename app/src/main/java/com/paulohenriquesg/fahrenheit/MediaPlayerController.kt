@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.Chapter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -98,7 +99,7 @@ fun MediaPlayerController(
                 },
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text(if (isPlaying) "Pause" else "Play")
+                Text(if (isPlaying) "Pause" else "Play", color = MaterialTheme.colorScheme.onPrimary)
             }
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -113,7 +114,7 @@ fun MediaPlayerController(
                 },
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Stop")
+                Text("Stop", color = MaterialTheme.colorScheme.onSecondary)
             }
         }
 
@@ -146,10 +147,11 @@ fun MediaPlayerController(
             Text(
                 text = "Current Time: ${formatTime(currentTimeState.toInt() * 1000)}",
                 modifier = Modifier.weight(1f)
+                , color = androidx.compose.material3.MaterialTheme.colorScheme.surface
             )
             Text(
                 text = "Total Time: ${formatTime(totalTime.toInt() * 1000)}",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f), color = androidx.compose.material3.MaterialTheme.colorScheme.surface
             )
         }
     }

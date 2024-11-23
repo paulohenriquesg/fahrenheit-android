@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -59,42 +60,57 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
         Text(
             text = context.getString(R.string.app_name),
             style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.surface,
             modifier = Modifier
                 .padding(bottom = 16.dp)
         )
         OutlinedTextField(
             value = host,
             onValueChange = { host = it },
-            label = { Text("Host") },
-            leadingIcon = { Icon(Icons.Filled.Language, contentDescription = "Host Icon") },
+            label = { Text("Host", color = MaterialTheme.colorScheme.onBackground) },
+            leadingIcon = { Icon(Icons.Filled.Language, contentDescription = "Host Icon", tint = MaterialTheme.colorScheme.onBackground) },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Next
             ),
             keyboardActions = KeyboardActions(
                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            colors = TextFieldDefaults.colors(
+                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.onBackground,
             )
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = username,
             onValueChange = { username = it },
-            label = { Text("Username") },
-            leadingIcon = { Icon(Icons.Filled.Person, contentDescription = "Username Icon") },
+            label = { Text("Username", color = MaterialTheme.colorScheme.onBackground) },
+            leadingIcon = { Icon(Icons.Filled.Person, contentDescription = "Username Icon", tint = MaterialTheme.colorScheme.onBackground) },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Next
             ),
             keyboardActions = KeyboardActions(
                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            colors = TextFieldDefaults.colors(
+                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.onBackground
             )
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
-            leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = "Password Icon") },
+            label = { Text("Password", color = MaterialTheme.colorScheme.onBackground) },
+            leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = "Password Icon", tint = MaterialTheme.colorScheme.onBackground) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions.Default.copy(
@@ -102,17 +118,24 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
             ),
             keyboardActions = KeyboardActions(
                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            colors = TextFieldDefaults.colors(
+                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.onBackground
             )
         )
         Spacer(modifier = Modifier.height(16.dp))
         if (isLoading.value) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         } else {
             Button(
                 onClick = { handleLogin(host, username, password, isLoading) },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Login")
+                Text("Login", color = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }

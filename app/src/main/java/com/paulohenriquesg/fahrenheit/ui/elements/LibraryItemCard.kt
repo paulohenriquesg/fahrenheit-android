@@ -35,7 +35,8 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
     ) {
         Card(
             elevation = CardDefaults.cardElevation(4.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C))
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -64,7 +65,7 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
             ) {
                 Text(
                     text = if (item.numEpisodesIncomplete > 99) "99+" else item.numEpisodesIncomplete.toString(),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.background,
                     style = MaterialTheme.typography.bodySmall
                 )
             }

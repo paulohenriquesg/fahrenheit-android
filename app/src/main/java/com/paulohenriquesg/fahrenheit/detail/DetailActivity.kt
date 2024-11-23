@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,7 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,11 +61,18 @@ class DetailActivity : ComponentActivity() {
 
         setContent {
             FahrenheitTheme {
-                if (itemId != null) {
-                    DetailScreen(itemId)
-                } else {
-                    Toast.makeText(this, "Item ID is missing", Toast.LENGTH_SHORT).show()
-                    finish()
+                Surface(
+                    color = MaterialTheme.colorScheme.background,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.fillMaxSize(),
+                    shape = RectangleShape
+                ) {
+                    if (itemId != null) {
+                        DetailScreen(itemId)
+                    } else {
+                        Toast.makeText(this, "Item ID is missing", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
                 }
             }
         }
@@ -102,7 +110,8 @@ class DetailActivity : ComponentActivity() {
                     itemDetail?.let {
                         Text(
                             text = it.media.metadata.title,
-                            style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                         )
                         Box(
                             modifier = Modifier
@@ -128,19 +137,20 @@ class DetailActivity : ComponentActivity() {
                                     )
                                 },
                                 style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = if (expanded) Int.MAX_VALUE else 5,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = if (expanded) "View Less" else "View More",
-                                color = Color.Blue,
+                            color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
                                     .clickable { expanded = !expanded }
                                     .padding(top = 8.dp)
                             )
                         }
-                    } ?: Text(text = "Loading...")
+                } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
                 }
             }
 
@@ -153,20 +163,20 @@ class DetailActivity : ComponentActivity() {
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "Play Book")
+                Text(text = "Play Book", color = MaterialTheme.colorScheme.onPrimary)
                 }
             } else {
                 itemDetail?.media?.episodes?.sortedByDescending { it.publishedAt }
                     ?.let { episodes ->
                         if (episodes.isNotEmpty()) {
-                            Text(text = "Episodes", style = MaterialTheme.typography.titleMedium)
+                        Text(text = "Episodes", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                             LazyColumn {
                                 items(episodes) { episode ->
                                     EpisodeCard(episode)
                                 }
                             }
                         } else {
-                            Text(text = "No Episodes", style = MaterialTheme.typography.bodyLarge)
+                            Text(text = "No Episodes", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
             }

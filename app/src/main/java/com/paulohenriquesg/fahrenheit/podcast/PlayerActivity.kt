@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
@@ -98,16 +100,29 @@ class PlayerActivity : ComponentActivity() {
 
         setContent {
             FahrenheitTheme {
-                if (podcastId != null && episodeId != null) {
-                    fetchMediaProgress(podcastId, episodeId)
+                Surface(
+                    color = androidx.tv.material3.MaterialTheme.colorScheme.background,
+                    contentColor = androidx.tv.material3.MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.fillMaxSize(),
+                    shape = RectangleShape
+                ) {
+                    if (podcastId != null && episodeId != null) {
+                        fetchMediaProgress(podcastId, episodeId)
 
-                    PlayerScreen(podcastId, episodeId, mediaSession, isPlaying, mediaProgress) { newIsPlaying ->
-                        isPlaying = newIsPlaying
+                        PlayerScreen(
+                            podcastId,
+                            episodeId,
+                            mediaSession,
+                            isPlaying,
+                            mediaProgress
+                        ) { newIsPlaying ->
+                            isPlaying = newIsPlaying
+                        }
+                    } else {
+                        Toast.makeText(this, "Podcast or Episode ID is missing", Toast.LENGTH_SHORT)
+                            .show()
+                        finish()
                     }
-                } else {
-                    Toast.makeText(this, "Podcast or Episode ID is missing", Toast.LENGTH_SHORT)
-                        .show()
-                    finish()
                 }
             }
         }
@@ -122,17 +137,26 @@ class PlayerActivity : ComponentActivity() {
                 delay(5000L)
                 val currentTimeState = mediaPlayer.currentPosition / 1000f
                 val totalTime = mediaPlayer.duration / 1000f
-                val request = MediaProgressRequest(currentTime = currentTimeState, duration = totalTime)
+                val request =
+                    MediaProgressRequest(currentTime = currentTimeState, duration = totalTime)
                 apiClient?.userCreateOrUpdateMediaProgress(podcastId!!, episodeId!!, request)
                     ?.enqueue(object : Callback<Void> {
                         override fun onResponse(call: Call<Void>, response: Response<Void>) {
                             if (!response.isSuccessful) {
-                                Toast.makeText(this@PlayerActivity, "Failed to update media progress", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@PlayerActivity,
+                                    "Failed to update media progress",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
 
                         override fun onFailure(call: Call<Void>, t: Throwable) {
-                            Toast.makeText(this@PlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@PlayerActivity,
+                                "Network error: ${t.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     })
             }
@@ -158,27 +182,50 @@ class PlayerActivity : ComponentActivity() {
                         } else if (response.code() == 404) {
                             // Call userCreateOrUpdateMediaProgress if 404
                             val request = MediaProgressRequest(currentTime = 0f, duration = 0f)
-                            apiClient.userCreateOrUpdateMediaProgress(libraryItemId, episodeId, request)
+                            apiClient.userCreateOrUpdateMediaProgress(
+                                libraryItemId,
+                                episodeId,
+                                request
+                            )
                                 .enqueue(object : Callback<Void> {
-                                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                                    override fun onResponse(
+                                        call: Call<Void>,
+                                        response: Response<Void>
+                                    ) {
                                         if (response.isSuccessful) {
                                             // Handle successful creation
                                         } else {
-                                            Toast.makeText(this@PlayerActivity, "Failed to create media progress", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                this@PlayerActivity,
+                                                "Failed to create media progress",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     }
 
                                     override fun onFailure(call: Call<Void>, t: Throwable) {
-                                        Toast.makeText(this@PlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            this@PlayerActivity,
+                                            "Network error: ${t.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 })
-                            } else {
-                                Toast.makeText(this@PlayerActivity, "Failed to load media progress", Toast.LENGTH_SHORT).show()
-                            }
+                        } else {
+                            Toast.makeText(
+                                this@PlayerActivity,
+                                "Failed to load media progress",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
+                    }
 
                     override fun onFailure(call: Call<MediaProgressResponse>, t: Throwable) {
-                        Toast.makeText(this@PlayerActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@PlayerActivity,
+                            "Network error: ${t.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 })
         }
@@ -224,19 +271,26 @@ fun PlayerScreen(
         }
     }
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+
+    ) {
         CoverImage(
             itemId = podcastId,
-                contentDescription = episode?.title ?: "Cover Image",
+            contentDescription = episode?.title ?: "Cover Image",
             size = 200.dp
-            )
+        )
         Spacer(modifier = Modifier.height(8.dp))
         episode?.let {
-            Text(text = it.title, style = MaterialTheme.typography.titleLarge)
+            Text(
+                text = it.title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.surface
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            val contentUrl = ApiClient.generateFullUrl(it.audioTrack?.contentUrl?: "")
+            val contentUrl = ApiClient.generateFullUrl(it.audioTrack?.contentUrl ?: "")
             if (contentUrl != null) {
                 MediaPlayerController(
                     contentUrl,

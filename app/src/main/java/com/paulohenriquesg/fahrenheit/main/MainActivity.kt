@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
             FahrenheitTheme() {
                 Surface(
                     color = MaterialTheme.colorScheme.background,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {

@@ -1,4 +1,3 @@
-// BookPlayerActivity.kt
 package com.paulohenriquesg.fahrenheit.book
 
 import android.content.Context
@@ -17,7 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,11 +26,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.GlobalMediaPlayer
 import com.paulohenriquesg.fahrenheit.MediaPlayerController
 import com.paulohenriquesg.fahrenheit.api.ApiClient
@@ -100,6 +100,14 @@ class BookPlayerActivity : ComponentActivity() {
 
         setContent {
             FahrenheitTheme {
+                Surface(
+                    color = MaterialTheme.colorScheme.background,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.fillMaxSize(),
+                    shape = RectangleShape
+                ) {
+
+                }
                 if (bookId != null) {
                     fetchMediaProgress(bookId)
 
@@ -261,7 +269,8 @@ fun BookPlayerScreen(
                 bookDetail?.let {
                     Text(
                         text = it.media.metadata.title,
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = it.media.metadata.seriesName?.takeIf { it.isNotEmpty() }?.let { seriesName ->
@@ -269,20 +278,22 @@ fun BookPlayerScreen(
                         } ?: "",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontStyle = FontStyle.Italic,
-                            color = Color.Gray.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         ),
                         modifier = Modifier.padding(start = 4.dp)
                     )
                     it.media.metadata.authorName?.let { authorName ->
                         Text(
                             text = "Author: $authorName",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     it.media.metadata.narratorName?.let { narratorName ->
                         Text(
                             text = "Narrator: $narratorName",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     val currentChapter = it.media.chapters?.firstOrNull { chapter ->
@@ -291,10 +302,11 @@ fun BookPlayerScreen(
                     currentChapter?.let { chapter ->
                         Text(
                             text = "Current Chapter: ${chapter.title}",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                } ?: Text(text = "Loading...")
+                } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -313,7 +325,7 @@ fun BookPlayerScreen(
                     it.media.chapters
                 )
             }
-        } ?: Text(text = "Loading...")
+        } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
     }
 }
 

@@ -137,7 +137,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
             Column(
                 modifier = Modifier
                     .width(300.dp) // Set a fixed width for the drawer
-                    .background(Color.White) // Set the background color to white
+                    .background(Color(0xFF2C2C2C))
                     .fillMaxSize()
             ) {
                 Spacer(modifier = Modifier.height(56.dp)) // Add a gap at the top
@@ -154,7 +154,10 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 ) {
                     Icon(Icons.Filled.Home, contentDescription = "Home")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Home")
+                    Text(
+                        "Home",
+                        color = MaterialTheme.colorScheme.surface
+                    ) // Use surface color for text
                 }
                 Row(
                     modifier = Modifier
@@ -168,7 +171,10 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 ) {
                     Icon(Icons.Filled.Person, contentDescription = "Profile")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Profile")
+                    Text(
+                        "Profile",
+                        color = MaterialTheme.colorScheme.surface
+                    ) // Use surface color for text
                 }
                 Row(
                     modifier = Modifier
@@ -184,7 +190,10 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 ) {
                     Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Settings")
+                    Text(
+                        "Settings",
+                        color = MaterialTheme.colorScheme.surface
+                    ) // Use surface color for text
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // Add a separator before Libraries
@@ -201,7 +210,10 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 ) {
                     Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = "Libraries")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Libraries")
+                    Text(
+                        "Libraries",
+                        color = MaterialTheme.colorScheme.surface
+                    ) // Use surface color for text
                 }
 
                 // Display library items fetched from the API
@@ -231,7 +243,10 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                             contentDescription = library.name
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(library.name!!)
+                        Text(
+                            library.name!!,
+                            color = MaterialTheme.colorScheme.surface
+                        ) // Use surface color for text
                     }
                 }
 
@@ -256,7 +271,10 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Logout")
+                    Text(
+                        "Logout",
+                        color = MaterialTheme.colorScheme.surface
+                    ) // Use surface color for text
                 }
             }
         },
@@ -306,7 +324,8 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                         .padding(top = 30.dp) // Add padding to avoid overlap with the menu icon
                 ) {
                     val itemCount = libraryItems.size
-                    val itemLabel = if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts"
+                    val itemLabel =
+                        if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts"
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(16.dp)

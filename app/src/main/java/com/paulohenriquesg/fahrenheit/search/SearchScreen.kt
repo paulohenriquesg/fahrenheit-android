@@ -94,9 +94,9 @@ fun SearchScreen(searchHandler: SearchHandler) {
 //        }
 
         library?.let {
-            Text(text = it.name ?: "No name", style = MaterialTheme.typography.titleLarge)
+            Text(text = it.name ?: "No name", style = MaterialTheme.typography.titleLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.surface)
             // Add more UI elements to display library details
-        } ?: Text(text = "Loading...")
+        } ?: Text(text = "Loading...", color = androidx.compose.material3.MaterialTheme.colorScheme.surface)
 
         Spacer(modifier = Modifier.height(16.dp))
         LibraryItemsRow(libraryItems = searchResults, listState = listState)
