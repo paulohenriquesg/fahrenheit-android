@@ -288,11 +288,23 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                         .align(Alignment.TopCenter)
                         .padding(top = 30.dp) // Add padding to avoid overlap with the menu icon
                 ) {
-                    Text(
-                        text = currentLibraryName,
-                        style = MaterialTheme.typography.titleLarge,
+                    val itemCount = libraryItems.size
+                    val itemLabel = if (libraries.find { it.name == currentLibraryName }?.mediaType == "book") "books" else "podcasts"
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(16.dp)
-                    )
+                    ) {
+                        Text(
+                            text = currentLibraryName,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "($itemCount $itemLabel)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                    }
                     if (isRowLayout) {
                         LibraryItemsRow(libraryItems, listState)
                     } else {
