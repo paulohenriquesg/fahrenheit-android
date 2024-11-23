@@ -55,6 +55,7 @@ fun MediaPlayerController(
 
     LaunchedEffect(url) {
         mediaPlayer.apply {
+            reset() // Ensure the media player is reset before setting a new data source
             setDataSource(url)
             setOnPreparedListener {
                 totalTime = duration
