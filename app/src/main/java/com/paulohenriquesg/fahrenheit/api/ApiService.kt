@@ -16,6 +16,9 @@ interface ApiService {
     @GET("api/libraries")
     fun getLibraries(): Call<LibrariesResponse>
 
+    @GET("api/libraries/{libraryId}")
+    fun getLibrary(@Path("libraryId") libraryId: String): Call<Library>
+
     @GET("api/libraries/{libraryId}/items")
     fun getLibraryItems(
         @Path("libraryId") libraryId: String,
@@ -73,4 +76,11 @@ interface ApiService {
     fun userGetMediaProgress(
         @Path("libraryItemId") libraryItemId: String,
     ): Call<MediaProgressResponse>
+
+    @GET("api/libraries/{libraryId}/search")
+    fun searchLibraryItems(
+        @Path("libraryId") libraryId: String,
+        @Query("q") query: String,
+        @Query("limit") limit: Int = 5
+    ): Call<SearchLibraryItemsResponse>
 }

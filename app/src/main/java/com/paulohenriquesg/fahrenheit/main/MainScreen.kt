@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Podcasts
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
@@ -52,6 +53,7 @@ import com.paulohenriquesg.fahrenheit.api.LibrariesResponse
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
+import com.paulohenriquesg.fahrenheit.search.SearchActivity
 import com.paulohenriquesg.fahrenheit.settings.SettingsActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.navigation.LibraryItemsFluid
@@ -71,7 +73,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
     val username = userPreferences.username
     var libraries by remember { mutableStateOf(listOf<Library>()) }
     var libraryItems by remember { mutableStateOf(listOf<LibraryItem>()) }
-    var currentLibraryName by remember { mutableStateOf("") }
+    var currentLibrary by remember { mutableStateOf<Library?>(null) }
     val listState = rememberLazyListState()
     var isRowLayout by remember { mutableStateOf(true) }
     var selectedItem by remember { mutableStateOf<String?>(null) }
@@ -101,9 +103,11 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                         response.body()?.libraries?.sortedBy { it.displayOrder } ?: emptyList()
 
                     if (libraries.isNotEmpty()) {
-                        currentLibraryName = libraries[0].name
-                        fetchLibraryItems(libraries[0].id) { items ->
-                            libraryItems = items
+                        currentLibrary = libraries[0]
+                        libraries[0].id?.let {
+                            fetchLibraryItems(it) { items ->
+                                libraryItems = items
+                            }
                         }
                     }
                 }
@@ -208,10 +212,12 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                             .padding(16.dp)
                             .clickable {
                                 selectedItem = library.name
-                                currentLibraryName = library.name
-                                fetchLibraryItems(library.id) { items ->
-                                    libraryItems = items
-                                    scrollToFirstItem() // Scroll to the first item when switching libraries
+                                currentLibrary = library
+                                library.id?.let {
+                                    fetchLibraryItems(it) { items ->
+                                        libraryItems = items
+                                        scrollToFirstItem() // Scroll to the first item when switching libraries
+                                    }
                                 }
                                 scope.launch {
                                     drawerState.close()
@@ -225,7 +231,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                             contentDescription = library.name
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(library.name)
+                        Text(library.name!!)
                     }
                 }
 
@@ -279,6 +285,17 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 ) {
                     Text(text = if (isRowLayout) "Switch to Fluid Layout" else "Switch to Row Layout")
                 }
+                IconButton(
+                    onClick = {
+                        val intent = Intent(context, SearchActivity::class.java).apply {
+                            putExtra("libraryId", currentLibrary?.id)
+                        }
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Icon(Icons.Filled.Search, contentDescription = "Search")
+                }
                 Greeting(
                     name = username,
                     modifier = Modifier.align(Alignment.TopEnd)
@@ -289,15 +306,17 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                         .padding(top = 30.dp) // Add padding to avoid overlap with the menu icon
                 ) {
                     val itemCount = libraryItems.size
-                    val itemLabel = if (libraries.find { it.name == currentLibraryName }?.mediaType == "book") "books" else "podcasts"
+                    val itemLabel = if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts"
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(16.dp)
                     ) {
-                        Text(
-                            text = currentLibraryName,
-                            style = MaterialTheme.typography.titleLarge
-                        )
+                        currentLibrary?.name?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "($itemCount $itemLabel)",
@@ -321,7 +340,7 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(text = "Hello, $name!", modifier = modifier)
 }
 
-fun getIconForMediaType(mediaType: String): ImageVector {
+fun getIconForMediaType(mediaType: String?): ImageVector {
     return when (mediaType) {
         "book" -> Icons.Filled.Book
         "podcast" -> Icons.Filled.Podcasts

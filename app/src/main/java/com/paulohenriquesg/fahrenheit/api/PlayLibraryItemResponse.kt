@@ -176,9 +176,9 @@ data class PlayLibraryItemMetaTags(
 )
 
 data class PlayLibraryItemLibraryFile(
-    @SerializedName("ino") val ino: String,
-    @SerializedName("metadata") val metadata: PlayLibraryItemMetadata,
-    @SerializedName("addedAt") val addedAt: Long,
-    @SerializedName("updatedAt") val updatedAt: Long,
-    @SerializedName("fileType") val fileType: String
+    @SerializedName("ino") val ino: String? = null,
+    @SerializedName("metadata") val metadata: SearchFileMetadata? = null,
+    @SerializedName("addedAt") val addedAt: Long? = null,
+    @SerializedName("updatedAt") val updatedAt: Long? = null,
+    @SerializedName("fileType") val fileType: String? = null
 )

@@ -44,6 +44,7 @@
         <activity android:name=".detail.DetailActivity" />
         <activity android:name=".podcast.PlayerActivity" />
         <activity android:name=".book.BookPlayerActivity" />
+        <activity android:name=".search.SearchActivity" />
     </application>
 
 </manifest>
