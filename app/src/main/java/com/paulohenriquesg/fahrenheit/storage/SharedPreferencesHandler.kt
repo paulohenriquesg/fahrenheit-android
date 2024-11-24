@@ -11,7 +11,7 @@ class SharedPreferencesHandler(context: Context) {
     fun getUserPreferences(): UserPreferences {
         return UserPreferences(
             host = sharedPreferences.getString("host", "") ?: "",
-            username = sharedPreferences.getString("username", "User") ?: "User",
+            username = sharedPreferences.getString("username", "") ?: "",
             token = sharedPreferences.getString("token", "") ?: "",
             darkTheme = sharedPreferences.getBoolean("dark_theme", false)
         )
