@@ -53,13 +53,15 @@ fun SearchScreen(searchHandler: SearchHandler) {
     }
 
     LaunchedEffect(query.text) {
-        libraryId?.let {
-            searchHandler.performLibrarySearch(
-                it,
-                query.text,
-                library?.mediaType ?: "books"
-            ) { results ->
-                searchResults = results
+        if (query.text.isNotEmpty()) {
+            libraryId?.let {
+                searchHandler.performLibrarySearch(
+                    it,
+                    query.text,
+                    library?.mediaType ?: "books"
+                ) { results ->
+                    searchResults = results
+                }
             }
         }
     }
