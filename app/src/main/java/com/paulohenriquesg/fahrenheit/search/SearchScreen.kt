@@ -54,7 +54,11 @@ fun SearchScreen(searchHandler: SearchHandler) {
 
     LaunchedEffect(query.text) {
         libraryId?.let {
-            searchHandler.performLibrarySearch(it, query.text, library?.mediaType ?: "books") { results ->
+            searchHandler.performLibrarySearch(
+                it,
+                query.text,
+                library?.mediaType ?: "books"
+            ) { results ->
                 searchResults = results
             }
         }
@@ -94,9 +98,13 @@ fun SearchScreen(searchHandler: SearchHandler) {
 //        }
 
         library?.let {
-            Text(text = it.name ?: "No name", style = MaterialTheme.typography.titleLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.surface)
+            Text(
+                text = it.name ?: "No name",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
             // Add more UI elements to display library details
-        } ?: Text(text = "Loading...", color = androidx.compose.material3.MaterialTheme.colorScheme.surface)
+        } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
 
         Spacer(modifier = Modifier.height(16.dp))
         LibraryItemsRow(libraryItems = searchResults, listState = listState)
@@ -115,8 +123,8 @@ private fun loadLibrary(
                 callback(response.body())
             } else {
                 Toast.makeText(context, "Failed to load library", Toast.LENGTH_SHORT).show()
-    }
-}
+            }
+        }
 
         override fun onFailure(call: Call<Library>, t: Throwable) {
             Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()

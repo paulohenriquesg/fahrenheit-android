@@ -106,23 +106,23 @@ class BookPlayerActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
+                    if (bookId != null) {
+                        fetchMediaProgress(bookId)
 
-                }
-                if (bookId != null) {
-                    fetchMediaProgress(bookId)
-
-                    BookPlayerScreen(
-                        bookId,
-                        mediaSession,
-                        isPlaying,
-                        mediaProgress
-                    ) { newIsPlaying ->
-                        isPlaying = newIsPlaying
+                        BookPlayerScreen(
+                            bookId,
+                            mediaSession,
+                            isPlaying,
+                            mediaProgress
+                        ) { newIsPlaying ->
+                            isPlaying = newIsPlaying
+                        }
+                    } else {
+                        Toast.makeText(this, "Book ID is missing", Toast.LENGTH_SHORT).show()
+                        finish()
                     }
-                } else {
-                    Toast.makeText(this, "Book ID is missing", Toast.LENGTH_SHORT).show()
-                    finish()
                 }
+
             }
         }
     }

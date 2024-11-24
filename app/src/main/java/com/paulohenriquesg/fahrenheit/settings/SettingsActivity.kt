@@ -7,13 +7,10 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -88,23 +85,6 @@ fun SettingsScreen() {
                 }
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "isDarkTheme: $isDarkTheme")
-        Text(
-            text = "SharedPreferences dark_theme: ${
-                sharedPreferencesHandler.getUserPreferences().darkTheme
-            }"
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "Background color: $backgroundColor")
-        Spacer(modifier = Modifier.height(16.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp)
-                .background(backgroundColor)
-                .border(2.dp, Color.Red) // Add red border
-        )
     }
 }
 
