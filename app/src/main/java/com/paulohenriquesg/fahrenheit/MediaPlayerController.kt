@@ -147,11 +147,11 @@ fun MediaPlayerController(
             Text(
                 text = "Current Time: ${formatTime(currentTimeState.toInt() * 1000)}",
                 modifier = Modifier.weight(1f)
-                , color = androidx.compose.material3.MaterialTheme.colorScheme.surface
+                , color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "Total Time: ${formatTime(totalTime.toInt() * 1000)}",
-                modifier = Modifier.weight(1f), color = androidx.compose.material3.MaterialTheme.colorScheme.surface
+                modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
