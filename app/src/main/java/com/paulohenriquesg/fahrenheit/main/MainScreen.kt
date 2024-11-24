@@ -303,21 +303,25 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                 ) {
                     Text(text = if (isRowLayout) "Switch to Fluid Layout" else "Switch to Row Layout")
                 }
-                IconButton(
-                    onClick = {
-                        val intent = Intent(context, SearchActivity::class.java).apply {
-                            putExtra("libraryId", currentLibrary?.id)
-                        }
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.align(Alignment.TopEnd)
+                Row(
+                    modifier = Modifier.align(Alignment.TopEnd),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.Search, contentDescription = "Search")
+                    IconButton(
+                        onClick = {
+                            val intent = Intent(context, SearchActivity::class.java).apply {
+                                putExtra("libraryId", currentLibrary?.id)
+                            }
+                            context.startActivity(intent)
+                        },
+                    ) {
+                        Icon(Icons.Filled.Search, contentDescription = "Search")
+                    }
+                    Greeting(
+                        name = username,
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
-                Greeting(
-                    name = username,
-                    modifier = Modifier.align(Alignment.TopEnd)
-                )
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
