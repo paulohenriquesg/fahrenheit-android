@@ -36,7 +36,6 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
         Card(
             elevation = CardDefaults.cardElevation(4.dp),
             modifier = Modifier.fillMaxSize(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C))
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)

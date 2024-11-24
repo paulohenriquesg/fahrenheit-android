@@ -137,7 +137,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
             Column(
                 modifier = Modifier
                     .width(300.dp) // Set a fixed width for the drawer
-                    .background(Color(0xFF2C2C2C))
+                    .background(MaterialTheme.colorScheme.surface)
                     .fillMaxSize()
             ) {
                 Spacer(modifier = Modifier.height(56.dp)) // Add a gap at the top
@@ -273,7 +273,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Logout",
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.surface
                     ) // Use surface color for text
                 }
             }
