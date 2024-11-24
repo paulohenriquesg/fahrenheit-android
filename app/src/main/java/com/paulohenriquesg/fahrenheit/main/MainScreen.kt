@@ -31,7 +31,6 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
@@ -48,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibrariesResponse
 import com.paulohenriquesg.fahrenheit.api.Library
@@ -156,7 +156,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Home",
-                        color = MaterialTheme.colorScheme.surface
+                        color = MaterialTheme.colorScheme.onSurface
                     ) // Use surface color for text
                 }
                 Row(
@@ -173,7 +173,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Profile",
-                        color = MaterialTheme.colorScheme.surface
+                        color = MaterialTheme.colorScheme.onSurface
                     ) // Use surface color for text
                 }
                 Row(
@@ -192,7 +192,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Settings",
-                        color = MaterialTheme.colorScheme.surface
+                        color = MaterialTheme.colorScheme.onSurface
                     ) // Use surface color for text
                 }
 
@@ -212,7 +212,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Libraries",
-                        color = MaterialTheme.colorScheme.surface
+                        color = MaterialTheme.colorScheme.onSurface
                     ) // Use surface color for text
                 }
 
@@ -245,7 +245,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             library.name!!,
-                            color = MaterialTheme.colorScheme.surface
+                            color = MaterialTheme.colorScheme.onSurface
                         ) // Use surface color for text
                     }
                 }
@@ -273,7 +273,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Logout",
-                        color = MaterialTheme.colorScheme.surface
+                        color = MaterialTheme.colorScheme.onSurface
                     ) // Use surface color for text
                 }
             }
