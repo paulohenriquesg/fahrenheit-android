@@ -84,7 +84,6 @@ class PlayerActivity : ComponentActivity() {
                     isPlaying = false
                 }
             })
-            setFlags(MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS)
             setPlaybackState(
                 PlaybackStateCompat.Builder()
                     .setActions(
