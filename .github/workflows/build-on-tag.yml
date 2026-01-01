@@ -11,10 +11,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -36,48 +38,49 @@ jobs:
         run: ls -la app/build/outputs/apk/release/
 
       - name: Generate release notes
+        id: release_notes
         run: |
-          latest_tag=$(git describe --tags --abbrev=0)
-          commit_messages=$(git log ${latest_tag}..HEAD --pretty=format:"%s")
-          release_message="Release Notes:\n\n$commit_messages"
-          echo -e "$release_message" > release_notes.txt
+          # Get the previous tag
+          previous_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          # Generate commit messages since last tag
+          if [ -n "$previous_tag" ]; then
+            commit_messages=$(git log ${previous_tag}..HEAD --pretty=format:"- %s")
+          else
+            commit_messages=$(git log --pretty=format:"- %s")
+          fi
+
+          # Create release notes
+          echo "## Changes" > release_notes.txt
+          echo "" >> release_notes.txt
+          echo "$commit_messages" >> release_notes.txt
 
       - name: Delete existing latest release
-        run: |
-          gh release delete latest -y || true
+        continue-on-error: true
+        run: gh release delete latest -y
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release from tag
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           body_path: release_notes.txt
           draft: false
           prerelease: true
-
-      - name: Create latest release
-        id: create_latest_release
-        uses: actions/create-release@v1
+          files: app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create or update latest release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          release_name: Latest Release
+          name: Latest Release
           body_path: release_notes.txt
           draft: false
           prerelease: true
-
-      - name: Upload APK
-        uses: actions/upload-release-asset@v1
+          files: app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/release/app-release.apk
-          asset_name: app-release.apk
-          asset_content_type: application/vnd.android.package-archive
