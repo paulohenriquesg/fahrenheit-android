@@ -1,11 +1,9 @@
 package com.paulohenriquesg.fahrenheit.ui.theme
 
-import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
@@ -17,9 +15,8 @@ fun FahrenheitTheme(
     isInDarkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    val context = LocalContext.current
-    val sharedPreferences = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
-    val isDarkTheme = sharedPreferences.getBoolean("dark_theme", isInDarkTheme)
+    // Observe theme state from ThemeManager
+    val isDarkTheme by ThemeManager.isDarkTheme
 
     val colorScheme = if (isDarkTheme) {
         darkColorScheme(
@@ -27,7 +24,9 @@ fun FahrenheitTheme(
             secondary = PurpleGrey80,
             tertiary = Pink80,
             background = Color(0xFF121212), // Dark Gray
+            surface = Color(0xFF1E1E1E), // Slightly lighter dark for cards
             onBackground = Color(0xFFFFFFFF), // White for text
+            onSurface = Color(0xFFFFFFFF), // White for text on cards
             onPrimary = Color(0xFFBB86FC) // Light Purple for icons
         )
     } else {
@@ -35,7 +34,10 @@ fun FahrenheitTheme(
             primary = Purple40,
             secondary = PurpleGrey40,
             tertiary = Pink40,
-            background = Color.White // Ensure background color is set
+            background = Color.White, // White background
+            surface = Color(0xFFF5F5F5), // Light gray for cards
+            onBackground = Color(0xFF000000), // Black for text
+            onSurface = Color(0xFF000000) // Black for text on cards
         )
     }
     MaterialTheme(

@@ -240,10 +240,15 @@ class DetailActivity : ComponentActivity() {
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(text = episode.title, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = episode.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     Text(
                         text = formatPubDate(episode.pubDate),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

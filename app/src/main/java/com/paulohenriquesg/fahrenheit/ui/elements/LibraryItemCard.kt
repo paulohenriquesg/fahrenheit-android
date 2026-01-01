@@ -36,6 +36,9 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
         Card(
             elevation = CardDefaults.cardElevation(4.dp),
             modifier = Modifier.fillMaxSize(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -48,6 +51,7 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
                 Text(
                     text = item.media.metadata.title,
                     style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -58,13 +62,13 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .size(24.dp) // Set a fixed size for the badge
-                    .background(Color.Red, shape = CircleShape)
+                    .background(MaterialTheme.colorScheme.error, shape = CircleShape)
                     .clip(CircleShape),
                 contentAlignment = Alignment.Center // Center the text within the badge
             ) {
                 Text(
                     text = if (item.numEpisodesIncomplete > 99) "99+" else item.numEpisodesIncomplete.toString(),
-                    color = MaterialTheme.colorScheme.background,
+                    color = MaterialTheme.colorScheme.onError,
                     style = MaterialTheme.typography.bodySmall
                 )
             }

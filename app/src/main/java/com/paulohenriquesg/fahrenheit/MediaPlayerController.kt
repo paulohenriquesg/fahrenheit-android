@@ -133,10 +133,11 @@ fun MediaPlayerController(
                     }
             )
 
+            val chapterColor = MaterialTheme.colorScheme.onSurfaceVariant
             Canvas(modifier = Modifier.matchParentSize()) {
                 chapters?.dropLast(1)?.forEach { chapter ->
                     val percentage = (chapter.end / totalTime) * 100
-                    drawLineAtPercentage(percentage.toFloat(), sliderSize.width, 4.dp.toPx())
+                    drawLineAtPercentage(percentage.toFloat(), sliderSize.width, 4.dp.toPx(), chapterColor)
                 }
             }
         }
@@ -157,10 +158,10 @@ fun MediaPlayerController(
     }
 }
 
-fun DrawScope.drawLineAtPercentage(percentage: Float, sliderWidth: Int, trackHeight: Float) {
+fun DrawScope.drawLineAtPercentage(percentage: Float, sliderWidth: Int, trackHeight: Float, color: androidx.compose.ui.graphics.Color) {
     val position = (percentage / 100) * sliderWidth
     drawLine(
-        color = Color.Gray,
+        color = color,
         start = Offset(x = position, y = (size.height - trackHeight) / 2),
         end = Offset(x = position, y = (size.height + trackHeight) / 2),
         strokeWidth = 2f
