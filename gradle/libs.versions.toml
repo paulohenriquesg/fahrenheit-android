@@ -1,26 +1,24 @@
 [versions]
-agp = "8.7.2"
+agp = "8.7.3"
 coilCompose = "2.7.0"
-converterGson = "2.9.0"
-kotlin = "2.0.21"
+converterGson = "2.11.0"
+kotlin = "2.1.0"
 coreKtx = "1.15.0"
 appcompat = "1.7.0"
-composeBom = "2024.11.00"
-lifecycleViewmodelCompose = "2.6.2"
-loggingInterceptor = "4.11.0"
+composeBom = "2024.12.01"
+lifecycleViewmodelCompose = "2.8.7"
+loggingInterceptor = "4.12.0"
 material3 = "1.3.1"
-materialIconsExtended = "1.7.5"
-materialIconsExtendedVersion = "1.7.5"
+materialIconsExtended = "1.7.6"
 media = "1.7.0"
 media2Session = "1.3.0"
-retrofit = "2.9.0"
+retrofit = "2.11.0"
 tvFoundation = "1.0.0-alpha11"
 tvMaterial = "1.0.0"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.9.3"
-tvMaterialVersion = "1.0.0"
 leanback = "1.0.0"
-ui = "1.5.1"
+ui = "1.7.6"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -31,7 +29,7 @@ androidx-material-icons-extended = { module = "androidx.compose.material:materia
 androidx-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 androidx-media = { module = "androidx.media:media", version.ref = "media" }
 androidx-media2-session = { module = "androidx.media2:media2-session", version.ref = "media2Session" }
-androidx-tv-material-v100alpha01 = { module = "androidx.tv:tv-material", version.ref = "tvMaterialVersion" }
+androidx-tv-material-v100alpha01 = { module = "androidx.tv:tv-material", version.ref = "tvMaterial" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
