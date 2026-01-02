@@ -5,6 +5,7 @@ import android.widget.Toast
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibraryItemsResponse
+import com.paulohenriquesg.fahrenheit.api.Shelf
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -35,6 +36,27 @@ class MainHandler(private val context: Context) {
     private fun updateUIWithLibraryItems(items: List<LibraryItem>?, updateItems: (List<LibraryItem>) -> Unit) {
         items?.let {
             updateItems(it)
+        }
+    }
+
+    fun fetchPersonalizedView(libraryId: String, updateShelves: (List<Shelf>) -> Unit) {
+        val apiClient = ApiClient.getApiService()
+        if (apiClient != null) {
+            apiClient.getPersonalizedView(libraryId).enqueue(object : Callback<List<Shelf>> {
+                override fun onResponse(call: Call<List<Shelf>>, response: Response<List<Shelf>>) {
+                    if (response.isSuccessful) {
+                        response.body()?.let { shelves ->
+                            updateShelves(shelves)
+                        }
+                    } else {
+                        Toast.makeText(context, "Failed to load personalized view", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<List<Shelf>>, t: Throwable) {
+                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
         }
     }
 }

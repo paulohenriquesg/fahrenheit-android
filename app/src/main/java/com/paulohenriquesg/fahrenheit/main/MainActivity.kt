@@ -35,7 +35,10 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
-                    MainScreen(mainHandler::fetchLibraryItems)
+                    MainScreen(
+                        mainHandler::fetchLibraryItems,
+                        mainHandler::fetchPersonalizedView
+                    )
                 }
             }
         }
@@ -47,6 +50,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreenPreview() {
     FahrenheitTheme {
         MainScreen(
+            { _, _ -> },
             { _, _ -> }
         )
     }

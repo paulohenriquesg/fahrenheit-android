@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.api
 
 import android.content.Context
 import android.content.Intent
+import com.google.gson.GsonBuilder
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import okhttp3.OkHttpClient
@@ -38,6 +39,10 @@ object ApiClient {
         return apiService
     }
 
+    fun getToken(): String? {
+        return token
+    }
+
     fun getApiServiceForLogin(host: String): ApiService {
         return create(host)
     }
@@ -71,10 +76,15 @@ object ApiClient {
 
         val client = clientBuilder.build()
 
+        // Create custom Gson with ShelfDeserializer
+        val gson = GsonBuilder()
+            .registerTypeAdapter(Shelf::class.java, ShelfDeserializer())
+            .create()
+
         val retrofit = Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
         return retrofit.create(ApiService::class.java)
     }

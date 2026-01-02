@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -52,10 +53,14 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibrariesResponse
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
+import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.search.SearchActivity
 import com.paulohenriquesg.fahrenheit.settings.SettingsActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
+import com.paulohenriquesg.fahrenheit.ui.elements.AuthorShelfRow
+import com.paulohenriquesg.fahrenheit.ui.elements.SeriesShelfRow
+import com.paulohenriquesg.fahrenheit.ui.elements.ShelfRow
 import com.paulohenriquesg.fahrenheit.ui.navigation.LibraryItemsFluid
 import com.paulohenriquesg.fahrenheit.ui.navigation.LibraryItemsRow
 import kotlinx.coroutines.launch
@@ -64,7 +69,10 @@ import retrofit2.Callback
 import retrofit2.Response
 
 @Composable
-fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit) {
+fun MainScreen(
+    fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit,
+    fetchPersonalizedView: (String, (List<Shelf>) -> Unit) -> Unit
+) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -73,10 +81,12 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
     val username = userPreferences.username
     var libraries by remember { mutableStateOf(listOf<Library>()) }
     var libraryItems by remember { mutableStateOf(listOf<LibraryItem>()) }
+    var shelves by remember { mutableStateOf(listOf<Shelf>()) }
     var currentLibrary by remember { mutableStateOf<Library?>(null) }
     val listState = rememberLazyListState()
     var isRowLayout by remember { mutableStateOf(true) }
     var selectedItem by remember { mutableStateOf<String?>(null) }
+    var viewMode by remember { mutableStateOf("home") }
 
     val apiClient = ApiClient.getApiService()
     if (apiClient == null) {
@@ -104,8 +114,11 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
 
                     if (libraries.isNotEmpty()) {
                         currentLibrary = libraries[0]
-                        libraries[0].id?.let {
-                            fetchLibraryItems(it) { items ->
+                        libraries[0].id?.let { libraryId ->
+                            fetchPersonalizedView(libraryId) { personalizedShelves ->
+                                shelves = personalizedShelves
+                            }
+                            fetchLibraryItems(libraryId) { items ->
                                 libraryItems = items
                             }
                         }
@@ -148,6 +161,12 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                         .padding(16.dp)
                         .clickable {
                             selectedItem = "Home"
+                            viewMode = "home"
+                            currentLibrary?.id?.let { libraryId ->
+                                fetchPersonalizedView(libraryId) { personalizedShelves ->
+                                    shelves = personalizedShelves
+                                }
+                            }
                             scope.launch { drawerState.close() }
                         },
                     verticalAlignment = Alignment.CenterVertically
@@ -224,6 +243,7 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                             .padding(16.dp)
                             .clickable {
                                 selectedItem = library.name
+                                viewMode = "library"
                                 currentLibrary = library
                                 library.id?.let {
                                     fetchLibraryItems(it) { items ->
@@ -322,35 +342,39 @@ fun MainScreen(fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit)
                         modifier = Modifier.padding(16.dp)
                     )
                 }
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 30.dp) // Add padding to avoid overlap with the menu icon
-                ) {
-                    val itemCount = libraryItems.size
-                    val itemLabel =
-                        if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts"
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(16.dp)
+                if (viewMode == "home") {
+                    PersonalizedHomeView(shelves)
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 30.dp) // Add padding to avoid overlap with the menu icon
                     ) {
-                        currentLibrary?.name?.let {
+                        val itemCount = libraryItems.size
+                        val itemLabel =
+                            if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts"
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            currentLibrary?.name?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = it,
-                                style = MaterialTheme.typography.titleLarge
+                                text = "($itemCount $itemLabel)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "($itemCount $itemLabel)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    if (isRowLayout) {
-                        LibraryItemsRow(libraryItems, listState)
-                    } else {
-                        LibraryItemsFluid(libraryItems)
+                        if (isRowLayout) {
+                            LibraryItemsRow(libraryItems, listState)
+                        } else {
+                            LibraryItemsFluid(libraryItems)
+                        }
                     }
                 }
             }
@@ -368,5 +392,61 @@ fun getIconForMediaType(mediaType: String?): ImageVector {
         "book" -> Icons.Filled.Book
         "podcast" -> Icons.Filled.Podcasts
         else -> Icons.Filled.Book // default icon
+    }
+}
+
+@Composable
+fun PersonalizedHomeView(shelves: List<Shelf>) {
+    val context = LocalContext.current
+    // Filter out empty shelves
+    val nonEmptyShelves = shelves.filter {
+        (it.bookEntities != null && it.bookEntities.isNotEmpty()) ||
+        (it.authorEntities != null && it.authorEntities.isNotEmpty()) ||
+        (it.seriesEntities != null && it.seriesEntities.isNotEmpty())
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 60.dp, start = 16.dp, end = 16.dp)
+    ) {
+        Text(
+            text = "Home",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        androidx.compose.foundation.lazy.LazyColumn {
+            items(nonEmptyShelves) { shelf ->
+                when (shelf.type) {
+                    "book", "podcast" -> {
+                        shelf.bookEntities?.let { books ->
+                            ShelfRow(shelf = shelf) { item ->
+                                val intent = com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(context, item.id)
+                                context.startActivity(intent)
+                            }
+                        }
+                    }
+                    "authors" -> {
+                        shelf.authorEntities?.let { authors ->
+                            AuthorShelfRow(shelf = shelf, authors = authors) { author ->
+                                // TODO: Navigate to author detail page
+                                Toast.makeText(context, "Author: ${author.name}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                    "series" -> {
+                        shelf.seriesEntities?.let { series ->
+                            SeriesShelfRow(shelf = shelf, series = series) { seriesItem ->
+                                // TODO: Navigate to series detail page
+                                Toast.makeText(context, "Series: ${seriesItem.name}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
     }
 }

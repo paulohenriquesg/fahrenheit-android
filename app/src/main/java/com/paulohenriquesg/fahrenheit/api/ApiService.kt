@@ -83,4 +83,11 @@ interface ApiService {
         @Query("q") query: String,
         @Query("limit") limit: Int = 5
     ): Call<SearchLibraryItemsResponse>
+
+    @GET("api/libraries/{libraryId}/personalized")
+    fun getPersonalizedView(
+        @Path("libraryId") libraryId: String,
+        @Query("limit") limit: Int = 10,
+        @Query("include") include: String = "rssfeed"
+    ): Call<List<Shelf>>
 }

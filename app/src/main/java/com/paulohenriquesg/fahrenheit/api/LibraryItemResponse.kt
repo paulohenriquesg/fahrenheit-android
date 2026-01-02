@@ -190,17 +190,29 @@ data class LibraryItemMetadata(
 
 data class Author(
     @SerializedName("id") val id: String,
-    @SerializedName("asin") val asin: String?,
+    @SerializedName("asin") val asin: String? = null,
     @SerializedName("name") val name: String,
-    @SerializedName("description") val description: String?,
-    @SerializedName("imagePath") val imagePath: String?,
-    @SerializedName("addedAt") val addedAt: Long,
-    @SerializedName("updatedAt") val updatedAt: Long,
-    @SerializedName("numBooks") val numBooks: Int? = null  // From SearchAuthor - only in search responses
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("imagePath") val imagePath: String? = null,
+    @SerializedName("libraryId") val libraryId: String? = null,
+    @SerializedName("addedAt") val addedAt: Long? = null,
+    @SerializedName("updatedAt") val updatedAt: Long? = null,
+    @SerializedName("numBooks") val numBooks: Int? = null
 )
 
 data class Series(
     @SerializedName("id") val id: String,
     @SerializedName("name") val name: String,
-    @SerializedName("sequence") val sequence: String
+    @SerializedName("nameIgnorePrefix") val nameIgnorePrefix: String? = null,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("sequence") val sequence: String? = null,
+    @SerializedName("addedAt") val addedAt: Long? = null,
+    @SerializedName("updatedAt") val updatedAt: Long? = null,
+    @SerializedName("libraryId") val libraryId: String? = null,
+    @SerializedName("books") val books: List<LibraryItem>? = null,
+    // Personalized view specific fields
+    @SerializedName("inProgress") val inProgress: Boolean? = null,
+    @SerializedName("hasActiveBook") val hasActiveBook: Boolean? = null,
+    @SerializedName("hideFromContinueListening") val hideFromContinueListening: Boolean? = null,
+    @SerializedName("bookInProgressLastUpdate") val bookInProgressLastUpdate: Long? = null
 )
