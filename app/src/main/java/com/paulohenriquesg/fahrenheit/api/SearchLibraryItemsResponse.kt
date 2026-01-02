@@ -47,7 +47,7 @@ data class SearchMedia(
     @SerializedName("coverPath") val coverPath: String? = null,
     @SerializedName("tags") val tags: List<String>? = null,
     @SerializedName("audioFiles") val audioFiles: List<SearchAudioFile>? = null,
-    @SerializedName("chapters") val chapters: List<SearchChapter>? = null,
+    @SerializedName("chapters") val chapters: List<Chapter>? = null,
     @SerializedName("duration") val duration: Double? = null,
     @SerializedName("size") val size: Long? = null,
     @SerializedName("tracks") val tracks: List<SearchTrack>? = null,
@@ -58,9 +58,9 @@ data class SearchMetadata(
     @SerializedName("title") val title: String? = null,
     @SerializedName("titleIgnorePrefix") val titleIgnorePrefix: String? = null,
     @SerializedName("subtitle") val subtitle: String? = null,
-    @SerializedName("authors") val authors: List<SearchAuthor>? = null,
+    @SerializedName("authors") val authors: List<Author>? = null,
     @SerializedName("narrators") val narrators: List<String>? = null,
-    @SerializedName("series") val series: List<SearchSeries>? = null,
+    @SerializedName("series") val series: List<Series>? = null,
     @SerializedName("genres") val genres: List<String>? = null,
     @SerializedName("publishedYear") val publishedYear: String? = null,
     @SerializedName("publishedDate") val publishedDate: String? = null,
@@ -76,27 +76,10 @@ data class SearchMetadata(
     @SerializedName("seriesName") val seriesName: String? = null
 )
 
-data class SearchAuthor(
-    @SerializedName("id") val id: String? = null,
-    @SerializedName("asin") val asin: String? = null,
-    @SerializedName("name") val name: String? = null,
-    @SerializedName("description") val description: String? = null,
-    @SerializedName("imagePath") val imagePath: String? = null,
-    @SerializedName("addedAt") val addedAt: Long? = null,
-    @SerializedName("updatedAt") val updatedAt: Long? = null,
-    @SerializedName("numBooks") val numBooks: Int? = null
-)
-
-data class SearchSeries(
-    @SerializedName("id") val id: String? = null,
-    @SerializedName("name") val name: String? = null,
-    @SerializedName("sequence") val sequence: String? = null
-)
-
 data class SearchAudioFile(
     @SerializedName("index") val index: Int? = null,
     @SerializedName("ino") val ino: String? = null,
-    @SerializedName("metadata") val metadata: SearchFileMetadata? = null,
+    @SerializedName("metadata") val metadata: AudioFileMetadata? = null,
     @SerializedName("addedAt") val addedAt: Long? = null,
     @SerializedName("updatedAt") val updatedAt: Long? = null,
     @SerializedName("trackNumFromMeta") val trackNumFromMeta: Int? = null,
@@ -116,36 +99,8 @@ data class SearchAudioFile(
     @SerializedName("channelLayout") val channelLayout: String? = null,
     @SerializedName("chapters") val chapters: List<Any>? = null,
     @SerializedName("embeddedCoverArt") val embeddedCoverArt: Any? = null,
-    @SerializedName("metaTags") val metaTags: SearchMetaTags? = null,
+    @SerializedName("metaTags") val metaTags: MetaTags? = null,
     @SerializedName("mimeType") val mimeType: String? = null
-)
-
-data class SearchFileMetadata(
-    @SerializedName("filename") val filename: String? = null,
-    @SerializedName("ext") val ext: String? = null,
-    @SerializedName("path") val path: String? = null,
-    @SerializedName("relPath") val relPath: String? = null,
-    @SerializedName("size") val size: Long? = null,
-    @SerializedName("mtimeMs") val mtimeMs: Long? = null,
-    @SerializedName("ctimeMs") val ctimeMs: Long? = null,
-    @SerializedName("birthtimeMs") val birthtimeMs: Long? = null
-)
-
-data class SearchMetaTags(
-    @SerializedName("tagAlbum") val tagAlbum: String? = null,
-    @SerializedName("tagArtist") val tagArtist: String? = null,
-    @SerializedName("tagGenre") val tagGenre: String? = null,
-    @SerializedName("tagTitle") val tagTitle: String? = null,
-    @SerializedName("tagTrack") val tagTrack: String? = null,
-    @SerializedName("tagAlbumArtist") val tagAlbumArtist: String? = null,
-    @SerializedName("tagComposer") val tagComposer: String? = null
-)
-
-data class SearchChapter(
-    @SerializedName("id") val id: Int? = null,
-    @SerializedName("start") val start: Double? = null,
-    @SerializedName("end") val end: Double? = null,
-    @SerializedName("title") val title: String? = null
 )
 
 data class SearchTrack(
@@ -160,7 +115,7 @@ data class SearchTrack(
 
 data class SearchLibraryFile(
     @SerializedName("ino") val ino: String? = null,
-    @SerializedName("metadata") val metadata: SearchFileMetadata? = null,
+    @SerializedName("metadata") val metadata: AudioFileMetadata? = null,
     @SerializedName("addedAt") val addedAt: Long? = null,
     @SerializedName("updatedAt") val updatedAt: Long? = null,
     @SerializedName("fileType") val fileType: String? = null
