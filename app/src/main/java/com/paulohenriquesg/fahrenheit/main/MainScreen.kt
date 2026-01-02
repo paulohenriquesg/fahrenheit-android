@@ -264,7 +264,7 @@ fun MainScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            library.name!!,
+                            library.name ?: "Unknown Library",
                             color = MaterialTheme.colorScheme.onSurface
                         ) // Use surface color for text
                     }

@@ -6,10 +6,7 @@ object GlobalMediaPlayer {
     private var mediaPlayer: MediaPlayer? = null
 
     fun getInstance(): MediaPlayer {
-        if (mediaPlayer == null) {
-            mediaPlayer = MediaPlayer()
-        }
-        return mediaPlayer!!
+        return mediaPlayer ?: MediaPlayer().also { mediaPlayer = it }
     }
 
     fun release() {

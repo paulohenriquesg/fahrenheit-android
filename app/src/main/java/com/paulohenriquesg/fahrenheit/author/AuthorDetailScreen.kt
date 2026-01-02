@@ -87,14 +87,16 @@ fun AuthorDetailScreen(authorId: String) {
                         .padding(16.dp)
                 )
             }
-            authorDetail != null -> {
-                AuthorDetailContent(
-                    author = authorDetail!!,
-                    onBookClick = { book ->
-                        val intent = DetailActivity.createIntent(context, book.id)
-                        context.startActivity(intent)
-                    }
-                )
+            else -> {
+                authorDetail?.let { author ->
+                    AuthorDetailContent(
+                        author = author,
+                        onBookClick = { book ->
+                            val intent = DetailActivity.createIntent(context, book.id)
+                            context.startActivity(intent)
+                        }
+                    )
+                }
             }
         }
     }

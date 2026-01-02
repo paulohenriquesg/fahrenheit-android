@@ -131,6 +131,12 @@ class PlayerActivity : ComponentActivity() {
         val apiClient = ApiClient.getApiService()
         val mediaPlayer = GlobalMediaPlayer.getInstance()
 
+        // Validate required parameters
+        if (podcastId == null || episodeId == null || apiClient == null) {
+            android.util.Log.e("PlayerActivity", "Cannot update progress: missing podcastId, episodeId, or apiClient")
+            return
+        }
+
         lifecycleScope.launch {
             while (isPlaying) {
                 delay(5000L)
@@ -138,8 +144,8 @@ class PlayerActivity : ComponentActivity() {
                 val totalTime = mediaPlayer.duration / 1000.0
                 val request =
                     MediaProgressRequest(currentTime = currentTimeState, duration = totalTime)
-                apiClient?.userCreateOrUpdateMediaProgress(podcastId!!, episodeId!!, request)
-                    ?.enqueue(object : Callback<Void> {
+                apiClient.userCreateOrUpdateMediaProgress(podcastId, episodeId, request)
+                    .enqueue(object : Callback<Void> {
                         override fun onResponse(call: Call<Void>, response: Response<Void>) {
                             if (!response.isSuccessful) {
                                 Toast.makeText(

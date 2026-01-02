@@ -22,17 +22,28 @@ object ApiClient {
         host = userPreferences.host
         token = userPreferences.token
 
-        if (!host!!.startsWith("http://") && !host!!.startsWith("https://")) {
-            // Clear shared preferences
+        val hostValue = host
+        val tokenValue = token
+
+        if (hostValue == null || tokenValue == null) {
+            // Missing credentials, navigate to login
             sharedPreferencesHandler.clearPreferences()
-            // Navigate to login screen
             val intent = Intent(context, LoginActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             context.startActivity(intent)
-        } else {
-            apiService = create(host!!, token!!)
+            return
         }
 
+        if (!hostValue.startsWith("http://") && !hostValue.startsWith("https://")) {
+            // Invalid host format, clear and navigate to login
+            sharedPreferencesHandler.clearPreferences()
+            val intent = Intent(context, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            context.startActivity(intent)
+            return
+        }
+
+        apiService = create(hostValue, tokenValue)
     }
 
     fun getApiService(): ApiService? {
@@ -48,11 +59,7 @@ object ApiClient {
     }
 
     fun generateFullUrl(path: String): String? {
-        return if (host != null && token != null) {
-            "$host$path?token=$token"
-        } else {
-            null
-        }
+        return host?.let { "$it$path" }
     }
 
     private fun create(baseUrl: String, token: String? = null): ApiService {
