@@ -45,8 +45,6 @@ fun MediaPlayerController(
     currentTime: Float = 0f,
     chapters: List<Chapter>? = null
 ) {
-    Log.i("MediaPlayerController", "URL: $url")
-
     val mediaPlayer = remember { GlobalMediaPlayer.getInstance() }
     var progress by remember { mutableStateOf(if (duration > 0) currentTime / duration else 0f) }
     var currentTimeState by remember { mutableStateOf(currentTime) }
@@ -59,9 +57,14 @@ fun MediaPlayerController(
             reset() // Ensure the media player is reset before setting a new data source
             setDataSource(url)
             setOnPreparedListener {
-                totalTime = duration
+                // Use the parameter duration (from API) if available, otherwise use MediaPlayer duration
+                if (duration > 0) {
+                    totalTime = duration
+                } else {
+                    totalTime = mediaPlayer.duration / 1000f
+                }
                 currentTimeState = currentTime
-                progress = if (duration > 0) currentTime / duration else 0f
+                progress = if (totalTime > 0) currentTime / totalTime else 0f
                 seekTo((currentTime * 1000).toInt()) // Seek to the currentTime position
             }
             prepareAsync()
@@ -70,7 +73,9 @@ fun MediaPlayerController(
 
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
-            mediaPlayer.start()
+            if (!mediaPlayer.isPlaying) {
+                mediaPlayer.start()
+            }
             coroutineScope.launch {
                 while (isPlaying) {
                     currentTimeState = mediaPlayer.currentPosition / 1000f
@@ -79,7 +84,9 @@ fun MediaPlayerController(
                 }
             }
         } else {
-            mediaPlayer.pause()
+            if (mediaPlayer.isPlaying) {
+                mediaPlayer.pause()
+            }
         }
     }
 
@@ -90,10 +97,14 @@ fun MediaPlayerController(
             Button(
                 onClick = {
                     if (isPlaying) {
-                        mediaPlayer.pause()
+                        if (mediaPlayer.isPlaying) {
+                            mediaPlayer.pause()
+                        }
                     } else {
-                        mediaPlayer.start()
-                        mediaPlayer.seekTo((currentTimeState * 1000).toInt()) // Seek to the currentTime position
+                        if (!mediaPlayer.isPlaying) {
+                            mediaPlayer.start()
+                            mediaPlayer.seekTo((currentTimeState * 1000).toInt()) // Seek to the currentTime position
+                        }
                     }
                     onPlayPause(!isPlaying)
                 },
