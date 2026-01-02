@@ -269,6 +269,41 @@ fun BookPlayerScreen(
 ) {
     val context = LocalContext.current
 
+    // Start progress update coroutine when playing
+    LaunchedEffect(isPlaying) {
+        if (isPlaying && bookDetail != null) {
+            val apiClient = ApiClient.getApiService()
+            val mediaPlayer = GlobalMediaPlayer.getInstance()
+            val totalDuration = bookDetail.media.duration
+
+            while (isPlaying) {
+                delay(5000L)
+                val currentTimeState = mediaPlayer.currentPosition / 1000.0
+                val request = MediaProgressRequest(currentTime = currentTimeState, duration = totalDuration)
+                apiClient?.userCreateOrUpdateMediaProgress(bookId, request = request)
+                    ?.enqueue(object : Callback<Void> {
+                        override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                            if (!response.isSuccessful) {
+                                Toast.makeText(
+                                    context,
+                                    "Failed to update media progress",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+
+                        override fun onFailure(call: Call<Void>, t: Throwable) {
+                            Toast.makeText(
+                                context,
+                                "Network error: ${t.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    })
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -342,7 +377,8 @@ fun BookPlayerScreen(
                     onPlayPause,
                     mediaProgress?.duration?.takeIf { it > 0 } ?: bookDetail?.media?.duration ?: 0.0,
                     mediaProgress?.currentTime ?: 0.0,
-                    it.media.chapters
+                    it.media.chapters,
+                    authToken = ApiClient.getToken()
                 )
             }
         } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)

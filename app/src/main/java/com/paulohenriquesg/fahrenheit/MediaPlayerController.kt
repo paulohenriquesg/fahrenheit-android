@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit
 
+import android.net.Uri
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
 import androidx.compose.foundation.Canvas
@@ -27,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
@@ -43,19 +45,28 @@ fun MediaPlayerController(
     onPlayPause: (Boolean) -> Unit,
     duration: Double = 0.0,
     currentTime: Double = 0.0,
-    chapters: List<Chapter>? = null
+    chapters: List<Chapter>? = null,
+    authToken: String? = null
 ) {
+    val context = LocalContext.current
     val mediaPlayer = remember { GlobalMediaPlayer.getInstance() }
     var progress by remember { mutableStateOf(if (duration > 0) (currentTime / duration).toFloat() else 0f) }
     var currentTimeState by remember { mutableStateOf(currentTime) }
     var totalTime by remember { mutableStateOf(duration) }
     var sliderSize by remember { mutableStateOf(IntSize.Zero) }
+    var isPrepared by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(url) {
+        isPrepared = false
         mediaPlayer.apply {
             reset() // Ensure the media player is reset before setting a new data source
-            setDataSource(url)
+            if (authToken != null) {
+                val headers = mapOf("Authorization" to "Bearer $authToken")
+                setDataSource(context, Uri.parse(url), headers)
+            } else {
+                setDataSource(url)
+            }
             setOnPreparedListener {
                 // Use the parameter duration (from API) if available, otherwise use MediaPlayer duration
                 if (duration > 0) {
@@ -66,6 +77,7 @@ fun MediaPlayerController(
                 currentTimeState = currentTime
                 progress = if (totalTime > 0) (currentTime / totalTime).toFloat() else 0f
                 seekTo((currentTime * 1000).toInt()) // Seek to the currentTime position
+                isPrepared = true
             }
             prepareAsync()
         }
@@ -73,11 +85,11 @@ fun MediaPlayerController(
 
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
-            if (!mediaPlayer.isPlaying) {
+            if (isPrepared && !mediaPlayer.isPlaying) {
                 mediaPlayer.start()
             }
             coroutineScope.launch {
-                while (isPlaying) {
+                while (isPlaying && isPrepared) {
                     currentTimeState = mediaPlayer.currentPosition / 1000.0
                     progress = if (totalTime > 0) (currentTimeState / totalTime).toFloat() else 0f
                     delay(1000L)
@@ -96,18 +108,11 @@ fun MediaPlayerController(
         ) {
             Button(
                 onClick = {
-                    if (isPlaying) {
-                        if (mediaPlayer.isPlaying) {
-                            mediaPlayer.pause()
-                        }
-                    } else {
-                        if (!mediaPlayer.isPlaying) {
-                            mediaPlayer.start()
-                            mediaPlayer.seekTo((currentTimeState * 1000).toInt()) // Seek to the currentTime position
-                        }
+                    if (isPrepared) {
+                        onPlayPause(!isPlaying)
                     }
-                    onPlayPause(!isPlaying)
                 },
+                enabled = isPrepared,
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(if (isPlaying) "Pause" else "Play", color = MaterialTheme.colorScheme.onPrimary)
@@ -119,10 +124,17 @@ fun MediaPlayerController(
                 onClick = {
                     mediaPlayer.stop()
                     mediaPlayer.reset()
-                    mediaPlayer.setDataSource(url)
+                    isPrepared = false
+                    if (authToken != null) {
+                        val headers = mapOf("Authorization" to "Bearer $authToken")
+                        mediaPlayer.setDataSource(context, Uri.parse(url), headers)
+                    } else {
+                        mediaPlayer.setDataSource(url)
+                    }
                     mediaPlayer.prepareAsync()
                     onPlayPause(false)
                 },
+                enabled = isPrepared,
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text("Stop", color = MaterialTheme.colorScheme.onSecondary)

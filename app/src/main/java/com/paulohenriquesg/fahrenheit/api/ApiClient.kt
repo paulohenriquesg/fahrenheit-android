@@ -83,9 +83,10 @@ object ApiClient {
 
         val client = clientBuilder.build()
 
-        // Create custom Gson with ShelfDeserializer
+        // Create custom Gson with ShelfDeserializer and ServerSettingsDeserializer
         val gson = GsonBuilder()
             .registerTypeAdapter(Shelf::class.java, ShelfDeserializer())
+            .registerTypeAdapter(ServerSettings::class.java, ServerSettingsDeserializer())
             .create()
 
         val retrofit = Retrofit.Builder()
