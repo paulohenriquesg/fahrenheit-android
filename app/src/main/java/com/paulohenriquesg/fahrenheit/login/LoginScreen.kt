@@ -76,14 +76,14 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
             label = {
                 Text(
                     "Host",
-                    color = if (isHostFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.surface
+                    color = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             leadingIcon = {
                 Icon(
                     Icons.Filled.Language,
                     contentDescription = "Host Icon",
-                    tint = MaterialTheme.colorScheme.surface
+                    tint = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             modifier = Modifier
@@ -98,11 +98,11 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
             ),
             colors = TextFieldDefaults.colors(
-                unfocusedTextColor = MaterialTheme.colorScheme.surface,
-                focusedTextColor = MaterialTheme.colorScheme.surface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
                 cursorColor = MaterialTheme.colorScheme.primary,
                 focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.onBackground,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -112,14 +112,14 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
             label = {
                 Text(
                     "Username",
-                    color = if (isUsernameFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.surface
+                    color = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             leadingIcon = {
                 Icon(
                     Icons.Filled.Person,
                     contentDescription = "Username Icon",
-                    tint = MaterialTheme.colorScheme.surface
+                    tint = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             modifier = Modifier
@@ -134,11 +134,11 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
             ),
             colors = TextFieldDefaults.colors(
-                unfocusedTextColor = MaterialTheme.colorScheme.surface,
-                focusedTextColor = MaterialTheme.colorScheme.surface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
                 cursorColor = MaterialTheme.colorScheme.primary,
                 focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.onBackground
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -148,14 +148,14 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
             label = {
                 Text(
                     "Password",
-                    color = if (isPasswordFocused) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.surface
+                    color = if (isPasswordFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             leadingIcon = {
                 Icon(
                     Icons.Filled.Lock,
                     contentDescription = "Password Icon",
-                    tint = MaterialTheme.colorScheme.surface
+                    tint = if (isPasswordFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             visualTransformation = PasswordVisualTransformation(),
@@ -171,11 +171,11 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
             ),
             colors = TextFieldDefaults.colors(
-                unfocusedTextColor = MaterialTheme.colorScheme.surface,
-                focusedTextColor = MaterialTheme.colorScheme.surface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
                 cursorColor = MaterialTheme.colorScheme.primary,
                 focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.onBackground
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
         Spacer(modifier = Modifier.height(16.dp))
