@@ -41,12 +41,12 @@ fun MediaPlayerController(
     mediaSession: MediaSessionCompat,
     isPlaying: Boolean,
     onPlayPause: (Boolean) -> Unit,
-    duration: Float = 0f,
-    currentTime: Float = 0f,
+    duration: Double = 0.0,
+    currentTime: Double = 0.0,
     chapters: List<Chapter>? = null
 ) {
     val mediaPlayer = remember { GlobalMediaPlayer.getInstance() }
-    var progress by remember { mutableStateOf(if (duration > 0) currentTime / duration else 0f) }
+    var progress by remember { mutableStateOf(if (duration > 0) (currentTime / duration).toFloat() else 0f) }
     var currentTimeState by remember { mutableStateOf(currentTime) }
     var totalTime by remember { mutableStateOf(duration) }
     var sliderSize by remember { mutableStateOf(IntSize.Zero) }
@@ -61,10 +61,10 @@ fun MediaPlayerController(
                 if (duration > 0) {
                     totalTime = duration
                 } else {
-                    totalTime = mediaPlayer.duration / 1000f
+                    totalTime = mediaPlayer.duration / 1000.0
                 }
                 currentTimeState = currentTime
-                progress = if (totalTime > 0) currentTime / totalTime else 0f
+                progress = if (totalTime > 0) (currentTime / totalTime).toFloat() else 0f
                 seekTo((currentTime * 1000).toInt()) // Seek to the currentTime position
             }
             prepareAsync()
@@ -78,8 +78,8 @@ fun MediaPlayerController(
             }
             coroutineScope.launch {
                 while (isPlaying) {
-                    currentTimeState = mediaPlayer.currentPosition / 1000f
-                    progress = if (totalTime > 0) currentTimeState / totalTime else 0f
+                    currentTimeState = mediaPlayer.currentPosition / 1000.0
+                    progress = if (totalTime > 0) (currentTimeState / totalTime).toFloat() else 0f
                     delay(1000L)
                 }
             }
@@ -135,7 +135,7 @@ fun MediaPlayerController(
                 onValueChange = { newValue ->
                     progress = newValue
                     mediaPlayer.seekTo((newValue * totalTime * 1000).toInt())
-                    currentTimeState = mediaPlayer.currentPosition / 1000f
+                    currentTimeState = mediaPlayer.currentPosition / 1000.0
                 },
                 modifier = Modifier
                     .fillMaxWidth()

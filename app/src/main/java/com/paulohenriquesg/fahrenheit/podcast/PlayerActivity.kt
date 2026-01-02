@@ -134,8 +134,8 @@ class PlayerActivity : ComponentActivity() {
         lifecycleScope.launch {
             while (isPlaying) {
                 delay(5000L)
-                val currentTimeState = mediaPlayer.currentPosition / 1000f
-                val totalTime = mediaPlayer.duration / 1000f
+                val currentTimeState = mediaPlayer.currentPosition / 1000.0
+                val totalTime = mediaPlayer.duration / 1000.0
                 val request =
                     MediaProgressRequest(currentTime = currentTimeState, duration = totalTime)
                 apiClient?.userCreateOrUpdateMediaProgress(podcastId!!, episodeId!!, request)
@@ -180,7 +180,7 @@ class PlayerActivity : ComponentActivity() {
                             }
                         } else if (response.code() == 404) {
                             // Call userCreateOrUpdateMediaProgress if 404
-                            val request = MediaProgressRequest(currentTime = 0f, duration = 0f)
+                            val request = MediaProgressRequest(currentTime = 0.0, duration = 0.0)
                             apiClient.userCreateOrUpdateMediaProgress(
                                 libraryItemId,
                                 episodeId,
@@ -296,8 +296,8 @@ fun PlayerScreen(
                     mediaSession,
                     isPlaying,
                     onPlayPause,
-                    mediaProgress?.duration ?: episode?.audioTrack?.duration?.toFloat() ?: 0f,
-                    mediaProgress?.currentTime ?: 0f
+                    mediaProgress?.duration ?: episode?.audioTrack?.duration ?: 0.0,
+                    mediaProgress?.currentTime ?: 0.0
                 )
             }
         } ?: Text(text = "Loading...")

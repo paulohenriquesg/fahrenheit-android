@@ -23,7 +23,7 @@ data class LibraryItemResponse(
     @SerializedName("media") val media: LibraryItemMedia,
     @SerializedName("libraryFiles") val libraryFiles: List<LibraryFile>,
     @SerializedName("size") val size: Long,
-    @SerializedName("userMediaProgress") val userMediaProgress: UserMediaProgress?,
+    @SerializedName("userMediaProgress") val userMediaProgress: MediaProgressResponse?,
     @SerializedName("rssFeedUrl") val rssFeedUrl: String?
 )
 
@@ -162,20 +162,6 @@ data class LibraryFile(
     @SerializedName("addedAt") val addedAt: Long,
     @SerializedName("updatedAt") val updatedAt: Long,
     @SerializedName("fileType") val fileType: String
-)
-
-data class UserMediaProgress(
-    @SerializedName("id") val id: String,
-    @SerializedName("libraryItemId") val libraryItemId: String,
-    @SerializedName("episodeId") val episodeId: String?,
-    @SerializedName("duration") val duration: Double,
-    @SerializedName("progress") val progress: Double,
-    @SerializedName("currentTime") val currentTime: Double,
-    @SerializedName("isFinished") val isFinished: Boolean,
-    @SerializedName("hideFromContinueListening") val hideFromContinueListening: Boolean,
-    @SerializedName("lastUpdate") val lastUpdate: Long,
-    @SerializedName("startedAt") val startedAt: Long,
-    @SerializedName("finishedAt") val finishedAt: Long?
 )
 
 data class LibraryItemMetadata(

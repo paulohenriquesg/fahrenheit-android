@@ -14,7 +14,7 @@ data class User(
     @SerializedName("username") val username: String,
     @SerializedName("type") val type: String,
     @SerializedName("token") val token: String,
-    @SerializedName("mediaProgress") val mediaProgress: List<MediaProgress>,
+    @SerializedName("mediaProgress") val mediaProgress: List<MediaProgressResponse>,
     @SerializedName("seriesHideFromContinueListening") val seriesHideFromContinueListening: List<Any>,
     @SerializedName("bookmarks") val bookmarks: List<Any>,
     @SerializedName("isActive") val isActive: Boolean,
@@ -24,20 +24,6 @@ data class User(
     @SerializedName("permissions") val permissions: Permissions,
     @SerializedName("librariesAccessible") val librariesAccessible: List<Any>,
     @SerializedName("itemTagsAccessible") val itemTagsAccessible: List<Any>
-)
-
-data class MediaProgress(
-    @SerializedName("id") val id: String,
-    @SerializedName("libraryItemId") val libraryItemId: String,
-    @SerializedName("episodeId") val episodeId: String,
-    @SerializedName("duration") val duration: Double,
-    @SerializedName("progress") val progress: Double,
-    @SerializedName("currentTime") val currentTime: Double,
-    @SerializedName("isFinished") val isFinished: Boolean,
-    @SerializedName("hideFromContinueListening") val hideFromContinueListening: Boolean,
-    @SerializedName("lastUpdate") val lastUpdate: Long,
-    @SerializedName("startedAt") val startedAt: Long,
-    @SerializedName("finishedAt") val finishedAt: Any?
 )
 
 data class Permissions(

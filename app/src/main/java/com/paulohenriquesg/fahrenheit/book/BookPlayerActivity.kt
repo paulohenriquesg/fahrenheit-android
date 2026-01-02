@@ -133,8 +133,8 @@ class BookPlayerActivity : ComponentActivity() {
         lifecycleScope.launch {
             while (isPlaying) {
                 delay(5000L)
-                val currentTimeState = mediaPlayer.currentPosition / 1000f
-                val totalTime = mediaPlayer.duration / 1000f
+                val currentTimeState = mediaPlayer.currentPosition / 1000.0
+                val totalTime = mediaPlayer.duration / 1000.0
                 val request =
                     MediaProgressRequest(currentTime = currentTimeState, duration = totalTime)
                 apiClient?.userCreateOrUpdateMediaProgress(bookId, request = request)
@@ -173,7 +173,7 @@ class BookPlayerActivity : ComponentActivity() {
                         if (response.isSuccessful) {
                             mediaProgress = response.body()
                         } else if (response.code() == 404) {
-                            val request = MediaProgressRequest(currentTime = 0f, duration = 0f)
+                            val request = MediaProgressRequest(currentTime = 0.0, duration = 0.0)
                             apiClient.userCreateOrUpdateMediaProgress(
                                 libraryItemId = libraryItemId,
                                 request = request
@@ -298,7 +298,7 @@ fun BookPlayerScreen(
                     val currentChapter = it.media.chapters?.firstOrNull { chapter ->
                         val start = chapter.start ?: 0.0
                         val end = chapter.end ?: 0.0
-                        (mediaProgress?.currentTime ?: 0f) in start..end
+                        (mediaProgress?.currentTime ?: 0.0) in start..end
                     }
                     currentChapter?.let { chapter ->
                         Text(
@@ -321,8 +321,8 @@ fun BookPlayerScreen(
                     mediaSession,
                     isPlaying,
                     onPlayPause,
-                    mediaProgress?.duration?.takeIf { it >= 0 } ?: bookDetail?.media?.duration?.toFloat() ?: 0f,
-                    mediaProgress?.currentTime ?: 0f,
+                    mediaProgress?.duration?.takeIf { it >= 0 } ?: bookDetail?.media?.duration ?: 0.0,
+                    mediaProgress?.currentTime ?: 0.0,
                     it.media.chapters
                 )
             }
