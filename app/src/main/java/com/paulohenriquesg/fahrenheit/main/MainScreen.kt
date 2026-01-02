@@ -343,7 +343,7 @@ fun MainScreen(
                     )
                 }
                 if (viewMode == "home") {
-                    PersonalizedHomeView(shelves)
+                    PersonalizedHomeView(shelves, currentLibrary?.id)
                 } else {
                     Column(
                         modifier = Modifier
@@ -396,7 +396,7 @@ fun getIconForMediaType(mediaType: String?): ImageVector {
 }
 
 @Composable
-fun PersonalizedHomeView(shelves: List<Shelf>) {
+fun PersonalizedHomeView(shelves: List<Shelf>, libraryId: String?) {
     val context = LocalContext.current
     // Filter out empty shelves
     val nonEmptyShelves = shelves.filter {
@@ -439,8 +439,8 @@ fun PersonalizedHomeView(shelves: List<Shelf>) {
                     "series" -> {
                         shelf.seriesEntities?.let { series ->
                             SeriesShelfRow(shelf = shelf, series = series) { seriesItem ->
-                                // TODO: Navigate to series detail page
-                                Toast.makeText(context, "Series: ${seriesItem.name}", Toast.LENGTH_SHORT).show()
+                                val intent = com.paulohenriquesg.fahrenheit.series.SeriesDetailActivity.createIntent(context, seriesItem)
+                                context.startActivity(intent)
                             }
                         }
                     }

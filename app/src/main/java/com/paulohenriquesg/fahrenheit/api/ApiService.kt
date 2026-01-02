@@ -96,4 +96,10 @@ interface ApiService {
         @Path("authorId") authorId: String,
         @Query("include") include: String = "items"
     ): Call<AuthorDetailResponse>
+
+    @GET("api/libraries/{libraryId}/series/{seriesId}")
+    fun getSeries(
+        @Path("libraryId") libraryId: String,
+        @Path("seriesId") seriesId: String
+    ): Call<Series>
 }
