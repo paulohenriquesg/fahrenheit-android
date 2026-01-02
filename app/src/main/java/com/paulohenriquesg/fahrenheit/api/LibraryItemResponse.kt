@@ -168,9 +168,10 @@ data class LibraryItemMetadata(
     @SerializedName("title") val title: String,
     @SerializedName("titleIgnorePrefix") val titleIgnorePrefix: String,
     @SerializedName("subtitle") val subtitle: String?,
-    @SerializedName("authors") val authors: List<Author>,
-    @SerializedName("narrators") val narrators: List<String>,
-    @SerializedName("series") val series: List<Series>,
+    // Detailed API responses (array format)
+    @SerializedName("authors") val authors: List<Author>? = null,
+    @SerializedName("narrators") val narrators: List<String>? = null,
+    @SerializedName("series") val series: List<Series>? = null,
     @SerializedName("genres") val genres: List<String>,
     @SerializedName("publishedYear") val publishedYear: String,
     @SerializedName("publishedDate") val publishedDate: String?,
@@ -180,10 +181,11 @@ data class LibraryItemMetadata(
     @SerializedName("asin") val asin: String,
     @SerializedName("language") val language: String?,
     @SerializedName("explicit") val explicit: Boolean,
-    @SerializedName("authorName") val authorName: String,
-    @SerializedName("authorNameLF") val authorNameLF: String,
-    @SerializedName("narratorName") val narratorName: String,
-    @SerializedName("seriesName") val seriesName: String
+    // Minified API responses (string format)
+    @SerializedName("authorName") val authorName: String? = null,
+    @SerializedName("authorNameLF") val authorNameLF: String? = null,
+    @SerializedName("narratorName") val narratorName: String? = null,
+    @SerializedName("seriesName") val seriesName: String? = null
 )
 
 data class Author(
