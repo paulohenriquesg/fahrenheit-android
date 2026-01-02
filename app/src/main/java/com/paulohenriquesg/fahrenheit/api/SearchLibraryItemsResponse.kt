@@ -7,7 +7,7 @@ data class SearchLibraryItemsResponse(
     @SerializedName("podcast") val podcast: List<SearchBookItem>? = null,
     @SerializedName("tags") val tags: List<Any>? = null,
     @SerializedName("genres") val genres: List<Any>? = null,
-    @SerializedName("authors") val authors: List<SearchAuthor>? = null,
+    @SerializedName("authors") val authors: List<Author>? = null,
     @SerializedName("narrators") val narrators: List<Any>? = null,
     @SerializedName("series") val series: List<Any>? = null
 )
@@ -110,7 +110,7 @@ data class SearchTrack(
     @SerializedName("title") val title: String? = null,
     @SerializedName("contentUrl") val contentUrl: String? = null,
     @SerializedName("mimeType") val mimeType: String? = null,
-    @SerializedName("metadata") val metadata: SearchFileMetadata? = null
+    @SerializedName("metadata") val metadata: AudioFileMetadata? = null
 )
 
 data class SearchLibraryFile(
