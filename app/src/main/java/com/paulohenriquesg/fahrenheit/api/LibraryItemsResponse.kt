@@ -40,7 +40,7 @@ data class LibraryItem(
 )
 
 data class Media(
-    @SerializedName("metadata") val metadata: Metadata,
+    @SerializedName("metadata") val metadata: LibraryItemMetadata,
     @SerializedName("coverPath") val coverPath: String,
     @SerializedName("tags") val tags: List<String>,
     @SerializedName("numTracks") val numTracks: Int,
@@ -49,24 +49,6 @@ data class Media(
     @SerializedName("duration") val duration: Double,
     @SerializedName("size") val size: Long,
     @SerializedName("ebookFileFormat") val ebookFileFormat: String?
-)
-
-data class Metadata(
-    @SerializedName("title") val title: String,
-    @SerializedName("titleIgnorePrefix") val titleIgnorePrefix: String,
-    @SerializedName("subtitle") val subtitle: String?,
-    @SerializedName("authorName") val authorName: String,
-    @SerializedName("narratorName") val narratorName: String,
-    @SerializedName("seriesName") val seriesName: String,
-    @SerializedName("genres") val genres: List<String>,
-    @SerializedName("publishedYear") val publishedYear: String,
-    @SerializedName("publishedDate") val publishedDate: String?,
-    @SerializedName("publisher") val publisher: String,
-    @SerializedName("description") val description: String,
-    @SerializedName("isbn") val isbn: String?,
-    @SerializedName("asin") val asin: String,
-    @SerializedName("language") val language: String?,
-    @SerializedName("explicit") val explicit: Boolean
 )
 
 data class CollapsedSeries(
