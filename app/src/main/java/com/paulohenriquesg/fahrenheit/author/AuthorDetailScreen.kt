@@ -1,19 +1,11 @@
 package com.paulohenriquesg.fahrenheit.author
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,8 +22,9 @@ import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.AuthorDetailResponse
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
+import com.paulohenriquesg.fahrenheit.ui.components.DetailHeader
+import com.paulohenriquesg.fahrenheit.ui.components.ItemsGrid
 import com.paulohenriquesg.fahrenheit.ui.elements.AuthorImage
-import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemCard
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -112,78 +105,35 @@ fun AuthorDetailContent(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Author header section - similar to book/podcast detail
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp)
-        ) {
-            AuthorImage(
-                authorId = author.id,
-                imagePath = author.imagePath,
-                contentDescription = author.name
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(
-                modifier = Modifier.height(200.dp)
-            ) {
-                Text(
-                    text = author.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+        val booksCount = author.libraryItems?.size ?: 0
 
-                val booksCount = author.libraryItems?.size ?: 0
-                Text(
-                    text = "$booksCount ${if (booksCount == 1) "book" else "books"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp)
+        DetailHeader(
+            imageContent = {
+                AuthorImage(
+                    authorId = author.id,
+                    imagePath = author.imagePath,
+                    contentDescription = author.name
                 )
-
-                author.description?.let { desc ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = desc,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 5,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
+            },
+            title = author.name,
+            subtitle = "$booksCount ${if (booksCount == 1) "book" else "books"}",
+            description = author.description
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Books grid
-        author.libraryItems?.let { books ->
-            if (books.isNotEmpty()) {
-                Text(
-                    text = "Books",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    contentPadding = PaddingValues(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(books) { book ->
-                        LibraryItemCard(
-                            item = book,
-                            onClick = { onBookClick(book) }
-                        )
-                    }
-                }
-            } else {
-                Text(
-                    text = "No books found for this author",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
-            }
-        }
+        Text(
+            text = "Books",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        ItemsGrid(
+            items = author.libraryItems,
+            columns = 4,
+            onItemClick = onBookClick,
+            emptyMessage = "No books found for this author"
+        )
     }
 }
