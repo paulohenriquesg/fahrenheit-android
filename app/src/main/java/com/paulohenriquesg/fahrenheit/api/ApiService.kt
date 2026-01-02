@@ -90,4 +90,10 @@ interface ApiService {
         @Query("limit") limit: Int = 10,
         @Query("include") include: String = "rssfeed"
     ): Call<List<Shelf>>
+
+    @GET("api/authors/{authorId}")
+    fun getAuthor(
+        @Path("authorId") authorId: String,
+        @Query("include") include: String = "items"
+    ): Call<AuthorDetailResponse>
 }

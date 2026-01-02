@@ -431,8 +431,8 @@ fun PersonalizedHomeView(shelves: List<Shelf>) {
                     "authors" -> {
                         shelf.authorEntities?.let { authors ->
                             AuthorShelfRow(shelf = shelf, authors = authors) { author ->
-                                // TODO: Navigate to author detail page
-                                Toast.makeText(context, "Author: ${author.name}", Toast.LENGTH_SHORT).show()
+                                val intent = com.paulohenriquesg.fahrenheit.author.AuthorDetailActivity.createIntent(context, author.id)
+                                context.startActivity(intent)
                             }
                         }
                     }

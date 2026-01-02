@@ -106,7 +106,9 @@ class DetailActivity : ComponentActivity() {
                     contentDescription = itemDetail?.media?.metadata?.title ?: "Cover Image"
                 )
                 Spacer(modifier = Modifier.width(16.dp))
-                Column {
+                Column(
+                    modifier = Modifier.height(200.dp)
+                ) {
                     itemDetail?.let {
                         Text(
                             text = it.media.metadata.title,

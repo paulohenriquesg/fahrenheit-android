@@ -4,9 +4,9 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
@@ -32,7 +32,8 @@ fun AuthorImage(
     authorId: String,
     imagePath: String?,
     contentDescription: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 200.dp
 ) {
     var bitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     val context = LocalContext.current
@@ -85,16 +86,16 @@ fun AuthorImage(
             bitmap = it,
             contentDescription = contentDescription,
             modifier = modifier
-                .fillMaxWidth()
-                .height(200.dp),
+                .width(size)
+                .height(size),
             contentScale = ContentScale.Crop
         )
     } ?: run {
         // Show placeholder for authors without images
         PlaceholderImage(
             modifier = modifier
-                .fillMaxWidth()
-                .height(200.dp)
+                .width(size)
+                .height(size)
         )
     }
 }
