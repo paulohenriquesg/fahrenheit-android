@@ -296,7 +296,9 @@ fun BookPlayerScreen(
                         )
                     }
                     val currentChapter = it.media.chapters?.firstOrNull { chapter ->
-                        (mediaProgress?.currentTime ?: 0f) in chapter.start..chapter.end
+                        val start = chapter.start ?: 0.0
+                        val end = chapter.end ?: 0.0
+                        (mediaProgress?.currentTime ?: 0f) in start..end
                     }
                     currentChapter?.let { chapter ->
                         Text(

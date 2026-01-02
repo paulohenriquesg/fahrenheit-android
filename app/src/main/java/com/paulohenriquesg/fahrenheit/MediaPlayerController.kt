@@ -147,8 +147,10 @@ fun MediaPlayerController(
             val chapterColor = MaterialTheme.colorScheme.onSurfaceVariant
             Canvas(modifier = Modifier.matchParentSize()) {
                 chapters?.dropLast(1)?.forEach { chapter ->
-                    val percentage = (chapter.end / totalTime) * 100
-                    drawLineAtPercentage(percentage.toFloat(), sliderSize.width, 4.dp.toPx(), chapterColor)
+                    chapter.end?.let { end ->
+                        val percentage = (end / totalTime) * 100
+                        drawLineAtPercentage(percentage.toFloat(), sliderSize.width, 4.dp.toPx(), chapterColor)
+                    }
                 }
             }
         }

@@ -122,25 +122,25 @@ data class AudioFileMetadata(
 )
 
 data class MetaTags(
-    @SerializedName("tagAlbum") val tagAlbum: String,
-    @SerializedName("tagArtist") val tagArtist: String,
-    @SerializedName("tagGenre") val tagGenre: String,
-    @SerializedName("tagTitle") val tagTitle: String,
-    @SerializedName("tagGrouping") val tagGrouping: String,
-    @SerializedName("tagTrack") val tagTrack: String,
-    @SerializedName("tagAlbumArtist") val tagAlbumArtist: String,
-    @SerializedName("tagDate") val tagDate: String,
-    @SerializedName("tagComposer") val tagComposer: String,
-    @SerializedName("tagComment") val tagComment: String,
-    @SerializedName("tagDescription") val tagDescription: String,
-    @SerializedName("tagEncoder") val tagEncoder: String
+    @SerializedName("tagAlbum") val tagAlbum: String? = null,
+    @SerializedName("tagArtist") val tagArtist: String? = null,
+    @SerializedName("tagGenre") val tagGenre: String? = null,
+    @SerializedName("tagTitle") val tagTitle: String? = null,
+    @SerializedName("tagGrouping") val tagGrouping: String? = null,  // Not in Search/Play variants
+    @SerializedName("tagTrack") val tagTrack: String? = null,
+    @SerializedName("tagAlbumArtist") val tagAlbumArtist: String? = null,
+    @SerializedName("tagDate") val tagDate: String? = null,
+    @SerializedName("tagComposer") val tagComposer: String? = null,
+    @SerializedName("tagComment") val tagComment: String? = null,  // Not in Search/Play variants
+    @SerializedName("tagDescription") val tagDescription: String? = null,  // Not in Search/Play variants
+    @SerializedName("tagEncoder") val tagEncoder: String? = null
 )
 
 data class Chapter(
-    @SerializedName("id") val id: Int,
-    @SerializedName("start") val start: Double,
-    @SerializedName("end") val end: Double,
-    @SerializedName("title") val title: String
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("start") val start: Double? = null,
+    @SerializedName("end") val end: Double? = null,
+    @SerializedName("title") val title: String? = null
 )
 
 data class Track(
@@ -204,7 +204,8 @@ data class Author(
     @SerializedName("description") val description: String?,
     @SerializedName("imagePath") val imagePath: String?,
     @SerializedName("addedAt") val addedAt: Long,
-    @SerializedName("updatedAt") val updatedAt: Long
+    @SerializedName("updatedAt") val updatedAt: Long,
+    @SerializedName("numBooks") val numBooks: Int? = null  // From SearchAuthor - only in search responses
 )
 
 data class Series(
