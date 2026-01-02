@@ -1,7 +1,5 @@
 package com.paulohenriquesg.fahrenheit.ui.elements
 
-import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -11,21 +9,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.paulohenriquesg.fahrenheit.api.ApiClient
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Composable
 fun AuthorImage(
@@ -35,68 +26,31 @@ fun AuthorImage(
     modifier: Modifier = Modifier,
     size: androidx.compose.ui.unit.Dp = 200.dp
 ) {
-    var bitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     val context = LocalContext.current
+    val imageUrl = ApiClient.generateFullUrl("/api/authors/$authorId/image")
 
-    LaunchedEffect(authorId) {
-        android.util.Log.d("AuthorImage", "Loading image for author $authorId")
-        try {
-            // Use the API endpoint /api/authors/{id}/image
-            val imageUrl = ApiClient.generateFullUrl("/api/authors/$authorId/image")
-            android.util.Log.d("AuthorImage", "Generated imageUrl: $imageUrl")
-
-            if (imageUrl != null) {
-                withContext(Dispatchers.IO) {
-                    val token = ApiClient.getToken()
-                    if (token != null) {
-                        val response = okhttp3.OkHttpClient().newCall(
-                            okhttp3.Request.Builder()
-                                .url(imageUrl)
-                                .header("Authorization", "Bearer $token")
-                                .build()
-                        ).execute()
-
-                        android.util.Log.d("AuthorImage", "Response code: ${response.code}, body size: ${response.body?.contentLength()}")
-
-                        if (response.isSuccessful) {
-                            response.body?.byteStream()?.use { inputStream ->
-                                BitmapFactory.decodeStream(inputStream)?.let {
-                                    android.util.Log.d("AuthorImage", "Successfully decoded bitmap for $authorId")
-                                    bitmap = it.asImageBitmap()
-                                } ?: android.util.Log.e("AuthorImage", "Failed to decode bitmap for $authorId")
-                            }
-                        } else {
-                            android.util.Log.e("AuthorImage", "Failed to load image: ${response.code} - ${response.message}")
-                        }
-                    } else {
-                        android.util.Log.e("AuthorImage", "Token is null")
-                    }
-                }
-            } else {
-                android.util.Log.e("AuthorImage", "Generated imageUrl is null")
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("AuthorImage", "Error loading image for $authorId", e)
-            e.printStackTrace()
-        }
-    }
-
-    bitmap?.let {
-        Image(
-            bitmap = it,
+    Box(
+        modifier = modifier
+            .width(size)
+            .height(size)
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(imageUrl)
+                .addHeader("Authorization", "Bearer ${ApiClient.getToken() ?: ""}")
+                .crossfade(true)
+                .build(),
             contentDescription = contentDescription,
-            modifier = modifier
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
                 .width(size)
                 .height(size),
-            contentScale = ContentScale.Crop
+            placeholder = null,
+            error = null
         )
-    } ?: run {
-        // Show placeholder for authors without images
-        PlaceholderImage(
-            modifier = modifier
-                .width(size)
-                .height(size)
-        )
+
+        // This will show if image fails to load (Coil shows nothing by default on error)
+        // The Box background could be customized here if needed
     }
 }
 
