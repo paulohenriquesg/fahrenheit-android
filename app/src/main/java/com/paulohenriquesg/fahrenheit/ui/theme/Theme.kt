@@ -25,9 +25,17 @@ fun FahrenheitTheme(
             tertiary = Pink80,
             background = Color(0xFF121212), // Dark Gray
             surface = Color(0xFF1E1E1E), // Slightly lighter dark for cards
+            surfaceVariant = Color(0xFF4A3D5C), // Muted purple for disabled buttons
             onBackground = Color(0xFFFFFFFF), // White for text
             onSurface = Color(0xFFFFFFFF), // White for text on cards
-            onPrimary = Color(0xFFBB86FC) // Light Purple for icons
+            onSurfaceVariant = Color(0xFFCAC4D0), // Light purple for disabled text
+            onPrimary = Color(0xFFFFFFFF), // White for button text
+            onSecondary = Color(0xFFFFFFFF), // White for secondary button text
+            onSecondaryContainer = Color(0xFFFFFFFF), // White for container text
+            onTertiary = Color(0xFFFFFFFF), // White for tertiary button text
+            onTertiaryContainer = Color(0xFFFFFFFF), // White for tertiary containers
+            secondaryContainer = Color(0xFF4A4458), // Medium purple container
+            tertiaryContainer = Color(0xFF633B48) // Medium pink container
         )
     } else {
         lightColorScheme(

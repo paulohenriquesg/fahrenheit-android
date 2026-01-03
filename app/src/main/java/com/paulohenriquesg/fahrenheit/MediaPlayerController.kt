@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -113,7 +114,11 @@ fun MediaPlayerController(
                     }
                 },
                 enabled = isPrepared,
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             ) {
                 Text(if (isPlaying) "Pause" else "Play", color = MaterialTheme.colorScheme.onPrimary)
             }
@@ -135,7 +140,11 @@ fun MediaPlayerController(
                     onPlayPause(false)
                 },
                 enabled = isPrepared,
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             ) {
                 Text("Stop", color = MaterialTheme.colorScheme.onSecondary)
             }
