@@ -68,7 +68,7 @@ jobs:
           name: Release ${{ github.ref_name }}
           body_path: release_notes.txt
           draft: false
-          prerelease: true
+          prerelease: false
           files: app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -80,7 +80,7 @@ jobs:
           name: Latest Release
           body_path: release_notes.txt
           draft: false
-          prerelease: true
+          prerelease: false
           files: app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
