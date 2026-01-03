@@ -268,6 +268,7 @@ fun BookPlayerScreen(
     onPlayPause: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
+    var currentPlaybackTime by remember { mutableStateOf(mediaProgress?.currentTime ?: 0.0) }
 
     // Start progress update coroutine when playing
     LaunchedEffect(isPlaying) {
@@ -352,7 +353,7 @@ fun BookPlayerScreen(
                     val currentChapter = it.media.chapters?.firstOrNull { chapter ->
                         val start = chapter.start ?: 0.0
                         val end = chapter.end ?: 0.0
-                        (mediaProgress?.currentTime ?: 0.0) in start..end
+                        currentPlaybackTime in start..end
                     }
                     currentChapter?.let { chapter ->
                         Text(
@@ -378,7 +379,10 @@ fun BookPlayerScreen(
                     mediaProgress?.duration?.takeIf { it > 0 } ?: bookDetail?.media?.duration ?: 0.0,
                     mediaProgress?.currentTime ?: 0.0,
                     it.media.chapters,
-                    authToken = ApiClient.getToken()
+                    authToken = ApiClient.getToken(),
+                    onCurrentTimeUpdate = { newTime ->
+                        currentPlaybackTime = newTime
+                    }
                 )
             }
         } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)

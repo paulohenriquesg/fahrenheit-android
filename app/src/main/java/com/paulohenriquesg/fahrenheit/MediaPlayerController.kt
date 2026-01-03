@@ -47,7 +47,8 @@ fun MediaPlayerController(
     duration: Double = 0.0,
     currentTime: Double = 0.0,
     chapters: List<Chapter>? = null,
-    authToken: String? = null
+    authToken: String? = null,
+    onCurrentTimeUpdate: (Double) -> Unit = {}
 ) {
     val context = LocalContext.current
     val mediaPlayer = remember { GlobalMediaPlayer.getInstance() }
@@ -93,6 +94,7 @@ fun MediaPlayerController(
                 while (isPlaying && isPrepared) {
                     currentTimeState = mediaPlayer.currentPosition / 1000.0
                     progress = if (totalTime > 0) (currentTimeState / totalTime).toFloat() else 0f
+                    onCurrentTimeUpdate(currentTimeState)
                     delay(1000L)
                 }
             }

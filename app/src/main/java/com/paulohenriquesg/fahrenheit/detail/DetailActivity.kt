@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,7 +36,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
+import androidx.tv.material3.Border
 import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
@@ -115,10 +118,10 @@ class DetailActivity : ComponentActivity() {
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                         )
-                        Box(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 8.dp)
+                                .weight(1f)
                         ) {
                             val description =
                                 it.media.metadata.description ?: "No description available"
@@ -133,24 +136,24 @@ class DetailActivity : ComponentActivity() {
                                 }
                             }
                             Text(
-                                text = if (expanded) annotatedDescription else buildAnnotatedString {
-                                    append(
-                                        annotatedDescription.text.take(100)
-                                    )
-                                },
+                                text = annotatedDescription,
                                 style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = if (expanded) Int.MAX_VALUE else 5,
-                                overflow = TextOverflow.Ellipsis
+                                maxLines = if (expanded) Int.MAX_VALUE else Int.MAX_VALUE,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
                             )
-                            Text(
-                                text = if (expanded) "View Less" else "View More",
-                            color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .clickable { expanded = !expanded }
-                                    .padding(top = 8.dp)
-                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier.fillMaxHeight(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (expanded) "View Less" else "View More",
+                                color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.clickable { expanded = !expanded }
+                                )
+                            }
                         }
                 } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -218,18 +221,25 @@ class DetailActivity : ComponentActivity() {
         val context = LocalContext.current
 
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
-                .clickable {
-                    val intent =
-                        PlayerActivity.createIntent(context, episode.libraryItemId, episode.id)
-                    context.startActivity(intent)
-                },
             onClick = {
                 val intent = PlayerActivity.createIntent(context, episode.libraryItemId, episode.id)
                 context.startActivity(intent)
-            }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
+            border = CardDefaults.border(
+                focusedBorder = Border(
+                    border = androidx.compose.foundation.BorderStroke(
+                        3.dp,
+                        MaterialTheme.colorScheme.primary
+                    )
+                )
+            )
         ) {
             Row(
                 modifier = Modifier
