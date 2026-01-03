@@ -30,7 +30,10 @@ class SharedPreferencesHandler(context: Context) {
             host = sharedPreferences.getString("host", "") ?: "",
             username = sharedPreferences.getString("username", "") ?: "",
             token = sharedPreferences.getString("token", "") ?: "",
-            darkTheme = sharedPreferences.getBoolean("dark_theme", false)
+            darkTheme = sharedPreferences.getBoolean("dark_theme", false),
+            lastUpdateCheck = sharedPreferences.getLong("last_update_check", 0L),
+            skipVersion = sharedPreferences.getString("skip_version", null),
+            updateCheckEnabled = sharedPreferences.getBoolean("update_check_enabled", true)
         )
     }
 
@@ -40,6 +43,9 @@ class SharedPreferencesHandler(context: Context) {
             putString("username", userPreferences.username)
             putString("token", userPreferences.token)
             putBoolean("dark_theme", userPreferences.darkTheme)
+            putLong("last_update_check", userPreferences.lastUpdateCheck)
+            putString("skip_version", userPreferences.skipVersion)
+            putBoolean("update_check_enabled", userPreferences.updateCheckEnabled)
             apply()
         }
     }

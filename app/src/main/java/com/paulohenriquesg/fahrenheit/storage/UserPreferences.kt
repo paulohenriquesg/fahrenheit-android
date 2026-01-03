@@ -4,5 +4,8 @@ data class UserPreferences(
     val host: String,
     val username: String,
     val token: String,
-    val darkTheme: Boolean
+    val darkTheme: Boolean,
+    val lastUpdateCheck: Long = 0L,
+    val skipVersion: String? = null,
+    val updateCheckEnabled: Boolean = true
 )

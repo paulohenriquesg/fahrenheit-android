@@ -4,6 +4,15 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+fun getVersionFromGit(): String {
+    return try {
+        val process = Runtime.getRuntime().exec("git describe --tags --abbrev=0")
+        process.inputStream.bufferedReader().readText().trim()
+    } catch (e: Exception) {
+        "1.0"
+    }
+}
+
 android {
     namespace = "com.paulohenriquesg.fahrenheit"
     compileSdk = 35
@@ -13,7 +22,7 @@ android {
         minSdk = 25
         targetSdk = 34
         versionCode = 1
-        versionName = System.getenv("GITHUB_REF")?.split("/")?.last() ?: "1.0"
+        versionName = System.getenv("GITHUB_REF")?.split("/")?.last() ?: getVersionFromGit()
 
     }
 
@@ -45,6 +54,7 @@ android {
         jvmTarget = "17"
     }
     buildFeatures {
+        buildConfig = true
         compose = true
     }
 }
