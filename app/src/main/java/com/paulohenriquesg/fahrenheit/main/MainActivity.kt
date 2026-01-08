@@ -20,7 +20,7 @@ import com.paulohenriquesg.fahrenheit.BuildConfig
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.update.UpdateChecker
-import com.paulohenriquesg.fahrenheit.update.UpdateDialog
+import com.paulohenriquesg.fahrenheit.update.EnhancedUpdateDialog
 import com.paulohenriquesg.fahrenheit.update.UpdateInfo
 
 class MainActivity : ComponentActivity() {
@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
 
                 // Show update dialog if available
                 updateInfo?.let { info ->
-                    UpdateDialog(
+                    EnhancedUpdateDialog(
                         updateInfo = info,
                         onDismiss = {
                             updateInfo = null
