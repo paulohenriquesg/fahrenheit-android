@@ -1,10 +1,11 @@
-package com.paulohenriquesg.fahrenheit.author
+package com.paulohenriquesg.fahrenheit.collection
 
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -16,18 +17,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
 import com.paulohenriquesg.fahrenheit.api.ApiClient
-import com.paulohenriquesg.fahrenheit.api.Author
-import com.paulohenriquesg.fahrenheit.api.AuthorsResponse
-import com.paulohenriquesg.fahrenheit.ui.elements.AuthorCard
+import com.paulohenriquesg.fahrenheit.api.Collection
+import com.paulohenriquesg.fahrenheit.api.CollectionsResponse
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-class AuthorBrowseActivity : ComponentActivity() {
+class CollectionBrowseActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -44,7 +46,7 @@ class AuthorBrowseActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
-                    AuthorBrowseScreen(libraryId = libraryId)
+                    CollectionBrowseScreen(libraryId = libraryId)
                 }
             }
         }
@@ -54,7 +56,7 @@ class AuthorBrowseActivity : ComponentActivity() {
         private const val EXTRA_LIBRARY_ID = "library_id"
 
         fun createIntent(context: Context, libraryId: String): Intent {
-            return Intent(context, AuthorBrowseActivity::class.java).apply {
+            return Intent(context, CollectionBrowseActivity::class.java).apply {
                 putExtra(EXTRA_LIBRARY_ID, libraryId)
             }
         }
@@ -63,26 +65,25 @@ class AuthorBrowseActivity : ComponentActivity() {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun AuthorBrowseScreen(libraryId: String) {
+fun CollectionBrowseScreen(libraryId: String) {
     val context = LocalContext.current
-    var authors by remember { mutableStateOf<List<Author>>(emptyList()) }
+    var collections by remember { mutableStateOf<List<Collection>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Fetch authors on startup
     LaunchedEffect(libraryId) {
         val apiClient = ApiClient.getApiService()
-        apiClient?.getLibraryAuthors(libraryId)?.enqueue(object : Callback<AuthorsResponse> {
+        apiClient?.getLibraryCollections(libraryId)?.enqueue(object : Callback<CollectionsResponse> {
             override fun onResponse(
-                call: Call<AuthorsResponse>,
-                response: Response<AuthorsResponse>
+                call: Call<CollectionsResponse>,
+                response: Response<CollectionsResponse>
             ) {
                 if (response.isSuccessful) {
-                    authors = response.body()?.authors?.sortedBy { it.name } ?: emptyList()
+                    collections = response.body()?.collections?.sortedBy { it.name } ?: emptyList()
                 }
                 isLoading = false
             }
 
-            override fun onFailure(call: Call<AuthorsResponse>, t: Throwable) {
+            override fun onFailure(call: Call<CollectionsResponse>, t: Throwable) {
                 isLoading = false
             }
         })
@@ -93,9 +94,8 @@ fun AuthorBrowseScreen(libraryId: String) {
             .fillMaxSize()
             .padding(horizontal = 48.dp, vertical = 32.dp)
     ) {
-        // Title
         Text(
-            text = "Authors",
+            text = "Collections",
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -108,39 +108,88 @@ fun AuthorBrowseScreen(libraryId: String) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Loading authors...",
+                    text = "Loading collections...",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        } else if (authors.isEmpty()) {
+        } else if (collections.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No authors found",
+                    text = "No collections found",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         } else {
-            // Authors Grid
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 180.dp),
+                columns = GridCells.Adaptive(minSize = 200.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(authors) { author ->
-                    AuthorCard(
-                        author = author,
+                items(collections) { collection ->
+                    CollectionCard(
+                        collection = collection,
                         onClick = {
-                            val intent = AuthorDetailActivity.createIntent(context, author.id)
-                            context.startActivity(intent)
+                            // TODO: Navigate to collection detail screen when implemented
                         }
                     )
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun CollectionCard(
+    collection: Collection,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .width(200.dp)
+            .height(160.dp),
+        colors = CardDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
+            )
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = collection.name,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            collection.books?.size?.let { count ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "$count ${if (count == 1) "book" else "books"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }

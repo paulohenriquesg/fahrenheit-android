@@ -49,7 +49,9 @@
         <activity android:name=".search.SearchActivity" />
         <activity android:name=".author.AuthorDetailActivity" />
         <activity android:name=".author.AuthorBrowseActivity" />
+        <activity android:name=".series.SeriesBrowseActivity" />
         <activity android:name=".series.SeriesDetailActivity" />
+        <activity android:name=".collection.CollectionBrowseActivity" />
         <activity android:name=".update.UpdateActivity" />
 
         <!-- FileProvider for APK installation -->

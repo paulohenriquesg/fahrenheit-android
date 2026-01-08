@@ -29,7 +29,7 @@ fun AuthorShelfRow(shelf: Shelf, authors: List<Author>, onItemClick: (Author) ->
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
             items(authors) { author ->
-                AuthorCard(author = author, onClick = onItemClick)
+                AuthorCard(author = author, onClick = { onItemClick(author) })
             }
         }
     }

@@ -254,10 +254,16 @@ fun MainScreen(
                 }
             }
             MenuAction.SERIES -> {
-                Toast.makeText(context, "Series view - Coming soon", Toast.LENGTH_SHORT).show()
+                libraryId?.let { id ->
+                    val intent = com.paulohenriquesg.fahrenheit.series.SeriesBrowseActivity.createIntent(context, id)
+                    context.startActivity(intent)
+                }
             }
             MenuAction.COLLECTIONS -> {
-                Toast.makeText(context, "Collections view - Coming soon", Toast.LENGTH_SHORT).show()
+                libraryId?.let { id ->
+                    val intent = com.paulohenriquesg.fahrenheit.collection.CollectionBrowseActivity.createIntent(context, id)
+                    context.startActivity(intent)
+                }
             }
             MenuAction.AUTHORS -> {
                 libraryId?.let { id ->
