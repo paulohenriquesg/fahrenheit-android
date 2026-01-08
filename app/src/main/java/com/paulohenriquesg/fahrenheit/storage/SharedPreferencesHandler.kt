@@ -33,7 +33,8 @@ class SharedPreferencesHandler(context: Context) {
             darkTheme = sharedPreferences.getBoolean("dark_theme", false),
             lastUpdateCheck = sharedPreferences.getLong("last_update_check", 0L),
             skipVersion = sharedPreferences.getString("skip_version", null),
-            updateCheckEnabled = sharedPreferences.getBoolean("update_check_enabled", true)
+            updateCheckEnabled = sharedPreferences.getBoolean("update_check_enabled", true),
+            selectedLibraryId = sharedPreferences.getString("selected_library_id", null)
         )
     }
 
@@ -46,6 +47,7 @@ class SharedPreferencesHandler(context: Context) {
             putLong("last_update_check", userPreferences.lastUpdateCheck)
             putString("skip_version", userPreferences.skipVersion)
             putBoolean("update_check_enabled", userPreferences.updateCheckEnabled)
+            putString("selected_library_id", userPreferences.selectedLibraryId)
             apply()
         }
     }
@@ -55,5 +57,14 @@ class SharedPreferencesHandler(context: Context) {
             clear()
             apply()
         }
+    }
+
+    fun getSelectedLibraryId(): String? {
+        return getUserPreferences().selectedLibraryId
+    }
+
+    fun saveSelectedLibraryId(libraryId: String) {
+        val prefs = getUserPreferences()
+        saveUserPreferences(prefs.copy(selectedLibraryId = libraryId))
     }
 }

@@ -7,5 +7,6 @@ data class UserPreferences(
     val darkTheme: Boolean,
     val lastUpdateCheck: Long = 0L,
     val skipVersion: String? = null,
-    val updateCheckEnabled: Boolean = true
+    val updateCheckEnabled: Boolean = true,
+    val selectedLibraryId: String? = null
 )

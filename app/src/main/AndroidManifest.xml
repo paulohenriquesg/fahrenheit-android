@@ -42,6 +42,7 @@
         </activity>
 
         <activity android:name=".settings.SettingsActivity" />
+        <activity android:name=".library.LibrarySelectionActivity" />
         <activity android:name=".detail.DetailActivity" />
         <activity android:name=".podcast.PlayerActivity" />
         <activity android:name=".book.BookPlayerActivity" />

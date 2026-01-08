@@ -1,20 +1,25 @@
 package com.paulohenriquesg.fahrenheit.main
 
+import android.app.Activity
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -36,25 +41,44 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Border
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibrariesResponse
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.Shelf
+import com.paulohenriquesg.fahrenheit.library.LibrarySelectionActivity
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
+import com.paulohenriquesg.fahrenheit.navigation.MenuAction
+import com.paulohenriquesg.fahrenheit.navigation.MenuConfig
+import com.paulohenriquesg.fahrenheit.navigation.MenuItem
 import com.paulohenriquesg.fahrenheit.podcast.PlayerActivity
 import com.paulohenriquesg.fahrenheit.search.SearchActivity
 import com.paulohenriquesg.fahrenheit.settings.SettingsActivity
@@ -64,11 +88,13 @@ import com.paulohenriquesg.fahrenheit.ui.elements.SeriesShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.ShelfRow
 import com.paulohenriquesg.fahrenheit.ui.navigation.LibraryItemsFluid
 import com.paulohenriquesg.fahrenheit.ui.navigation.LibraryItemsRow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun MainScreen(
     fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit,
@@ -77,6 +103,7 @@ fun MainScreen(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val sharedPreferencesHandler = remember { SharedPreferencesHandler(context) }
     val userPreferences = sharedPreferencesHandler.getUserPreferences()
     val username = userPreferences.username
@@ -88,6 +115,7 @@ fun MainScreen(
     var isRowLayout by remember { mutableStateOf(true) }
     var selectedItem by remember { mutableStateOf<String?>(null) }
     var viewMode by remember { mutableStateOf("home") }
+    var shouldRefreshLibrary by remember { mutableStateOf(false) }
 
     val apiClient = ApiClient.getApiService()
     if (apiClient == null) {
@@ -102,6 +130,46 @@ fun MainScreen(
         return
     }
 
+    // Detect when returning from LibrarySelectionActivity
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Check if library has changed
+                val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
+                if (savedLibraryId != null && savedLibraryId != currentLibrary?.id) {
+                    shouldRefreshLibrary = true
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Handle library refresh when needed
+    LaunchedEffect(shouldRefreshLibrary) {
+        if (shouldRefreshLibrary && libraries.isNotEmpty()) {
+            val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
+            val newLibrary = libraries.find { it.id == savedLibraryId }
+            if (newLibrary != null && newLibrary.id != currentLibrary?.id) {
+                currentLibrary = newLibrary
+                viewMode = "home"
+
+                // Fetch data for new library
+                newLibrary.id?.let { libraryId ->
+                    fetchPersonalizedView(libraryId) { personalizedShelves ->
+                        shelves = personalizedShelves
+                    }
+                    fetchLibraryItems(libraryId) { items ->
+                        libraryItems = items
+                    }
+                }
+            }
+            shouldRefreshLibrary = false
+        }
+    }
+
     // Fetch libraries from the API
     LaunchedEffect(Unit) {
         apiClient.getLibraries().enqueue(object : Callback<LibrariesResponse> {
@@ -114,8 +182,21 @@ fun MainScreen(
                         response.body()?.libraries?.sortedBy { it.displayOrder } ?: emptyList()
 
                     if (libraries.isNotEmpty()) {
-                        currentLibrary = libraries[0]
-                        libraries[0].id?.let { libraryId ->
+                        // Load saved library preference
+                        val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
+                        currentLibrary = if (savedLibraryId != null) {
+                            libraries.find { it.id == savedLibraryId } ?: libraries[0]
+                        } else {
+                            libraries[0]
+                        }
+
+                        // Save selection if using default
+                        currentLibrary?.id?.let { id ->
+                            sharedPreferencesHandler.saveSelectedLibraryId(id)
+                        }
+
+                        // Fetch data for selected library
+                        currentLibrary?.id?.let { libraryId ->
                             fetchPersonalizedView(libraryId) { personalizedShelves ->
                                 shelves = personalizedShelves
                             }
@@ -145,184 +226,108 @@ fun MainScreen(
         scope.launch { drawerState.close() }
     }
 
+    // Get menu items for current library type
+    val menuItems = remember(currentLibrary?.mediaType) {
+        MenuConfig.getMenuForLibraryType(currentLibrary?.mediaType)
+    }
+
+    // Handle menu actions
+    fun handleMenuAction(action: MenuAction, libraryId: String?) {
+        when (action) {
+            MenuAction.HOME -> {
+                viewMode = "home"
+                libraryId?.let { id ->
+                    fetchPersonalizedView(id) { personalizedView ->
+                        shelves = personalizedView
+                    }
+                }
+            }
+            MenuAction.LIBRARY -> {
+                viewMode = "library"
+                libraryId?.let { id ->
+                    fetchLibraryItems(id) { items ->
+                        libraryItems = items
+                    }
+                }
+            }
+            MenuAction.SERIES -> {
+                Toast.makeText(context, "Series view - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+            MenuAction.COLLECTIONS -> {
+                Toast.makeText(context, "Collections view - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+            MenuAction.AUTHORS -> {
+                Toast.makeText(context, "Authors view - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+            MenuAction.NARRATORS -> {
+                Toast.makeText(context, "Narrators view - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+            MenuAction.STATS -> {
+                Toast.makeText(context, "Stats view - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+            MenuAction.LATEST -> {
+                viewMode = "latest"
+                Toast.makeText(context, "Latest episodes - Coming soon", Toast.LENGTH_SHORT).show()
+            }
+            MenuAction.SELECT_LIBRARY -> {
+                val intent = LibrarySelectionActivity.createIntent(context)
+                context.startActivity(intent)
+            }
+            MenuAction.SETTINGS -> {
+                val intent = SettingsActivity.createIntent(context)
+                context.startActivity(intent)
+            }
+            MenuAction.LOGOUT -> {
+                sharedPreferencesHandler.clearPreferences()
+                val intent = Intent(context, LoginActivity::class.java)
+                context.startActivity(intent)
+                (context as? Activity)?.finish()
+            }
+        }
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            Column(
+            LazyColumn(
                 modifier = Modifier
-                    .width(300.dp) // Set a fixed width for the drawer
+                    .width(300.dp)
+                    .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.surface)
-                    .fillMaxSize()
+                    .padding(16.dp)
             ) {
-                Spacer(modifier = Modifier.height(56.dp)) // Add a gap at the top
+                item { Spacer(modifier = Modifier.height(40.dp)) }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable {
-                            selectedItem = "Home"
-                            viewMode = "home"
-                            currentLibrary?.id?.let { libraryId ->
-                                fetchPersonalizedView(libraryId) { personalizedShelves ->
-                                    shelves = personalizedShelves
-                                }
+                // Library-specific menu items
+                items(menuItems) { menuItem ->
+                    MenuItemRow(
+                        menuItem = menuItem,
+                        isSelected = selectedItem == menuItem.id,
+                        onClick = {
+                            selectedItem = menuItem.id
+                            handleMenuAction(menuItem.action, currentLibrary?.id)
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+                }
+
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+                item { HorizontalDivider() }
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+
+                // Common items (Switch Library, Settings, Logout)
+                items(MenuConfig.commonItems) { menuItem ->
+                    MenuItemRow(
+                        menuItem = menuItem,
+                        isSelected = selectedItem == menuItem.id,
+                        onClick = {
+                            selectedItem = menuItem.id
+                            handleMenuAction(menuItem.action, currentLibrary?.id)
+                            if (menuItem.action != MenuAction.SELECT_LIBRARY) {
+                                scope.launch { drawerState.close() }
                             }
-                            scope.launch { drawerState.close() }
-                        },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Home, contentDescription = "Home")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Home",
-                        color = MaterialTheme.colorScheme.onSurface
-                    ) // Use surface color for text
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable {
-                            selectedItem = "Library"
-                            viewMode = "library"
-                            currentLibrary?.id?.let { libraryId ->
-                                fetchLibraryItems(libraryId) { items ->
-                                    libraryItems = items
-                                    scrollToFirstItem()
-                                }
-                            }
-                            scope.launch { drawerState.close() }
-                        },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = "Library")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Library",
-                        color = MaterialTheme.colorScheme.onSurface
-                    ) // Use surface color for text
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable {
-                            selectedItem = "Profile"
-                            scope.launch { drawerState.close() }
-                        },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Person, contentDescription = "Profile")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Profile",
-                        color = MaterialTheme.colorScheme.onSurface
-                    ) // Use surface color for text
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable {
-                            selectedItem = "Settings"
-                            val intent = SettingsActivity.createIntent(context)
-                            context.startActivity(intent)
-                            scope.launch { drawerState.close() }
-                        },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Settings, contentDescription = "Settings")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Settings",
-                        color = MaterialTheme.colorScheme.onSurface
-                    ) // Use surface color for text
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // Add a separator before Libraries
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable {
-                            selectedItem = "Libraries"
-                            selectedItem = null // Unselect the item
-                        },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = "Libraries")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Libraries",
-                        color = MaterialTheme.colorScheme.onSurface
-                    ) // Use surface color for text
-                }
-
-                // Display library items fetched from the API
-                libraries.forEach { library ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                            .clickable {
-                                selectedItem = library.name
-                                viewMode = "home"
-                                currentLibrary = library
-                                library.id?.let { libraryId ->
-                                    fetchPersonalizedView(libraryId) { fetchedShelves ->
-                                        shelves = fetchedShelves
-                                    }
-                                    fetchLibraryItems(libraryId) { items ->
-                                        libraryItems = items
-                                        scrollToFirstItem() // Scroll to the first item when switching libraries
-                                    }
-                                }
-                                scope.launch {
-                                    drawerState.close()
-                                    selectedItem = null // Unselect the item
-                                }
-                            },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            getIconForMediaType(library.mediaType),
-                            contentDescription = library.name
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            library.name ?: "Unknown Library",
-                            color = MaterialTheme.colorScheme.onSurface
-                        ) // Use surface color for text
-                    }
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // Add a separator after Libraries
-
-                Spacer(modifier = Modifier.weight(1f)) // Push the Logout item to the bottom
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable {
-                            // Handle Logout click
-                            selectedItem = "Logout"
-                            sharedPreferencesHandler.clearPreferences()
-                            val intent = Intent(context, LoginActivity::class.java)
-                            context.startActivity(intent)
-                            (context as ComponentActivity).finish()
-                            selectedItem = null // Unselect the item
-                        },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Logout",
-                        color = MaterialTheme.colorScheme.surface
-                    ) // Use surface color for text
+                        }
+                    )
                 }
             }
         },
@@ -330,14 +335,24 @@ fun MainScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-//                    .onKeyEvent { keyEvent ->
-//                        if (keyEvent.key.keyCode == Key.DirectionLeft.keyCode && !listState.isScrollInProgress && !listState.canScrollBackward) {
-//                            scope.launch { drawerState.open() }
-//                            true
-//                        } else {
-//                            false
-//                        }
-//                    }
+                    .onKeyEvent { keyEvent ->
+                        when {
+                            // Open drawer on D-Pad left from edge
+                            keyEvent.key == Key.DirectionLeft &&
+                            !listState.isScrollInProgress &&
+                            !listState.canScrollBackward -> {
+                                scope.launch { drawerState.open() }
+                                true
+                            }
+                            // Close drawer on D-Pad right when drawer is open
+                            keyEvent.key == Key.DirectionRight &&
+                            drawerState.isOpen -> {
+                                scope.launch { drawerState.close() }
+                                true
+                            }
+                            else -> false
+                        }
+                    }
             ) {
                 IconButton(
                     onClick = { if (!listState.isScrollInProgress) scope.launch { drawerState.open() } },
@@ -495,6 +510,58 @@ fun PersonalizedHomeView(shelves: List<Shelf>, libraryId: String?) {
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun MenuItemRow(
+    menuItem: MenuItem,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        colors = CardDefaults.colors(
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surface,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            )
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = menuItem.icon,
+                contentDescription = null,
+                tint = if (isSelected)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = menuItem.label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (isSelected)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
