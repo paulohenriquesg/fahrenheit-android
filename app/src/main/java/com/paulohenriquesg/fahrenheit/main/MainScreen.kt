@@ -55,6 +55,7 @@ import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
+import com.paulohenriquesg.fahrenheit.podcast.PlayerActivity
 import com.paulohenriquesg.fahrenheit.search.SearchActivity
 import com.paulohenriquesg.fahrenheit.settings.SettingsActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
@@ -183,6 +184,30 @@ fun MainScreen(
                         .fillMaxWidth()
                         .padding(16.dp)
                         .clickable {
+                            selectedItem = "Library"
+                            viewMode = "library"
+                            currentLibrary?.id?.let { libraryId ->
+                                fetchLibraryItems(libraryId) { items ->
+                                    libraryItems = items
+                                    scrollToFirstItem()
+                                }
+                            }
+                            scope.launch { drawerState.close() }
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = "Library")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Library",
+                        color = MaterialTheme.colorScheme.onSurface
+                    ) // Use surface color for text
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .clickable {
                             selectedItem = "Profile"
                             scope.launch { drawerState.close() }
                         },
@@ -243,10 +268,13 @@ fun MainScreen(
                             .padding(16.dp)
                             .clickable {
                                 selectedItem = library.name
-                                viewMode = "library"
+                                viewMode = "home"
                                 currentLibrary = library
-                                library.id?.let {
-                                    fetchLibraryItems(it) { items ->
+                                library.id?.let { libraryId ->
+                                    fetchPersonalizedView(libraryId) { fetchedShelves ->
+                                        shelves = fetchedShelves
+                                    }
+                                    fetchLibraryItems(libraryId) { items ->
                                         libraryItems = items
                                         scrollToFirstItem() // Scroll to the first item when switching libraries
                                     }
@@ -420,6 +448,26 @@ fun PersonalizedHomeView(shelves: List<Shelf>, libraryId: String?) {
         androidx.compose.foundation.lazy.LazyColumn {
             items(nonEmptyShelves) { shelf ->
                 when (shelf.type) {
+                    "episode" -> {
+                        shelf.bookEntities?.let { books ->
+                            ShelfRow(shelf = shelf) { item ->
+                                val episodeId = item.recentEpisode?.id
+                                val podcastId = item.recentEpisode?.libraryItemId ?: item.id
+
+                                android.util.Log.d("MainScreen", "Episode clicked - episodeId: $episodeId, podcastId: $podcastId")
+                                android.util.Log.d("MainScreen", "Item data - id: ${item.id}, mediaType: ${item.mediaType}")
+                                android.util.Log.d("MainScreen", "RecentEpisode data - ${item.recentEpisode}")
+
+                                if (episodeId != null) {
+                                    val intent = PlayerActivity.createIntent(context, podcastId, episodeId, autoPlay = true)
+                                    context.startActivity(intent)
+                                } else {
+                                    val intent = com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(context, item.id)
+                                    context.startActivity(intent)
+                                }
+                            }
+                        }
+                    }
                     "book", "podcast" -> {
                         shelf.bookEntities?.let { books ->
                             ShelfRow(shelf = shelf) { item ->

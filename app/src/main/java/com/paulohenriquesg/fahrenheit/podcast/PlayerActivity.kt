@@ -51,12 +51,20 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var mediaSession: MediaSessionCompat
     private var isPlaying by mutableStateOf(false)
     private var mediaProgress by mutableStateOf<MediaProgressResponse?>(null)
+    private var shouldAutoPlay by mutableStateOf(false)
+    private var isProgressUpdateRunning = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val podcastId = intent.getStringExtra(EXTRA_PODCAST_ID)
         val episodeId = intent.getStringExtra(EXTRA_EPISODE_ID)
+        val autoPlay = intent.getBooleanExtra(EXTRA_AUTO_PLAY, false)
+
+        android.util.Log.d("PlayerActivity", "onCreate - podcastId: $podcastId, episodeId: $episodeId, autoPlay: $autoPlay")
+
+        // Store autoPlay flag but don't start playing yet - wait for media to be prepared
+        shouldAutoPlay = autoPlay
 
         mediaSession = MediaSessionCompat(this, "PlayerActivity").apply {
             setCallback(object : MediaSessionCompat.Callback() {
@@ -113,9 +121,14 @@ class PlayerActivity : ComponentActivity() {
                             episodeId,
                             mediaSession,
                             isPlaying,
-                            mediaProgress
+                            mediaProgress,
+                            shouldAutoPlay
                         ) { newIsPlaying ->
                             isPlaying = newIsPlaying
+                            // Start progress updates when playback starts
+                            if (newIsPlaying) {
+                                startProgressUpdateCoroutine(podcastId, episodeId)
+                            }
                         }
                     } else {
                         Toast.makeText(this, "Podcast or Episode ID is missing", Toast.LENGTH_SHORT)
@@ -128,6 +141,12 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun startProgressUpdateCoroutine(podcastId: String?, episodeId: String?) {
+        // Prevent multiple coroutines from running
+        if (isProgressUpdateRunning) {
+            android.util.Log.d("PlayerActivity", "Progress update already running, skipping")
+            return
+        }
+
         val apiClient = ApiClient.getApiService()
         val mediaPlayer = GlobalMediaPlayer.getInstance()
 
@@ -136,6 +155,9 @@ class PlayerActivity : ComponentActivity() {
             android.util.Log.e("PlayerActivity", "Cannot update progress: missing podcastId, episodeId, or apiClient")
             return
         }
+
+        isProgressUpdateRunning = true
+        android.util.Log.d("PlayerActivity", "Starting progress update coroutine")
 
         lifecycleScope.launch {
             while (isPlaying) {
@@ -165,6 +187,9 @@ class PlayerActivity : ComponentActivity() {
                         }
                     })
             }
+            // Reset flag when coroutine exits
+            isProgressUpdateRunning = false
+            android.util.Log.d("PlayerActivity", "Progress update coroutine stopped")
         }
     }
 
@@ -244,11 +269,13 @@ class PlayerActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_PODCAST_ID = "podcast_id"
         private const val EXTRA_EPISODE_ID = "episode_id"
+        private const val EXTRA_AUTO_PLAY = "auto_play"
 
-        fun createIntent(context: Context, podcastId: String, episodeId: String): Intent {
+        fun createIntent(context: Context, podcastId: String, episodeId: String, autoPlay: Boolean = false): Intent {
             return Intent(context, PlayerActivity::class.java).apply {
                 putExtra(EXTRA_PODCAST_ID, podcastId)
                 putExtra(EXTRA_EPISODE_ID, episodeId)
+                putExtra(EXTRA_AUTO_PLAY, autoPlay)
             }
         }
     }
@@ -261,6 +288,7 @@ fun PlayerScreen(
     mediaSession: MediaSessionCompat,
     isPlaying: Boolean,
     mediaProgress: MediaProgressResponse?,
+    shouldAutoPlay: Boolean,
     onPlayPause: (Boolean) -> Unit
 ) {
     var episode by remember { mutableStateOf<Episode?>(null) }
@@ -268,10 +296,14 @@ fun PlayerScreen(
     val context = LocalContext.current
 
     LaunchedEffect(podcastId, episodeId) {
+        android.util.Log.d("PlayerScreen", "LaunchedEffect - podcastId: $podcastId, episodeId: $episodeId")
         loadEpisodeDetails(context, podcastId, episodeId) { response ->
+            android.util.Log.d("PlayerScreen", "Episode details loaded - episodes count: ${response?.media?.episodes?.size}")
             episode = response?.media?.episodes?.find { it.id == episodeId }
+            android.util.Log.d("PlayerScreen", "Found episode: ${episode?.title}, duration: ${episode?.audioTrack?.duration}")
         }
         playLibraryItem(context, podcastId, episodeId) { response ->
+            android.util.Log.d("PlayerScreen", "PlayLibraryItem response received")
             playLibraryItemResponse = response
         }
     }
@@ -296,14 +328,24 @@ fun PlayerScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             val contentUrl = ApiClient.generateFullUrl(it.audioTrack?.contentUrl ?: "")
+            // Use mediaProgress duration only if it's valid (positive), otherwise use episode duration
+            val duration = if (mediaProgress?.duration != null && mediaProgress.duration > 0) {
+                mediaProgress.duration
+            } else {
+                episode?.audioTrack?.duration ?: 0.0
+            }
+            val currentTime = mediaProgress?.currentTime ?: 0.0
+            android.util.Log.d("PlayerScreen", "MediaPlayerController - duration: $duration, currentTime: $currentTime, contentUrl: $contentUrl, mediaProgress.duration: ${mediaProgress?.duration}")
             if (contentUrl != null) {
                 MediaPlayerController(
                     contentUrl,
                     mediaSession,
                     isPlaying,
                     onPlayPause,
-                    mediaProgress?.duration ?: episode?.audioTrack?.duration ?: 0.0,
-                    mediaProgress?.currentTime ?: 0.0
+                    duration,
+                    currentTime,
+                    authToken = ApiClient.getToken(),
+                    shouldAutoPlay = shouldAutoPlay
                 )
             }
         } ?: Text(text = "Loading...")

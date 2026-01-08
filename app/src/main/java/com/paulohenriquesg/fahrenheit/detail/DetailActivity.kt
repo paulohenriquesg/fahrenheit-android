@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -175,7 +176,8 @@ class DetailActivity : ComponentActivity() {
                     ?.let { episodes ->
                         if (episodes.isNotEmpty()) {
                         Text(text = "Episodes", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                            LazyColumn {
+                            val listState = rememberLazyListState()
+                            LazyColumn(state = listState) {
                                 items(episodes) { episode ->
                                     EpisodeCard(episode)
                                 }
@@ -227,7 +229,7 @@ class DetailActivity : ComponentActivity() {
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
+                .padding(horizontal = 4.dp, vertical = 8.dp),
             colors = CardDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.surface,
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -255,7 +257,9 @@ class DetailActivity : ComponentActivity() {
                     Text(
                         text = episode.title,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = formatPubDate(episode.pubDate),

@@ -4,16 +4,24 @@ import android.net.Uri
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +56,7 @@ fun MediaPlayerController(
     currentTime: Double = 0.0,
     chapters: List<Chapter>? = null,
     authToken: String? = null,
+    shouldAutoPlay: Boolean = false,
     onCurrentTimeUpdate: (Double) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -60,16 +69,30 @@ fun MediaPlayerController(
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(url) {
+        android.util.Log.d("MediaPlayerController", "LaunchedEffect url: $url")
+        android.util.Log.d("MediaPlayerController", "duration: $duration, currentTime: $currentTime, authToken: ${authToken?.take(20)}...")
         isPrepared = false
         mediaPlayer.apply {
             reset() // Ensure the media player is reset before setting a new data source
+            android.util.Log.d("MediaPlayerController", "MediaPlayer reset")
+
+            setOnErrorListener { mp, what, extra ->
+                android.util.Log.e("MediaPlayerController", "MediaPlayer error - what: $what, extra: $extra")
+                false
+            }
+
             if (authToken != null) {
                 val headers = mapOf("Authorization" to "Bearer $authToken")
+                android.util.Log.d("MediaPlayerController", "Setting data source with auth headers")
                 setDataSource(context, Uri.parse(url), headers)
             } else {
+                android.util.Log.d("MediaPlayerController", "Setting data source without auth")
                 setDataSource(url)
             }
+            android.util.Log.d("MediaPlayerController", "Data source set, calling prepareAsync")
+
             setOnPreparedListener {
+                android.util.Log.d("MediaPlayerController", "OnPreparedListener called, shouldAutoPlay: $shouldAutoPlay")
                 // Use the parameter duration (from API) if available, otherwise use MediaPlayer duration
                 if (duration > 0) {
                     totalTime = duration
@@ -78,17 +101,31 @@ fun MediaPlayerController(
                 }
                 currentTimeState = currentTime
                 progress = if (totalTime > 0) (currentTime / totalTime).toFloat() else 0f
+                android.util.Log.d("MediaPlayerController", "Seeking to position: ${(currentTime * 1000).toInt()}ms")
                 seekTo((currentTime * 1000).toInt()) // Seek to the currentTime position
+                onCurrentTimeUpdate(currentTime) // Notify parent of initial position
                 isPrepared = true
+                android.util.Log.d("MediaPlayerController", "MediaPlayer prepared, totalTime: $totalTime, currentTimeState: $currentTimeState")
+
+                // Auto-play if requested
+                if (shouldAutoPlay) {
+                    android.util.Log.d("MediaPlayerController", "Auto-playing after preparation")
+                    onPlayPause(true)
+                }
             }
             prepareAsync()
         }
     }
 
     LaunchedEffect(isPlaying) {
+        android.util.Log.d("MediaPlayerController", "isPlaying changed to: $isPlaying, isPrepared: $isPrepared, mediaPlayer.isPlaying: ${mediaPlayer.isPlaying}")
         if (isPlaying) {
             if (isPrepared && !mediaPlayer.isPlaying) {
+                android.util.Log.d("MediaPlayerController", "Starting media player")
                 mediaPlayer.start()
+                android.util.Log.d("MediaPlayerController", "Media player started, isPlaying: ${mediaPlayer.isPlaying}")
+            } else {
+                android.util.Log.d("MediaPlayerController", "Cannot start - isPrepared: $isPrepared, mediaPlayer.isPlaying: ${mediaPlayer.isPlaying}")
             }
             coroutineScope.launch {
                 while (isPlaying && isPrepared) {
@@ -100,6 +137,7 @@ fun MediaPlayerController(
             }
         } else {
             if (mediaPlayer.isPlaying) {
+                android.util.Log.d("MediaPlayerController", "Pausing media player")
                 mediaPlayer.pause()
             }
         }
@@ -107,27 +145,56 @@ fun MediaPlayerController(
 
     Column(modifier = Modifier.padding(8.dp)) {
         Row(
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Button(
+            // Skip Back 30s
+            FilledTonalIconButton(
+                onClick = {
+                    if (isPrepared) {
+                        val newPosition = (currentTimeState - 30.0).coerceAtLeast(0.0)
+                        mediaPlayer.seekTo((newPosition * 1000).toInt())
+                        currentTimeState = newPosition
+                        progress = if (totalTime > 0) (newPosition / totalTime).toFloat() else 0f
+                        onCurrentTimeUpdate(newPosition)
+                    }
+                },
+                enabled = isPrepared,
+                modifier = Modifier.size(48.dp),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
+                Icon(Icons.Filled.FastRewind, contentDescription = "Skip back 30 seconds")
+            }
+
+            // Play/Pause (larger)
+            FilledIconButton(
                 onClick = {
                     if (isPrepared) {
                         onPlayPause(!isPlaying)
                     }
                 },
                 enabled = isPrepared,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
+                modifier = Modifier.size(56.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                     disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             ) {
-                Text(if (isPlaying) "Pause" else "Play", color = MaterialTheme.colorScheme.onPrimary)
+                Icon(
+                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play"
+                )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Button(
+            // Stop
+            IconButton(
                 onClick = {
                     mediaPlayer.stop()
                     mediaPlayer.reset()
@@ -142,13 +209,36 @@ fun MediaPlayerController(
                     onPlayPause(false)
                 },
                 enabled = isPrepared,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
+                modifier = Modifier.size(48.dp),
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
+                Icon(Icons.Filled.Stop, contentDescription = "Stop")
+            }
+
+            // Skip Forward 30s
+            FilledTonalIconButton(
+                onClick = {
+                    if (isPrepared) {
+                        val newPosition = (currentTimeState + 30.0).coerceAtMost(totalTime)
+                        mediaPlayer.seekTo((newPosition * 1000).toInt())
+                        currentTimeState = newPosition
+                        progress = if (totalTime > 0) (newPosition / totalTime).toFloat() else 0f
+                        onCurrentTimeUpdate(newPosition)
+                    }
+                },
+                enabled = isPrepared,
+                modifier = Modifier.size(48.dp),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             ) {
-                Text("Stop", color = MaterialTheme.colorScheme.onSecondary)
+                Icon(Icons.Filled.FastForward, contentDescription = "Skip forward 30 seconds")
             }
         }
 
@@ -159,6 +249,7 @@ fun MediaPlayerController(
                     progress = newValue
                     mediaPlayer.seekTo((newValue * totalTime * 1000).toInt())
                     currentTimeState = mediaPlayer.currentPosition / 1000.0
+                    onCurrentTimeUpdate(currentTimeState)
                 },
                 modifier = Modifier
                     .fillMaxWidth()

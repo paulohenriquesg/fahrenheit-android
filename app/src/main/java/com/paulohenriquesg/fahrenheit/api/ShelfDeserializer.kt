@@ -21,7 +21,7 @@ class ShelfDeserializer : JsonDeserializer<Shelf> {
         val entities = jsonObject.get("entities")
 
         return when (type) {
-            "book", "podcast" -> {
+            "book", "podcast", "episode" -> {
                 val bookList = if (entities != null && !entities.isJsonNull) {
                     context.deserialize<List<LibraryItem>>(
                         entities,

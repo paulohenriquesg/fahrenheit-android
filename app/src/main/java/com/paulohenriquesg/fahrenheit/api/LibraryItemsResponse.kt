@@ -39,7 +39,8 @@ data class LibraryItem(
     @SerializedName("numEpisodesIncomplete") val numEpisodesIncomplete: Int?,
     // Personalized view specific fields
     @SerializedName("progressLastUpdate") val progressLastUpdate: Long? = null,
-    @SerializedName("weight") val weight: Double? = null
+    @SerializedName("weight") val weight: Double? = null,
+    @SerializedName("recentEpisode") val recentEpisode: RecentEpisode? = null
 )
 
 data class Media(
@@ -59,4 +60,10 @@ data class CollapsedSeries(
     @SerializedName("name") val name: String,
     @SerializedName("nameIgnorePrefix") val nameIgnorePrefix: String,
     @SerializedName("numBooks") val numBooks: Int
+)
+
+data class RecentEpisode(
+    @SerializedName("id") val id: String,
+    @SerializedName("title") val title: String? = null,
+    @SerializedName("libraryItemId") val libraryItemId: String? = null
 )
