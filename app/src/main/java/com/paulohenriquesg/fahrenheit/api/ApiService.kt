@@ -102,4 +102,28 @@ interface ApiService {
         @Path("libraryId") libraryId: String,
         @Path("seriesId") seriesId: String
     ): Call<Series>
+
+    @GET("api/libraries/{libraryId}/authors")
+    fun getLibraryAuthors(
+        @Path("libraryId") libraryId: String
+    ): Call<AuthorsResponse>
+
+    @GET("api/libraries/{libraryId}/series")
+    fun getLibrarySeries(
+        @Path("libraryId") libraryId: String
+    ): Call<SeriesResponse>
+
+    @GET("api/libraries/{libraryId}/collections")
+    fun getLibraryCollections(
+        @Path("libraryId") libraryId: String
+    ): Call<CollectionsResponse>
+
+    @GET("api/me/listening-stats")
+    fun getListeningStats(): Call<ListeningStatsResponse>
+
+    @GET("api/libraries/{libraryId}/recent-episodes")
+    fun getRecentEpisodes(
+        @Path("libraryId") libraryId: String,
+        @Query("limit") limit: Int = 10
+    ): Call<RecentEpisodesResponse>
 }
