@@ -361,15 +361,13 @@ fun MainScreen(
                     .fillMaxSize()
                     .onKeyEvent { keyEvent ->
                         when {
-                            // Open drawer on D-Pad left from edge
-                            keyEvent.key == Key.DirectionLeft &&
-                            !listState.isScrollInProgress &&
-                            !listState.canScrollBackward -> {
+                            // Open drawer with Menu button
+                            keyEvent.key == Key.Menu && !drawerState.isOpen -> {
                                 scope.launch { drawerState.open() }
                                 true
                             }
-                            // Close drawer on D-Pad right when drawer is open
-                            keyEvent.key == Key.DirectionRight &&
+                            // Close drawer on D-Pad right or Menu button when drawer is open
+                            (keyEvent.key == Key.DirectionRight || keyEvent.key == Key.Menu) &&
                             drawerState.isOpen -> {
                                 scope.launch { drawerState.close() }
                                 true
