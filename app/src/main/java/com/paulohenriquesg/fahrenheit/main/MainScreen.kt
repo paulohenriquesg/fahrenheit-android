@@ -260,7 +260,10 @@ fun MainScreen(
                 Toast.makeText(context, "Collections view - Coming soon", Toast.LENGTH_SHORT).show()
             }
             MenuAction.AUTHORS -> {
-                Toast.makeText(context, "Authors view - Coming soon", Toast.LENGTH_SHORT).show()
+                libraryId?.let { id ->
+                    val intent = com.paulohenriquesg.fahrenheit.author.AuthorBrowseActivity.createIntent(context, id)
+                    context.startActivity(intent)
+                }
             }
             MenuAction.NARRATORS -> {
                 Toast.makeText(context, "Narrators view - Coming soon", Toast.LENGTH_SHORT).show()
