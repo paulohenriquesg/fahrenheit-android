@@ -32,15 +32,23 @@ object UpdateChecker {
 
         // Make API call
         val apiService = GitHubApiClient.getApiService()
-        apiService.getLatestRelease(
+        apiService.getReleases(
             GitHubApiClient.getOwner(),
             GitHubApiClient.getRepo()
-        ).enqueue(object : Callback<GitHubRelease> {
-            override fun onResponse(call: Call<GitHubRelease>, response: Response<GitHubRelease>) {
+        ).enqueue(object : Callback<List<GitHubRelease>> {
+            override fun onResponse(call: Call<List<GitHubRelease>>, response: Response<List<GitHubRelease>>) {
                 if (response.isSuccessful) {
-                    val release = response.body()
-                    if (release != null) {
-                        handleRelease(release, currentVersion, context, callback)
+                    val releases = response.body() ?: emptyList()
+
+                    // Filter for stable semantic versions only
+                    val stableReleases = releases
+                        .filter { !it.prerelease && !it.draft }
+                        .filter { it.tagName.matches(Regex("^v?\\d+\\.\\d+\\.\\d+$")) }
+                        .sortedByDescending { VersionComparator.parseVersion(it.tagName) }
+
+                    val latestRelease = stableReleases.firstOrNull()
+                    if (latestRelease != null) {
+                        handleRelease(latestRelease, currentVersion, context, callback)
                     } else {
                         callback(null)
                     }
@@ -49,7 +57,7 @@ object UpdateChecker {
                 }
             }
 
-            override fun onFailure(call: Call<GitHubRelease>, t: Throwable) {
+            override fun onFailure(call: Call<List<GitHubRelease>>, t: Throwable) {
                 // Fail silently - don't bother user with network errors
                 callback(null)
             }

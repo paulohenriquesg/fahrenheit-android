@@ -20,7 +20,7 @@ import com.paulohenriquesg.fahrenheit.BuildConfig
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.update.UpdateChecker
-import com.paulohenriquesg.fahrenheit.update.EnhancedUpdateDialog
+import com.paulohenriquesg.fahrenheit.update.UpdateActivity
 import com.paulohenriquesg.fahrenheit.update.UpdateInfo
 
 class MainActivity : ComponentActivity() {
@@ -43,19 +43,16 @@ class MainActivity : ComponentActivity() {
                 currentVersion = BuildConfig.VERSION_NAME,
                 context = this
             ) { updateInfo ->
-                // Update available - will show dialog in MainScreen
+                // Update available - launch UpdateActivity
                 if (updateInfo != null) {
-                    // Store for MainScreen to display
-                    startupUpdateInfo = updateInfo
+                    val intent = UpdateActivity.createIntent(this, updateInfo)
+                    startActivity(intent)
                 }
             }
         }
 
         setContent {
             FahrenheitTheme() {
-                val context = LocalContext.current
-                var updateInfo by remember { mutableStateOf(startupUpdateInfo) }
-
                 Surface(
                     color = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
@@ -65,22 +62,6 @@ class MainActivity : ComponentActivity() {
                     MainScreen(
                         mainHandler::fetchLibraryItems,
                         mainHandler::fetchPersonalizedView
-                    )
-                }
-
-                // Show update dialog if available
-                updateInfo?.let { info ->
-                    EnhancedUpdateDialog(
-                        updateInfo = info,
-                        onDismiss = {
-                            updateInfo = null
-                            startupUpdateInfo = null
-                        },
-                        onSkip = {
-                            UpdateChecker.markVersionSkipped(context, info.availableVersion)
-                            updateInfo = null
-                            startupUpdateInfo = null
-                        }
                     )
                 }
             }

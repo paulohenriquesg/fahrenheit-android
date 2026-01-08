@@ -35,7 +35,7 @@ object VersionComparator {
         }
     }
 
-    private fun parseVersion(version: String): Version {
+    fun parseVersion(version: String): Version {
         // Strip "v" prefix if present
         val cleanVersion = version.removePrefix("v").removePrefix("V")
 
@@ -49,9 +49,17 @@ object VersionComparator {
         return Version(major, minor, patch)
     }
 
-    private data class Version(
+    data class Version(
         val major: Int,
         val minor: Int,
         val patch: Int
-    )
+    ) : Comparable<Version> {
+        override fun compareTo(other: Version): Int {
+            return when {
+                this.major != other.major -> this.major.compareTo(other.major)
+                this.minor != other.minor -> this.minor.compareTo(other.minor)
+                else -> this.patch.compareTo(other.patch)
+            }
+        }
+    }
 }

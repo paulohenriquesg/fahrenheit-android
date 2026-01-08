@@ -22,7 +22,7 @@ android {
         minSdk = 25
         targetSdk = 34
         versionCode = 1
-        versionName = System.getenv("GITHUB_REF")?.split("/")?.last() ?: getVersionFromGit()
+        versionName = getVersionFromGit()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -73,6 +73,9 @@ dependencies {
 
     // handle cards
     implementation(libs.coil.compose)
+
+    // handle markdown rendering
+    implementation(libs.commonmark)
 
     // handle media controls and player
     implementation(libs.androidx.media)

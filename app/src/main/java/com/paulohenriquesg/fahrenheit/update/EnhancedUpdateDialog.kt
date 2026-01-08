@@ -196,7 +196,7 @@ private fun UpdateAvailableContent(
     // Buttons
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Skip button
         Button(
@@ -205,9 +205,11 @@ private fun UpdateAvailableContent(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             ),
-            modifier = Modifier.size(width = 140.dp, height = 48.dp)
+            modifier = Modifier
+                .weight(1f)
+                .height(48.dp)
         ) {
-            Text("Skip This Version")
+            Text("Skip", maxLines = 1)
         }
 
         // Later button
@@ -217,9 +219,11 @@ private fun UpdateAvailableContent(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             ),
-            modifier = Modifier.size(width = 140.dp, height = 48.dp)
+            modifier = Modifier
+                .weight(1f)
+                .height(48.dp)
         ) {
-            Text("Later")
+            Text("Later", maxLines = 1)
         }
 
         // Download & Install button (primary)
@@ -229,9 +233,11 @@ private fun UpdateAvailableContent(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
-            modifier = Modifier.size(width = 180.dp, height = 48.dp)
+            modifier = Modifier
+                .weight(1.5f)
+                .height(48.dp)
         ) {
-            Text("Download & Install")
+            Text("Download & Install", maxLines = 1)
         }
     }
 }

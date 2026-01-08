@@ -55,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -113,7 +114,8 @@ fun MainScreen(
     var currentLibrary by remember { mutableStateOf<Library?>(null) }
     val listState = rememberLazyListState()
     var isRowLayout by remember { mutableStateOf(true) }
-    var selectedItem by remember { mutableStateOf<String?>(null) }
+    var currentSection by remember { mutableStateOf("home") }  // Tracks active section
+    val menuItemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }  // Map menu item ID to FocusRequester
     var viewMode by remember { mutableStateOf("home") }
     var shouldRefreshLibrary by remember { mutableStateOf(false) }
 
@@ -148,13 +150,14 @@ fun MainScreen(
     }
 
     // Handle library refresh when needed
-    LaunchedEffect(shouldRefreshLibrary) {
+    LaunchedEffect(shouldRefreshLibrary, libraries) {
         if (shouldRefreshLibrary && libraries.isNotEmpty()) {
             val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
             val newLibrary = libraries.find { it.id == savedLibraryId }
             if (newLibrary != null && newLibrary.id != currentLibrary?.id) {
                 currentLibrary = newLibrary
                 viewMode = "home"
+                currentSection = "home"  // Reset to home section when library changes
 
                 // Fetch data for new library
                 newLibrary.id?.let { libraryId ->
@@ -286,6 +289,15 @@ fun MainScreen(
         }
     }
 
+    // Restore focus to current section when drawer opens
+    LaunchedEffect(drawerState.isOpen) {
+        if (drawerState.isOpen) {
+            delay(100)  // Wait for drawer animation
+            // Request focus on the current section's menu item
+            menuItemFocusRequesters[currentSection]?.requestFocus()
+        }
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -300,11 +312,17 @@ fun MainScreen(
 
                 // Library-specific menu items
                 items(menuItems) { menuItem ->
+                    // Create or retrieve FocusRequester for this menu item
+                    val focusRequester = menuItemFocusRequesters.getOrPut(menuItem.id) {
+                        FocusRequester()
+                    }
+
                     MenuItemRow(
                         menuItem = menuItem,
-                        isSelected = selectedItem == menuItem.id,
+                        isFocused = currentSection == menuItem.id,
+                        focusRequester = focusRequester,
                         onClick = {
-                            selectedItem = menuItem.id
+                            currentSection = menuItem.id  // Track active section
                             handleMenuAction(menuItem.action, currentLibrary?.id)
                             scope.launch { drawerState.close() }
                         }
@@ -317,11 +335,17 @@ fun MainScreen(
 
                 // Common items (Switch Library, Settings, Logout)
                 items(MenuConfig.commonItems) { menuItem ->
+                    // Create or retrieve FocusRequester for this menu item
+                    val focusRequester = menuItemFocusRequesters.getOrPut(menuItem.id) {
+                        FocusRequester()
+                    }
+
                     MenuItemRow(
                         menuItem = menuItem,
-                        isSelected = selectedItem == menuItem.id,
+                        isFocused = currentSection == menuItem.id,
+                        focusRequester = focusRequester,
                         onClick = {
-                            selectedItem = menuItem.id
+                            currentSection = menuItem.id  // Track active section
                             handleMenuAction(menuItem.action, currentLibrary?.id)
                             if (menuItem.action != MenuAction.SELECT_LIBRARY) {
                                 scope.launch { drawerState.close() }
@@ -518,20 +542,19 @@ fun PersonalizedHomeView(shelves: List<Shelf>, libraryId: String?) {
 @Composable
 fun MenuItemRow(
     menuItem: MenuItem,
-    isSelected: Boolean,
+    isFocused: Boolean,
+    focusRequester: FocusRequester,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .focusRequester(focusRequester),
         colors = CardDefaults.colors(
-            containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surface,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surface,
+            focusedContainerColor = MaterialTheme.colorScheme.primaryContainer  // Focus = selection
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
@@ -548,19 +571,13 @@ fun MenuItemRow(
             Icon(
                 imageVector = menuItem.icon,
                 contentDescription = null,
-                tint = if (isSelected)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurface
+                tint = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = menuItem.label,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (isSelected)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

@@ -35,7 +35,7 @@ import com.paulohenriquesg.fahrenheit.BuildConfig
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemeManager
 import com.paulohenriquesg.fahrenheit.update.UpdateChecker
-import com.paulohenriquesg.fahrenheit.update.UpdateDialog
+import com.paulohenriquesg.fahrenheit.update.UpdateActivity
 import com.paulohenriquesg.fahrenheit.update.UpdateInfo
 
 class SettingsActivity : ComponentActivity() {
@@ -61,7 +61,6 @@ fun SettingsScreen() {
     val isDarkTheme by ThemeManager.isDarkTheme
 
     var isCheckingUpdate by remember { mutableStateOf(false) }
-    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
 
     Log.i("SettingsScreen", "isDarkTheme: $isDarkTheme")
 
@@ -109,7 +108,8 @@ fun SettingsScreen() {
                 ) { result ->
                     isCheckingUpdate = false
                     if (result != null) {
-                        updateInfo = result
+                        val intent = UpdateActivity.createIntent(context, result)
+                        context.startActivity(intent)
                     } else {
                         Toast.makeText(context, "You're up to date!", Toast.LENGTH_SHORT).show()
                     }
@@ -124,18 +124,6 @@ fun SettingsScreen() {
                 Text("Check for Updates")
             }
         }
-    }
-
-    // Show update dialog
-    updateInfo?.let { info ->
-        UpdateDialog(
-            updateInfo = info,
-            onDismiss = { updateInfo = null },
-            onSkip = {
-                UpdateChecker.markVersionSkipped(context, info.availableVersion)
-                Toast.makeText(context, "Update skipped", Toast.LENGTH_SHORT).show()
-            }
-        )
     }
 }
 
