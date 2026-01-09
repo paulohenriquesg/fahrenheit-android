@@ -119,10 +119,8 @@ fun MainScreen(
     var viewMode by remember { mutableStateOf("home") }
     var shouldRefreshLibrary by remember { mutableStateOf(false) }
     var seriesList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Series>()) }
-    var authorsList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Author>()) }
     var collectionsList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Collection>()) }
     var isLoadingSeries by remember { mutableStateOf(false) }
-    var isLoadingAuthors by remember { mutableStateOf(false) }
     var isLoadingCollections by remember { mutableStateOf(false) }
     var isLoadingStats by remember { mutableStateOf(false) }
     var listeningStats by remember { mutableStateOf<com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse?>(null) }
@@ -309,33 +307,6 @@ fun MainScreen(
             }
             MenuAction.AUTHORS -> {
                 viewMode = "authors"
-                authorsList = emptyList()  // Clear old data
-                isLoadingAuthors = true
-                if (libraryId != null) {
-                    apiClient?.getLibraryAuthors(libraryId)?.enqueue(object : Callback<com.paulohenriquesg.fahrenheit.api.AuthorsResponse> {
-                        override fun onResponse(
-                            call: Call<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>,
-                            response: Response<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>
-                        ) {
-                            if (response.isSuccessful) {
-                                val results = response.body()?.results
-                                android.util.Log.d("MainScreen", "Authors response - results size: ${results?.size}, total: ${response.body()?.total}")
-                                authorsList = results?.sortedBy { it.name } ?: emptyList()
-                                android.util.Log.d("MainScreen", "Authors list updated - size: ${authorsList.size}")
-                            } else {
-                                android.util.Log.e("MainScreen", "Authors API error: ${response.code()}")
-                            }
-                            isLoadingAuthors = false
-                        }
-                        override fun onFailure(call: Call<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>, t: Throwable) {
-                            android.util.Log.e("MainScreen", "Authors API failure: ${t.message}", t)
-                            isLoadingAuthors = false
-                        }
-                    })
-                } else {
-                    android.util.Log.e("MainScreen", "Authors - libraryId is null!")
-                    isLoadingAuthors = false
-                }
             }
             MenuAction.NARRATORS -> {
                 Toast.makeText(context, "Narrators view - Coming soon", Toast.LENGTH_SHORT).show()
@@ -536,7 +507,7 @@ fun MainScreen(
                         }
                     }
                     "series" -> SeriesBrowseView(seriesList, isLoadingSeries)
-                    "authors" -> AuthorsBrowseView(authorsList, isLoadingAuthors)
+                    "authors" -> AuthorsBrowseView(currentLibrary?.id)
                     "collections" -> CollectionsBrowseView(collectionsList, isLoadingCollections)
                     "stats" -> StatsBrowseView(listeningStats, isLoadingStats)
                 }
@@ -742,10 +713,43 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun AuthorsBrowseView(authorsList: List<com.paulohenriquesg.fahrenheit.api.Author>, isLoading: Boolean) {
+fun AuthorsBrowseView(libraryId: String?) {
     val context = LocalContext.current
+    var authors by remember { mutableStateOf<List<com.paulohenriquesg.fahrenheit.api.Author>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
 
-    android.util.Log.d("AuthorsBrowseView", "Rendering - isLoading: $isLoading, authorsList.size: ${authorsList.size}")
+    // Fetch authors using ApiClient (which has correct auth credentials)
+    LaunchedEffect(libraryId) {
+        android.util.Log.d("AuthorsBrowseView", "Starting to fetch authors for libraryId: $libraryId")
+        if (libraryId != null) {
+            val apiClient = ApiClient.getApiService()
+            apiClient?.getLibraryAuthors(libraryId)?.enqueue(object : Callback<com.paulohenriquesg.fahrenheit.api.AuthorsResponse> {
+                override fun onResponse(
+                    call: Call<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>,
+                    response: Response<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>
+                ) {
+                    android.util.Log.d("AuthorsBrowseView", "Got response! Code: ${response.code()}")
+                    if (response.isSuccessful) {
+                        val body = response.body()
+                        android.util.Log.d("AuthorsBrowseView", "Response body authors count: ${body?.authors?.size}")
+                        authors = body?.authors?.sortedBy { it.name } ?: emptyList()
+                        android.util.Log.d("AuthorsBrowseView", "Set ${authors.size} authors")
+                    } else {
+                        android.util.Log.e("AuthorsBrowseView", "Response not successful: ${response.code()}")
+                    }
+                    isLoading = false
+                }
+
+                override fun onFailure(call: Call<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>, t: Throwable) {
+                    android.util.Log.e("AuthorsBrowseView", "Request failed", t)
+                    isLoading = false
+                }
+            })
+        } else {
+            android.util.Log.e("AuthorsBrowseView", "libraryId is null!")
+            isLoading = false
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -770,7 +774,7 @@ fun AuthorsBrowseView(authorsList: List<com.paulohenriquesg.fahrenheit.api.Autho
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        } else if (authorsList.isEmpty()) {
+        } else if (authors.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -788,8 +792,8 @@ fun AuthorsBrowseView(authorsList: List<com.paulohenriquesg.fahrenheit.api.Autho
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(authorsList.size) { index ->
-                    val author = authorsList[index]
+                items(authors.size) { index ->
+                    val author = authors[index]
                     com.paulohenriquesg.fahrenheit.ui.elements.AuthorCard(
                         author = author,
                         onClick = {
