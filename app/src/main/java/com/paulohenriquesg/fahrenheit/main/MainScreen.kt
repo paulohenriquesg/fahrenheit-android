@@ -118,6 +118,14 @@ fun MainScreen(
     val menuItemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }  // Map menu item ID to FocusRequester
     var viewMode by remember { mutableStateOf("home") }
     var shouldRefreshLibrary by remember { mutableStateOf(false) }
+    var seriesList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Series>()) }
+    var authorsList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Author>()) }
+    var collectionsList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Collection>()) }
+    var isLoadingSeries by remember { mutableStateOf(false) }
+    var isLoadingAuthors by remember { mutableStateOf(false) }
+    var isLoadingCollections by remember { mutableStateOf(false) }
+    var isLoadingStats by remember { mutableStateOf(false) }
+    var listeningStats by remember { mutableStateOf<com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse?>(null) }
 
     val apiClient = ApiClient.getApiService()
     if (apiClient == null) {
@@ -254,29 +262,102 @@ fun MainScreen(
                 }
             }
             MenuAction.SERIES -> {
-                libraryId?.let { id ->
-                    val intent = com.paulohenriquesg.fahrenheit.series.SeriesBrowseActivity.createIntent(context, id)
-                    context.startActivity(intent)
+                viewMode = "series"
+                seriesList = emptyList()  // Clear old data
+                isLoadingSeries = true
+                if (libraryId != null) {
+                    apiClient?.getLibrarySeries(libraryId)?.enqueue(object : Callback<com.paulohenriquesg.fahrenheit.api.SeriesResponse> {
+                        override fun onResponse(
+                            call: Call<com.paulohenriquesg.fahrenheit.api.SeriesResponse>,
+                            response: Response<com.paulohenriquesg.fahrenheit.api.SeriesResponse>
+                        ) {
+                            if (response.isSuccessful) {
+                                seriesList = response.body()?.results?.sortedBy { it.name } ?: emptyList()
+                            }
+                            isLoadingSeries = false
+                        }
+                        override fun onFailure(call: Call<com.paulohenriquesg.fahrenheit.api.SeriesResponse>, t: Throwable) {
+                            isLoadingSeries = false
+                        }
+                    })
+                } else {
+                    isLoadingSeries = false
                 }
             }
             MenuAction.COLLECTIONS -> {
-                libraryId?.let { id ->
-                    val intent = com.paulohenriquesg.fahrenheit.collection.CollectionBrowseActivity.createIntent(context, id)
-                    context.startActivity(intent)
+                viewMode = "collections"
+                collectionsList = emptyList()  // Clear old data
+                isLoadingCollections = true
+                if (libraryId != null) {
+                    apiClient?.getLibraryCollections(libraryId)?.enqueue(object : Callback<com.paulohenriquesg.fahrenheit.api.CollectionsResponse> {
+                        override fun onResponse(
+                            call: Call<com.paulohenriquesg.fahrenheit.api.CollectionsResponse>,
+                            response: Response<com.paulohenriquesg.fahrenheit.api.CollectionsResponse>
+                        ) {
+                            if (response.isSuccessful) {
+                                collectionsList = response.body()?.results?.sortedBy { it.name } ?: emptyList()
+                            }
+                            isLoadingCollections = false
+                        }
+                        override fun onFailure(call: Call<com.paulohenriquesg.fahrenheit.api.CollectionsResponse>, t: Throwable) {
+                            isLoadingCollections = false
+                        }
+                    })
+                } else {
+                    isLoadingCollections = false
                 }
             }
             MenuAction.AUTHORS -> {
-                libraryId?.let { id ->
-                    val intent = com.paulohenriquesg.fahrenheit.author.AuthorBrowseActivity.createIntent(context, id)
-                    context.startActivity(intent)
+                viewMode = "authors"
+                authorsList = emptyList()  // Clear old data
+                isLoadingAuthors = true
+                if (libraryId != null) {
+                    apiClient?.getLibraryAuthors(libraryId)?.enqueue(object : Callback<com.paulohenriquesg.fahrenheit.api.AuthorsResponse> {
+                        override fun onResponse(
+                            call: Call<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>,
+                            response: Response<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>
+                        ) {
+                            if (response.isSuccessful) {
+                                val results = response.body()?.results
+                                android.util.Log.d("MainScreen", "Authors response - results size: ${results?.size}, total: ${response.body()?.total}")
+                                authorsList = results?.sortedBy { it.name } ?: emptyList()
+                                android.util.Log.d("MainScreen", "Authors list updated - size: ${authorsList.size}")
+                            } else {
+                                android.util.Log.e("MainScreen", "Authors API error: ${response.code()}")
+                            }
+                            isLoadingAuthors = false
+                        }
+                        override fun onFailure(call: Call<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>, t: Throwable) {
+                            android.util.Log.e("MainScreen", "Authors API failure: ${t.message}", t)
+                            isLoadingAuthors = false
+                        }
+                    })
+                } else {
+                    android.util.Log.e("MainScreen", "Authors - libraryId is null!")
+                    isLoadingAuthors = false
                 }
             }
             MenuAction.NARRATORS -> {
                 Toast.makeText(context, "Narrators view - Coming soon", Toast.LENGTH_SHORT).show()
             }
             MenuAction.STATS -> {
-                val intent = com.paulohenriquesg.fahrenheit.stats.StatsActivity.createIntent(context)
-                context.startActivity(intent)
+                viewMode = "stats"
+                listeningStats = null  // Clear old data
+                isLoadingStats = true
+                apiClient?.getListeningStats()?.enqueue(object : Callback<com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse> {
+                    override fun onResponse(
+                        call: Call<com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse>,
+                        response: Response<com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse>
+                    ) {
+                        if (response.isSuccessful) {
+                            listeningStats = response.body()
+                        }
+                        isLoadingStats = false
+                    }
+                    override fun onFailure(call: Call<com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse>, t: Throwable) {
+                        isLoadingStats = false
+                    }
+                })
             }
             MenuAction.LATEST -> {
                 libraryId?.let { id ->
@@ -419,40 +500,45 @@ fun MainScreen(
                         modifier = Modifier.padding(16.dp)
                     )
                 }
-                if (viewMode == "home") {
-                    PersonalizedHomeView(shelves, currentLibrary?.id)
-                } else {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 30.dp) // Add padding to avoid overlap with the menu icon
-                    ) {
-                        val itemCount = libraryItems.size
-                        val itemLabel =
-                            if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts"
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(16.dp)
+                when (viewMode) {
+                    "home" -> PersonalizedHomeView(shelves, currentLibrary?.id)
+                    "library" -> {
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 30.dp)
                         ) {
-                            currentLibrary?.name?.let {
+                            val itemCount = libraryItems.size
+                            val itemLabel =
+                                if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts"
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                currentLibrary?.name?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = it,
-                                    style = MaterialTheme.typography.titleLarge
+                                    text = "($itemCount $itemLabel)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "($itemCount $itemLabel)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (isRowLayout) {
-                            LibraryItemsRow(libraryItems, listState)
-                        } else {
-                            LibraryItemsFluid(libraryItems)
+                            if (isRowLayout) {
+                                LibraryItemsRow(libraryItems, listState)
+                            } else {
+                                LibraryItemsFluid(libraryItems)
+                            }
                         }
                     }
+                    "series" -> SeriesBrowseView(seriesList, isLoadingSeries)
+                    "authors" -> AuthorsBrowseView(authorsList, isLoadingAuthors)
+                    "collections" -> CollectionsBrowseView(collectionsList, isLoadingCollections)
+                    "stats" -> StatsBrowseView(listeningStats, isLoadingStats)
                 }
             }
         }
@@ -589,6 +675,261 @@ fun MenuItemRow(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>, isLoading: Boolean) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
+    ) {
+        Text(
+            text = "Series",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Loading series...",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else if (seriesList.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No series found",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 200.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(seriesList.size) { index ->
+                    val series = seriesList[index]
+                    com.paulohenriquesg.fahrenheit.series.SeriesCard(
+                        series = series,
+                        onClick = {
+                            val intent = com.paulohenriquesg.fahrenheit.series.SeriesDetailActivity.createIntent(context, series)
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun AuthorsBrowseView(authorsList: List<com.paulohenriquesg.fahrenheit.api.Author>, isLoading: Boolean) {
+    val context = LocalContext.current
+
+    android.util.Log.d("AuthorsBrowseView", "Rendering - isLoading: $isLoading, authorsList.size: ${authorsList.size}")
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
+    ) {
+        Text(
+            text = "Authors",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Loading authors...",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else if (authorsList.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No authors found",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 180.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(authorsList.size) { index ->
+                    val author = authorsList[index]
+                    com.paulohenriquesg.fahrenheit.ui.elements.AuthorCard(
+                        author = author,
+                        onClick = {
+                            val intent = com.paulohenriquesg.fahrenheit.author.AuthorDetailActivity.createIntent(context, author.id)
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.api.Collection>, isLoading: Boolean) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
+    ) {
+        Text(
+            text = "Collections",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Loading collections...",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else if (collectionsList.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No collections found",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 200.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(collectionsList.size) { index ->
+                    val collection = collectionsList[index]
+                    com.paulohenriquesg.fahrenheit.collection.CollectionCard(
+                        collection = collection,
+                        onClick = {
+                            val intent = com.paulohenriquesg.fahrenheit.collection.CollectionDetailActivity.createIntent(context, collection)
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+@Composable
+fun StatsBrowseView(stats: com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse?, isLoading: Boolean) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
+    ) {
+        Text(
+            text = "Listening Statistics",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Loading stats...",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else if (stats == null) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No statistics available",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                com.paulohenriquesg.fahrenheit.stats.StatCard(
+                    title = "Total Listening Time",
+                    value = com.paulohenriquesg.fahrenheit.stats.formatTime(stats.totalTime)
+                )
+
+                stats.items.size.let { itemCount ->
+                    com.paulohenriquesg.fahrenheit.stats.StatCard(
+                        title = "Items Listened To",
+                        value = "$itemCount ${if (itemCount == 1) "item" else "items"}"
+                    )
+                }
+
+                stats.days.size.let { dayCount ->
+                    com.paulohenriquesg.fahrenheit.stats.StatCard(
+                        title = "Days with Activity",
+                        value = "$dayCount ${if (dayCount == 1) "day" else "days"}"
+                    )
+                }
+
+                if (stats.days.isNotEmpty()) {
+                    val avgPerDay = stats.totalTime / stats.days.size
+                    com.paulohenriquesg.fahrenheit.stats.StatCard(
+                        title = "Average per Day",
+                        value = com.paulohenriquesg.fahrenheit.stats.formatTime(avgPerDay)
+                    )
+                }
+            }
         }
     }
 }
