@@ -275,11 +275,14 @@ fun MainScreen(
                 Toast.makeText(context, "Narrators view - Coming soon", Toast.LENGTH_SHORT).show()
             }
             MenuAction.STATS -> {
-                Toast.makeText(context, "Stats view - Coming soon", Toast.LENGTH_SHORT).show()
+                val intent = com.paulohenriquesg.fahrenheit.stats.StatsActivity.createIntent(context)
+                context.startActivity(intent)
             }
             MenuAction.LATEST -> {
-                viewMode = "latest"
-                Toast.makeText(context, "Latest episodes - Coming soon", Toast.LENGTH_SHORT).show()
+                libraryId?.let { id ->
+                    val intent = com.paulohenriquesg.fahrenheit.podcast.LatestEpisodesActivity.createIntent(context, id)
+                    context.startActivity(intent)
+                }
             }
             MenuAction.SELECT_LIBRARY -> {
                 val intent = LibrarySelectionActivity.createIntent(context)
