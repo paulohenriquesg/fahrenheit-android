@@ -105,17 +105,23 @@ interface ApiService {
 
     @GET("api/libraries/{libraryId}/authors")
     fun getLibraryAuthors(
-        @Path("libraryId") libraryId: String
+        @Path("libraryId") libraryId: String,
+        @Query("limit") limit: Int = 1000,
+        @Query("minified") minified: Int = 1
     ): Call<AuthorsResponse>
 
     @GET("api/libraries/{libraryId}/series")
     fun getLibrarySeries(
-        @Path("libraryId") libraryId: String
+        @Path("libraryId") libraryId: String,
+        @Query("limit") limit: Int = 1000,
+        @Query("minified") minified: Int = 1
     ): Call<SeriesResponse>
 
     @GET("api/libraries/{libraryId}/collections")
     fun getLibraryCollections(
-        @Path("libraryId") libraryId: String
+        @Path("libraryId") libraryId: String,
+        @Query("limit") limit: Int = 1000,
+        @Query("minified") minified: Int = 1
     ): Call<CollectionsResponse>
 
     @GET("api/me/listening-stats")

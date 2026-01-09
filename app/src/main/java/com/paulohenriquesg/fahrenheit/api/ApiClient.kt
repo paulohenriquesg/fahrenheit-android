@@ -65,9 +65,9 @@ object ApiClient {
     private fun create(baseUrl: String, token: String? = null): ApiService {
         val clientBuilder = OkHttpClient.Builder()
 
-        // Add logging interceptor
+        // Add logging interceptor (BASIC level to prevent OOM with large responses)
         val logging = HttpLoggingInterceptor()
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY)
+        logging.setLevel(HttpLoggingInterceptor.Level.BASIC)
         clientBuilder.addInterceptor(logging)
 
         clientBuilder.addInterceptor { chain ->

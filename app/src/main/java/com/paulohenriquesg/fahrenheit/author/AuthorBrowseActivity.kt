@@ -77,7 +77,7 @@ fun AuthorBrowseScreen(libraryId: String) {
                 response: Response<AuthorsResponse>
             ) {
                 if (response.isSuccessful) {
-                    authors = response.body()?.authors?.sortedBy { it.name } ?: emptyList()
+                    authors = response.body()?.results?.sortedBy { it.name } ?: emptyList()
                 }
                 isLoading = false
             }

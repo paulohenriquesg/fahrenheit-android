@@ -78,12 +78,18 @@ fun SeriesBrowseScreen(libraryId: String) {
                 response: Response<SeriesResponse>
             ) {
                 if (response.isSuccessful) {
-                    seriesList = response.body()?.series?.sortedBy { it.name } ?: emptyList()
+                    val body = response.body()
+                    seriesList = body?.results?.sortedBy { it.name } ?: emptyList()
+                    android.util.Log.d("SeriesBrowse", "Loaded ${seriesList.size} series")
+                } else {
+                    android.util.Log.e("SeriesBrowse", "Error: ${response.code()} - ${response.message()}")
+                    android.util.Log.e("SeriesBrowse", "Error body: ${response.errorBody()?.string()}")
                 }
                 isLoading = false
             }
 
             override fun onFailure(call: Call<SeriesResponse>, t: Throwable) {
+                android.util.Log.e("SeriesBrowse", "Failure: ${t.message}", t)
                 isLoading = false
             }
         })
@@ -135,10 +141,7 @@ fun SeriesBrowseScreen(libraryId: String) {
                     SeriesCard(
                         series = series,
                         onClick = {
-                            val intent = Intent(context, SeriesDetailActivity::class.java).apply {
-                                putExtra("libraryId", libraryId)
-                                putExtra("seriesId", series.id)
-                            }
+                            val intent = SeriesDetailActivity.createIntent(context, series)
                             context.startActivity(intent)
                         }
                     )

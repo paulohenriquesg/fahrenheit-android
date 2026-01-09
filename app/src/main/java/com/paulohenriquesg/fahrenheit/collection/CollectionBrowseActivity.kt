@@ -77,13 +77,23 @@ fun CollectionBrowseScreen(libraryId: String) {
                 call: Call<CollectionsResponse>,
                 response: Response<CollectionsResponse>
             ) {
-                if (response.isSuccessful) {
-                    collections = response.body()?.collections?.sortedBy { it.name } ?: emptyList()
+                try {
+                    if (response.isSuccessful) {
+                        val body = response.body()
+                        collections = body?.results?.sortedBy { it.name } ?: emptyList()
+                        android.util.Log.d("CollectionBrowse", "Loaded ${collections.size} collections (total: ${body?.total})")
+                    } else {
+                        android.util.Log.e("CollectionBrowse", "Error: ${response.code()} - ${response.message()}")
+                        android.util.Log.e("CollectionBrowse", "Error body: ${response.errorBody()?.string()}")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("CollectionBrowse", "Exception in onResponse", e)
                 }
                 isLoading = false
             }
 
             override fun onFailure(call: Call<CollectionsResponse>, t: Throwable) {
+                android.util.Log.e("CollectionBrowse", "Failure: ${t.message}", t)
                 isLoading = false
             }
         })
@@ -135,7 +145,8 @@ fun CollectionBrowseScreen(libraryId: String) {
                     CollectionCard(
                         collection = collection,
                         onClick = {
-                            // TODO: Navigate to collection detail screen when implemented
+                            val intent = CollectionDetailActivity.createIntent(context, collection)
+                            context.startActivity(intent)
                         }
                     )
                 }
