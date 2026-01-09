@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.podcast
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -23,6 +24,7 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.RecentEpisodesResponse
 import com.paulohenriquesg.fahrenheit.api.RecentPodcastEpisode
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
+import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import retrofit2.Call
 import retrofit2.Callback
@@ -88,57 +90,58 @@ fun LatestEpisodesScreen(libraryId: String) {
         })
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 48.dp, vertical = 32.dp)
-    ) {
-        Text(
-            text = "Latest Episodes",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onBackground
+    Column(modifier = Modifier.fillMaxSize()) {
+        BrowseTopBar(
+            title = "Latest Episodes",
+            onBackClick = { (context as? Activity)?.finish() }
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Loading episodes...",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else if (episodes.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "No recent episodes found",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(episodes) { recentEpisode ->
-                    EpisodeCard(
-                        episode = recentEpisode,
-                        onClick = {
-                            val intent = DetailActivity.createIntent(
-                                context,
-                                recentEpisode.libraryItemId
-                            )
-                            context.startActivity(intent)
-                        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 48.dp, vertical = 16.dp)
+        ) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Loading episodes...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            } else if (episodes.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No recent episodes found",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(episodes) { recentEpisode ->
+                        EpisodeCard(
+                            episode = recentEpisode,
+                            onClick = {
+                                val intent = DetailActivity.createIntent(
+                                    context,
+                                    recentEpisode.libraryItemId
+                                )
+                                context.startActivity(intent)
+                            }
+                        )
+                    }
                 }
             }
         }

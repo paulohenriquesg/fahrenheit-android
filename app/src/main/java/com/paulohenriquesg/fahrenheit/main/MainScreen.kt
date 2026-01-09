@@ -484,7 +484,8 @@ fun MainScreen(
                                 currentLibrary?.name?.let {
                                     Text(
                                         text = it,
-                                        style = MaterialTheme.typography.titleLarge
+                                        style = MaterialTheme.typography.headlineLarge,
+                                        modifier = Modifier.padding(bottom = 16.dp)
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))

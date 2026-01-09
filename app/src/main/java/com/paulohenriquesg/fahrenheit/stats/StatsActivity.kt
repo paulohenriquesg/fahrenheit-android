@@ -12,10 +12,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse
+import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import retrofit2.Call
 import retrofit2.Callback
@@ -49,6 +51,7 @@ class StatsActivity : ComponentActivity() {
 
 @Composable
 fun StatsScreen() {
+    val context = LocalContext.current
     var stats by remember { mutableStateOf<ListeningStatsResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -71,74 +74,75 @@ fun StatsScreen() {
         })
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 48.dp, vertical = 32.dp)
-    ) {
-        Text(
-            text = "Listening Statistics",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onBackground
+    Column(modifier = Modifier.fillMaxSize()) {
+        BrowseTopBar(
+            title = "Listening Statistics",
+            onBackClick = { (context as? ComponentActivity)?.finish() }
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Loading stats...",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else if (stats == null) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "No statistics available",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                // Total listening time
-                StatCard(
-                    title = "Total Listening Time",
-                    value = formatTime(stats!!.totalTime)
-                )
-
-                // Number of items
-                stats!!.items.size.let { itemCount ->
-                    StatCard(
-                        title = "Items Listened To",
-                        value = "$itemCount ${if (itemCount == 1) "item" else "items"}"
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 48.dp, vertical = 16.dp)
+        ) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Loading stats...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-                // Number of days tracked
-                stats!!.days.size.let { dayCount ->
-                    StatCard(
-                        title = "Days with Activity",
-                        value = "$dayCount ${if (dayCount == 1) "day" else "days"}"
+            } else if (stats == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No statistics available",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-                // Average per day
-                if (stats!!.days.isNotEmpty()) {
-                    val avgPerDay = stats!!.totalTime / stats!!.days.size
+            } else {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    // Total listening time
                     StatCard(
-                        title = "Average per Day",
-                        value = formatTime(avgPerDay)
+                        title = "Total Listening Time",
+                        value = formatTime(stats!!.totalTime)
                     )
+
+                    // Number of items
+                    stats!!.items.size.let { itemCount ->
+                        StatCard(
+                            title = "Items Listened To",
+                            value = "$itemCount ${if (itemCount == 1) "item" else "items"}"
+                        )
+                    }
+
+                    // Number of days tracked
+                    stats!!.days.size.let { dayCount ->
+                        StatCard(
+                            title = "Days with Activity",
+                            value = "$dayCount ${if (dayCount == 1) "day" else "days"}"
+                        )
+                    }
+
+                    // Average per day
+                    if (stats!!.days.isNotEmpty()) {
+                        val avgPerDay = stats!!.totalTime / stats!!.days.size
+                        StatCard(
+                            title = "Average per Day",
+                            value = formatTime(avgPerDay)
+                        )
+                    }
                 }
             }
         }
