@@ -44,8 +44,7 @@
   - Consider using event bus or callback mechanism
   - Ensure smooth transition without jarring UI changes
 
-## Known Issues
-- [ ] **Authors screen not loading data**
-  - API call succeeds (200 OK, 174KB response)
-  - Data not displaying in UI
-  - Need to debug state management and recomposition
+## Recently Fixed
+- [x] **Authors screen not loading data** (Fixed 2026-01-09)
+  - Root cause: API returns {"authors": []} but app expected {"results": []}
+  - Solution: Updated AuthorsResponse model to match actual API structure

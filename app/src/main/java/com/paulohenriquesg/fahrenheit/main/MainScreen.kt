@@ -77,6 +77,7 @@ import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.library.LibrarySelectionActivity
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
+import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
 import com.paulohenriquesg.fahrenheit.navigation.MenuAction
 import com.paulohenriquesg.fahrenheit.navigation.MenuConfig
 import com.paulohenriquesg.fahrenheit.navigation.MenuItem
@@ -113,7 +114,7 @@ fun MainScreen(
     var shelves by remember { mutableStateOf(listOf<Shelf>()) }
     var currentLibrary by remember { mutableStateOf<Library?>(null) }
     val listState = rememberLazyListState()
-    var isRowLayout by remember { mutableStateOf(true) }
+    val isRowLayout by LayoutManager.isRowLayout  // Use LayoutManager instead of local state
     var currentSection by remember { mutableStateOf("home") }  // Tracks active section
     val menuItemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }  // Map menu item ID to FocusRequester
     var viewMode by remember { mutableStateOf("home") }
@@ -445,12 +446,6 @@ fun MainScreen(
                     modifier = Modifier.align(Alignment.TopStart)
                 ) {
                     Icon(Icons.Filled.Menu, contentDescription = "Open Menu")
-                }
-                Button(
-                    onClick = { isRowLayout = !isRowLayout },
-                    modifier = Modifier.align(Alignment.TopCenter)
-                ) {
-                    Text(text = if (isRowLayout) "Switch to Fluid Layout" else "Switch to Row Layout")
                 }
                 Row(
                     modifier = Modifier.align(Alignment.TopEnd),

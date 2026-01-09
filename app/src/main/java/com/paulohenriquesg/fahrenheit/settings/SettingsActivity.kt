@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.BuildConfig
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemeManager
 import com.paulohenriquesg.fahrenheit.update.UpdateChecker
 import com.paulohenriquesg.fahrenheit.update.UpdateActivity
@@ -59,6 +60,7 @@ class SettingsActivity : ComponentActivity() {
 fun SettingsScreen() {
     val context = LocalContext.current
     val isDarkTheme by ThemeManager.isDarkTheme
+    val isRowLayout by LayoutManager.isRowLayout
 
     var isCheckingUpdate by remember { mutableStateOf(false) }
 
@@ -83,6 +85,22 @@ fun SettingsScreen() {
                 checked = isDarkTheme,
                 onCheckedChange = {
                     ThemeManager.toggleTheme(context)
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Layout Toggle
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "Row Layout (Grid if disabled)", color = MaterialTheme.colorScheme.onSurface)
+            Spacer(modifier = Modifier.width(8.dp))
+            Switch(
+                checked = isRowLayout,
+                onCheckedChange = {
+                    LayoutManager.toggleLayout(context)
                 }
             )
         }
