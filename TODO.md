@@ -3,11 +3,11 @@
 ## Features to Implement
 
 ### UI/UX Improvements
-- [ ] **Move layout button to settings page**
-  - Remove the "Switch to Fluid/Row Layout" button from the main screen top bar
-  - Add layout preference option in SettingsActivity
-  - Persist layout choice in SharedPreferences
-  - Load saved layout preference on app start
+- [x] **Move layout button to settings page** (Fixed 2026-01-09)
+  - Removed the "Switch to Fluid/Row Layout" button from the main screen top bar
+  - Added layout preference toggle in SettingsActivity
+  - Created LayoutManager to persist layout choice in SharedPreferences
+  - Layout preference loads on app start and persists across sessions
 
 ### Screensaver & Power Management
 - [ ] **Custom screensaver implementation**
