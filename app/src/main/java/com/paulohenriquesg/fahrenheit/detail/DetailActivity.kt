@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.buildAnnotatedString
@@ -48,6 +50,7 @@ import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.book.BookPlayerActivity
 import com.paulohenriquesg.fahrenheit.podcast.PlayerActivity
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
+import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import retrofit2.Call
 import retrofit2.Callback
@@ -221,6 +224,7 @@ class DetailActivity : ComponentActivity() {
     @Composable
     fun EpisodeCard(episode: Episode) {
         val context = LocalContext.current
+        var isFocused by remember { mutableStateOf(false) }
 
         Card(
             onClick = {
@@ -229,7 +233,8 @@ class DetailActivity : ComponentActivity() {
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 8.dp),
+                .padding(horizontal = 4.dp, vertical = 8.dp)
+                .onFocusChanged { isFocused = it.isFocused },
             colors = CardDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.surface,
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -253,19 +258,51 @@ class DetailActivity : ComponentActivity() {
                     size = 64.dp
                 )
                 Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Episode title with marquee
+                    MarqueeText(
                         text = episode.title,
+                        isFocused = isFocused,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = 2
                     )
-                    Text(
-                        text = formatPubDate(episode.pubDate),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+
+                    // Episode description (2 lines max)
+                    if (episode.description.isNotEmpty()) {
+                        Text(
+                            text = episode.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    // Duration and progress row
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Publication date
+                        Text(
+                            text = formatPubDate(episode.pubDate),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Duration (if available)
+                        episode.duration?.let { duration ->
+                            Text(
+                                text = "• ${formatDuration(duration)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -285,6 +322,17 @@ class DetailActivity : ComponentActivity() {
             }
         }
         return pubDate // Return the original date string if no format matches
+    }
+
+    private fun formatDuration(seconds: Double): String {
+        val hours = (seconds / 3600).toInt()
+        val minutes = ((seconds % 3600) / 60).toInt()
+
+        return if (hours > 0) {
+            String.format("%dh %dm", hours, minutes)
+        } else {
+            String.format("%dm", minutes)
+        }
     }
 
     companion object {

@@ -12,7 +12,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
@@ -27,6 +32,8 @@ import com.paulohenriquesg.fahrenheit.api.LibraryItem
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
+    var isFocused by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .padding(8.dp)
@@ -35,7 +42,9 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
     ) {
         Card(
             onClick = { onClick(item) },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .onFocusChanged { isFocused = it.isFocused },
             colors = CardDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.surface,
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -57,12 +66,21 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
                     contentDescription = item.media?.metadata?.title ?: "Cover"
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = item.media?.metadata?.title ?: item.id,
+
+                // For podcasts with recent episode, show episode title
+                // For books/podcasts without recent episode, show item title
+                val displayTitle = if (item.mediaType == "podcast" && item.recentEpisode != null) {
+                    item.recentEpisode.title ?: item.media?.metadata?.title ?: item.id
+                } else {
+                    item.media?.metadata?.title ?: item.id
+                }
+
+                MarqueeText(
+                    text = displayTitle,
+                    isFocused = isFocused,
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 1
                 )
             }
         }

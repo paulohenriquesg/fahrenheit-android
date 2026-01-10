@@ -9,11 +9,15 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,9 +26,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.tv.material3.MaterialTheme
@@ -40,6 +47,7 @@ import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemDeviceInfo
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemRequest
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemResponse
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
+import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -292,7 +300,9 @@ fun PlayerScreen(
     onPlayPause: (Boolean) -> Unit
 ) {
     var episode by remember { mutableStateOf<Episode?>(null) }
+    var podcastName by remember { mutableStateOf<String?>(null) }
     var playLibraryItemResponse by remember { mutableStateOf<PlayLibraryItemResponse?>(null) }
+    var isTitleFocused by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     LaunchedEffect(podcastId, episodeId) {
@@ -300,7 +310,8 @@ fun PlayerScreen(
         loadEpisodeDetails(context, podcastId, episodeId) { response ->
             android.util.Log.d("PlayerScreen", "Episode details loaded - episodes count: ${response?.media?.episodes?.size}")
             episode = response?.media?.episodes?.find { it.id == episodeId }
-            android.util.Log.d("PlayerScreen", "Found episode: ${episode?.title}, duration: ${episode?.audioTrack?.duration}")
+            podcastName = response?.media?.metadata?.title
+            android.util.Log.d("PlayerScreen", "Found episode: ${episode?.title}, duration: ${episode?.audioTrack?.duration}, podcast: $podcastName")
         }
         playLibraryItem(context, podcastId, episodeId) { response ->
             android.util.Log.d("PlayerScreen", "PlayLibraryItem response received")
@@ -312,21 +323,93 @@ fun PlayerScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-
     ) {
-        CoverImage(
-            itemId = podcastId,
-            contentDescription = episode?.title ?: "Cover Image",
-            size = 200.dp
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        episode?.let {
-            Text(
-                text = it.title,
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Cover image (left side)
+            CoverImage(
+                itemId = podcastId,
+                contentDescription = episode?.title ?: "Cover Image",
+                size = 200.dp
             )
-            Spacer(modifier = Modifier.height(8.dp))
+
+            // Episode information (right side)
+            episode?.let { ep ->
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Episode title with marquee
+                    MarqueeText(
+                        text = ep.title,
+                        isFocused = isTitleFocused,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        modifier = Modifier.onFocusChanged { isTitleFocused = it.isFocused }
+                    )
+
+                    // Podcast name (for context)
+                    podcastName?.let { name ->
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Episode metadata row
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Publication date
+                        Text(
+                            text = formatPubDate(ep.pubDate),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Season/Episode number
+                        if (ep.season != null || ep.episode != null) {
+                            Text(
+                                text = "• S${ep.season ?: "?"}E${ep.episode ?: "?"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Duration
+                        ep.audioTrack?.duration?.let { duration ->
+                            Text(
+                                text = "• ${formatDuration(duration)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Episode description (scrollable)
+                    if (ep.description.isNotEmpty()) {
+                        Text(
+                            text = ep.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 5,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // MediaPlayerController (playback controls at bottom)
+        episode?.let {
             val contentUrl = ApiClient.generateFullUrl(it.audioTrack?.contentUrl ?: "")
             // Use mediaProgress duration only if it's valid (positive), otherwise use episode duration
             val duration = if (mediaProgress?.duration != null && mediaProgress.duration > 0) {
@@ -348,7 +431,7 @@ fun PlayerScreen(
                     shouldAutoPlay = shouldAutoPlay
                 )
             }
-        } ?: Text(text = "Loading...")
+        }
     }
 }
 
@@ -423,5 +506,32 @@ private fun loadEpisodeDetails(
                 Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
+    }
+}
+
+private fun formatPubDate(pubDate: String): String {
+    val formats = listOf(
+        java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", java.util.Locale.getDefault()),
+        java.text.SimpleDateFormat("yyyy", java.util.Locale.getDefault())
+    )
+    val formatter = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
+    for (format in formats) {
+        try {
+            return format.parse(pubDate)?.let { formatter.format(it) } ?: pubDate
+        } catch (e: java.text.ParseException) {
+            // Continue to the next format
+        }
+    }
+    return pubDate // Return the original date string if no format matches
+}
+
+private fun formatDuration(seconds: Double): String {
+    val hours = (seconds / 3600).toInt()
+    val minutes = ((seconds % 3600) / 60).toInt()
+
+    return if (hours > 0) {
+        String.format("%dh %dm", hours, minutes)
+    } else {
+        String.format("%dm", minutes)
     }
 }
