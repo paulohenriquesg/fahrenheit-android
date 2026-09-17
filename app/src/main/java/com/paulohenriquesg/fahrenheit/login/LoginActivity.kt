@@ -6,7 +6,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -17,7 +20,7 @@ import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 class LoginActivity : ComponentActivity() {
     private lateinit var loginHandler: LoginHandler
 
-    @OptIn(ExperimentalTvMaterial3Api::class)
+    @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -40,7 +43,10 @@ class LoginActivity : ComponentActivity() {
                 Surface(
                     color = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // Surfaces testTag as resource-id for UiAutomator/Maestro
+                        .semantics { testTagsAsResourceId = true },
                     shape = RectangleShape
                 ) {
                     LoginScreen(loginHandler::handleLogin)

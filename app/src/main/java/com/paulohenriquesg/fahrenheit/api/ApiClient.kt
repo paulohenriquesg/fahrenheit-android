@@ -42,7 +42,7 @@ object ApiClient {
             return
         }
 
-        apiService = create(hostValue, tokenValue, sessionManager)
+        apiService = create(hostValue, sessionManager)
     }
 
     private fun navigateToLogin(context: Context) {
@@ -74,46 +74,71 @@ object ApiClient {
 
     private fun create(
         baseUrl: String,
-        token: String? = null,
         sessionManager: SessionManager? = null
     ): ApiService {
-        val clientBuilder = OkHttpClient.Builder()
+        val client = if (sessionManager != null) {
+            buildAuthenticatedClient(sessionManager, refreshVia(baseUrl))
+        } else {
+            // Pre-login: there is no session to authenticate with yet.
+            OkHttpClient.Builder()
+                .addInterceptor(loggingInterceptor())
+                .addInterceptor { chain ->
+                    chain.proceed(
+                        chain.request().newBuilder()
+                            .addHeader("Content-Type", "application/json")
+                            .build()
+                    )
+                }
+                .build()
+        }
+        return buildRetrofit(baseUrl, client).create(ApiService::class.java)
+    }
 
-        // Add logging interceptor (BASIC level to prevent OOM with large responses)
-        val logging = HttpLoggingInterceptor()
-        logging.setLevel(HttpLoggingInterceptor.Level.BASIC)
-        clientBuilder.addInterceptor(logging)
+    /** BASIC level on purpose: full bodies OOM on large library responses. */
+    private fun loggingInterceptor() = HttpLoggingInterceptor().apply {
+        setLevel(HttpLoggingInterceptor.Level.BASIC)
+    }
 
-        clientBuilder.addInterceptor { chain ->
+    /**
+     * The OkHttp stack for authenticated calls: bearer injection plus 401 refresh.
+     *
+     * Exposed separately so the interceptor, the authenticator and the retry can
+     * be exercised together against a real socket - the wiring is what breaks,
+     * not the pieces.
+     */
+    internal fun buildAuthenticatedClient(
+        sessionManager: SessionManager,
+        refreshSession: (String) -> AuthSession
+    ): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(loggingInterceptor())
+        .addInterceptor { chain ->
             val requestBuilder: Request.Builder = chain.request().newBuilder()
                 .addHeader("Content-Type", "application/json")
 
-            // Resolved per request, not captured once: a refresh replaces the token
-            // mid-session and every later request must carry the new one.
-            val currentToken = sessionManager?.accessToken() ?: token
-            if (currentToken != null) {
-                requestBuilder.addHeader("Authorization", "Bearer $currentToken")
+            // Resolved per request, not captured once: a refresh replaces the
+            // token mid-session and every later request must carry the new one.
+            sessionManager.accessToken()?.let {
+                requestBuilder.addHeader("Authorization", "Bearer $it")
             }
 
             chain.proceed(requestBuilder.build())
         }
-
-        if (sessionManager != null) {
-            clientBuilder.authenticator(
-                TokenRefreshAuthenticator(sessionManager, refreshVia(baseUrl))
-            )
-        }
-
-        return buildRetrofit(baseUrl, clientBuilder.build()).create(ApiService::class.java)
-    }
+        .authenticator(TokenRefreshAuthenticator(sessionManager, refreshSession))
+        .build()
 
     /**
      * Refreshes on a bare client: it must not carry the Authorization header that
      * just 401'd, nor recurse back into the authenticator.
      */
     private fun refreshVia(baseUrl: String): (String) -> AuthSession {
-        val refreshApi = buildRetrofit(baseUrl, OkHttpClient.Builder().build())
-            .create(AuthRefreshApi::class.java)
+        // Logging on purpose: without it the refresh is invisible in logcat, and a
+        // silent refresh is indistinguishable from no refresh happening at all.
+        // No auth interceptor and no authenticator here - it must not resend the
+        // token that just 401'd, nor recurse back into itself.
+        val refreshApi = buildRetrofit(
+            baseUrl,
+            OkHttpClient.Builder().addInterceptor(loggingInterceptor()).build()
+        ).create(AuthRefreshApi::class.java)
         return { refreshToken ->
             val response = refreshApi.refresh(refreshToken).execute()
             val body = response.body()

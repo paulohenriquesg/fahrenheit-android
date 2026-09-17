@@ -49,6 +49,7 @@ coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose"
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
 logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "loggingInterceptor" }
+mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "loggingInterceptor" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 androidx-leanback = { group = "androidx.leanback", name = "leanback", version.ref = "leanback" }
 ui = { module = "androidx.compose.ui:ui", version.ref = "ui" }

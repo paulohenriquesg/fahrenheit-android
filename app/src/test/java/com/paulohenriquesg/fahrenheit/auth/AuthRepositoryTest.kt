@@ -5,6 +5,7 @@ import com.paulohenriquesg.fahrenheit.api.AuthApi
 import com.paulohenriquesg.fahrenheit.api.AuthRepository
 import com.paulohenriquesg.fahrenheit.api.LoginRequest
 import com.paulohenriquesg.fahrenheit.api.LoginResponse
+import com.paulohenriquesg.fahrenheit.api.ServerStatus
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -28,6 +29,10 @@ class AuthRepositoryTest {
         var returnTokensHeader: String? = null
         var refreshTokenHeader: String? = null
         var loginRequest: LoginRequest? = null
+
+        var statusResponse: ServerStatus = ServerStatus(authMethods = listOf("local"))
+
+        override suspend fun status(): ServerStatus = statusResponse
 
         override suspend fun login(returnTokens: String, request: LoginRequest): LoginResponse {
             returnTokensHeader = returnTokens

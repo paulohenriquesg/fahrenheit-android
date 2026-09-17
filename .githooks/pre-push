@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+# Runs the unit tests before a push.
+#
+# Tests run nowhere else: build-on-tag.yml only calls assembleRelease, so
+# without this a failing test can sit on main indefinitely and ship in a
+# release. One had - ShelfDeserializerTest was red on main and nothing said so.
+#
+# Enable once per clone:
+#   git config core.hooksPath .githooks
+#
+# Skip deliberately when you know why:
+#   git push --no-verify
+set -e
+
+echo "pre-push: running unit tests..."
+if ! ./gradlew testDebugUnitTest --console=plain -q; then
+  echo ""
+  echo "pre-push: unit tests FAILED - push aborted."
+  echo "  report: app/build/reports/tests/testDebugUnitTest/index.html"
+  echo "  to push anyway: git push --no-verify"
+  exit 1
+fi
+echo "pre-push: tests passed."

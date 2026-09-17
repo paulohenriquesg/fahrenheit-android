@@ -6,18 +6,18 @@ import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /**
- * Custom deserializer for ServerSettings to handle numeric type mismatches.
+ * Custom deserializer for ServerSettings.
  *
- * The Audiobookshelf API may return numeric values as either integers or floats,
- * but our Kotlin data class expects Int types. This deserializer handles both cases:
+ * This object arrives inside the login response, so anything that makes it
+ * unparseable blocks sign-in entirely. That is issue #1: the server sent
+ * maxBackupSize as 0.5 against an Int field, and nobody could log in.
  *
- * - For size limits (maxBackupSize): Uses ceiling to round up conservatively
- * - For counts and other values: Uses standard rounding to nearest integer
+ * Nothing in the app reads ServerSettings. Refusing to sign a user in over a
+ * field we never look at is indefensible, so every read here tolerates the
+ * field being absent, null, or the wrong type, and falls back to a default.
  *
- * Example conversions:
- * - maxBackupSize: 0.5 → 1 (0.5 GB rounded up to 1 GB)
- * - backupsToKeep: 2.4 → 2 (2.4 rounded to 2)
- * - backupsToKeep: 2.6 → 3 (2.6 rounded to 3)
+ * Numbers keep their original rounding: sizes round up (conservative for a
+ * limit), everything else to nearest.
  */
 class ServerSettingsDeserializer : JsonDeserializer<ServerSettings> {
     override fun deserialize(
@@ -25,65 +25,57 @@ class ServerSettingsDeserializer : JsonDeserializer<ServerSettings> {
         typeOfT: Type,
         context: JsonDeserializationContext
     ): ServerSettings {
-        val obj = json.asJsonObject
+        val obj = if (json.isJsonObject) json.asJsonObject else JsonObject()
 
         return ServerSettings(
-            id = obj.get("id").asString,
-            scannerFindCovers = obj.get("scannerFindCovers").asBoolean,
-            scannerCoverProvider = obj.get("scannerCoverProvider").asString,
-            scannerParseSubtitle = obj.get("scannerParseSubtitle").asBoolean,
-            scannerPreferMatchedMetadata = obj.get("scannerPreferMatchedMetadata").asBoolean,
-            scannerDisableWatcher = obj.get("scannerDisableWatcher").asBoolean,
-            storeCoverWithItem = obj.get("storeCoverWithItem").asBoolean,
-            storeMetadataWithItem = obj.get("storeMetadataWithItem").asBoolean,
-            metadataFileFormat = obj.get("metadataFileFormat").asString,
-            rateLimitLoginRequests = getIntFromNumber(obj, "rateLimitLoginRequests"),
-            rateLimitLoginWindow = obj.get("rateLimitLoginWindow").asLong,
-            backupSchedule = obj.get("backupSchedule").asString,
-            backupsToKeep = getIntFromNumber(obj, "backupsToKeep"),
-            maxBackupSize = getIntFromNumberCeil(obj, "maxBackupSize"),
-            loggerDailyLogsToKeep = getIntFromNumber(obj, "loggerDailyLogsToKeep"),
-            loggerScannerLogsToKeep = getIntFromNumber(obj, "loggerScannerLogsToKeep"),
-            homeBookshelfView = getIntFromNumber(obj, "homeBookshelfView"),
-            bookshelfView = getIntFromNumber(obj, "bookshelfView"),
-            sortingIgnorePrefix = obj.get("sortingIgnorePrefix").asBoolean,
-            sortingPrefixes = context.deserialize(
-                obj.get("sortingPrefixes"),
-                object : com.google.gson.reflect.TypeToken<List<String>>() {}.type
-            ),
-            chromecastEnabled = obj.get("chromecastEnabled").asBoolean,
-            dateFormat = obj.get("dateFormat").asString,
-            language = obj.get("language").asString,
-            logLevel = getIntFromNumber(obj, "logLevel"),
-            version = obj.get("version").asString
+            id = obj.string("id"),
+            scannerFindCovers = obj.boolean("scannerFindCovers"),
+            scannerCoverProvider = obj.string("scannerCoverProvider"),
+            scannerParseSubtitle = obj.boolean("scannerParseSubtitle"),
+            scannerPreferMatchedMetadata = obj.boolean("scannerPreferMatchedMetadata"),
+            scannerDisableWatcher = obj.boolean("scannerDisableWatcher"),
+            storeCoverWithItem = obj.boolean("storeCoverWithItem"),
+            storeMetadataWithItem = obj.boolean("storeMetadataWithItem"),
+            metadataFileFormat = obj.string("metadataFileFormat"),
+            rateLimitLoginRequests = obj.int("rateLimitLoginRequests"),
+            rateLimitLoginWindow = obj.long("rateLimitLoginWindow"),
+            backupSchedule = obj.string("backupSchedule"),
+            backupsToKeep = obj.int("backupsToKeep"),
+            maxBackupSize = obj.int("maxBackupSize", roundUp = true),
+            loggerDailyLogsToKeep = obj.int("loggerDailyLogsToKeep"),
+            loggerScannerLogsToKeep = obj.int("loggerScannerLogsToKeep"),
+            homeBookshelfView = obj.int("homeBookshelfView"),
+            bookshelfView = obj.int("bookshelfView"),
+            sortingIgnorePrefix = obj.boolean("sortingIgnorePrefix"),
+            sortingPrefixes = obj.stringList("sortingPrefixes"),
+            chromecastEnabled = obj.boolean("chromecastEnabled"),
+            dateFormat = obj.string("dateFormat"),
+            language = obj.string("language"),
+            logLevel = obj.int("logLevel"),
+            version = obj.string("version")
         )
     }
 
-    /**
-     * Safely extracts Int from JSON number, handling both int and float values.
-     * Uses rounding to nearest integer for fractional values.
-     */
-    private fun getIntFromNumber(obj: JsonObject, fieldName: String): Int {
-        val element = obj.get(fieldName)
-        return when {
-            element.isJsonPrimitive && element.asJsonPrimitive.isNumber -> {
-                element.asDouble.roundToInt()
-            }
-            else -> 0 // Default value if field is missing or invalid
-        }
+    /** Present, non-null and a primitive - anything else is treated as absent. */
+    private fun JsonObject.usable(field: String): JsonPrimitive? =
+        get(field)?.takeIf { !it.isJsonNull && it.isJsonPrimitive }?.asJsonPrimitive
+
+    private fun JsonObject.string(field: String, default: String = "") =
+        usable(field)?.asString ?: default
+
+    private fun JsonObject.boolean(field: String, default: Boolean = false) =
+        usable(field)?.takeIf { it.isBoolean }?.asBoolean ?: default
+
+    private fun JsonObject.long(field: String, default: Long = 0L) =
+        usable(field)?.takeIf { it.isNumber }?.asLong ?: default
+
+    private fun JsonObject.int(field: String, roundUp: Boolean = false, default: Int = 0): Int {
+        val number = usable(field)?.takeIf { it.isNumber }?.asDouble ?: return default
+        return if (roundUp) ceil(number).toInt() else number.roundToInt()
     }
 
-    /**
-     * Safely extracts Int from JSON number with ceiling rounding.
-     * Used for size limits where we want to round up (conservative approach).
-     */
-    private fun getIntFromNumberCeil(obj: JsonObject, fieldName: String): Int {
-        val element = obj.get(fieldName)
-        return when {
-            element.isJsonPrimitive && element.asJsonPrimitive.isNumber -> {
-                ceil(element.asDouble).toInt()
-            }
-            else -> 0 // Default value if field is missing or invalid
-        }
-    }
+    private fun JsonObject.stringList(field: String): List<String> =
+        get(field)?.takeIf { it.isJsonArray }?.asJsonArray
+            ?.mapNotNull { it.takeIf { e -> !e.isJsonNull && e.isJsonPrimitive }?.asString }
+            ?: emptyList()
 }
