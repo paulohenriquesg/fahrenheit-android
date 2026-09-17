@@ -30,6 +30,9 @@ class SharedPreferencesHandler(context: Context) {
             host = sharedPreferences.getString("host", "") ?: "",
             username = sharedPreferences.getString("username", "") ?: "",
             token = sharedPreferences.getString("token", "") ?: "",
+            // Deliberately not defaulted to "": an empty string would later be sent
+            // as a valid-looking x-refresh-token header.
+            refreshToken = sharedPreferences.getString("refresh_token", null),
             darkTheme = sharedPreferences.getBoolean("dark_theme", false),
             isRowLayout = sharedPreferences.getBoolean("is_row_layout", true),
             lastUpdateCheck = sharedPreferences.getLong("last_update_check", 0L),
@@ -44,6 +47,7 @@ class SharedPreferencesHandler(context: Context) {
             putString("host", userPreferences.host)
             putString("username", userPreferences.username)
             putString("token", userPreferences.token)
+            putString("refresh_token", userPreferences.refreshToken)
             putBoolean("dark_theme", userPreferences.darkTheme)
             putBoolean("is_row_layout", userPreferences.isRowLayout)
             putLong("last_update_check", userPreferences.lastUpdateCheck)

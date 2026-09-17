@@ -6,16 +6,19 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.MutableState
 import com.paulohenriquesg.fahrenheit.api.ApiClient
-import com.paulohenriquesg.fahrenheit.api.LoginRequest
-import com.paulohenriquesg.fahrenheit.api.LoginResponse
+import com.paulohenriquesg.fahrenheit.api.AuthRepository
+import com.paulohenriquesg.fahrenheit.api.SessionManager
 import com.paulohenriquesg.fahrenheit.main.MainActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class LoginHandler(private val context: Context) {
-    private val sharedPreferencesHandler = SharedPreferencesHandler(context)
+    private val sessionManager = SessionManager(SharedPreferencesHandler(context))
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     fun handleLogin(
         host: String,
@@ -35,56 +38,27 @@ class LoginHandler(private val context: Context) {
         }
 
         isLoading.value = true
-        val loginRequest = LoginRequest(username, password, host)
-        val apiService = ApiClient.getApiServiceForLogin(host)
-        apiService.login(loginRequest).enqueue(object : Callback<LoginResponse> {
-            override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
-                isLoading.value = false
-                if (response.isSuccessful) {
-                    val loginResponse = response.body()
-                    // Handle successful login
-                    if (loginResponse != null) {
-                        saveToLocalStorage(host, loginResponse.user.username, loginResponse.user.token)
-                        Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
-
-                        ApiClient.initialize(context)
-
-                        // Redirect to MainActivity
-                        val intent = Intent(context, MainActivity::class.java)
-                        context.startActivity(intent)
-                        if (context is LoginActivity) {
-                            context.finish()
-                        }
-                    }
-                } else {
-                    // Handle login failure
-                    Toast.makeText(
-                        context,
-                        "Login failed: ${response.message()}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+        scope.launch {
+            try {
+                val session = withContext(Dispatchers.IO) {
+                    AuthRepository(ApiClient.createAuthApi(host)).login(username, password, host)
                 }
-            }
 
-            override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
+                sessionManager.persist(host, session)
+                ApiClient.initialize(context)
+
+                Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+
+                context.startActivity(Intent(context, MainActivity::class.java))
+                if (context is LoginActivity) {
+                    context.finish()
+                }
+            } catch (e: Exception) {
+                Log.e("LoginHandler", "Login failed", e)
+                Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
                 isLoading.value = false
-                // Log the error message
-                Log.e("LoginHandler", "Network error", t)
-                Toast.makeText(
-                    context,
-                    "Network error: ${t.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
             }
-        })
-    }
-
-    private fun saveToLocalStorage(host: String, username: String, token: String) {
-        val userPreferences = sharedPreferencesHandler.getUserPreferences().copy(
-            host = host,
-            username = username,
-            token = token
-        )
-        sharedPreferencesHandler.saveUserPreferences(userPreferences)
+        }
     }
 }
