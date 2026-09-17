@@ -16,7 +16,9 @@ class ShelfDeserializer : JsonDeserializer<Shelf> {
         val label = jsonObject.get("label").asString
         val labelStringKey = jsonObject.get("labelStringKey").asString
         val type = jsonObject.get("type").asString
-        val total = jsonObject.get("total")?.asInt
+        // `?.` only covers an absent key: a present-but-null field is a JsonNull
+        // instance, and asInt throws UnsupportedOperationException on it.
+        val total = jsonObject.get("total")?.takeIf { !it.isJsonNull }?.asInt
 
         val entities = jsonObject.get("entities")
 
