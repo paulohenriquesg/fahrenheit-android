@@ -8,7 +8,6 @@ import androidx.compose.runtime.MutableState
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.AuthRepository
 import com.paulohenriquesg.fahrenheit.api.SessionManager
-import com.paulohenriquesg.fahrenheit.api.SessionState
 import com.paulohenriquesg.fahrenheit.main.MainActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import kotlinx.coroutines.CoroutineScope
@@ -17,9 +16,22 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Presents [LoginCoordinator]'s result. Deliberately thin: everything worth
+ * testing lives in the coordinator, which needs no Context.
+ */
 class LoginHandler(private val context: Context) {
-    private val sessionManager = SessionManager(SharedPreferencesHandler(context))
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    private val coordinator = LoginCoordinator(
+        sessionManager = SessionManager(SharedPreferencesHandler(context)),
+        performLogin = { host, username, password ->
+            withContext(Dispatchers.IO) {
+                AuthRepository(ApiClient.createAuthApi(host)).login(username, password, host)
+            }
+        },
+        activateSession = { ApiClient.initialize(context) }
+    )
 
     fun handleLogin(
         host: String,
@@ -27,46 +39,35 @@ class LoginHandler(private val context: Context) {
         password: String,
         isLoading: MutableState<Boolean>
     ) {
-        if (host.isBlank() || username.isBlank() || password.isBlank()) {
-            Toast.makeText(context, "All fields are required", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        if (!host.startsWith("http://") && !host.startsWith("https://")) {
-            Toast.makeText(context, "Host must start with http:// or https://", Toast.LENGTH_SHORT)
-                .show()
-            return
-        }
-
         isLoading.value = true
         scope.launch {
             try {
-                val session = withContext(Dispatchers.IO) {
-                    AuthRepository(ApiClient.createAuthApi(host)).login(username, password, host)
+                when (val outcome = coordinator.login(host, username, password)) {
+                    is LoginOutcome.Success -> {
+                        Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+                        context.startActivity(Intent(context, MainActivity::class.java))
+                        if (context is LoginActivity) context.finish()
+                    }
+
+                    is LoginOutcome.Invalid ->
+                        Toast.makeText(context, outcome.message, Toast.LENGTH_SHORT).show()
+
+                    is LoginOutcome.Failed -> {
+                        Log.e("LoginHandler", "Login failed: ${outcome.message}")
+                        Toast.makeText(
+                            context,
+                            "Login failed: ${outcome.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    is LoginOutcome.UnusableSession ->
+                        Toast.makeText(
+                            context,
+                            "Signed in, but the server address could not be used",
+                            Toast.LENGTH_LONG
+                        ).show()
                 }
-
-                sessionManager.persist(host, session)
-
-                // If what we just stored is not usable, going to MainActivity
-                // only bounces straight back here. Say so instead.
-                if (ApiClient.initialize(context) == SessionState.NeedsLogin) {
-                    Toast.makeText(
-                        context,
-                        "Signed in, but the server address could not be used",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@launch
-                }
-
-                Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
-
-                context.startActivity(Intent(context, MainActivity::class.java))
-                if (context is LoginActivity) {
-                    context.finish()
-                }
-            } catch (e: Exception) {
-                Log.e("LoginHandler", "Login failed", e)
-                Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_SHORT).show()
             } finally {
                 isLoading.value = false
             }
