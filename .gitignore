@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Local secrets and local-only tooling
+.envrc*
+.env*
+.local/

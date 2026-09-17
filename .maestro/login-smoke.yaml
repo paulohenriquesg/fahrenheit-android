@@ -1,0 +1,66 @@
+# Login smoke test: proves a real server accepts our credentials and the app
+# reaches the home screen.
+#
+# Selectors are testTag ids, never visible text, so copy changes and
+# localization cannot break the suite.
+#
+# Two TV-specific things this flow depends on, both learned the hard way:
+#
+# 1. The IME is already up when the screen appears, and it owns D-pad focus.
+#    A single "Remote Dpad Down" hands focus to the first field; without it the
+#    D-pad just walks the on-screen keyboard (q -> a) and nothing is typed.
+#    Tapping a Compose field does NOT move focus here, so taps are not used.
+#
+# 2. Each field's imeAction is Next, wired to focusManager.moveFocus(Down) in
+#    LoginScreen, so Enter walks the form. That is why this asserts `focused`
+#    before typing - it fails loudly rather than silently typing into nothing.
+#
+# Device setup (once per emulator/device): scripts/maestro-setup.sh
+#
+#   maestro test .maestro/login-smoke.yaml \
+#     -e ABS_HOST="$ABS_HOST" -e ABS_USERNAME="$ABS_USERNAME" -e ABS_PASSWORD="$ABS_PASSWORD"
+appId: com.paulohenriquesg.fahrenheit
+name: Login smoke
+---
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible:
+      id: "login_screen"
+    timeout: 40000
+
+- pressKey: "Remote Dpad Down"
+
+- assertVisible:
+    id: "login_host_field"
+    focused: true
+- inputText: ${ABS_HOST}
+
+- pressKey: Enter
+- assertVisible:
+    id: "login_username_field"
+    focused: true
+- inputText: ${ABS_USERNAME}
+
+- pressKey: Enter
+- assertVisible:
+    id: "login_password_field"
+    focused: true
+- inputText: ${ABS_PASSWORD}
+
+# The password field is also imeAction Next, so Enter moves focus onto the
+# submit button. hideKeyboard is not usable here - this IME exposes no standard
+# dismiss action - and tapping does not work on TV, so activate with the remote.
+- pressKey: Enter
+- assertVisible:
+    id: "login_submit_button"
+    focused: true
+- pressKey: "Remote Dpad Center"
+
+# Reaching the home screen proves the server accepted the credentials, the
+# token was stored, and the libraries request succeeded.
+- extendedWaitUntil:
+    visible:
+      id: "main_screen"
+    timeout: 40000

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only overlay.
+
+  The app ships as TV-only: LoginActivity is registered under
+  LEANBACK_LAUNCHER, with no android.intent.category.LAUNCHER. Maestro (and
+  anything else driving the app through the standard launcher intent) resolves
+  LAUNCHER, so `launchApp` fails against a release-shaped manifest.
+
+  Adding LAUNCHER here keeps the release manifest untouched - the production
+  app still appears only on TV launchers.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name="com.paulohenriquesg.fahrenheit.login.LoginActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

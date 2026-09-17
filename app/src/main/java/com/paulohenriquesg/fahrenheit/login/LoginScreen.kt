@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
@@ -58,6 +59,7 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .testTag("login_screen")
             .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -88,6 +90,7 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
             },
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag("login_host_field")
                 .onFocusChanged {
                     isHostFocused = it.isFocused
                 },
@@ -124,6 +127,7 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
             },
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag("login_username_field")
                 .onFocusChanged {
                     isUsernameFocused = it.isFocused
                 },
@@ -161,6 +165,7 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag("login_password_field")
                 .onFocusChanged {
                     isPasswordFocused = it.isFocused
                 },
@@ -184,7 +189,9 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
         } else {
             Button(
                 onClick = { handleLogin(host, username, password, isLoading) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("login_submit_button")
             ) {
                 Text("Login", color = MaterialTheme.colorScheme.onPrimary)
             }
