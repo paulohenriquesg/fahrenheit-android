@@ -31,11 +31,16 @@ object TestFixtures {
         version = "2.5.0"
     )
 
-    fun createMockUser(username: String = "testuser") = User(
+    fun createMockUser(
+        username: String = "testuser",
+        token: String = "mock-token-12345",
+        accessToken: String? = null,
+        refreshToken: String? = null
+    ) = User(
         id = "user-123",
         username = username,
         type = "root",
-        token = "mock-token-12345",
+        token = token,
         mediaProgress = emptyList(),
         seriesHideFromContinueListening = emptyList(),
         bookmarks = emptyList(),
@@ -53,11 +58,21 @@ object TestFixtures {
             accessExplicitContent = true
         ),
         librariesAccessible = emptyList(),
-        itemTagsAccessible = emptyList()
+        itemTagsAccessible = emptyList(),
+        accessToken = accessToken,
+        refreshToken = refreshToken
     )
 
-    fun createMockLoginResponse() = LoginResponse(
-        user = createMockUser(),
+    fun createMockLoginResponse(
+        token: String = "mock-token-12345",
+        accessToken: String? = null,
+        refreshToken: String? = null
+    ) = LoginResponse(
+        user = createMockUser(
+            token = token,
+            accessToken = accessToken,
+            refreshToken = refreshToken
+        ),
         userDefaultLibraryId = "library-456",
         serverSettings = createMockServerSettings(),
         source = "test"
