@@ -1,9 +1,7 @@
 package com.paulohenriquesg.fahrenheit.api
 
 import android.content.Context
-import android.content.Intent
 import com.google.gson.GsonBuilder
-import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -18,37 +16,37 @@ object ApiClient {
     private var token: String? = null
     private var sessionManager: SessionManager? = null
 
-    fun initialize(context: Context) {
+    /**
+     * Loads stored credentials and reports whether they are usable.
+     *
+     * Deliberately does not navigate. This runs from Application.onCreate, so
+     * starting an Activity here races the launcher Activity - and a network
+     * client choosing what the user sees is what made this class untestable.
+     */
+    fun initialize(context: Context): SessionState {
         val sharedPreferencesHandler = SharedPreferencesHandler(context)
         val userPreferences = sharedPreferencesHandler.getUserPreferences()
-        host = userPreferences.host
-        token = userPreferences.token
+        val hostValue = userPreferences.host
+        val tokenValue = userPreferences.token
+
+        val usable = hostValue.isNotEmpty() &&
+            tokenValue.isNotEmpty() &&
+            (hostValue.startsWith("http://") || hostValue.startsWith("https://"))
+
+        if (!usable) {
+            apiService = null
+            host = null
+            token = null
+            sessionManager = null
+            sharedPreferencesHandler.clearPreferences()
+            return SessionState.NeedsLogin
+        }
+
+        host = hostValue
+        token = tokenValue
         sessionManager = SessionManager(sharedPreferencesHandler)
-
-        val hostValue = host
-        val tokenValue = token
-
-        if (hostValue.isNullOrEmpty() || tokenValue.isNullOrEmpty()) {
-            // Missing credentials, navigate to login
-            sharedPreferencesHandler.clearPreferences()
-            navigateToLogin(context)
-            return
-        }
-
-        if (!hostValue.startsWith("http://") && !hostValue.startsWith("https://")) {
-            // Invalid host format, clear and navigate to login
-            sharedPreferencesHandler.clearPreferences()
-            navigateToLogin(context)
-            return
-        }
-
         apiService = create(hostValue, sessionManager)
-    }
-
-    private fun navigateToLogin(context: Context) {
-        val intent = Intent(context, LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        context.startActivity(intent)
+        return SessionState.Ready
     }
 
     fun getApiService(): ApiService? {

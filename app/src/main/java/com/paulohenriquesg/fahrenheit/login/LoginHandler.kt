@@ -8,6 +8,7 @@ import androidx.compose.runtime.MutableState
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.AuthRepository
 import com.paulohenriquesg.fahrenheit.api.SessionManager
+import com.paulohenriquesg.fahrenheit.api.SessionState
 import com.paulohenriquesg.fahrenheit.main.MainActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import kotlinx.coroutines.CoroutineScope
@@ -45,7 +46,17 @@ class LoginHandler(private val context: Context) {
                 }
 
                 sessionManager.persist(host, session)
-                ApiClient.initialize(context)
+
+                // If what we just stored is not usable, going to MainActivity
+                // only bounces straight back here. Say so instead.
+                if (ApiClient.initialize(context) == SessionState.NeedsLogin) {
+                    Toast.makeText(
+                        context,
+                        "Signed in, but the server address could not be used",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@launch
+                }
 
                 Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
 
