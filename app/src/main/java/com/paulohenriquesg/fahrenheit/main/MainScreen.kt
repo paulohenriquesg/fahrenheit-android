@@ -494,6 +494,7 @@ fun PersonalizedHomeView(shelves: List<Shelf>, libraryId: String?) {
 
     Column(
         modifier = Modifier
+            .testTag("home_view")
             .fillMaxSize()
             .padding(top = 60.dp, start = 16.dp, end = 16.dp)
     ) {
@@ -570,6 +571,7 @@ fun MenuItemRow(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .testTag("menu_item_${menuItem.id}")
             .padding(vertical = 4.dp)
             .focusRequester(focusRequester),
         colors = CardDefaults.colors(
@@ -610,6 +612,7 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
 
     Column(
         modifier = Modifier
+            .testTag("series_view")
             .fillMaxSize()
             .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
     ) {
@@ -690,6 +693,7 @@ fun AuthorsBrowseView(libraryId: String?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .testTag("authors_view")
             .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
     ) {
         Text(
@@ -750,6 +754,7 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
 
     Column(
         modifier = Modifier
+            .testTag("collections_view")
             .fillMaxSize()
             .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
     ) {
@@ -807,6 +812,7 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
 fun StatsBrowseView(stats: com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse?, isLoading: Boolean) {
     Column(
         modifier = Modifier
+            .testTag("stats_view")
             .fillMaxSize()
             .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
     ) {

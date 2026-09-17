@@ -1,0 +1,80 @@
+# Reusable sign-in. Callers pass credentials via `env:`.
+#
+# Two TV-specific things this depends on, both learned the hard way:
+#
+# 1. The IME is already up when the screen appears and it owns D-pad focus. One
+#    "Remote Dpad Down" hands focus to the first field; without it the D-pad
+#    walks the on-screen keyboard (q -> a) and nothing is typed. Tapping a
+#    Compose field does NOT move focus here, so taps are not used.
+#
+# 2. Each field's imeAction is Next, wired to focusManager.moveFocus(Down), so
+#    Enter walks the form. Waiting on `focused` before each inputText turns a
+#    silent empty-field failure into a loud one. extendedWaitUntil rather than
+#    assertVisible throughout: focus lands a beat after the key press, and a
+#    single check races the IME animation - the cause of every flake here.
+#
+# Device setup (once per emulator): scripts/maestro-setup.sh
+appId: com.paulohenriquesg.fahrenheit
+---
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible:
+      id: "login_screen"
+    timeout: 40000
+
+# Focus at launch is not deterministic: sometimes the IME is already up and owns
+# the D-pad (so Down walks the keyboard, q -> a), sometimes nothing is focused
+# and one Down hands focus to the field. Press until the field actually has
+# focus rather than assuming a fixed number of presses.
+- repeat:
+    while:
+      notVisible:
+        id: "login_host_field"
+        focused: true
+    commands:
+      - pressKey: "Remote Dpad Down"
+
+- extendedWaitUntil:
+    visible:
+      id: "login_host_field"
+      focused: true
+    timeout: 15000
+- inputText: ${ABS_HOST}
+
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: "login_username_field"
+      focused: true
+    timeout: 15000
+- inputText: ${ABS_USERNAME}
+
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: "login_password_field"
+      focused: true
+    timeout: 15000
+- inputText: ${ABS_PASSWORD}
+
+# The password field is also imeAction Next, so Enter moves focus onto the
+# submit button. hideKeyboard is not usable here - this IME exposes no standard
+# dismiss action - and tapping does not work on TV, so activate with the remote.
+- pressKey: Enter
+# extendedWaitUntil, not assertVisible: focus lands on the button only once the
+# IME has finished closing, and a single check races that animation.
+- extendedWaitUntil:
+    visible:
+      id: "login_submit_button"
+      focused: true
+    timeout: 15000
+- pressKey: "Remote Dpad Center"
+
+# Reaching the home screen proves the server accepted the credentials, the
+# token was stored, and the libraries request succeeded.
+- extendedWaitUntil:
+    visible:
+      id: "main_screen"
+    timeout: 40000
