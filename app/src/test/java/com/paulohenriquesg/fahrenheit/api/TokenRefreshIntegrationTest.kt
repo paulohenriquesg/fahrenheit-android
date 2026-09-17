@@ -1,7 +1,5 @@
 package com.paulohenriquesg.fahrenheit.api
 
-import android.content.Context
-import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.Request
@@ -10,10 +8,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.annotation.Config
 
 /**
  * Exercises the whole OkHttp stack - auth interceptor, authenticator, retry -
@@ -24,8 +18,6 @@ import org.robolectric.annotation.Config
  * wired together: that the retry actually carries the new token, and that every
  * later request does too.
  */
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28])
 class TokenRefreshIntegrationTest {
     private lateinit var server: MockWebServer
     private lateinit var sessionManager: SessionManager
@@ -34,10 +26,7 @@ class TokenRefreshIntegrationTest {
     fun setup() {
         server = MockWebServer()
         server.start()
-        val context: Context = RuntimeEnvironment.getApplication()
-        val prefs = SharedPreferencesHandler(context)
-        prefs.clearPreferences()
-        sessionManager = SessionManager(prefs)
+        sessionManager = SessionManager(FakeTokenStore())
         sessionManager.persist(
             host = server.url("/").toString().trimEnd('/'),
             session = AuthSession("expired-access", "valid-refresh", "testuser")

@@ -1,37 +1,27 @@
 package com.paulohenriquesg.fahrenheit.auth
 
-import android.content.Context
 import com.paulohenriquesg.fahrenheit.api.AuthSession
 import com.paulohenriquesg.fahrenheit.api.SessionManager
 import com.paulohenriquesg.fahrenheit.api.TokenRefreshAuthenticator
-import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import com.paulohenriquesg.fahrenheit.api.FakeTokenStore
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.annotation.Config
 
 /**
  * Audiobookshelf access tokens last an hour. Without this, the app dies mid-session
  * and the user is bounced to the login screen.
  */
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28])
 class TokenRefreshAuthenticatorTest {
     private lateinit var sessionManager: SessionManager
 
     @Before
     fun setup() {
-        val context: Context = RuntimeEnvironment.getApplication()
-        val prefs = SharedPreferencesHandler(context)
-        prefs.clearPreferences()
-        sessionManager = SessionManager(prefs)
+        sessionManager = SessionManager(FakeTokenStore())
     }
 
     private fun unauthorized(prior: Response? = null): Response {

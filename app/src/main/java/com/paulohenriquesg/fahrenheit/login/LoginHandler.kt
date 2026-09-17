@@ -10,6 +10,7 @@ import com.paulohenriquesg.fahrenheit.api.AuthRepository
 import com.paulohenriquesg.fahrenheit.api.SessionManager
 import com.paulohenriquesg.fahrenheit.main.MainActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
+import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesTokenStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,7 +25,7 @@ class LoginHandler(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     private val coordinator = LoginCoordinator(
-        sessionManager = SessionManager(SharedPreferencesHandler(context)),
+        sessionManager = SessionManager(SharedPreferencesTokenStore(SharedPreferencesHandler(context))),
         performLogin = { host, username, password ->
             withContext(Dispatchers.IO) {
                 AuthRepository(ApiClient.createAuthApi(host)).login(username, password, host)

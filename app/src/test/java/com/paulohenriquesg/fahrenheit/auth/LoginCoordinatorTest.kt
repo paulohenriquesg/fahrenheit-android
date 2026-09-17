@@ -1,21 +1,16 @@
 package com.paulohenriquesg.fahrenheit.auth
 
-import android.content.Context
 import com.paulohenriquesg.fahrenheit.api.AuthSession
 import com.paulohenriquesg.fahrenheit.api.SessionManager
 import com.paulohenriquesg.fahrenheit.api.SessionState
 import com.paulohenriquesg.fahrenheit.login.LoginCoordinator
 import com.paulohenriquesg.fahrenheit.login.LoginOutcome
-import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import com.paulohenriquesg.fahrenheit.api.FakeTokenStore
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.annotation.Config
 import java.io.IOException
 
 /**
@@ -25,18 +20,12 @@ import java.io.IOException
  * none of this had coverage - the login package sat at 0%. Everything here used
  * to be reachable only by driving the UI.
  */
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28])
 class LoginCoordinatorTest {
     private lateinit var sessionManager: SessionManager
-    private lateinit var prefs: SharedPreferencesHandler
 
     @Before
     fun setup() {
-        val context: Context = RuntimeEnvironment.getApplication()
-        prefs = SharedPreferencesHandler(context)
-        prefs.clearPreferences()
-        sessionManager = SessionManager(prefs)
+        sessionManager = SessionManager(FakeTokenStore())
     }
 
     private fun coordinator(

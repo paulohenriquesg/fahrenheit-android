@@ -60,6 +60,11 @@ android {
         jvmTarget = "17"
     }
     testOptions {
+        // android.util.Log and friends are stubs that throw on the JVM. Returning
+        // defaults lets framework-free classes be tested with plain JUnit; anything
+        // that actually depends on Android behaviour should use Robolectric.
+        unitTests.isReturnDefaultValues = true
+
         unitTests.all {
             // Robolectric loads classes in its own sandbox classloader; without
             // this every Robolectric test contributes zero coverage, which reads

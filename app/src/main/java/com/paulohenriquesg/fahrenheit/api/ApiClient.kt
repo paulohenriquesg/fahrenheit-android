@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.api
 import android.content.Context
 import com.google.gson.GsonBuilder
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
+import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesTokenStore
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.logging.HttpLoggingInterceptor
@@ -44,7 +45,7 @@ object ApiClient {
 
         host = hostValue
         token = tokenValue
-        sessionManager = SessionManager(sharedPreferencesHandler)
+        sessionManager = SessionManager(SharedPreferencesTokenStore(sharedPreferencesHandler))
         apiService = create(hostValue, sessionManager)
         return SessionState.Ready
     }
