@@ -1,30 +1,31 @@
 package com.paulohenriquesg.fahrenheit.api
 
-import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
-
 /**
  * Single owner of the signed-in token state.
  *
- * Both the login flow and the 401 refresh path write through here, so the stored
- * access token and refresh token cannot drift apart.
+ * Both the login flow and the 401 refresh path write through here, so the
+ * stored access token and refresh token cannot drift apart.
+ *
+ * Takes a [TokenStore] rather than SharedPreferences directly, so session logic
+ * can be exercised without an Android framework.
  */
-class SessionManager(private val preferences: SharedPreferencesHandler) {
+class SessionManager(private val store: TokenStore) {
 
-    /** Writes the tokens without disturbing the user's unrelated settings. */
     fun persist(host: String, session: AuthSession) {
-        val updated = preferences.getUserPreferences().copy(
-            host = host,
-            username = session.username,
-            token = session.accessToken,
-            refreshToken = session.refreshToken
+        store.write(
+            StoredCredentials(
+                host = host,
+                username = session.username,
+                accessToken = session.accessToken,
+                refreshToken = session.refreshToken
+            )
         )
-        preferences.saveUserPreferences(updated)
     }
 
-    /** Null when the server issued no refresh token, i.e. there is nothing to retry with. */
-    fun refreshToken(): String? = preferences.getUserPreferences().refreshToken
+    /** Null when the server issued no refresh token, i.e. nothing to retry with. */
+    fun refreshToken(): String? = store.read().refreshToken
 
-    fun accessToken(): String? = preferences.getUserPreferences().token.takeIf { it.isNotEmpty() }
+    fun accessToken(): String? = store.read().accessToken.takeIf { it.isNotEmpty() }
 
-    fun host(): String = preferences.getUserPreferences().host
+    fun host(): String = store.read().host
 }
