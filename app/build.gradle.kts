@@ -110,6 +110,7 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.robolectric)
+    testImplementation(libs.mockwebserver)
 
     // AndroidX Test dependencies
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
