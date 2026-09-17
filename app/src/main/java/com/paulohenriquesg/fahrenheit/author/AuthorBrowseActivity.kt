@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.Author
 import com.paulohenriquesg.fahrenheit.api.AuthorsResponse
 import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
@@ -72,22 +73,13 @@ fun AuthorBrowseScreen(libraryId: String) {
 
     // Fetch authors on startup
     LaunchedEffect(libraryId) {
-        val apiClient = ApiClient.getApiService()
-        apiClient?.getLibraryAuthors(libraryId)?.enqueue(object : Callback<AuthorsResponse> {
-            override fun onResponse(
-                call: Call<AuthorsResponse>,
-                response: Response<AuthorsResponse>
-            ) {
-                if (response.isSuccessful) {
-                    authors = response.body()?.authors?.sortedBy { it.name } ?: emptyList()
-                }
-                isLoading = false
-            }
-
-            override fun onFailure(call: Call<AuthorsResponse>, t: Throwable) {
-                isLoading = false
-            }
-        })
+        val browseApi = ApiClient.getBrowseApi()
+        if (browseApi != null) {
+            BrowseRepository(browseApi).authors(libraryId)
+                .onSuccess { authors = it.sortedBy { author -> author.name } }
+                .onFailure { android.util.Log.e("AuthorBrowse", "Failure: ${it.message}", it) }
+        }
+        isLoading = false
     }
 
     Column(
