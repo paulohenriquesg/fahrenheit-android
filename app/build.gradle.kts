@@ -1,3 +1,5 @@
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -37,6 +39,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            enableUnitTestCoverage = true
+        }
         getByName("release") {
             signingConfig = signingConfigs.getByName("release")
 
@@ -54,6 +59,18 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    testOptions {
+        unitTests.all {
+            // Robolectric loads classes in its own sandbox classloader; without
+            // this every Robolectric test contributes zero coverage, which reads
+            // as "untested" when it is really "unmeasured".
+            it.extensions.configure(JacocoTaskExtension::class.java) {
+                isIncludeNoLocationClasses = true
+                excludes = listOf("jdk.internal.*")
+            }
+        }
+    }
+
     buildFeatures {
         buildConfig = true
         compose = true
