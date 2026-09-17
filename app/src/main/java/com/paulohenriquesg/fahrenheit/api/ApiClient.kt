@@ -131,8 +131,14 @@ object ApiClient {
      * just 401'd, nor recurse back into the authenticator.
      */
     private fun refreshVia(baseUrl: String): (String) -> AuthSession {
-        val refreshApi = buildRetrofit(baseUrl, OkHttpClient.Builder().build())
-            .create(AuthRefreshApi::class.java)
+        // Logging on purpose: without it the refresh is invisible in logcat, and a
+        // silent refresh is indistinguishable from no refresh happening at all.
+        // No auth interceptor and no authenticator here - it must not resend the
+        // token that just 401'd, nor recurse back into itself.
+        val refreshApi = buildRetrofit(
+            baseUrl,
+            OkHttpClient.Builder().addInterceptor(loggingInterceptor()).build()
+        ).create(AuthRefreshApi::class.java)
         return { refreshToken ->
             val response = refreshApi.refresh(refreshToken).execute()
             val body = response.body()
