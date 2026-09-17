@@ -13,22 +13,8 @@ interface ApiService {
     @POST("login")
     fun login(@Body request: LoginRequest): Call<LoginResponse>
 
-    @GET("api/libraries")
-    fun getLibraries(): Call<LibrariesResponse>
-
     @GET("api/libraries/{libraryId}")
     fun getLibrary(@Path("libraryId") libraryId: String): Call<Library>
-
-    @GET("api/libraries/{libraryId}/items")
-    fun getLibraryItems(
-        @Path("libraryId") libraryId: String,
-        @Query("sort") sort: String = "media.metadata.title",
-        @Query("limit") limit: Int? = null,
-        @Query("page") page: Int? = null,
-        @Query("desc") desc: Boolean? = null,
-        @Query("include", encoded = true) include: String = "rssfeed,numEpisodesIncomplete",
-        @Query("minified") minified: Int = 0
-    ): Call<LibraryItemsResponse>
 
     @GET("api/items/{itemId}")
     fun getLibraryItem(
@@ -83,13 +69,6 @@ interface ApiService {
         @Query("q") query: String,
         @Query("limit") limit: Int = 5
     ): Call<SearchLibraryItemsResponse>
-
-    @GET("api/libraries/{libraryId}/personalized")
-    fun getPersonalizedView(
-        @Path("libraryId") libraryId: String,
-        @Query("limit") limit: Int = 10,
-        @Query("include") include: String = "rssfeed"
-    ): Call<List<Shelf>>
 
     @GET("api/authors/{authorId}")
     fun getAuthor(

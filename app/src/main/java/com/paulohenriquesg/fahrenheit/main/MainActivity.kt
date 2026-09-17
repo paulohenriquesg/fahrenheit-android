@@ -80,8 +80,8 @@ class MainActivity : ComponentActivity() {
 fun MainScreenPreview() {
     FahrenheitTheme {
         MainScreen(
-            { _, _ -> },
-            { _, _ -> }
+            { emptyList() },
+            { emptyList() }
         )
     }
 }
