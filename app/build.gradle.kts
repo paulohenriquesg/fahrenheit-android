@@ -15,6 +15,31 @@ fun getVersionFromGit(): String {
     }
 }
 
+/**
+ * The tag as one increasing number: v1.2.3 -> 10203. The in-app updater compares
+ * these, and Android refuses to install an APK whose code is lower than the one
+ * installed, so it must never go backwards. 1 when the tag cannot be read, which
+ * keeps an untagged build below every release.
+ */
+fun versionCodeFromVersionName(versionName: String): Int {
+    val parts = versionName.removePrefix("v").removePrefix("V").split(".")
+    if (parts.size < 3) return 1
+    val numbers = parts.take(3).map { it.takeWhile(Char::isDigit).toIntOrNull() ?: return 1 }
+    require(numbers.all { it in 0..99 }) {
+        "version $versionName does not fit major.minor.patch with each part under 100"
+    }
+    return numbers[0] * 10000 + numbers[1] * 100 + numbers[2]
+}
+
+val appVersionName = getVersionFromGit()
+val appVersionCode = versionCodeFromVersionName(appVersionName)
+
+// The release workflow reads these to build the update manifest, so the numbers
+// in it cannot drift from the ones compiled into the APK.
+tasks.register("printVersionInfo") {
+    doLast { println("$appVersionCode $appVersionName") }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
@@ -29,8 +54,8 @@ android {
         applicationId = "com.paulohenriquesg.fahrenheit"
         minSdk = 25
         targetSdk = 34
-        versionCode = 1
-        versionName = getVersionFromGit()
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
