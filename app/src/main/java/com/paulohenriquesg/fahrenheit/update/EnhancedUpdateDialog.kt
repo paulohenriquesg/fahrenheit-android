@@ -258,12 +258,11 @@ private fun DownloadingContent(
     Spacer(modifier = Modifier.height(24.dp))
 
     // Progress bar
-    LinearProgressIndicator(
-        progress = progress / 100f,
+    DownloadProgressBar(
+        progress = progress,
         modifier = Modifier
             .fillMaxWidth()
-            .height(8.dp),
-        color = MaterialTheme.colorScheme.primary
+            .height(8.dp)
     )
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -368,4 +367,13 @@ private fun ErrorContent(
             Text("Retry")
         }
     }
+}
+
+@Composable
+internal fun DownloadProgressBar(progress: Int, modifier: Modifier = Modifier) {
+    LinearProgressIndicator(
+        progress = { progress / 100f },
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.primary
+    )
 }
