@@ -31,6 +31,11 @@ class LoginHandler(private val context: Context) {
                 AuthRepository(ApiClient.createAuthApi(host)).login(username, password, host)
             }
         },
+        performApiKeyLogin = { host, apiKey ->
+            withContext(Dispatchers.IO) {
+                AuthRepository(ApiClient.createAuthApi(host)).signInWithApiKey(apiKey)
+            }
+        },
         activateSession = { ApiClient.initialize(context) }
     )
 
@@ -39,39 +44,52 @@ class LoginHandler(private val context: Context) {
         username: String,
         password: String,
         isLoading: MutableState<Boolean>
-    ) {
+    ) = run(isLoading) { coordinator.login(host, username, password) }
+
+    /** For accounts with no password: sign in with a key from the web UI. */
+    fun handleApiKeyLogin(
+        host: String,
+        apiKey: String,
+        isLoading: MutableState<Boolean>
+    ) = run(isLoading) { coordinator.loginWithApiKey(host, apiKey) }
+
+    private fun run(isLoading: MutableState<Boolean>, attempt: suspend () -> LoginOutcome) {
         isLoading.value = true
         scope.launch {
             try {
-                when (val outcome = coordinator.login(host, username, password)) {
-                    is LoginOutcome.Success -> {
-                        Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
-                        context.startActivity(Intent(context, MainActivity::class.java))
-                        if (context is LoginActivity) context.finish()
-                    }
-
-                    is LoginOutcome.Invalid ->
-                        Toast.makeText(context, outcome.message, Toast.LENGTH_SHORT).show()
-
-                    is LoginOutcome.Failed -> {
-                        Log.e("LoginHandler", "Login failed: ${outcome.message}")
-                        Toast.makeText(
-                            context,
-                            "Login failed: ${outcome.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    is LoginOutcome.UnusableSession ->
-                        Toast.makeText(
-                            context,
-                            "Signed in, but the server address could not be used",
-                            Toast.LENGTH_LONG
-                        ).show()
-                }
+                present(attempt())
             } finally {
                 isLoading.value = false
             }
+        }
+    }
+
+    private fun present(outcome: LoginOutcome) {
+        when (outcome) {
+            is LoginOutcome.Success -> {
+                Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+                context.startActivity(Intent(context, MainActivity::class.java))
+                if (context is LoginActivity) context.finish()
+            }
+
+            is LoginOutcome.Invalid ->
+                Toast.makeText(context, outcome.message, Toast.LENGTH_SHORT).show()
+
+            is LoginOutcome.Failed -> {
+                Log.e("LoginHandler", "Login failed: ${outcome.message}")
+                Toast.makeText(
+                    context,
+                    "Login failed: ${outcome.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            is LoginOutcome.UnusableSession ->
+                Toast.makeText(
+                    context,
+                    "Signed in, but the server address could not be used",
+                    Toast.LENGTH_LONG
+                ).show()
         }
     }
 }

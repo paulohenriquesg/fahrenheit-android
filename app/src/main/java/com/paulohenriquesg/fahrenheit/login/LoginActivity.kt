@@ -49,7 +49,7 @@ class LoginActivity : ComponentActivity() {
                         .semantics { testTagsAsResourceId = true },
                     shape = RectangleShape
                 ) {
-                    LoginScreen(loginHandler::handleLogin)
+                    LoginScreen(loginHandler::handleLogin, loginHandler::handleApiKeyLogin)
                 }
             }
         }
