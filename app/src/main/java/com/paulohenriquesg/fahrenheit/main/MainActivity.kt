@@ -22,13 +22,15 @@ import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.BuildConfig
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
-import com.paulohenriquesg.fahrenheit.update.UpdateChecker
+import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
+import com.paulohenriquesg.fahrenheit.update.AppUpdates
+import com.paulohenriquesg.fahrenheit.update.PendingInstall
+import kotlinx.coroutines.launch
 import com.paulohenriquesg.fahrenheit.update.UpdateActivity
-import com.paulohenriquesg.fahrenheit.update.UpdateInfo
 
 class MainActivity : ComponentActivity() {
     private lateinit var mainHandler: MainHandler
-    private var startupUpdateInfo: UpdateInfo? = null
 
     @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,16 +42,17 @@ class MainActivity : ComponentActivity() {
         val sharedPreferencesHandler = SharedPreferencesHandler(this)
         val userPreferences = sharedPreferencesHandler.getUserPreferences()
 
-        // Check for updates on startup (max once per 24h)
-        if (UpdateChecker.shouldCheckOnStartup(this)) {
-            UpdateChecker.checkForUpdate(
-                currentVersion = BuildConfig.VERSION_NAME,
-                context = this
-            ) { updateInfo ->
-                // Update available - launch UpdateActivity
-                if (updateInfo != null) {
-                    val intent = UpdateActivity.createIntent(this, updateInfo)
-                    startActivity(intent)
+        // An update handed to the system installer reports nothing back, so the
+        // previous dispatch is judged here, once.
+        if (AppUpdates.takePendingInstallOutcome(this) == PendingInstall.Outcome.Failed) {
+            Toast.makeText(this, "The last update did not install", Toast.LENGTH_LONG).show()
+        }
+
+        // Only from here: a player screen must never be interrupted by this.
+        if (AppUpdates.isEnabled(this)) {
+            lifecycleScope.launch {
+                AppUpdates.checker(this@MainActivity).check()?.let { update ->
+                    startActivity(UpdateActivity.createIntent(this@MainActivity, update))
                 }
             }
         }

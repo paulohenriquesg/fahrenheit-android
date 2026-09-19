@@ -36,7 +36,10 @@ class SharedPreferencesHandler(context: Context) {
             darkTheme = sharedPreferences.getBoolean("dark_theme", false),
             isRowLayout = sharedPreferences.getBoolean("is_row_layout", true),
             lastUpdateCheck = sharedPreferences.getLong("last_update_check", 0L),
-            skipVersion = sharedPreferences.getString("skip_version", null),
+            // -1 stands for "never": SharedPreferences has no nullable Int.
+            updateSnoozeVersionCode = sharedPreferences.getInt("update_snooze_version_code", -1).takeIf { it > 0 },
+            updateSnoozeAt = sharedPreferences.getLong("update_snooze_at", -1L).takeIf { it > 0 },
+            pendingInstallVersionCode = sharedPreferences.getInt("pending_install_version_code", -1).takeIf { it > 0 },
             updateCheckEnabled = sharedPreferences.getBoolean("update_check_enabled", true),
             selectedLibraryId = sharedPreferences.getString("selected_library_id", null)
         )
@@ -51,7 +54,9 @@ class SharedPreferencesHandler(context: Context) {
             putBoolean("dark_theme", userPreferences.darkTheme)
             putBoolean("is_row_layout", userPreferences.isRowLayout)
             putLong("last_update_check", userPreferences.lastUpdateCheck)
-            putString("skip_version", userPreferences.skipVersion)
+            putInt("update_snooze_version_code", userPreferences.updateSnoozeVersionCode ?: -1)
+            putLong("update_snooze_at", userPreferences.updateSnoozeAt ?: -1L)
+            putInt("pending_install_version_code", userPreferences.pendingInstallVersionCode ?: -1)
             putBoolean("update_check_enabled", userPreferences.updateCheckEnabled)
             putString("selected_library_id", userPreferences.selectedLibraryId)
             apply()

@@ -1,0 +1,24 @@
+{
+  "apk": {
+    "url": "https://github.com/paulohenriquesg/fahrenheit-android/releases/download/latest/app-release.apk",
+    "sha256": "b7a46f34af3684d4070fe8b45bcfe1202306f98fff03dd2ad10a2676d5c4a4ab",
+    "sizeBytes": 11
+  },
+  "versions": [
+    {
+      "versionCode": 12,
+      "versionName": "v0.0.12",
+      "changelog": [
+        "Sign in without a password"
+      ]
+    },
+    {
+      "versionCode": 11,
+      "versionName": "v0.0.11",
+      "changelog": [
+        "Latest episodes list works again",
+        "Stats screen loads"
+      ]
+    }
+  ]
+}

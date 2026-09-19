@@ -35,9 +35,10 @@ import com.paulohenriquesg.fahrenheit.BuildConfig
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemeManager
-import com.paulohenriquesg.fahrenheit.update.UpdateChecker
+import com.paulohenriquesg.fahrenheit.update.AppUpdates
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import com.paulohenriquesg.fahrenheit.update.UpdateActivity
-import com.paulohenriquesg.fahrenheit.update.UpdateInfo
 
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,6 +64,7 @@ fun SettingsScreen() {
     val isRowLayout by LayoutManager.isRowLayout
 
     var isCheckingUpdate by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Log.i("SettingsScreen", "isDarkTheme: $isDarkTheme")
 
@@ -120,14 +122,12 @@ fun SettingsScreen() {
         Button(
             onClick = {
                 isCheckingUpdate = true
-                UpdateChecker.checkForUpdate(
-                    currentVersion = BuildConfig.VERSION_NAME,
-                    context = context
-                ) { result ->
+                scope.launch {
+                    // Asked for by the user, so it answers even while snoozed.
+                    val update = AppUpdates.checker(context).check(force = true)
                     isCheckingUpdate = false
-                    if (result != null) {
-                        val intent = UpdateActivity.createIntent(context, result)
-                        context.startActivity(intent)
+                    if (update != null) {
+                        context.startActivity(UpdateActivity.createIntent(context, update))
                     } else {
                         Toast.makeText(context, "You're up to date!", Toast.LENGTH_SHORT).show()
                     }
