@@ -56,7 +56,8 @@ data class PlayLibraryItemDeviceInfo(
 
 data class PlayLibraryItemAudioTrack(
     @SerializedName("index") val index: Int,
-    @SerializedName("startOffset") val startOffset: Int,
+    // Seconds, fractional: each track starts at the summed duration of those before it (#14).
+    @SerializedName("startOffset") val startOffset: Double,
     @SerializedName("duration") val duration: Double,
     @SerializedName("title") val title: String,
     @SerializedName("contentUrl") val contentUrl: String,
@@ -69,7 +70,8 @@ data class PlayLibraryItemMetadata(
     @SerializedName("ext") val ext: String,
     @SerializedName("path") val path: String,
     @SerializedName("relPath") val relPath: String,
-    @SerializedName("size") val size: Int,
+    // Bytes. Long, not Int: a single file can exceed 2 GB.
+    @SerializedName("size") val size: Long,
     @SerializedName("mtimeMs") val mtimeMs: Long,
     @SerializedName("ctimeMs") val ctimeMs: Long,
     @SerializedName("birthtimeMs") val birthtimeMs: Long
@@ -95,7 +97,7 @@ data class PlayLibraryItemLibraryItem(
     @SerializedName("mediaType") val mediaType: String,
     @SerializedName("media") val media: PlayLibraryItemMedia,
     @SerializedName("libraryFiles") val libraryFiles: List<PlayLibraryItemLibraryFile>,
-    @SerializedName("size") val size: Int
+    @SerializedName("size") val size: Long
 )
 
 data class PlayLibraryItemMedia(
@@ -109,7 +111,7 @@ data class PlayLibraryItemMedia(
     @SerializedName("lastEpisodeCheck") val lastEpisodeCheck: Long,
     @SerializedName("maxEpisodesToKeep") val maxEpisodesToKeep: Int,
     @SerializedName("maxNewEpisodesToDownload") val maxNewEpisodesToDownload: Int,
-    @SerializedName("size") val size: Int
+    @SerializedName("size") val size: Long
 )
 
 data class PlayLibraryItemEpisode(
@@ -130,13 +132,14 @@ data class PlayLibraryItemEpisode(
     @SerializedName("addedAt") val addedAt: Long,
     @SerializedName("updatedAt") val updatedAt: Long,
     @SerializedName("duration") val duration: Double,
-    @SerializedName("size") val size: Int
+    @SerializedName("size") val size: Long
 )
 
 data class PlayLibraryItemEnclosure(
     @SerializedName("url") val url: String,
     @SerializedName("type") val type: String,
-    @SerializedName("length") val length: String
+    // ABS sends String(enclosureSize), or null when the feed gave no size.
+    @SerializedName("length") val length: String?
 )
 
 data class PlayLibraryItemAudioFile(
@@ -161,7 +164,8 @@ data class PlayLibraryItemAudioFile(
     @SerializedName("channels") val channels: Int,
     @SerializedName("channelLayout") val channelLayout: String,
     @SerializedName("chapters") val chapters: List<Any>,
-    @SerializedName("embeddedCoverArt") val embeddedCoverArt: String,
+    // Null when the file has no embedded art (observed on a live server).
+    @SerializedName("embeddedCoverArt") val embeddedCoverArt: String?,
     @SerializedName("metaTags") val metaTags: PlayLibraryItemMetaTags,
     @SerializedName("mimeType") val mimeType: String
 )
