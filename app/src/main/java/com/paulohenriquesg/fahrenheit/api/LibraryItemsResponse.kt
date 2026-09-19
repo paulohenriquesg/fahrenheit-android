@@ -9,7 +9,7 @@ data class LibraryItemsResponse(
     @SerializedName("page") val page: Int,
     @SerializedName("sortBy") val sortBy: String,
     @SerializedName("sortDesc") val sortDesc: Boolean,
-    @SerializedName("filterBy") val filterBy: String,
+    @SerializedName("filterBy") val filterBy: String?,
     @SerializedName("mediaType") val mediaType: String,
     @SerializedName("minified") val minified: Boolean,
     @SerializedName("collapseseries") val collapseseries: Boolean,
@@ -45,7 +45,7 @@ data class LibraryItem(
 
 data class Media(
     @SerializedName("metadata") val metadata: LibraryItemMetadata,
-    @SerializedName("coverPath") val coverPath: String,
+    @SerializedName("coverPath") val coverPath: String?,
     @SerializedName("tags") val tags: List<String>,
     @SerializedName("numTracks") val numTracks: Int,
     @SerializedName("numAudioFiles") val numAudioFiles: Int,

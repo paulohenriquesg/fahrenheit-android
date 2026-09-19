@@ -188,7 +188,7 @@ fun EpisodeCard(
             ) {
                 // Episode title with marquee
                 MarqueeText(
-                    text = episode.episode.title,
+                    text = episode.title.orEmpty(),
                     isFocused = isFocused,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -197,7 +197,7 @@ fun EpisodeCard(
 
                 // Podcast name
                 Text(
-                    text = episode.podcast.media.metadata.title,
+                    text = episode.podcast?.metadata?.title.orEmpty(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -205,7 +205,7 @@ fun EpisodeCard(
                 )
 
                 // Episode description
-                episode.episode.description?.let { desc ->
+                episode.description?.let { desc ->
                     Text(
                         text = desc,
                         style = MaterialTheme.typography.bodySmall,

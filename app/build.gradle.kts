@@ -139,6 +139,7 @@ dependencies {
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.robolectric)
     testImplementation(libs.mockwebserver)
+    testImplementation(libs.kotlin.reflect)
     // Compose UI tests on the JVM via Robolectric, for UI that can be checked
     // without an emulator.
     testImplementation(platform(libs.androidx.compose.bom))
