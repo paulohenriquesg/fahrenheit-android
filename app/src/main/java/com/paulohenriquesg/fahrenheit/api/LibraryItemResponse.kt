@@ -70,7 +70,9 @@ data class Episode(
 
 data class Enclosure(
     @SerializedName("url") val url: String,
-    @SerializedName("length") val length: Long,
+    // ABS sends String(enclosureSize), or null when the feed gave no size. As a
+    // primitive Long, a null silently became 0 - a size that looked real.
+    @SerializedName("length") val length: String?,
     @SerializedName("type") val type: String
 )
 
