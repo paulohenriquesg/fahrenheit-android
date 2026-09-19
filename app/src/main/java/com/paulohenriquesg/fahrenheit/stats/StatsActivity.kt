@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse
 import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
@@ -56,22 +57,13 @@ fun StatsScreen() {
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        val apiClient = ApiClient.getApiService()
-        apiClient?.getListeningStats()?.enqueue(object : Callback<ListeningStatsResponse> {
-            override fun onResponse(
-                call: Call<ListeningStatsResponse>,
-                response: Response<ListeningStatsResponse>
-            ) {
-                if (response.isSuccessful) {
-                    stats = response.body()
-                }
-                isLoading = false
-            }
-
-            override fun onFailure(call: Call<ListeningStatsResponse>, t: Throwable) {
-                isLoading = false
-            }
-        })
+        val browseApi = ApiClient.getBrowseApi()
+        if (browseApi != null) {
+            BrowseRepository(browseApi).listeningStats()
+                .onSuccess { stats = it }
+                .onFailure { android.util.Log.e("Stats", "Failure: ${it.message}", it) }
+        }
+        isLoading = false
     }
 
     Column(modifier = Modifier.fillMaxSize()) {

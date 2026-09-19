@@ -17,6 +17,7 @@ object ApiClient {
     private var token: String? = null
     private var sessionManager: SessionManager? = null
     private var libraryApi: LibraryApi? = null
+    private var browseApi: BrowseApi? = null
 
     /**
      * Loads stored credentials and reports whether they are usable.
@@ -38,6 +39,7 @@ object ApiClient {
         if (!usable) {
             apiService = null
             libraryApi = null
+            browseApi = null
             host = null
             token = null
             sessionManager = null
@@ -53,6 +55,10 @@ object ApiClient {
             hostValue,
             buildAuthenticatedClient(sessionManager!!, refreshVia(hostValue))
         ).create(LibraryApi::class.java)
+        browseApi = buildRetrofit(
+            hostValue,
+            buildAuthenticatedClient(sessionManager!!, refreshVia(hostValue))
+        ).create(BrowseApi::class.java)
         return SessionState.Ready
     }
 
@@ -62,6 +68,9 @@ object ApiClient {
 
     /** Library endpoints as suspend calls; null until a session is active. */
     fun getLibraryApi(): LibraryApi? = libraryApi
+
+    /** Browse endpoints as suspend calls; null until a session is active. */
+    fun getBrowseApi(): BrowseApi? = browseApi
 
     fun getToken(): String? {
         // Read through the session manager so a refreshed token is picked up.

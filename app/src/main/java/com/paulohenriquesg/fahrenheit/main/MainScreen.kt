@@ -72,6 +72,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.LibrariesResponse
 import com.paulohenriquesg.fahrenheit.api.Library
@@ -242,20 +243,13 @@ fun MainScreen(
                 seriesList = emptyList()  // Clear old data
                 isLoadingSeries = true
                 if (libraryId != null) {
-                    apiClient?.getLibrarySeries(libraryId)?.enqueue(object : Callback<com.paulohenriquesg.fahrenheit.api.SeriesResponse> {
-                        override fun onResponse(
-                            call: Call<com.paulohenriquesg.fahrenheit.api.SeriesResponse>,
-                            response: Response<com.paulohenriquesg.fahrenheit.api.SeriesResponse>
-                        ) {
-                            if (response.isSuccessful) {
-                                seriesList = response.body()?.results?.sortedBy { it.name } ?: emptyList()
-                            }
-                            isLoadingSeries = false
+                    scope.launch {
+                        ApiClient.getBrowseApi()?.let { api ->
+                            BrowseRepository(api).series(libraryId)
+                                .onSuccess { seriesList = it.sortedBy { s -> s.name } }
                         }
-                        override fun onFailure(call: Call<com.paulohenriquesg.fahrenheit.api.SeriesResponse>, t: Throwable) {
-                            isLoadingSeries = false
-                        }
-                    })
+                        isLoadingSeries = false
+                    }
                 } else {
                     isLoadingSeries = false
                 }
@@ -265,20 +259,13 @@ fun MainScreen(
                 collectionsList = emptyList()  // Clear old data
                 isLoadingCollections = true
                 if (libraryId != null) {
-                    apiClient?.getLibraryCollections(libraryId)?.enqueue(object : Callback<com.paulohenriquesg.fahrenheit.api.CollectionsResponse> {
-                        override fun onResponse(
-                            call: Call<com.paulohenriquesg.fahrenheit.api.CollectionsResponse>,
-                            response: Response<com.paulohenriquesg.fahrenheit.api.CollectionsResponse>
-                        ) {
-                            if (response.isSuccessful) {
-                                collectionsList = response.body()?.results?.sortedBy { it.name } ?: emptyList()
-                            }
-                            isLoadingCollections = false
+                    scope.launch {
+                        ApiClient.getBrowseApi()?.let { api ->
+                            BrowseRepository(api).collections(libraryId)
+                                .onSuccess { collectionsList = it.sortedBy { c -> c.name } }
                         }
-                        override fun onFailure(call: Call<com.paulohenriquesg.fahrenheit.api.CollectionsResponse>, t: Throwable) {
-                            isLoadingCollections = false
-                        }
-                    })
+                        isLoadingCollections = false
+                    }
                 } else {
                     isLoadingCollections = false
                 }
@@ -293,20 +280,12 @@ fun MainScreen(
                 viewMode = "stats"
                 listeningStats = null  // Clear old data
                 isLoadingStats = true
-                apiClient?.getListeningStats()?.enqueue(object : Callback<com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse> {
-                    override fun onResponse(
-                        call: Call<com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse>,
-                        response: Response<com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse>
-                    ) {
-                        if (response.isSuccessful) {
-                            listeningStats = response.body()
-                        }
-                        isLoadingStats = false
+                scope.launch {
+                    ApiClient.getBrowseApi()?.let { api ->
+                        BrowseRepository(api).listeningStats().onSuccess { listeningStats = it }
                     }
-                    override fun onFailure(call: Call<com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse>, t: Throwable) {
-                        isLoadingStats = false
-                    }
-                })
+                    isLoadingStats = false
+                }
             }
             MenuAction.LATEST -> {
                 libraryId?.let { id ->
@@ -696,29 +675,12 @@ fun AuthorsBrowseView(libraryId: String?) {
     LaunchedEffect(libraryId) {
         android.util.Log.d("AuthorsBrowseView", "Starting to fetch authors for libraryId: $libraryId")
         if (libraryId != null) {
-            val apiClient = ApiClient.getApiService()
-            apiClient?.getLibraryAuthors(libraryId)?.enqueue(object : Callback<com.paulohenriquesg.fahrenheit.api.AuthorsResponse> {
-                override fun onResponse(
-                    call: Call<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>,
-                    response: Response<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>
-                ) {
-                    android.util.Log.d("AuthorsBrowseView", "Got response! Code: ${response.code()}")
-                    if (response.isSuccessful) {
-                        val body = response.body()
-                        android.util.Log.d("AuthorsBrowseView", "Response body authors count: ${body?.authors?.size}")
-                        authors = body?.authors?.sortedBy { it.name } ?: emptyList()
-                        android.util.Log.d("AuthorsBrowseView", "Set ${authors.size} authors")
-                    } else {
-                        android.util.Log.e("AuthorsBrowseView", "Response not successful: ${response.code()}")
-                    }
-                    isLoading = false
-                }
-
-                override fun onFailure(call: Call<com.paulohenriquesg.fahrenheit.api.AuthorsResponse>, t: Throwable) {
-                    android.util.Log.e("AuthorsBrowseView", "Request failed", t)
-                    isLoading = false
-                }
-            })
+            ApiClient.getBrowseApi()?.let { api ->
+                BrowseRepository(api).authors(libraryId)
+                    .onSuccess { authors = it.sortedBy { a -> a.name } }
+                    .onFailure { android.util.Log.e("AuthorsBrowseView", "Failure: ${it.message}", it) }
+            }
+            isLoading = false
         } else {
             android.util.Log.e("AuthorsBrowseView", "libraryId is null!")
             isLoading = false

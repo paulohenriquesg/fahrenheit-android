@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.Collection
 import com.paulohenriquesg.fahrenheit.api.CollectionsResponse
 import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
@@ -73,32 +74,13 @@ fun CollectionBrowseScreen(libraryId: String) {
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(libraryId) {
-        val apiClient = ApiClient.getApiService()
-        apiClient?.getLibraryCollections(libraryId)?.enqueue(object : Callback<CollectionsResponse> {
-            override fun onResponse(
-                call: Call<CollectionsResponse>,
-                response: Response<CollectionsResponse>
-            ) {
-                try {
-                    if (response.isSuccessful) {
-                        val body = response.body()
-                        collections = body?.results?.sortedBy { it.name } ?: emptyList()
-                        android.util.Log.d("CollectionBrowse", "Loaded ${collections.size} collections (total: ${body?.total})")
-                    } else {
-                        android.util.Log.e("CollectionBrowse", "Error: ${response.code()} - ${response.message()}")
-                        android.util.Log.e("CollectionBrowse", "Error body: ${response.errorBody()?.string()}")
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("CollectionBrowse", "Exception in onResponse", e)
-                }
-                isLoading = false
-            }
-
-            override fun onFailure(call: Call<CollectionsResponse>, t: Throwable) {
-                android.util.Log.e("CollectionBrowse", "Failure: ${t.message}", t)
-                isLoading = false
-            }
-        })
+        val browseApi = ApiClient.getBrowseApi()
+        if (browseApi != null) {
+            BrowseRepository(browseApi).collections(libraryId)
+                .onSuccess { collections = it.sortedBy { collection -> collection.name } }
+                .onFailure { android.util.Log.e("CollectionBrowse", "Failure: ${it.message}", it) }
+        }
+        isLoading = false
     }
 
     Column(

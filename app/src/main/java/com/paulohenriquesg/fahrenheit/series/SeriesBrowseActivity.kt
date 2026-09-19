@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.Series
 import com.paulohenriquesg.fahrenheit.api.SeriesResponse
 import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
@@ -73,28 +74,13 @@ fun SeriesBrowseScreen(libraryId: String) {
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(libraryId) {
-        val apiClient = ApiClient.getApiService()
-        apiClient?.getLibrarySeries(libraryId)?.enqueue(object : Callback<SeriesResponse> {
-            override fun onResponse(
-                call: Call<SeriesResponse>,
-                response: Response<SeriesResponse>
-            ) {
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    seriesList = body?.results?.sortedBy { it.name } ?: emptyList()
-                    android.util.Log.d("SeriesBrowse", "Loaded ${seriesList.size} series")
-                } else {
-                    android.util.Log.e("SeriesBrowse", "Error: ${response.code()} - ${response.message()}")
-                    android.util.Log.e("SeriesBrowse", "Error body: ${response.errorBody()?.string()}")
-                }
-                isLoading = false
-            }
-
-            override fun onFailure(call: Call<SeriesResponse>, t: Throwable) {
-                android.util.Log.e("SeriesBrowse", "Failure: ${t.message}", t)
-                isLoading = false
-            }
-        })
+        val browseApi = ApiClient.getBrowseApi()
+        if (browseApi != null) {
+            BrowseRepository(browseApi).series(libraryId)
+                .onSuccess { seriesList = it.sortedBy { series -> series.name } }
+                .onFailure { android.util.Log.e("SeriesBrowse", "Failure: ${it.message}", it) }
+        }
+        isLoading = false
     }
 
     Column(
