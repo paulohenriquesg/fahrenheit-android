@@ -25,7 +25,7 @@ class DurationFormatTest {
 
     @Test
     fun `digits stay Latin on a locale with its own numerals`() {
-        Locale.setDefault(Locale("fa"))
+        Locale.setDefault(Locale.forLanguageTag("fa"))
 
         assertEquals("1h 1m", formatDuration(3661.0))
     }

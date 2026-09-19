@@ -67,6 +67,9 @@ android {
         // defaults lets framework-free classes be tested with plain JUnit; anything
         // that actually depends on Android behaviour should use Robolectric.
         unitTests.isReturnDefaultValues = true
+        // Hands Robolectric the merged manifest, so Compose UI tests can launch
+        // the ComponentActivity that ui-test-manifest declares.
+        unitTests.isIncludeAndroidResources = true
 
         unitTests.all {
             // Robolectric loads classes in its own sandbox classloader; without
@@ -136,6 +139,10 @@ dependencies {
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.robolectric)
     testImplementation(libs.mockwebserver)
+    // Compose UI tests on the JVM via Robolectric, for UI that can be checked
+    // without an emulator.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
 
     // AndroidX Test dependencies
     androidTestImplementation("androidx.test.ext:junit:1.3.0")

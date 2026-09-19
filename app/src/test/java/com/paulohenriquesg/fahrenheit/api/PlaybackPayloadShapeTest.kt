@@ -62,7 +62,7 @@ class PlaybackPayloadShapeTest {
             PlayLibraryItemResponse::class.java
         )
 
-        assertEquals(31124.073333, response.audioTracks[0].startOffset.toDouble(), 1e-6)
+        assertEquals(31124.073333, response.audioTracks[0].startOffset, 1e-6)
     }
 
     @Test
@@ -75,7 +75,7 @@ class PlaybackPayloadShapeTest {
             PlayLibraryItemResponse::class.java
         )
 
-        assertEquals(3_000_000_000L, response.audioTracks[0].metadata.size.toLong())
+        assertEquals(3_000_000_000L, response.audioTracks[0].metadata.size)
     }
 
     @Test
@@ -112,8 +112,8 @@ class PlaybackPayloadShapeTest {
             PlayLibraryItemResponse::class.java
         )
 
-        assertEquals(19141.935520695628, response.currentTime.toDouble(), 1e-9)
-        assertEquals(538.6500963920058, response.startTime.toDouble(), 1e-9)
-        assertEquals(29.154561968609244, response.timeListening.toDouble(), 1e-9)
+        assertEquals(19141.935520695628, response.currentTime, 1e-9)
+        assertEquals(538.6500963920058, response.startTime, 1e-9)
+        assertEquals(29.154561968609244, response.timeListening, 1e-9)
     }
 }
