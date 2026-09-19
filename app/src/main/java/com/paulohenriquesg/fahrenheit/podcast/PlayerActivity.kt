@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.podcast
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.utils.formatDuration
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -525,13 +526,3 @@ private fun formatPubDate(pubDate: String): String {
     return pubDate // Return the original date string if no format matches
 }
 
-private fun formatDuration(seconds: Double): String {
-    val hours = (seconds / 3600).toInt()
-    val minutes = ((seconds % 3600) / 60).toInt()
-
-    return if (hours > 0) {
-        String.format("%dh %dm", hours, minutes)
-    } else {
-        String.format("%dm", minutes)
-    }
-}
