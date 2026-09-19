@@ -32,8 +32,16 @@ class LoginCoordinatorTest {
         login: suspend (String, String, String) -> AuthSession = { _, _, _ ->
             AuthSession("access", "refresh", "testuser")
         },
+        apiKeyLogin: suspend (String, String) -> AuthSession = { _, key ->
+            AuthSession(key, null, "testuser")
+        },
         activate: () -> SessionState = { SessionState.Ready }
-    ) = LoginCoordinator(sessionManager, login, activate)
+    ) = LoginCoordinator(
+        sessionManager = sessionManager,
+        performLogin = login,
+        performApiKeyLogin = apiKeyLogin,
+        activateSession = activate
+    )
 
     @Test
     fun `a blank field is rejected before any request is made`() = runBlocking {
@@ -101,5 +109,68 @@ class LoginCoordinatorTest {
         c.login("http://abs.local", "testuser", "hunter2")
 
         assertEquals(null, sessionManager.refreshToken())
+    }
+
+    @Test
+    fun `a blank API key is rejected before any request is made`() = runBlocking {
+        var called = false
+        val c = coordinator(apiKeyLogin = { _, _ -> called = true; error("must not be called") })
+
+        val outcome = c.loginWithApiKey("http://abs.local", "   ")
+
+        assertTrue(outcome is LoginOutcome.Invalid)
+        assertEquals(false, called)
+    }
+
+    @Test
+    fun `API key sign-in rejects a host without a scheme`() = runBlocking {
+        var called = false
+        val c = coordinator(apiKeyLogin = { _, _ -> called = true; error("must not be called") })
+
+        assertTrue(c.loginWithApiKey("abs.local:13378", "my-api-key") is LoginOutcome.Invalid)
+        assertEquals(false, called)
+    }
+
+    @Test
+    fun `API key sign-in stores the key as the access token and nothing to refresh`() =
+        runBlocking {
+            val outcome = coordinator().loginWithApiKey("http://abs.local", "my-api-key")
+
+            assertEquals(LoginOutcome.Success, outcome)
+            assertEquals("my-api-key", sessionManager.accessToken())
+            assertEquals(null, sessionManager.refreshToken())
+            assertEquals("http://abs.local", sessionManager.host())
+        }
+
+    @Test
+    fun `surrounding whitespace in a pasted key is not sent`() = runBlocking {
+        // Keys are pasted from the web UI; a trailing newline or space would be
+        // sent verbatim and fail as an invalid token.
+        var sent: String? = null
+        val c = coordinator(apiKeyLogin = { _, key -> sent = key; AuthSession(key, null, "u") })
+
+        c.loginWithApiKey("http://abs.local", "  my-api-key\n")
+
+        assertEquals("my-api-key", sent)
+    }
+
+    @Test
+    fun `a rejected API key is reported, not thrown`() = runBlocking {
+        val c = coordinator(apiKeyLogin = { _, _ -> throw IOException("HTTP 401 Unauthorized") })
+
+        val outcome = c.loginWithApiKey("http://abs.local", "revoked-key")
+
+        assertTrue(outcome is LoginOutcome.Failed)
+        assertEquals(null, sessionManager.accessToken())
+    }
+
+    @Test
+    fun `an API key that stores but does not activate is reported distinctly`() = runBlocking {
+        val c = coordinator(activate = { SessionState.NeedsLogin })
+
+        assertEquals(
+            LoginOutcome.UnusableSession,
+            c.loginWithApiKey("http://abs.local", "my-api-key")
+        )
     }
 }

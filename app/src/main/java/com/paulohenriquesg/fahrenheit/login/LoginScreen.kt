@@ -41,7 +41,10 @@ import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 
 @Composable
-fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> Unit) {
+fun LoginScreen(
+    handleLogin: (String, String, String, MutableState<Boolean>) -> Unit,
+    handleApiKeyLogin: (String, String, MutableState<Boolean>) -> Unit
+) {
     val context = LocalContext.current
     val sharedPreferencesHandler = SharedPreferencesHandler(context)
     val userPreferences = sharedPreferencesHandler.getUserPreferences()
@@ -49,6 +52,12 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
     var host by remember { mutableStateOf(userPreferences.host) }
     var username by remember { mutableStateOf(userPreferences.username) }
     var password by remember { mutableStateOf("") }
+    var apiKey by remember { mutableStateOf("") }
+    // Password is the default so the focus walk (host -> username -> password ->
+    // Login) is unchanged; the API-key option sits below Login. Accounts with no
+    // password (#2) cannot use the password form at all.
+    var useApiKey by remember { mutableStateOf(false) }
+    var isApiKeyFocused by remember { mutableStateOf(false) }
     var isLoading = remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
@@ -109,91 +118,150 @@ fun LoginScreen(handleLogin: (String, String, String, MutableState<Boolean>) -> 
             )
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = username,
-            onValueChange = { username = it },
-            label = {
-                Text(
-                    "Username",
-                    color = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            leadingIcon = {
-                Icon(
-                    Icons.Filled.Person,
-                    contentDescription = "Username Icon",
-                    tint = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("login_username_field")
-                .onFocusChanged {
-                    isUsernameFocused = it.isFocused
+        if (useApiKey) {
+            OutlinedTextField(
+                value = apiKey,
+                onValueChange = { apiKey = it },
+                label = {
+                    Text(
+                        "API key",
+                        color = if (isApiKeyFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 },
-            keyboardOptions = KeyboardOptions.Default.copy(
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            colors = TextFieldDefaults.colors(
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                cursorColor = MaterialTheme.colorScheme.primary,
-                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = {
-                Text(
-                    "Password",
-                    color = if (isPasswordFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            leadingIcon = {
-                Icon(
-                    Icons.Filled.Lock,
-                    contentDescription = "Password Icon",
-                    tint = if (isPasswordFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("login_password_field")
-                .onFocusChanged {
-                    isPasswordFocused = it.isFocused
+                leadingIcon = {
+                    Icon(
+                        Icons.Filled.Lock,
+                        contentDescription = "API Key Icon",
+                        tint = if (isApiKeyFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 },
-            keyboardOptions = KeyboardOptions.Default.copy(
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            colors = TextFieldDefaults.colors(
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                cursorColor = MaterialTheme.colorScheme.primary,
-                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+                supportingText = {
+                    Text(
+                        "Create one in Audiobookshelf: Settings > API Keys",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("login_api_key_field")
+                    .onFocusChanged { isApiKeyFocused = it.isFocused },
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                colors = TextFieldDefaults.colors(
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
-        )
+        } else {
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = {
+                    Text(
+                        "Username",
+                        color = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Filled.Person,
+                        contentDescription = "Username Icon",
+                        tint = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("login_username_field")
+                    .onFocusChanged {
+                        isUsernameFocused = it.isFocused
+                    },
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                colors = TextFieldDefaults.colors(
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = {
+                    Text(
+                        "Password",
+                        color = if (isPasswordFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Filled.Lock,
+                        contentDescription = "Password Icon",
+                        tint = if (isPasswordFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("login_password_field")
+                    .onFocusChanged {
+                        isPasswordFocused = it.isFocused
+                    },
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                colors = TextFieldDefaults.colors(
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
         if (isLoading.value) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         } else {
             Button(
-                onClick = { handleLogin(host, username, password, isLoading) },
+                onClick = {
+                    if (useApiKey) handleApiKeyLogin(host, apiKey, isLoading)
+                    else handleLogin(host, username, password, isLoading)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("login_submit_button")
             ) {
                 Text("Login", color = MaterialTheme.colorScheme.onPrimary)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { useApiKey = !useApiKey },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("login_mode_toggle")
+            ) {
+                Text(
+                    if (useApiKey) "Use username and password instead"
+                    else "No password? Sign in with an API key",
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
             }
         }
     }

@@ -31,6 +31,13 @@ class AuthRepositoryTest {
         var loginRequest: LoginRequest? = null
 
         var statusResponse: ServerStatus = ServerStatus(authMethods = listOf("local"))
+        var authorizeResponse: LoginResponse? = null
+        var authorizeHeader: String? = null
+
+        override suspend fun authorize(bearer: String): LoginResponse {
+            authorizeHeader = bearer
+            return authorizeResponse ?: error("no authorize response configured")
+        }
 
         override suspend fun status(): ServerStatus = statusResponse
 
@@ -110,5 +117,52 @@ class AuthRepositoryTest {
         assertEquals("long-lived-refresh", api.refreshTokenHeader)
         assertEquals("rotated-access-token", session.accessToken)
         assertEquals("rotated-refresh-token", session.refreshToken)
+    }
+
+    @Test
+    fun `an API key session stores the key itself, not the token the server echoes back`() =
+        runBlocking {
+            // /api/authorize returns the login payload WITHOUT accessToken but WITH
+            // the legacy non-expiring user.token. Reusing toAuthSession() would pick
+            // that legacy token and silently put API-key users back on the
+            // deprecated field PR #3 moved away from.
+            val api = FakeAuthApi()
+            api.authorizeResponse = TestFixtures.createMockLoginResponse(
+                token = "legacy-echoed-back",
+                accessToken = null,
+                refreshToken = null
+            )
+
+            val session = AuthRepository(api).signInWithApiKey("my-api-key")
+
+            assertEquals("my-api-key", session.accessToken)
+        }
+
+    @Test
+    fun `the API key is sent as a bearer token`() = runBlocking {
+        val api = FakeAuthApi()
+        api.authorizeResponse = TestFixtures.createMockLoginResponse()
+
+        AuthRepository(api).signInWithApiKey("my-api-key")
+
+        assertEquals("Bearer my-api-key", api.authorizeHeader)
+    }
+
+    @Test
+    fun `an API key session has nothing to refresh with`() = runBlocking {
+        // API keys are long-lived and do not rotate; a refresh token here would
+        // make the 401 authenticator try to refresh something that cannot be.
+        val api = FakeAuthApi()
+        api.authorizeResponse = TestFixtures.createMockLoginResponse(refreshToken = "should-be-ignored")
+
+        assertNull(AuthRepository(api).signInWithApiKey("my-api-key").refreshToken)
+    }
+
+    @Test
+    fun `the API key session takes its username from the server`() = runBlocking {
+        val api = FakeAuthApi()
+        api.authorizeResponse = TestFixtures.createMockLoginResponse()
+
+        assertEquals("testuser", AuthRepository(api).signInWithApiKey("my-api-key").username)
     }
 }
