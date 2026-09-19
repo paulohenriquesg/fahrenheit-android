@@ -100,4 +100,20 @@ class PlaybackPayloadShapeTest {
 
         assertEquals(null, episode.enclosure?.length)
     }
+
+    @Test
+    fun `a play session resuming part-way through an episode parses`() {
+        // ABS starts a session at the saved position, which is almost always
+        // fractional - 8 of 10 real sessions sampled. Typed as Int, resuming any
+        // partly heard podcast episode failed to parse.
+        val response = gson.fromJson(
+            """{ "currentTime": 19141.935520695628, "startTime": 538.6500963920058,
+                 "timeListening": 29.154561968609244, "audioTracks": [] }""",
+            PlayLibraryItemResponse::class.java
+        )
+
+        assertEquals(19141.935520695628, response.currentTime.toDouble(), 1e-9)
+        assertEquals(538.6500963920058, response.startTime.toDouble(), 1e-9)
+        assertEquals(29.154561968609244, response.timeListening.toDouble(), 1e-9)
+    }
 }

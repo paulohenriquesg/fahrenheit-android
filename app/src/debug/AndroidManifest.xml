@@ -10,7 +10,14 @@
   Adding LAUNCHER here keeps the release manifest untouched - the production
   app still appears only on TV launchers.
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<!--
+  tools:ignore below: lint checks this overlay on its own and does not see the
+  leanback / touchscreen declarations in the main manifest it is merged with.
+  The merged manifest has them.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="MissingLeanbackLauncher,MissingLeanbackSupport,ImpliedTouchscreenHardware">
     <application>
         <activity
             android:name="com.paulohenriquesg.fahrenheit.login.LoginActivity"
