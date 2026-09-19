@@ -54,8 +54,9 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var apiKey by remember { mutableStateOf("") }
     // Password is the default so the focus walk (host -> username -> password ->
-    // Login) is unchanged; the API-key option sits below Login. Accounts with no
-    // password (#2) cannot use the password form at all.
+    // Login) is unchanged; the API-key option sits below Login. An account with
+    // no password signs in here with the field left empty (#2); the API key
+    // stays for OpenID-only servers, where local sign-in is refused outright.
     var useApiKey by remember { mutableStateOf(false) }
     var isApiKeyFocused by remember { mutableStateOf(false) }
     var isLoading = remember { mutableStateOf(false) }
@@ -259,7 +260,7 @@ fun LoginScreen(
             ) {
                 Text(
                     if (useApiKey) "Use username and password instead"
-                    else "No password? Sign in with an API key",
+                    else "Sign in with an API key instead",
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             }

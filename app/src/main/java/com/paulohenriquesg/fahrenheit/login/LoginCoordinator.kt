@@ -38,8 +38,10 @@ class LoginCoordinator(
     private val activateSession: () -> SessionState
 ) {
     suspend fun login(host: String, username: String, password: String): LoginOutcome {
-        if (host.isBlank() || username.isBlank() || password.isBlank()) {
-            return LoginOutcome.Invalid("All fields are required")
+        // No check on the password: Audiobookshelf accounts can have none, and
+        // its own apps sign those users in with the field left empty (#2).
+        if (host.isBlank() || username.isBlank()) {
+            return LoginOutcome.Invalid("Host and username are required")
         }
         hostProblem(host)?.let { return it }
         return complete(host) { performLogin(host, username, password) }
