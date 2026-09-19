@@ -76,12 +76,12 @@ class BrowseRepositoryTest {
     fun `listening stats are passed through`() = runBlocking {
         val api = FakeBrowseApi(stats = {
             ListeningStatsResponse(
-                totalTime = 3600, items = emptyMap(), days = emptyMap(),
-                dayOfWeek = emptyMap(), today = 60
+                totalTime = 3600.0, items = emptyMap(), days = emptyMap(),
+                dayOfWeek = emptyMap(), today = 60.0
             )
         })
 
-        assertEquals(3600L, BrowseRepository(api).listeningStats().getOrThrow().totalTime)
+        assertEquals(3600.0, BrowseRepository(api).listeningStats().getOrThrow().totalTime, 0.0)
     }
 
     @Test

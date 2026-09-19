@@ -108,7 +108,7 @@ fun StatsScreen() {
                     // Total listening time
                     StatCard(
                         title = "Total Listening Time",
-                        value = formatTime(stats!!.totalTime)
+                        value = formatTime(stats!!.totalTime.toLong())
                     )
 
                     // Number of items
@@ -129,7 +129,7 @@ fun StatsScreen() {
 
                     // Average per day
                     if (stats!!.days.isNotEmpty()) {
-                        val avgPerDay = stats!!.totalTime / stats!!.days.size
+                        val avgPerDay = (stats!!.totalTime / stats!!.days.size).toLong()
                         StatCard(
                             title = "Average per Day",
                             value = formatTime(avgPerDay)

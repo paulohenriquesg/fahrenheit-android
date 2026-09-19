@@ -845,7 +845,7 @@ fun StatsBrowseView(stats: com.paulohenriquesg.fahrenheit.api.ListeningStatsResp
             ) {
                 com.paulohenriquesg.fahrenheit.stats.StatCard(
                     title = "Total Listening Time",
-                    value = com.paulohenriquesg.fahrenheit.stats.formatTime(stats.totalTime)
+                    value = com.paulohenriquesg.fahrenheit.stats.formatTime(stats.totalTime.toLong())
                 )
 
                 stats.items.size.let { itemCount ->
@@ -863,7 +863,7 @@ fun StatsBrowseView(stats: com.paulohenriquesg.fahrenheit.api.ListeningStatsResp
                 }
 
                 if (stats.days.isNotEmpty()) {
-                    val avgPerDay = stats.totalTime / stats.days.size
+                    val avgPerDay = (stats.totalTime / stats.days.size).toLong()
                     com.paulohenriquesg.fahrenheit.stats.StatCard(
                         title = "Average per Day",
                         value = com.paulohenriquesg.fahrenheit.stats.formatTime(avgPerDay)
