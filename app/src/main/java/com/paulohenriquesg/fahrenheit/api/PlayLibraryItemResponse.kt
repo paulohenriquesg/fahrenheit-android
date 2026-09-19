@@ -20,9 +20,12 @@ data class PlayLibraryItemResponse(
     @SerializedName("deviceInfo") val deviceInfo: PlayLibraryItemDeviceInfo,
     @SerializedName("date") val date: String,
     @SerializedName("dayOfWeek") val dayOfWeek: String,
-    @SerializedName("timeListening") val timeListening: Int,
-    @SerializedName("startTime") val startTime: Int,
-    @SerializedName("currentTime") val currentTime: Int,
+    // Seconds, fractional. A session starts at the saved position, so resuming a
+    // partly heard episode sends values like 19141.9355 - as Int, parsing failed
+    // and the episode would not start.
+    @SerializedName("timeListening") val timeListening: Double,
+    @SerializedName("startTime") val startTime: Double,
+    @SerializedName("currentTime") val currentTime: Double,
     @SerializedName("startedAt") val startedAt: Long,
     @SerializedName("updatedAt") val updatedAt: Long,
     @SerializedName("audioTracks") val audioTracks: List<PlayLibraryItemAudioTrack>,
