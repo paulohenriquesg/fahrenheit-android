@@ -54,6 +54,33 @@ class LoginCoordinatorTest {
         assertEquals(false, called)
     }
 
+    // Audiobookshelf accounts can have no password at all, and its own apps
+    // sign such users in with the field left empty (#2).
+    @Test
+    fun `an account with no password is sent to the server`() = runBlocking {
+        var sent: String? = "unset"
+        val c = coordinator(login = { _, _, password ->
+            sent = password
+            AuthSession("access", "refresh", "testuser")
+        })
+
+        val outcome = c.login("http://abs.local", "testuser", "")
+
+        assertEquals(LoginOutcome.Success, outcome)
+        assertEquals("", sent)
+    }
+
+    @Test
+    fun `a blank username is still rejected before any request is made`() = runBlocking {
+        var called = false
+        val c = coordinator(login = { _, _, _ -> called = true; error("must not be called") })
+
+        val outcome = c.login("http://abs.local", "   ", "")
+
+        assertTrue(outcome is LoginOutcome.Invalid)
+        assertEquals(false, called)
+    }
+
     @Test
     fun `a host without a scheme is rejected before any request is made`() = runBlocking {
         var called = false
