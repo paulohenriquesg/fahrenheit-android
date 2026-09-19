@@ -65,12 +65,7 @@ object UpdateService {
                     return@withContext Result.failure(Exception(error))
                 }
 
-                val body = response.body ?: run {
-                    val error = "Response body is null"
-                    Log.e(TAG, error)
-                    _downloadState.value = DownloadState.Error(error)
-                    return@withContext Result.failure(Exception(error))
-                }
+                val body = response.body
 
                 val contentLength = body.contentLength()
                 Log.d(TAG, "Download size: ${contentLength / 1024 / 1024} MB")
