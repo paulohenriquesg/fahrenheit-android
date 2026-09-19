@@ -367,7 +367,7 @@ fun BookPlayerScreen(
         }
         Spacer(modifier = Modifier.height(8.dp))
         bookDetail?.let {
-            val contentUrl = it.media.tracks.firstOrNull()?.contentUrl?.let { url ->
+            val contentUrl = it.media.tracks?.firstOrNull()?.contentUrl?.let { url ->
                 ApiClient.generateFullUrl(url)
             }
             if (contentUrl != null) {
@@ -376,7 +376,7 @@ fun BookPlayerScreen(
                     mediaSession,
                     isPlaying,
                     onPlayPause,
-                    mediaProgress?.duration?.takeIf { it > 0 } ?: bookDetail?.media?.duration ?: 0.0,
+                    mediaProgress?.duration?.takeIf { it > 0 } ?: it.media.duration ?: 0.0,
                     mediaProgress?.currentTime ?: 0.0,
                     it.media.chapters,
                     authToken = ApiClient.getToken(),

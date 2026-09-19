@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.podcast
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.utils.formatPubDate
 import com.paulohenriquesg.fahrenheit.utils.formatDuration
 import android.content.Intent
 import android.os.Build
@@ -394,9 +395,10 @@ fun PlayerScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Episode description (scrollable)
-                    if (ep.description.isNotEmpty()) {
+                    val description = ep.description
+                    if (!description.isNullOrEmpty()) {
                         Text(
-                            text = ep.description,
+                            text = description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 5,
@@ -508,21 +510,5 @@ private fun loadEpisodeDetails(
             }
         })
     }
-}
-
-private fun formatPubDate(pubDate: String): String {
-    val formats = listOf(
-        java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", java.util.Locale.getDefault()),
-        java.text.SimpleDateFormat("yyyy", java.util.Locale.getDefault())
-    )
-    val formatter = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
-    for (format in formats) {
-        try {
-            return format.parse(pubDate)?.let { formatter.format(it) } ?: pubDate
-        } catch (e: java.text.ParseException) {
-            // Continue to the next format
-        }
-    }
-    return pubDate // Return the original date string if no format matches
 }
 

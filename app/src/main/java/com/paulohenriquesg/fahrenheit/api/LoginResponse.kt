@@ -23,7 +23,7 @@ data class User(
     @SerializedName("createdAt") val createdAt: Long,
     @SerializedName("permissions") val permissions: Permissions,
     @SerializedName("librariesAccessible") val librariesAccessible: List<Any>,
-    @SerializedName("itemTagsAccessible") val itemTagsAccessible: List<Any>,
+    @SerializedName("itemTagsAccessible") val itemTagsAccessible: List<Any>?,
     // Audiobookshelf >= 2.26. Absent on older servers, which only send `token`.
     @SerializedName("accessToken") val accessToken: String? = null,
     @SerializedName("refreshToken") val refreshToken: String? = null

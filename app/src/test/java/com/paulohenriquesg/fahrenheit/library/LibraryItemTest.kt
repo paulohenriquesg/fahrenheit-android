@@ -22,7 +22,7 @@ class LibraryItemTest {
     fun `library item has audio tracks`() {
         val item = TestFixtures.createMockLibraryItem()
 
-        assertTrue(item.media.tracks.isNotEmpty())
+        assertTrue(item.media.tracks!!.isNotEmpty())
         assertTrue(!item.media.tracks.isNullOrEmpty())
     }
 
@@ -42,7 +42,7 @@ class LibraryItemTest {
         val item = TestFixtures.createMockLibraryItem(duration = trackDuration)
 
         assertEquals(trackDuration, item.media.duration ?: 0.0, 0.01)
-        assertEquals(trackDuration, item.media.tracks.first().duration, 0.01)
+        assertEquals(trackDuration, item.media.tracks!!.first().duration, 0.01)
     }
 
     @Test
@@ -130,7 +130,7 @@ class LibraryItemTest {
         val item = TestFixtures.createMockLibraryItem()
 
         assertNotNull(item.media.coverPath)
-        assertTrue(item.media.coverPath.isNotEmpty())
+        assertTrue(item.media.coverPath!!.isNotEmpty())
     }
 
     @Test

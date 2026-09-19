@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.detail
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.utils.formatPubDate
 import com.paulohenriquesg.fahrenheit.utils.formatDuration
 import android.content.Intent
 import android.os.Bundle
@@ -56,8 +57,6 @@ import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.text.ParseException
-import java.text.SimpleDateFormat
 import java.util.Locale
 
 class DetailActivity : ComponentActivity() {
@@ -273,9 +272,10 @@ class DetailActivity : ComponentActivity() {
                     )
 
                     // Episode description (2 lines max)
-                    if (episode.description.isNotEmpty()) {
+                    val description = episode.description
+                    if (!description.isNullOrEmpty()) {
                         Text(
-                            text = episode.description,
+                            text = description,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
@@ -307,22 +307,6 @@ class DetailActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    private fun formatPubDate(pubDate: String): String {
-        val formats = listOf(
-            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.getDefault()),
-            SimpleDateFormat("yyyy", Locale.getDefault())
-        )
-        val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        for (format in formats) {
-            try {
-                return format.parse(pubDate)?.let { formatter.format(it) } ?: pubDate
-            } catch (e: ParseException) {
-                // Continue to the next format
-            }
-        }
-        return pubDate // Return the original date string if no format matches
     }
 
     companion object {
