@@ -257,6 +257,74 @@ object TestFixtures {
         finishedAt = null
     )
 
+    fun createMockLibraryItemEntry(id: String = "item-123") = LibraryItem(
+            id = id,
+            ino = "ino-123",
+            libraryId = "library-456",
+            folderId = "folder-789",
+            path = "/audiobooks/testbook",
+            relPath = "testbook",
+            isFile = false,
+            mtimeMs = 1234567890000L,
+            ctimeMs = 1234567890000L,
+            birthtimeMs = 1234567890000L,
+            addedAt = 1234567890000L,
+            updatedAt = 1234567890000L,
+            isMissing = false,
+            isInvalid = false,
+            mediaType = "book",
+            media = Media(
+                metadata = createMockLibraryItemMetadata(),
+                coverPath = "/covers/test.jpg",
+                tags = emptyList(),
+                numTracks = 1,
+                numAudioFiles = 1,
+                numChapters = 0,
+                duration = 3600.0,
+                size = 1000000,
+                ebookFileFormat = null
+    ),
+            numFiles = 1,
+            size = 1000000,
+            collapsedSeries = null,
+            numEpisodesIncomplete = null
+        )
+
+    fun createMockLibraryItemsResponse(
+        items: List<LibraryItem> = emptyList()
+    ) = LibraryItemsResponse(
+        results = items,
+        total = items.size,
+        limit = 10,
+        page = 0,
+        sortBy = "media.metadata.title",
+        sortDesc = false,
+        filterBy = "",
+        mediaType = "book",
+        minified = false,
+        collapseseries = false,
+        include = ""
+    )
+
+    fun createMockLibrary(
+        id: String = "library-456",
+        name: String = "Books",
+        displayOrder: Int = 1
+    ) = Library(
+        id = id,
+        name = name,
+        folders = emptyList(),
+        displayOrder = displayOrder,
+        icon = "database",
+        mediaType = "book",
+        provider = "audible",
+        settings = null,
+        createdAt = 0L,
+        lastUpdate = 0L,
+        lastScan = null,
+        lastScanVersion = null
+    )
+
     fun createMockShelf(
         id: String = "shelf-123",
         label: String = "Continue Listening",
@@ -266,40 +334,7 @@ object TestFixtures {
         label = label,
         labelStringKey = "LabelContinueListening",
         type = type,
-        bookEntities = listOf(
-            LibraryItem(
-                id = "item-123",
-                ino = "ino-123",
-                libraryId = "library-456",
-                folderId = "folder-789",
-                path = "/audiobooks/testbook",
-                relPath = "testbook",
-                isFile = false,
-                mtimeMs = 1234567890000L,
-                ctimeMs = 1234567890000L,
-                birthtimeMs = 1234567890000L,
-                addedAt = 1234567890000L,
-                updatedAt = 1234567890000L,
-                isMissing = false,
-                isInvalid = false,
-                mediaType = "book",
-                media = Media(
-                    metadata = createMockLibraryItemMetadata(),
-                    coverPath = "/covers/test.jpg",
-                    tags = emptyList(),
-                    numTracks = 1,
-                    numAudioFiles = 1,
-                    numChapters = 0,
-                    duration = 3600.0,
-                    size = 1000000,
-                    ebookFileFormat = null
-                ),
-                numFiles = 1,
-                size = 1000000,
-                collapsedSeries = null,
-                numEpisodesIncomplete = null
-            )
-        ),
+        bookEntities = listOf(createMockLibraryItemEntry()),
         total = 1
     )
 }

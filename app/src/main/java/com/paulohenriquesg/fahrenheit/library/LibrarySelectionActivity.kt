@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.library
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -26,13 +27,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.Library
-import com.paulohenriquesg.fahrenheit.api.LibrariesResponse
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 
 class LibrarySelectionActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,21 +69,18 @@ fun LibrarySelectionScreen() {
 
     // Fetch libraries on startup
     LaunchedEffect(Unit) {
-        val apiClient = ApiClient.getApiService()
-        apiClient?.getLibraries()?.enqueue(object : Callback<LibrariesResponse> {
-            override fun onResponse(
-                call: Call<LibrariesResponse>,
-                response: Response<LibrariesResponse>
-            ) {
-                if (response.isSuccessful) {
-                    libraries = response.body()?.libraries?.sortedBy { it.displayOrder } ?: emptyList()
+        val libraryApi = ApiClient.getLibraryApi()
+        if (libraryApi != null) {
+            LibraryRepository(libraryApi).libraries()
+                .onSuccess { libraries = it }
+                .onFailure {
+                    Toast.makeText(
+                        context,
+                        "Failed to load libraries: ${it.message ?: "network error"}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
-            }
-
-            override fun onFailure(call: Call<LibrariesResponse>, t: Throwable) {
-                // Handle error
-            }
-        })
+        }
     }
 
     Column(

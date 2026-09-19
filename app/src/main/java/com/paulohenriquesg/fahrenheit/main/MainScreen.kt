@@ -72,6 +72,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.LibrariesResponse
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
@@ -100,8 +101,8 @@ import retrofit2.Response
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun MainScreen(
-    fetchLibraryItems: (String, (List<LibraryItem>) -> Unit) -> Unit,
-    fetchPersonalizedView: (String, (List<Shelf>) -> Unit) -> Unit
+    fetchLibraryItems: suspend (String) -> List<LibraryItem>,
+    fetchPersonalizedView: suspend (String) -> List<Shelf>
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -169,12 +170,8 @@ fun MainScreen(
 
                 // Fetch data for new library
                 newLibrary.id?.let { libraryId ->
-                    fetchPersonalizedView(libraryId) { personalizedShelves ->
-                        shelves = personalizedShelves
-                    }
-                    fetchLibraryItems(libraryId) { items ->
-                        libraryItems = items
-                    }
+                    shelves = fetchPersonalizedView(libraryId)
+                    libraryItems = fetchLibraryItems(libraryId)
                 }
             }
             shouldRefreshLibrary = false
@@ -183,46 +180,29 @@ fun MainScreen(
 
     // Fetch libraries from the API
     LaunchedEffect(Unit) {
-        apiClient.getLibraries().enqueue(object : Callback<LibrariesResponse> {
-            override fun onResponse(
-                call: Call<LibrariesResponse>,
-                response: Response<LibrariesResponse>
-            ) {
-                if (response.isSuccessful) {
-                    libraries =
-                        response.body()?.libraries?.sortedBy { it.displayOrder } ?: emptyList()
-
+        val libraryApi = ApiClient.getLibraryApi()
+        if (libraryApi != null) {
+            LibraryRepository(libraryApi).libraries()
+                .onSuccess { fetched ->
+                    libraries = fetched
                     if (libraries.isNotEmpty()) {
-                        // Load saved library preference
                         val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
-                        currentLibrary = if (savedLibraryId != null) {
-                            libraries.find { it.id == savedLibraryId } ?: libraries[0]
-                        } else {
-                            libraries[0]
-                        }
-
-                        // Save selection if using default
-                        currentLibrary?.id?.let { id ->
-                            sharedPreferencesHandler.saveSelectedLibraryId(id)
-                        }
-
-                        // Fetch data for selected library
+                        currentLibrary = libraries.find { it.id == savedLibraryId } ?: libraries[0]
+                        currentLibrary?.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
                         currentLibrary?.id?.let { libraryId ->
-                            fetchPersonalizedView(libraryId) { personalizedShelves ->
-                                shelves = personalizedShelves
-                            }
-                            fetchLibraryItems(libraryId) { items ->
-                                libraryItems = items
-                            }
+                            shelves = fetchPersonalizedView(libraryId)
+                            libraryItems = fetchLibraryItems(libraryId)
                         }
                     }
                 }
-            }
-
-            override fun onFailure(call: Call<LibrariesResponse>, t: Throwable) {
-                // Handle error
-            }
-        })
+                .onFailure {
+                    Toast.makeText(
+                        context,
+                        "Failed to load libraries: ${it.message ?: "network error"}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+        }
     }
 
     // Function to scroll to the first item
@@ -248,17 +228,13 @@ fun MainScreen(
             MenuAction.HOME -> {
                 viewMode = "home"
                 libraryId?.let { id ->
-                    fetchPersonalizedView(id) { personalizedView ->
-                        shelves = personalizedView
-                    }
+                    scope.launch { shelves = fetchPersonalizedView(id) }
                 }
             }
             MenuAction.LIBRARY -> {
                 viewMode = "library"
                 libraryId?.let { id ->
-                    fetchLibraryItems(id) { items ->
-                        libraryItems = items
-                    }
+                    scope.launch { libraryItems = fetchLibraryItems(id) }
                 }
             }
             MenuAction.SERIES -> {
