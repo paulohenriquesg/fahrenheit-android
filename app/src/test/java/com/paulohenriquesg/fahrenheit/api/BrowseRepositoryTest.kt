@@ -22,7 +22,9 @@ class BrowseRepositoryTest {
         private val collections: (() -> CollectionsResponse)? = null,
         private val authors: (() -> AuthorsResponse)? = null,
         private val stats: (() -> ListeningStatsResponse)? = null,
-        private val search: (() -> SearchLibraryItemsResponse)? = null
+        private val search: (() -> SearchLibraryItemsResponse)? = null,
+        private val author: (() -> AuthorDetailResponse)? = null,
+        private val recentEpisodes: (() -> RecentEpisodesResponse)? = null
     ) : BrowseApi {
         override suspend fun getLibrarySeries(libraryId: String, limit: Int, minified: Int) =
             series?.invoke() ?: error("no series configured")
@@ -38,6 +40,12 @@ class BrowseRepositoryTest {
 
         override suspend fun searchLibraryItems(libraryId: String, query: String, limit: Int) =
             search?.invoke() ?: error("no search configured")
+
+        override suspend fun getAuthor(authorId: String, include: String) =
+            author?.invoke() ?: error("no author configured")
+
+        override suspend fun getRecentEpisodes(libraryId: String, limit: Int) =
+            recentEpisodes?.invoke() ?: error("no recent episodes configured")
     }
 
     // Built from JSON: a search match carries a whole library item, and the
@@ -155,5 +163,55 @@ class BrowseRepositoryTest {
         val api = FakeBrowseApi(search = { throw IOException("offline") })
 
         assertTrue(BrowseRepository(api).search("lib", "dune", "book").isFailure)
+    }
+
+    @Test
+    fun `an author comes back with the books behind them`() = runBlocking {
+        val api = FakeBrowseApi(author = {
+            AuthorDetailResponse(
+                id = "a1", name = "Terry Pratchett", libraryId = "lib",
+                addedAt = 0, updatedAt = 0,
+                libraryItems = listOf(item("b1").libraryItem!!)
+            )
+        })
+
+        val author = BrowseRepository(api).author("a1").getOrThrow()
+
+        assertEquals("Terry Pratchett", author.name)
+        assertEquals(listOf("b1"), author.libraryItems.orEmpty().map { it.id })
+    }
+
+    @Test
+    fun `a failure loading an author is returned, not thrown`() = runBlocking {
+        val api = FakeBrowseApi(author = { throw IOException("offline") })
+
+        assertTrue(BrowseRepository(api).author("a1").isFailure)
+    }
+
+    @Test
+    fun `recent episodes are unwrapped from the episodes envelope`() = runBlocking {
+        val api = FakeBrowseApi(recentEpisodes = {
+            RecentEpisodesResponse(
+                episodes = listOf(
+                    RecentPodcastEpisode(
+                        id = "e1", libraryItemId = "li1", title = "Episode one",
+                        description = null, podcast = null
+                    )
+                )
+            )
+        })
+
+        val episodes = BrowseRepository(api).recentEpisodes("lib").getOrThrow()
+
+        assertEquals(listOf("e1"), episodes.map { it.id })
+    }
+
+    // Distinct from an empty list: the screen said "no recent episodes found"
+    // for both, which is how a broken response went unnoticed.
+    @Test
+    fun `a failure loading recent episodes is returned, not thrown`() = runBlocking {
+        val api = FakeBrowseApi(recentEpisodes = { throw IOException("offline") })
+
+        assertTrue(BrowseRepository(api).recentEpisodes("lib").isFailure)
     }
 }

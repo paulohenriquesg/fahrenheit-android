@@ -36,4 +36,12 @@ class BrowseRepository(private val api: BrowseApi) {
             val matches = if (mediaType == "podcast") response.podcast else response.book
             matches.orEmpty().mapNotNull { it.libraryItem }
         }
+
+    suspend fun author(authorId: String): Result<AuthorDetailResponse> = runCatching {
+        api.getAuthor(authorId)
+    }
+
+    suspend fun recentEpisodes(libraryId: String): Result<List<RecentPodcastEpisode>> = runCatching {
+        api.getRecentEpisodes(libraryId).episodes
+    }
 }
