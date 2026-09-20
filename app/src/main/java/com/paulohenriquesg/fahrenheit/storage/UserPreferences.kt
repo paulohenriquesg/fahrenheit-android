@@ -12,7 +12,11 @@ data class UserPreferences(
     val refreshToken: String? = null,
     val isRowLayout: Boolean = true,
     val lastUpdateCheck: Long = 0L,
-    val skipVersion: String? = null,
+    /** Version the user pushed away, and when: it stays quiet for a day. */
+    val updateSnoozeVersionCode: Int? = null,
+    val updateSnoozeAt: Long? = null,
+    /** Version handed to the system installer, to check it landed next launch. */
+    val pendingInstallVersionCode: Int? = null,
     val updateCheckEnabled: Boolean = true,
     val selectedLibraryId: String? = null
 )

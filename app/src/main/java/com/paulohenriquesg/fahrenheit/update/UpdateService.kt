@@ -32,7 +32,7 @@ object UpdateService {
      * @param downloadUrl Direct URL to APK file
      * @return Result containing APK file path on success, or error message on failure
      */
-    suspend fun downloadApk(context: Context, downloadUrl: String): Result<String> =
+    suspend fun downloadApk(context: Context, downloadUrl: String, expectedSha256: String): Result<String> =
         withContext(Dispatchers.IO) {
             try {
                 Log.d(TAG, "Starting APK download from: $downloadUrl")
@@ -104,7 +104,7 @@ object UpdateService {
                 Log.d(TAG, "Download complete. File size: ${apkFile.length() / 1024 / 1024} MB")
 
                 // Validate downloaded APK
-                val validationResult = validateApk(context, apkFile.absolutePath)
+                val validationResult = validateApk(context, apkFile.absolutePath, expectedSha256)
                 if (validationResult.isFailure) {
                     val error = validationResult.exceptionOrNull()?.message
                         ?: "APK validation failed"
@@ -133,7 +133,7 @@ object UpdateService {
      * @param apkPath Path to APK file
      * @return Result indicating success or failure with error message
      */
-    private fun validateApk(context: Context, apkPath: String): Result<Unit> {
+    private fun validateApk(context: Context, apkPath: String, expectedSha256: String): Result<Unit> {
         try {
             val apkFile = File(apkPath)
 
@@ -163,6 +163,13 @@ object UpdateService {
                                 "got ${packageInfo.packageName}"
                     )
                 )
+            }
+
+            // Check 5: the bytes are the ones that were published. A truncated
+            // download or a captive portal's page can still parse this far.
+            if (!ApkIntegrity.matches(apkFile, expectedSha256)) {
+                apkFile.delete()
+                return Result.failure(Exception("Downloaded file does not match the published checksum"))
             }
 
             Log.d(TAG, "APK validation successful: ${packageInfo.packageName}")

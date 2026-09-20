@@ -55,6 +55,23 @@ jobs:
           echo "" >> release_notes.txt
           echo "$commit_messages" >> release_notes.txt
 
+      - name: Build update manifest
+        run: |
+          read -r version_code version_name < <(./gradlew -q printVersionInfo | tail -1)
+          # The manifest published now, for its version history. Absent on the
+          # first run, and a 404 page must not end up parsed as one.
+          curl -sfL -o previous-manifest.json \
+            "https://github.com/${{ github.repository }}/releases/download/latest/update-manifest.json" \
+            || echo "no published manifest yet"
+          python3 scripts/build-update-manifest.py \
+            "$version_code" "$version_name" \
+            app/build/outputs/apk/release/app-release.apk \
+            release_notes.txt \
+            "$([ -f previous-manifest.json ] && echo previous-manifest.json || echo -)" \
+            update-manifest.json \
+            "${{ github.repository }}"
+          cat update-manifest.json
+
       - name: Delete existing latest release
         continue-on-error: true
         run: gh release delete latest -y
@@ -69,7 +86,9 @@ jobs:
           body_path: release_notes.txt
           draft: false
           prerelease: false
-          files: app/build/outputs/apk/release/app-release.apk
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            update-manifest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -81,6 +100,8 @@ jobs:
           body_path: release_notes.txt
           draft: false
           prerelease: false
-          files: app/build/outputs/apk/release/app-release.apk
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            update-manifest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

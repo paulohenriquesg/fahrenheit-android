@@ -24,6 +24,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.*
+import com.paulohenriquesg.fahrenheit.BuildConfig
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.launch
 import org.commonmark.parser.Parser
@@ -33,22 +34,23 @@ class UpdateActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val updateInfo = UpdateInfo(
-            availableVersion = intent.getStringExtra(EXTRA_AVAILABLE_VERSION) ?: "",
-            currentVersion = intent.getStringExtra(EXTRA_CURRENT_VERSION) ?: "",
-            downloadUrl = intent.getStringExtra(EXTRA_DOWNLOAD_URL) ?: "",
-            releaseUrl = intent.getStringExtra(EXTRA_RELEASE_URL) ?: "",
-            changelog = intent.getStringExtra(EXTRA_CHANGELOG)
+        val update = AvailableUpdate(
+            versionCode = intent.getIntExtra(EXTRA_VERSION_CODE, 0),
+            versionName = intent.getStringExtra(EXTRA_VERSION_NAME) ?: "",
+            changelog = intent.getStringArrayListExtra(EXTRA_CHANGELOG).orEmpty(),
+            apkUrl = intent.getStringExtra(EXTRA_APK_URL) ?: "",
+            sha256 = intent.getStringExtra(EXTRA_SHA256) ?: "",
+            sizeBytes = intent.getLongExtra(EXTRA_SIZE_BYTES, 0L)
         )
 
         setContent {
             FahrenheitTheme {
                 UpdateScreen(
-                    updateInfo = updateInfo,
+                    update = update,
                     onDismiss = { finish() },
-                    onSkip = {
-                        UpdateChecker.markVersionSkipped(this, updateInfo.availableVersion)
-                        Toast.makeText(this, "Update skipped", Toast.LENGTH_SHORT).show()
+                    onLater = {
+                        AppUpdates.checker(this).snooze(update)
+                        Toast.makeText(this, "We'll remind you tomorrow", Toast.LENGTH_SHORT).show()
                         finish()
                     }
                 )
@@ -57,19 +59,21 @@ class UpdateActivity : ComponentActivity() {
     }
 
     companion object {
-        private const val EXTRA_AVAILABLE_VERSION = "available_version"
-        private const val EXTRA_CURRENT_VERSION = "current_version"
-        private const val EXTRA_DOWNLOAD_URL = "download_url"
-        private const val EXTRA_RELEASE_URL = "release_url"
+        private const val EXTRA_VERSION_CODE = "version_code"
+        private const val EXTRA_VERSION_NAME = "version_name"
         private const val EXTRA_CHANGELOG = "changelog"
+        private const val EXTRA_APK_URL = "apk_url"
+        private const val EXTRA_SHA256 = "sha256"
+        private const val EXTRA_SIZE_BYTES = "size_bytes"
 
-        fun createIntent(context: Context, updateInfo: UpdateInfo): Intent {
+        fun createIntent(context: Context, update: AvailableUpdate): Intent {
             return Intent(context, UpdateActivity::class.java).apply {
-                putExtra(EXTRA_AVAILABLE_VERSION, updateInfo.availableVersion)
-                putExtra(EXTRA_CURRENT_VERSION, updateInfo.currentVersion)
-                putExtra(EXTRA_DOWNLOAD_URL, updateInfo.downloadUrl)
-                putExtra(EXTRA_RELEASE_URL, updateInfo.releaseUrl)
-                putExtra(EXTRA_CHANGELOG, updateInfo.changelog)
+                putExtra(EXTRA_VERSION_CODE, update.versionCode)
+                putExtra(EXTRA_VERSION_NAME, update.versionName)
+                putStringArrayListExtra(EXTRA_CHANGELOG, ArrayList(update.changelog))
+                putExtra(EXTRA_APK_URL, update.apkUrl)
+                putExtra(EXTRA_SHA256, update.sha256)
+                putExtra(EXTRA_SIZE_BYTES, update.sizeBytes)
             }
         }
     }
@@ -78,9 +82,9 @@ class UpdateActivity : ComponentActivity() {
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun UpdateScreen(
-    updateInfo: UpdateInfo,
+    update: AvailableUpdate,
     onDismiss: () -> Unit,
-    onSkip: () -> Unit
+    onLater: () -> Unit
 ) {
     val context = LocalContext.current
     val downloadState by UpdateService.downloadState.collectAsState()
@@ -123,12 +127,11 @@ fun UpdateScreen(
         when (val state = downloadState) {
             is DownloadState.Idle -> {
                 UpdateAvailableScreen(
-                    updateInfo = updateInfo,
-                    onSkip = onSkip,
-                    onLater = onDismiss,
+                    update = update,
+                    onLater = onLater,
                     onDownload = {
                         coroutineScope.launch {
-                            UpdateService.downloadApk(context, updateInfo.downloadUrl)
+                            UpdateService.downloadApk(context, update.apkUrl, update.sha256)
                         }
                     }
                 )
@@ -137,7 +140,7 @@ fun UpdateScreen(
             is DownloadState.Downloading -> {
                 DownloadingScreen(
                     progress = state.progress,
-                    version = updateInfo.availableVersion,
+                    version = update.versionName,
                     onCancel = {
                         UpdateService.cancelDownload(context)
                         UpdateService.resetState()
@@ -159,7 +162,7 @@ fun UpdateScreen(
                     },
                     onRetry = {
                         coroutineScope.launch {
-                            UpdateService.downloadApk(context, updateInfo.downloadUrl)
+                            UpdateService.downloadApk(context, update.apkUrl, update.sha256)
                         }
                     }
                 )
@@ -176,8 +179,7 @@ fun UpdateScreen(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun UpdateAvailableScreen(
-    updateInfo: UpdateInfo,
-    onSkip: () -> Unit,
+    update: AvailableUpdate,
     onLater: () -> Unit,
     onDownload: () -> Unit
 ) {
@@ -208,7 +210,7 @@ private fun UpdateAvailableScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = updateInfo.currentVersion,
+                    text = BuildConfig.VERSION_NAME,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Medium
@@ -229,7 +231,7 @@ private fun UpdateAvailableScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = updateInfo.availableVersion,
+                    text = update.versionName,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -240,7 +242,7 @@ private fun UpdateAvailableScreen(
         Spacer(modifier = Modifier.height(40.dp))
 
         // Changelog
-        if (!updateInfo.changelog.isNullOrBlank()) {
+        if (update.changelog.isNotEmpty()) {
             Text(
                 text = "What's New",
                 style = MaterialTheme.typography.titleLarge,
@@ -256,7 +258,7 @@ private fun UpdateAvailableScreen(
                     .fillMaxWidth()
             ) {
                 MarkdownText(
-                    markdown = updateInfo.changelog,
+                    markdown = update.changelog.joinToString("\n") { "- $it" },
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
@@ -274,22 +276,6 @@ private fun UpdateAvailableScreen(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Button(
-                onClick = onSkip,
-                colors = ButtonDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp)
-            ) {
-                Text(
-                    text = "Skip This Version",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-
-            Button(
                 onClick = onLater,
                 colors = ButtonDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -300,7 +286,7 @@ private fun UpdateAvailableScreen(
                     .height(56.dp)
             ) {
                 Text(
-                    text = "Remind Me Later",
+                    text = "Later",
                     style = MaterialTheme.typography.titleMedium
                 )
             }
