@@ -1,7 +1,5 @@
 package com.paulohenriquesg.fahrenheit.search
 
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,43 +25,49 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.Library
+import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.ui.navigation.LibraryItemsRow
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import kotlinx.coroutines.delay
 
 @Composable
-fun SearchScreen(searchHandler: SearchHandler) {
+fun SearchScreen() {
     val context = LocalContext.current
     val libraryId = (context as? SearchActivity)?.libraryId
     var query by remember { mutableStateOf(TextFieldValue("")) }
     var searchResults by remember { mutableStateOf(listOf<LibraryItem>()) }
     var library by remember { mutableStateOf<Library?>(null) }
+    var searchFailed by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val listState = remember { LazyListState() }
 
     LaunchedEffect(libraryId) {
-        if (libraryId != null) {
-            loadLibrary(context, libraryId) { response ->
-                library = response
-            }
+        val api = ApiClient.getLibraryApi()
+        if (libraryId != null && api != null) {
+            LibraryRepository(api).library(libraryId).onSuccess { library = it }
         }
     }
 
-    LaunchedEffect(query.text) {
-        if (query.text.isNotEmpty()) {
-            libraryId?.let {
-                searchHandler.performLibrarySearch(
-                    it,
-                    query.text,
-                    library?.mediaType ?: "books"
-                ) { results ->
-                    searchResults = results
-                }
-            }
+    // Runs inside the effect, so a slow search is cancelled when the query
+    // changes or the screen is left, instead of writing results in late.
+    LaunchedEffect(query.text, library, libraryId) {
+        val api = ApiClient.getBrowseApi()
+        if (query.text.isBlank() || libraryId == null || api == null) {
+            searchResults = emptyList()
+            searchFailed = false
+            return@LaunchedEffect
         }
+        // Each keystroke restarts this effect, so the wait collapses a burst of
+        // typing into one request instead of one per character.
+        delay(SEARCH_DEBOUNCE_MS)
+        BrowseRepository(api)
+            .search(libraryId, query.text, library?.mediaType ?: "book")
+            .onSuccess { searchResults = it; searchFailed = false }
+            // Distinct from "nothing matched": the old code reported both by
+            // leaving whatever the last search had found on screen.
+            .onFailure { searchResults = emptyList(); searchFailed = true }
     }
 
     Column(
@@ -86,18 +90,6 @@ fun SearchScreen(searchHandler: SearchHandler) {
                 }
             )
         )
-//        Button(
-//            onClick = {
-//                libraryId?.let {
-//                    searchHandler.performLibrarySearch(it) { results ->
-//                        searchResults = results
-//                    }
-//                }
-//            },
-//            modifier = Modifier.align(Alignment.End)
-//        ) {
-//            Text("Search")
-//        }
 
         library?.let {
             Text(
@@ -109,27 +101,20 @@ fun SearchScreen(searchHandler: SearchHandler) {
         } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
 
         Spacer(modifier = Modifier.height(16.dp))
-        LibraryItemsRow(libraryItems = searchResults, listState = listState)
+        when {
+            searchFailed -> Text(
+                text = "Search failed. Check the connection to your server.",
+                color = MaterialTheme.colorScheme.error
+            )
+
+            query.text.isNotBlank() && searchResults.isEmpty() -> Text(
+                text = "Nothing found for \"${query.text}\"",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            else -> LibraryItemsRow(libraryItems = searchResults, listState = listState)
+        }
     }
 }
 
-private fun loadLibrary(
-    context: Context,
-    libraryId: String,
-    callback: (Library?) -> Unit
-) {
-    val apiService = ApiClient.getApiService()
-    apiService?.getLibrary(libraryId)?.enqueue(object : Callback<Library> {
-        override fun onResponse(call: Call<Library>, response: Response<Library>) {
-            if (response.isSuccessful) {
-                callback(response.body())
-            } else {
-                Toast.makeText(context, "Failed to load library", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        override fun onFailure(call: Call<Library>, t: Throwable) {
-            Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
-        }
-    })
-}
+private const val SEARCH_DEBOUNCE_MS = 300L

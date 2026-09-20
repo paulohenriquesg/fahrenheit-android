@@ -21,7 +21,8 @@ class BrowseRepositoryTest {
         private val series: (() -> SeriesResponse)? = null,
         private val collections: (() -> CollectionsResponse)? = null,
         private val authors: (() -> AuthorsResponse)? = null,
-        private val stats: (() -> ListeningStatsResponse)? = null
+        private val stats: (() -> ListeningStatsResponse)? = null,
+        private val search: (() -> SearchLibraryItemsResponse)? = null
     ) : BrowseApi {
         override suspend fun getLibrarySeries(libraryId: String, limit: Int, minified: Int) =
             series?.invoke() ?: error("no series configured")
@@ -34,7 +35,21 @@ class BrowseRepositoryTest {
 
         override suspend fun getListeningStats() =
             stats?.invoke() ?: error("no stats configured")
+
+        override suspend fun searchLibraryItems(libraryId: String, query: String, limit: Int) =
+            search?.invoke() ?: error("no search configured")
     }
+
+    // Built from JSON: a search match carries a whole library item, and the
+    // fields that matter here are the ones the server actually sends.
+    private fun item(id: String) = com.google.gson.Gson().fromJson(
+        """{"libraryItem":{"id":"$id","ino":"1","libraryId":"lib","folderId":"f","path":"/p",
+             "relPath":"p","isFile":true,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0,"addedAt":0,
+             "updatedAt":0,"isMissing":false,"isInvalid":false,"mediaType":"book",
+             "media":{"metadata":{"title":"T"},"tags":[],"numTracks":0,"numAudioFiles":0,
+             "numChapters":0,"duration":0.0,"size":0},"numFiles":1,"size":1}}""",
+        SearchBookItem::class.java
+    )
 
     @Test
     fun `series are unwrapped from the results envelope`() = runBlocking {
@@ -102,5 +117,43 @@ class BrowseRepositoryTest {
 
         assertTrue(result.isSuccess)
         assertEquals(emptyList<Collection>(), result.getOrThrow())
+    }
+
+    @Test
+    fun `a book search returns the library items behind the matches`() = runBlocking {
+        val api = FakeBrowseApi(search = {
+            SearchLibraryItemsResponse(book = listOf(item("b1"), item("b2")))
+        })
+
+        val found = BrowseRepository(api).search("lib", "dune", mediaType = "book").getOrThrow()
+
+        assertEquals(listOf("b1", "b2"), found.map { it.id })
+    }
+
+    @Test
+    fun `a podcast library searches its podcasts`() = runBlocking {
+        val api = FakeBrowseApi(search = {
+            SearchLibraryItemsResponse(book = listOf(item("b1")), podcast = listOf(item("p1")))
+        })
+
+        val found = BrowseRepository(api).search("lib", "news", mediaType = "podcast").getOrThrow()
+
+        assertEquals(listOf("p1"), found.map { it.id })
+    }
+
+    // Nothing found has to reach the screen, or it keeps showing the last
+    // search's results as though they matched.
+    @Test
+    fun `a search that matches nothing returns no items rather than nothing at all`() = runBlocking {
+        val api = FakeBrowseApi(search = { SearchLibraryItemsResponse() })
+
+        assertEquals(emptyList<String>(), BrowseRepository(api).search("lib", "zzz", "book").getOrThrow().map { it.id })
+    }
+
+    @Test
+    fun `a search failure is returned, not thrown`() = runBlocking {
+        val api = FakeBrowseApi(search = { throw IOException("offline") })
+
+        assertTrue(BrowseRepository(api).search("lib", "dune", "book").isFailure)
     }
 }

@@ -13,13 +13,11 @@ import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 
 class SearchActivity : ComponentActivity() {
-    lateinit var searchHandler: SearchHandler
     var libraryId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        searchHandler = SearchHandler(this)
         libraryId = intent.getStringExtra(EXTRA_LIBRARY)
 
         setContent {
@@ -30,7 +28,7 @@ class SearchActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
-                    SearchScreen(searchHandler)
+                    SearchScreen()
                 }
             }
         }
