@@ -17,6 +17,10 @@ class LibraryRepository(private val api: LibraryApi) {
         api.getLibraries().libraries.orEmpty().sortedBy { it.displayOrder }
     }
 
+    suspend fun library(libraryId: String): Result<Library> = runCatching {
+        api.getLibrary(libraryId)
+    }
+
     suspend fun items(libraryId: String): Result<List<LibraryItem>> = runCatching {
         api.getLibraryItems(libraryId).results
     }

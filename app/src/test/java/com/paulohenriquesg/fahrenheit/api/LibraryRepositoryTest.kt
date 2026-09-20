@@ -21,7 +21,8 @@ class LibraryRepositoryTest {
     private class FakeLibraryApi(
         private val libraries: (() -> LibrariesResponse)? = null,
         private val items: (() -> LibraryItemsResponse)? = null,
-        private val shelves: (() -> List<Shelf>)? = null
+        private val shelves: (() -> List<Shelf>)? = null,
+        private val library: (() -> Library)? = null
     ) : LibraryApi {
         var lastLibraryId: String? = null
 
@@ -42,6 +43,9 @@ class LibraryRepositoryTest {
             lastLibraryId = libraryId
             return shelves?.invoke() ?: error("no shelves response configured")
         }
+
+        override suspend fun getLibrary(libraryId: String) =
+            library?.invoke() ?: error("no library configured")
     }
 
     @Test
@@ -102,5 +106,21 @@ class LibraryRepositoryTest {
         val result = LibraryRepository(api).personalizedShelves("library-456")
 
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `a single library is returned`() = runBlocking {
+        val api = FakeLibraryApi(library = { TestFixtures.createMockLibrary(id = "lib", name = "Books") })
+
+        val library = LibraryRepository(api).library("lib").getOrThrow()
+
+        assertEquals("Books", library.name)
+    }
+
+    @Test
+    fun `a failure fetching one library is returned, not thrown`() = runBlocking {
+        val api = FakeLibraryApi(library = { throw IOException("offline") })
+
+        assertTrue(LibraryRepository(api).library("lib").isFailure)
     }
 }

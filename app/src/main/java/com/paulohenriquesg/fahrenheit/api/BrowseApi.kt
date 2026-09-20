@@ -29,4 +29,11 @@ interface BrowseApi {
 
     @GET("api/me/listening-stats")
     suspend fun getListeningStats(): ListeningStatsResponse
+
+    @GET("api/libraries/{libraryId}/search")
+    suspend fun searchLibraryItems(
+        @Path("libraryId") libraryId: String,
+        @Query("q") query: String,
+        @Query("limit") limit: Int = 10
+    ): SearchLibraryItemsResponse
 }
