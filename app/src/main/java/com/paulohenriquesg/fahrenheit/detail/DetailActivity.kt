@@ -47,6 +47,8 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.LibraryRepository
+import com.paulohenriquesg.fahrenheit.podcast.EpisodeOrder
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.book.BookPlayerActivity
@@ -89,13 +91,31 @@ class DetailActivity : ComponentActivity() {
     fun DetailScreen(itemId: String) {
         var itemDetail by remember { mutableStateOf<LibraryItemResponse?>(null) }
         var expanded by remember { mutableStateOf(false) }
+        var loadFailed by remember { mutableStateOf(false) }
 
         val context = LocalContext.current
 
         LaunchedEffect(itemId) {
-            loadItemDetails(context, itemId) { response ->
-                itemDetail = response
+            val api = ApiClient.getLibraryApi()
+            if (api == null) {
+                loadFailed = true
+                return@LaunchedEffect
             }
+            LibraryRepository(api).item(itemId)
+                .onSuccess { itemDetail = it; loadFailed = false }
+                .onFailure { loadFailed = true }
+        }
+
+        if (loadFailed) {
+            // The previous version showed an empty screen with a toast that
+            // was gone by the time anyone looked at it.
+            Text(
+                text = "Could not load this item. Check the connection to your server.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(16.dp)
+            )
+            return
         }
 
         Column(
@@ -175,7 +195,7 @@ class DetailActivity : ComponentActivity() {
                 Text(text = "Play Book", color = MaterialTheme.colorScheme.onPrimary)
                 }
             } else {
-                itemDetail?.media?.episodes?.sortedByDescending { it.publishedAt }
+                itemDetail?.media?.episodes?.let { EpisodeOrder.newestFirst(it) }
                     ?.let { episodes ->
                         if (episodes.isNotEmpty()) {
                         Text(text = "Episodes", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
@@ -193,33 +213,6 @@ class DetailActivity : ComponentActivity() {
         }
     }
 
-    private fun loadItemDetails(
-        context: Context,
-        itemId: String,
-        callback: (LibraryItemResponse?) -> Unit
-    ) {
-        val apiClient = ApiClient.getApiService()
-        if (apiClient != null) {
-            apiClient.getLibraryItem(itemId).enqueue(object : Callback<LibraryItemResponse> {
-                override fun onResponse(
-                    call: Call<LibraryItemResponse>,
-                    response: Response<LibraryItemResponse>
-                ) {
-                    if (response.isSuccessful) {
-                        callback(response.body())
-                    } else {
-                        Toast.makeText(context, "Failed to load item details", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                }
-
-                override fun onFailure(call: Call<LibraryItemResponse>, t: Throwable) {
-                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT)
-                        .show()
-                }
-            })
-        }
-    }
 
     @Composable
     fun EpisodeCard(episode: Episode) {

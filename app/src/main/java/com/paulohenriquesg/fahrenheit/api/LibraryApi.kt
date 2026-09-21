@@ -18,6 +18,13 @@ interface LibraryApi {
     @GET("api/libraries/{libraryId}")
     suspend fun getLibrary(@Path("libraryId") libraryId: String): Library
 
+    @GET("api/items/{itemId}")
+    suspend fun getLibraryItem(
+        @Path("itemId") itemId: String,
+        @Query("expanded") expanded: Int = 1,
+        @Query("include", encoded = true) include: String = "progress,rssfeed,authors,downloads"
+    ): LibraryItemResponse
+
     @GET("api/libraries/{libraryId}/items")
     suspend fun getLibraryItems(
         @Path("libraryId") libraryId: String,

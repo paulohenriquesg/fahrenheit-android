@@ -22,7 +22,8 @@ class LibraryRepositoryTest {
         private val libraries: (() -> LibrariesResponse)? = null,
         private val items: (() -> LibraryItemsResponse)? = null,
         private val shelves: (() -> List<Shelf>)? = null,
-        private val library: (() -> Library)? = null
+        private val library: (() -> Library)? = null,
+        private val item: (() -> LibraryItemResponse)? = null
     ) : LibraryApi {
         var lastLibraryId: String? = null
 
@@ -46,6 +47,9 @@ class LibraryRepositoryTest {
 
         override suspend fun getLibrary(libraryId: String) =
             library?.invoke() ?: error("no library configured")
+
+        override suspend fun getLibraryItem(itemId: String, expanded: Int, include: String) =
+            item?.invoke() ?: error("no item configured")
     }
 
     @Test
@@ -122,5 +126,30 @@ class LibraryRepositoryTest {
         val api = FakeLibraryApi(library = { throw IOException("offline") })
 
         assertTrue(LibraryRepository(api).library("lib").isFailure)
+    }
+
+    @Test
+    fun `one item is returned with its media`() = runBlocking {
+        val api = FakeLibraryApi(item = {
+            com.google.gson.Gson().fromJson(
+                """{"id":"li1","ino":"1","libraryId":"lib","folderId":"f","path":"/p","relPath":"p",
+                    "isFile":true,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0,"addedAt":0,"updatedAt":0,
+                    "isMissing":false,"isInvalid":false,"mediaType":"book",
+                    "media":{"metadata":{"title":"Dune"},"tags":[],"chapters":[],"episodes":[]},
+                    "libraryFiles":[]}""",
+                LibraryItemResponse::class.java
+            )
+        })
+
+        val item = LibraryRepository(api).item("li1").getOrThrow()
+
+        assertEquals("Dune", item.media.metadata.title)
+    }
+
+    @Test
+    fun `a failure loading one item is returned, not thrown`() = runBlocking {
+        val api = FakeLibraryApi(item = { throw IOException("offline") })
+
+        assertTrue(LibraryRepository(api).item("li1").isFailure)
     }
 }
