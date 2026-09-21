@@ -131,6 +131,7 @@ dependencies {
     implementation(libs.commonmark)
 
     // handle media controls and player
+    implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media)
     implementation(libs.androidx.media2.session)
 
@@ -164,6 +165,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.kotlin.reflect)
+    testImplementation(libs.androidx.media3.test.utils.robolectric)
     // Compose UI tests on the JVM via Robolectric, for UI that can be checked
     // without an emulator.
     testImplementation(platform(libs.androidx.compose.bom))
