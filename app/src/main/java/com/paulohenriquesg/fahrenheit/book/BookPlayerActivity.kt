@@ -59,11 +59,9 @@ class BookPlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        mediaSession = MediaSessionCompat(this, "BookPlayerActivity")
-
         val bookId = intent.getStringExtra(EXTRA_BOOK_ID)
 
-        mediaSession = MediaSessionCompat(this, "PlayerActivity").apply {
+        mediaSession = MediaSessionCompat(this, "BookPlayerActivity").apply {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
                     super.onPlay()
@@ -132,6 +130,15 @@ class BookPlayerActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaSession.release()
+        // Playback already stopped in onStop; without this the player itself
+        // lives on, holding a codec and audio focus for the whole process.
+        GlobalMediaPlayer.release()
+    }
+
 
     private fun startProgressUpdateCoroutine(bookId: String, totalDuration: Double) {
         val apiClient = ApiClient.getApiService()
