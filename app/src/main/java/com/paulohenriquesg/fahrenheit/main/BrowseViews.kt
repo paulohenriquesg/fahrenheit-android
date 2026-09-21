@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.Alphabetical
 import android.content.Intent
 import android.widget.Toast
@@ -117,7 +119,7 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
             .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
     ) {
         Text(
-            text = "Series",
+            text = stringResource(R.string.series),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -129,7 +131,7 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Loading series...",
+                    text = stringResource(R.string.loading_series),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -140,7 +142,7 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No series found",
+                    text = stringResource(R.string.no_series_found),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -196,7 +198,7 @@ fun AuthorsBrowseView(libraryId: String?) {
             .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
     ) {
         Text(
-            text = "Authors",
+            text = stringResource(R.string.authors),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -208,7 +210,7 @@ fun AuthorsBrowseView(libraryId: String?) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Loading authors...",
+                    text = stringResource(R.string.loading_authors),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -219,7 +221,7 @@ fun AuthorsBrowseView(libraryId: String?) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No authors found",
+                    text = stringResource(R.string.no_authors_found),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -257,7 +259,7 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
             .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
     ) {
         Text(
-            text = "Collections",
+            text = stringResource(R.string.collections),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -269,7 +271,7 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Loading collections...",
+                    text = stringResource(R.string.loading_collections),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -280,7 +282,7 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No collections found",
+                    text = stringResource(R.string.no_collections_found),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -315,7 +317,7 @@ fun StatsBrowseView(stats: com.paulohenriquesg.fahrenheit.api.ListeningStatsResp
             .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
     ) {
         Text(
-            text = "Listening Statistics",
+            text = stringResource(R.string.listening_statistics),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -327,7 +329,7 @@ fun StatsBrowseView(stats: com.paulohenriquesg.fahrenheit.api.ListeningStatsResp
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Loading stats...",
+                    text = stringResource(R.string.loading_stats),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -338,7 +340,7 @@ fun StatsBrowseView(stats: com.paulohenriquesg.fahrenheit.api.ListeningStatsResp
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No statistics available",
+                    text = stringResource(R.string.no_statistics_available),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

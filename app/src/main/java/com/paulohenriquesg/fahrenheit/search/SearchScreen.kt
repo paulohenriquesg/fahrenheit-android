@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.search
 
 import androidx.compose.foundation.layout.Column
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -81,7 +83,7 @@ fun SearchScreen() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 8.dp),
-            placeholder = { Text("Search...") },
+            placeholder = { Text(stringResource(R.string.search_2)) },
             keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(
                 onNext = {
@@ -98,12 +100,12 @@ fun SearchScreen() {
                 color = MaterialTheme.colorScheme.onSurface
             )
             // Add more UI elements to display library details
-        } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
+        } ?: Text(text = stringResource(R.string.loading), color = MaterialTheme.colorScheme.onSurface)
 
         Spacer(modifier = Modifier.height(16.dp))
         when {
             searchFailed -> Text(
-                text = "Search failed. Check the connection to your server.",
+                text = stringResource(R.string.search_failed),
                 color = MaterialTheme.colorScheme.error
             )
 

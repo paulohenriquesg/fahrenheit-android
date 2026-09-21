@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.update
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -50,7 +52,7 @@ class UpdateActivity : ComponentActivity() {
                     onDismiss = { finish() },
                     onLater = {
                         AppUpdates.checker(this).snooze(update)
-                        Toast.makeText(this, "We'll remind you tomorrow", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.update_snoozed), Toast.LENGTH_SHORT).show()
                         finish()
                     }
                 )
@@ -98,7 +100,7 @@ fun UpdateScreen(
             if (!InstallationHelper.canInstallPackages(context)) {
                 Toast.makeText(
                     context,
-                    "Please grant permission to install apps",
+                    context.getString(R.string.install_permission_needed),
                     Toast.LENGTH_LONG
                 ).show()
                 InstallationHelper.openInstallPermissionSettings(context)
@@ -190,7 +192,7 @@ private fun UpdateAvailableScreen(
     ) {
         // Header
         Text(
-            text = "Update Available",
+            text = stringResource(R.string.update_available),
             style = MaterialTheme.typography.displayMedium,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
@@ -205,7 +207,7 @@ private fun UpdateAvailableScreen(
         ) {
             Column {
                 Text(
-                    text = "Current Version",
+                    text = stringResource(R.string.current_version),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -226,7 +228,7 @@ private fun UpdateAvailableScreen(
 
             Column {
                 Text(
-                    text = "New Version",
+                    text = stringResource(R.string.new_version),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -244,7 +246,7 @@ private fun UpdateAvailableScreen(
         // Changelog
         if (update.changelog.isNotEmpty()) {
             Text(
-                text = "What's New",
+                text = stringResource(R.string.what_s_new),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
@@ -286,7 +288,7 @@ private fun UpdateAvailableScreen(
                     .height(56.dp)
             ) {
                 Text(
-                    text = "Later",
+                    text = stringResource(R.string.later),
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -302,7 +304,7 @@ private fun UpdateAvailableScreen(
                     .height(56.dp)
             ) {
                 Text(
-                    text = "Download & Install",
+                    text = stringResource(R.string.download_install),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -325,7 +327,7 @@ private fun DownloadingScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Downloading Update",
+            text = stringResource(R.string.downloading_update),
             style = MaterialTheme.typography.displayMedium,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold
@@ -372,7 +374,7 @@ private fun DownloadingScreen(
                 .height(56.dp)
         ) {
             Text(
-                text = "Cancel",
+                text = stringResource(R.string.cancel),
                 style = MaterialTheme.typography.titleMedium
             )
         }
@@ -398,7 +400,7 @@ private fun DownloadCompleteScreen() {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Download Complete",
+            text = stringResource(R.string.download_complete),
             style = MaterialTheme.typography.displayMedium,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold
@@ -407,7 +409,7 @@ private fun DownloadCompleteScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Launching installer...",
+            text = stringResource(R.string.launching_installer),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -429,7 +431,7 @@ private fun ErrorScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Download Failed",
+            text = stringResource(R.string.download_failed),
             style = MaterialTheme.typography.displayMedium,
             color = MaterialTheme.colorScheme.error,
             fontWeight = FontWeight.Bold
@@ -459,7 +461,7 @@ private fun ErrorScreen(
                     .height(56.dp)
             ) {
                 Text(
-                    text = "Close",
+                    text = stringResource(R.string.close),
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -475,7 +477,7 @@ private fun ErrorScreen(
                     .height(56.dp)
             ) {
                 Text(
-                    text = "Retry",
+                    text = stringResource(R.string.retry),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

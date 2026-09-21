@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.Alphabetical
 import android.content.Intent
 import android.widget.Toast
@@ -139,7 +141,7 @@ fun MainScreen(
     if (apiClient == null) {
         // Show error and redirect to login
         LaunchedEffect(Unit) {
-            Toast.makeText(context, "Host is not configured. Please log in.", Toast.LENGTH_LONG)
+            Toast.makeText(context, context.getString(R.string.host_not_configured), Toast.LENGTH_LONG)
                 .show()
             val intent = Intent(context, LoginActivity::class.java)
             context.startActivity(intent)
@@ -280,7 +282,7 @@ fun MainScreen(
                 view = MainView.AUTHORS
             }
             MenuAction.NARRATORS -> {
-                Toast.makeText(context, "Narrators view - Coming soon", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.narrators_view_coming_soon), Toast.LENGTH_SHORT).show()
             }
             MenuAction.STATS -> {
                 view = MainView.STATS
@@ -408,7 +410,7 @@ fun MainScreen(
                     onClick = { if (!listState.isScrollInProgress) scope.launch { drawerState.open() } },
                     modifier = Modifier.align(Alignment.TopStart)
                 ) {
-                    Icon(Icons.Filled.Menu, contentDescription = "Open Menu")
+                    Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))
                 }
                 Row(
                     modifier = Modifier.align(Alignment.TopEnd),
@@ -422,7 +424,7 @@ fun MainScreen(
                             context.startActivity(intent)
                         },
                     ) {
-                        Icon(Icons.Filled.Search, contentDescription = "Search")
+                        Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.search))
                     }
                     Greeting(
                         name = username,
@@ -504,7 +506,7 @@ fun PersonalizedHomeView(shelves: List<Shelf>, libraryId: String?) {
             .padding(top = 60.dp, start = 16.dp, end = 16.dp)
     ) {
         Text(
-            text = "Home",
+            text = stringResource(R.string.home),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = 16.dp)

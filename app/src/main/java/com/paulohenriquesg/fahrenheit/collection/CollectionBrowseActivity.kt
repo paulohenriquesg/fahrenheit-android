@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.collection
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.Alphabetical
 import android.content.Context
 import android.content.Intent
@@ -105,7 +107,7 @@ fun CollectionBrowseScreen(libraryId: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Loading collections...",
+                        text = stringResource(R.string.loading_collections),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -116,7 +118,7 @@ fun CollectionBrowseScreen(libraryId: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No collections found",
+                        text = stringResource(R.string.no_collections_found),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

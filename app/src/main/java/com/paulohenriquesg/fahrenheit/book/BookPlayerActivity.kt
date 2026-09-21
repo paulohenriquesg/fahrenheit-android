@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.book
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -122,7 +124,7 @@ class BookPlayerActivity : ComponentActivity() {
                             isPlaying = newIsPlaying
                         }
                     } else {
-                        Toast.makeText(this, "Book ID is missing", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.book_id_is_missing), Toast.LENGTH_SHORT).show()
                         finish()
                     }
                 }
@@ -188,7 +190,7 @@ class BookPlayerActivity : ComponentActivity() {
             override fun onFailure(call: Call<LibraryItemResponse>, t: Throwable) {
                 Toast.makeText(
                     this@BookPlayerActivity,
-                    "Failed to load book details",
+                    this@BookPlayerActivity.getString(R.string.failed_to_load_book_details),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -223,7 +225,7 @@ class BookPlayerActivity : ComponentActivity() {
                                         } else {
                                             Toast.makeText(
                                                 this@BookPlayerActivity,
-                                                "Failed to create media progress",
+                                                this@BookPlayerActivity.getString(R.string.failed_to_create_media_progress),
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         }
@@ -240,7 +242,7 @@ class BookPlayerActivity : ComponentActivity() {
                         } else {
                             Toast.makeText(
                                 this@BookPlayerActivity,
-                                "Failed to load media progress",
+                                this@BookPlayerActivity.getString(R.string.failed_to_load_media_progress),
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -372,7 +374,7 @@ fun BookPlayerScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
+                } ?: Text(text = stringResource(R.string.loading), color = MaterialTheme.colorScheme.onSurface)
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -402,7 +404,7 @@ fun BookPlayerScreen(
                     }
                 )
             }
-        } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
+        } ?: Text(text = stringResource(R.string.loading), color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -421,7 +423,7 @@ private fun loadBookDetails(
                 if (response.isSuccessful) {
                     callback(response.body())
                 } else {
-                    Toast.makeText(context, "Failed to load book details", Toast.LENGTH_SHORT)
+                    Toast.makeText(context, context.getString(R.string.failed_to_load_book_details), Toast.LENGTH_SHORT)
                         .show()
                 }
             }

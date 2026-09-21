@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.library
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -90,7 +92,7 @@ fun LibrarySelectionScreen() {
     ) {
         // Title
         Text(
-            text = "Select Library",
+            text = stringResource(R.string.select_library),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -179,7 +181,7 @@ fun LibrarySelectionCard(
             if (isSelected) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "✓ Currently Selected",
+                    text = stringResource(R.string.currently_selected),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )

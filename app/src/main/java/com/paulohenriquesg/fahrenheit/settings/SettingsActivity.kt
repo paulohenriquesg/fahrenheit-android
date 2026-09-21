@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.settings
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -74,14 +76,14 @@ fun SettingsScreen() {
             .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
-        Text(text = "Settings", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+        Text(text = stringResource(R.string.settings), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
         Spacer(modifier = Modifier.height(16.dp))
 
         // Dark Theme Toggle
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Dark Theme", color = MaterialTheme.colorScheme.onSurface)
+            Text(text = stringResource(R.string.dark_theme), color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.width(8.dp))
             Switch(
                 checked = isDarkTheme,
@@ -97,7 +99,7 @@ fun SettingsScreen() {
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Row Layout (Grid if disabled)", color = MaterialTheme.colorScheme.onSurface)
+            Text(text = stringResource(R.string.row_layout_grid_if_disabled), color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.width(8.dp))
             Switch(
                 checked = isRowLayout,
@@ -129,7 +131,7 @@ fun SettingsScreen() {
                     if (update != null) {
                         context.startActivity(UpdateActivity.createIntent(context, update))
                     } else {
-                        Toast.makeText(context, "You're up to date!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.you_re_up_to_date), Toast.LENGTH_SHORT).show()
                     }
                 }
             },
@@ -139,7 +141,7 @@ fun SettingsScreen() {
             if (isCheckingUpdate) {
                 CircularProgressIndicator()
             } else {
-                Text("Check for Updates")
+                Text(stringResource(R.string.check_for_updates))
             }
         }
     }

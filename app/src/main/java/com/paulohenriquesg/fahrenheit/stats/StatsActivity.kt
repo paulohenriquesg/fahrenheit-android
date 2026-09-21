@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.stats
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -85,7 +87,7 @@ fun StatsScreen() {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Loading stats...",
+                        text = stringResource(R.string.loading_stats),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -96,7 +98,7 @@ fun StatsScreen() {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No statistics available",
+                        text = stringResource(R.string.no_statistics_available),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

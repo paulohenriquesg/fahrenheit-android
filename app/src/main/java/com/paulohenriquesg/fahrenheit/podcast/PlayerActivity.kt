@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.podcast
 
 import android.content.Context
+import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.formatPubDate
 import com.paulohenriquesg.fahrenheit.utils.formatDuration
 import android.content.Intent
@@ -143,7 +144,7 @@ class PlayerActivity : ComponentActivity() {
                             }
                         }
                     } else {
-                        Toast.makeText(this, "Podcast or Episode ID is missing", Toast.LENGTH_SHORT)
+                        Toast.makeText(this, getString(R.string.podcast_or_episode_id_is_missing), Toast.LENGTH_SHORT)
                             .show()
                         finish()
                     }
@@ -237,7 +238,7 @@ class PlayerActivity : ComponentActivity() {
                                         } else {
                                             Toast.makeText(
                                                 this@PlayerActivity,
-                                                "Failed to create media progress",
+                                                this@PlayerActivity.getString(R.string.failed_to_create_media_progress),
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         }
@@ -254,7 +255,7 @@ class PlayerActivity : ComponentActivity() {
                         } else {
                             Toast.makeText(
                                 this@PlayerActivity,
-                                "Failed to load media progress",
+                                this@PlayerActivity.getString(R.string.failed_to_load_media_progress),
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -409,7 +410,7 @@ fun PlayerScreen(
                         )
                     }
                 }
-            } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
+            } ?: Text(text = stringResource(R.string.loading), color = MaterialTheme.colorScheme.onSurface)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -502,7 +503,7 @@ private fun loadEpisodeDetails(
                 if (response.isSuccessful) {
                     callback(response.body())
                 } else {
-                    Toast.makeText(context, "Failed to load episode details", Toast.LENGTH_SHORT)
+                    Toast.makeText(context, context.getString(R.string.failed_to_load_episode_details), Toast.LENGTH_SHORT)
                         .show()
                 }
             }

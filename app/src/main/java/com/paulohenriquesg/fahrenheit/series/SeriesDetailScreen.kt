@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.series
 
 import androidx.compose.foundation.layout.Column
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -45,7 +47,7 @@ fun SeriesDetailContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Books",
+            text = stringResource(R.string.books),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = 8.dp)

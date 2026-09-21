@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.detail
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.formatPubDate
 import com.paulohenriquesg.fahrenheit.utils.formatDuration
 import android.content.Intent
@@ -79,7 +81,7 @@ class DetailActivity : ComponentActivity() {
                     if (itemId != null) {
                         DetailScreen(itemId)
                     } else {
-                        Toast.makeText(this, "Item ID is missing", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.item_id_is_missing), Toast.LENGTH_SHORT).show()
                         finish()
                     }
                 }
@@ -110,7 +112,7 @@ class DetailActivity : ComponentActivity() {
             // The previous version showed an empty screen with a toast that
             // was gone by the time anyone looked at it.
             Text(
-                text = "Could not load this item. Check the connection to your server.",
+                text = stringResource(R.string.item_load_failed),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(16.dp)
@@ -179,7 +181,7 @@ class DetailActivity : ComponentActivity() {
                                 )
                             }
                         }
-                } ?: Text(text = "Loading...", color = MaterialTheme.colorScheme.onSurface)
+                } ?: Text(text = stringResource(R.string.loading), color = MaterialTheme.colorScheme.onSurface)
                 }
             }
 
@@ -192,13 +194,13 @@ class DetailActivity : ComponentActivity() {
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                Text(text = "Play Book", color = MaterialTheme.colorScheme.onPrimary)
+                Text(text = stringResource(R.string.play_book), color = MaterialTheme.colorScheme.onPrimary)
                 }
             } else {
                 itemDetail?.media?.episodes?.let { EpisodeOrder.newestFirst(it) }
                     ?.let { episodes ->
                         if (episodes.isNotEmpty()) {
-                        Text(text = "Episodes", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                        Text(text = stringResource(R.string.episodes), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                             val listState = rememberLazyListState()
                             LazyColumn(state = listState) {
                                 items(episodes, key = { it.id }) { episode ->
@@ -206,7 +208,7 @@ class DetailActivity : ComponentActivity() {
                                 }
                             }
                         } else {
-                            Text(text = "No Episodes", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            Text(text = stringResource(R.string.no_episodes), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
             }
@@ -247,7 +249,7 @@ class DetailActivity : ComponentActivity() {
             ) {
                 CoverImage(
                     itemId = episode.libraryItemId,
-                    contentDescription = "Podcast Logo",
+                    contentDescription = stringResource(R.string.podcast_logo),
                     size = 64.dp
                 )
                 Spacer(modifier = Modifier.width(16.dp))
