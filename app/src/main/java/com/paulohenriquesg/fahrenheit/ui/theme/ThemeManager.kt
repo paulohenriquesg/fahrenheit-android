@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.ui.theme
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.runtime.mutableStateOf
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 
@@ -10,8 +11,14 @@ object ThemeManager {
 
     fun initialize(context: Context) {
         val sharedPreferencesHandler = SharedPreferencesHandler(context)
-        _isDarkTheme.value = sharedPreferencesHandler.getUserPreferences().darkTheme
+        val chosen = sharedPreferencesHandler.getUserPreferences().darkTheme
+            .takeIf { sharedPreferencesHandler.hasChosenTheme() }
+        _isDarkTheme.value = ThemeChoice.resolve(chosen, systemIsDark = context.isSystemDark())
     }
+
+    private fun Context.isSystemDark(): Boolean =
+        resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
+            Configuration.UI_MODE_NIGHT_YES
 
     fun toggleTheme(context: Context) {
         _isDarkTheme.value = !_isDarkTheme.value

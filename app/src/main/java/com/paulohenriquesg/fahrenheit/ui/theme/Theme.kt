@@ -1,6 +1,5 @@
 package com.paulohenriquesg.fahrenheit.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
@@ -12,10 +11,11 @@ import androidx.tv.material3.lightColorScheme
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun FahrenheitTheme(
-    isInDarkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    // Observe theme state from ThemeManager
+    // The device's setting is the starting point, not the last word: what the
+    // person chose in settings is held by ThemeManager, which resolved the two
+    // at startup.
     val isDarkTheme by ThemeManager.isDarkTheme
 
     val colorScheme = if (isDarkTheme) {

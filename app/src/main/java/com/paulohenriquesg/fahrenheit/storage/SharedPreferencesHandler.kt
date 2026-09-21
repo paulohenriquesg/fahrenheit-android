@@ -26,6 +26,9 @@ class SharedPreferencesHandler(context: Context) {
         context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
     }
 
+    /** Whether the theme was ever chosen here, as opposed to defaulted. */
+    fun hasChosenTheme(): Boolean = sharedPreferences.contains("dark_theme")
+
     fun getUserPreferences(): UserPreferences {
         return UserPreferences(
             host = sharedPreferences.getString("host", "") ?: "",
