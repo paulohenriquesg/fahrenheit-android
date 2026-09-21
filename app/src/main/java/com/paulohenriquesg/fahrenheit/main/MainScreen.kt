@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.utils.Alphabetical
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -251,7 +252,7 @@ fun MainScreen(
                     scope.launch {
                         ApiClient.getBrowseApi()?.let { api ->
                             BrowseRepository(api).series(libraryId)
-                                .onSuccess { seriesList = it.sortedBy { s -> s.name } }
+                                .onSuccess { seriesList = it.sortedWith(Alphabetical.byName { s -> s.name }) }
                         }
                         isLoadingSeries = false
                     }
@@ -267,7 +268,7 @@ fun MainScreen(
                     scope.launch {
                         ApiClient.getBrowseApi()?.let { api ->
                             BrowseRepository(api).collections(libraryId)
-                                .onSuccess { collectionsList = it.sortedBy { c -> c.name } }
+                                .onSuccess { collectionsList = it.sortedWith(Alphabetical.byName { c -> c.name }) }
                         }
                         isLoadingCollections = false
                     }

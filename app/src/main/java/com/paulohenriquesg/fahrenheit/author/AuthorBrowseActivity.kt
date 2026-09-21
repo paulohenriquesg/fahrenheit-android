@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.author
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.utils.Alphabetical
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -76,7 +77,7 @@ fun AuthorBrowseScreen(libraryId: String) {
         val browseApi = ApiClient.getBrowseApi()
         if (browseApi != null) {
             BrowseRepository(browseApi).authors(libraryId)
-                .onSuccess { authors = it.sortedBy { author -> author.name } }
+                .onSuccess { authors = it.sortedWith(Alphabetical.byName { author -> author.name }) }
                 .onFailure { android.util.Log.e("AuthorBrowse", "Failure: ${it.message}", it) }
         }
         isLoading = false

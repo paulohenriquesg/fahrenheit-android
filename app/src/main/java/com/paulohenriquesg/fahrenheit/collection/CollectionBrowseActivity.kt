@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.collection
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.utils.Alphabetical
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -77,7 +78,7 @@ fun CollectionBrowseScreen(libraryId: String) {
         val browseApi = ApiClient.getBrowseApi()
         if (browseApi != null) {
             BrowseRepository(browseApi).collections(libraryId)
-                .onSuccess { collections = it.sortedBy { collection -> collection.name } }
+                .onSuccess { collections = it.sortedWith(Alphabetical.byName { collection -> collection.name }) }
                 .onFailure { android.util.Log.e("CollectionBrowse", "Failure: ${it.message}", it) }
         }
         isLoading = false

@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.utils.Alphabetical
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -179,7 +180,7 @@ fun AuthorsBrowseView(libraryId: String?) {
         if (libraryId != null) {
             ApiClient.getBrowseApi()?.let { api ->
                 BrowseRepository(api).authors(libraryId)
-                    .onSuccess { authors = it.sortedBy { a -> a.name } }
+                    .onSuccess { authors = it.sortedWith(Alphabetical.byName { a -> a.name }) }
                     .onFailure { android.util.Log.e("AuthorsBrowseView", "Failure: ${it.message}", it) }
             }
             isLoading = false
