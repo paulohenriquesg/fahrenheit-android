@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.book
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.widget.Toast
@@ -35,6 +36,7 @@ import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.GlobalMediaPlayer
 import com.paulohenriquesg.fahrenheit.MediaPlayerController
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.player.ProgressSync
 import com.paulohenriquesg.fahrenheit.player.ResumePoint
 import com.paulohenriquesg.fahrenheit.player.timelineOf
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
@@ -134,31 +136,30 @@ class BookPlayerActivity : ComponentActivity() {
     private fun startProgressUpdateCoroutine(bookId: String, totalDuration: Double) {
         val apiClient = ApiClient.getApiService()
         val mediaPlayer = GlobalMediaPlayer.getInstance()
+        var lastSent: Double? = null
 
         lifecycleScope.launch {
             while (isPlaying) {
-                delay(5000L)
-                val currentTimeState = mediaPlayer.currentPosition / 1000.0
-                val request =
-                    MediaProgressRequest(currentTime = currentTimeState, duration = totalDuration)
+                delay(ProgressSync.INTERVAL_MS)
+                val request = ProgressSync.next(
+                    position = mediaPlayer.currentPosition / 1000.0,
+                    total = totalDuration,
+                    lastSent = lastSent
+                ) ?: continue
+                lastSent = request.currentTime
+
                 apiClient?.userCreateOrUpdateMediaProgress(bookId, request = request)
                     ?.enqueue(object : Callback<Void> {
                         override fun onResponse(call: Call<Void>, response: Response<Void>) {
                             if (!response.isSuccessful) {
-                                Toast.makeText(
-                                    this@BookPlayerActivity,
-                                    "Failed to update media progress",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                // Logged, not shown: this runs every few seconds
+                                // behind playback, and the next round retries.
+                                Log.w(TAG, "Progress update rejected: ${response.code()}")
                             }
                         }
 
                         override fun onFailure(call: Call<Void>, t: Throwable) {
-                            Toast.makeText(
-                                this@BookPlayerActivity,
-                                "Network error: ${t.message}",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Log.w(TAG, "Progress update failed: ${t.message}")
                         }
                     })
             }
@@ -277,30 +278,30 @@ fun BookPlayerScreen(
         if (isPlaying && bookDetail != null) {
             val apiClient = ApiClient.getApiService()
             val mediaPlayer = GlobalMediaPlayer.getInstance()
-            val totalDuration = bookDetail.media.duration
+            // The files that will play, not the item's reported duration.
+            val totalDuration = timelineOf(bookDetail.media.tracks.orEmpty())?.totalDuration
+                ?: bookDetail.media.duration ?: 0.0
+            var lastSent: Double? = null
 
             while (isPlaying) {
-                delay(5000L)
-                val currentTimeState = mediaPlayer.currentPosition / 1000.0
-                val request = MediaProgressRequest(currentTime = currentTimeState, duration = totalDuration)
+                delay(ProgressSync.INTERVAL_MS)
+                val request = ProgressSync.next(
+                    position = mediaPlayer.currentPosition / 1000.0,
+                    total = totalDuration,
+                    lastSent = lastSent
+                ) ?: continue
+                lastSent = request.currentTime
+
                 apiClient?.userCreateOrUpdateMediaProgress(bookId, request = request)
                     ?.enqueue(object : Callback<Void> {
                         override fun onResponse(call: Call<Void>, response: Response<Void>) {
                             if (!response.isSuccessful) {
-                                Toast.makeText(
-                                    context,
-                                    "Failed to update media progress",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                Log.w(TAG, "Progress update rejected: ${response.code()}")
                             }
                         }
 
                         override fun onFailure(call: Call<Void>, t: Throwable) {
-                            Toast.makeText(
-                                context,
-                                "Network error: ${t.message}",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Log.w(TAG, "Progress update failed: ${t.message}")
                         }
                     })
             }
@@ -424,3 +425,5 @@ private fun loadBookDetails(
         })
     }
 }
+
+private const val TAG = "BookPlayerActivity"
