@@ -128,7 +128,7 @@ fun SeriesBrowseScreen(libraryId: String) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(seriesList) { series ->
+                    items(seriesList, key = { it.id }) { series ->
                         SeriesCard(
                             series = series,
                             onClick = {

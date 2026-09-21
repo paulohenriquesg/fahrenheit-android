@@ -140,7 +140,7 @@ fun LatestEpisodesScreen(libraryId: String) {
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(episodes) { recentEpisode ->
+                    items(episodes, key = { it.id }) { recentEpisode ->
                         EpisodeCard(
                             episode = recentEpisode,
                             onClick = {

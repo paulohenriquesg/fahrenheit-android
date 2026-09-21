@@ -152,7 +152,7 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(seriesList.size) { index ->
+                items(seriesList.size, key = { seriesList[it].id }) { index ->
                     val series = seriesList[index]
                     com.paulohenriquesg.fahrenheit.series.SeriesCard(
                         series = series,
@@ -231,7 +231,7 @@ fun AuthorsBrowseView(libraryId: String?) {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(authors.size) { index ->
+                items(authors.size, key = { authors[it].id }) { index ->
                     val author = authors[index]
                     com.paulohenriquesg.fahrenheit.ui.elements.AuthorCard(
                         author = author,
@@ -292,7 +292,7 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(collectionsList.size) { index ->
+                items(collectionsList.size, key = { collectionsList[it].id }) { index ->
                     val collection = collectionsList[index]
                     com.paulohenriquesg.fahrenheit.collection.CollectionCard(
                         collection = collection,

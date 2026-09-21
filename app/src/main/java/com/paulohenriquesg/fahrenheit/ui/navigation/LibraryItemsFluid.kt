@@ -24,7 +24,7 @@ fun LibraryItemsFluid(libraryItems: List<LibraryItem>) {
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        items(libraryItems.size) { index ->
+        items(libraryItems.size, key = { libraryItems[it].id }) { index ->
             val item = libraryItems[index]
 
             LibraryItemCard(
