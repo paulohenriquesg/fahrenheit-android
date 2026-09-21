@@ -41,6 +41,7 @@ import com.paulohenriquesg.fahrenheit.GlobalMediaPlayer
 import com.paulohenriquesg.fahrenheit.MediaPlayerController
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.player.ResumePoint
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
@@ -414,22 +415,21 @@ fun PlayerScreen(
         // MediaPlayerController (playback controls at bottom)
         episode?.let {
             val contentUrl = ApiClient.generateFullUrl(it.audioTrack?.contentUrl ?: "")
-            // Use mediaProgress duration only if it's valid (positive), otherwise use episode duration
-            val duration = if (mediaProgress?.duration != null && mediaProgress.duration > 0) {
-                mediaProgress.duration
-            } else {
-                episode?.audioTrack?.duration ?: 0.0
-            }
-            val currentTime = mediaProgress?.currentTime ?: 0.0
-            android.util.Log.d("PlayerScreen", "MediaPlayerController - duration: $duration, currentTime: $currentTime, contentUrl: $contentUrl, mediaProgress.duration: ${mediaProgress?.duration}")
+            // An episode is one file, so its own duration is the one to trust
+            // where the saved progress has none.
+            val start = ResumePoint.decide(
+                progress = mediaProgress,
+                trackTotal = it.audioTrack?.duration,
+                mediaDuration = null
+            )
             if (contentUrl != null) {
                 MediaPlayerController(
                     contentUrl,
                     mediaSession,
                     isPlaying,
                     onPlayPause,
-                    duration,
-                    currentTime,
+                    start.totalSeconds,
+                    start.positionSeconds,
                     authToken = ApiClient.getToken(),
                     shouldAutoPlay = shouldAutoPlay
                 )

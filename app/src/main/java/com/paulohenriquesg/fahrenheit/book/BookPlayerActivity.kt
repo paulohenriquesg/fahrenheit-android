@@ -35,6 +35,8 @@ import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.GlobalMediaPlayer
 import com.paulohenriquesg.fahrenheit.MediaPlayerController
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.player.ResumePoint
+import com.paulohenriquesg.fahrenheit.player.timelineOf
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
@@ -370,14 +372,21 @@ fun BookPlayerScreen(
             val contentUrl = it.media.tracks?.firstOrNull()?.contentUrl?.let { url ->
                 ApiClient.generateFullUrl(url)
             }
+            // The tracks are what will actually play, so their total is the
+            // length to trust where the item has any.
+            val start = ResumePoint.decide(
+                progress = mediaProgress,
+                trackTotal = timelineOf(it.media.tracks.orEmpty())?.totalDuration,
+                mediaDuration = it.media.duration
+            )
             if (contentUrl != null) {
                 MediaPlayerController(
                     contentUrl,
                     mediaSession,
                     isPlaying,
                     onPlayPause,
-                    mediaProgress?.duration?.takeIf { it > 0 } ?: it.media.duration ?: 0.0,
-                    mediaProgress?.currentTime ?: 0.0,
+                    start.totalSeconds,
+                    start.positionSeconds,
                     it.media.chapters,
                     authToken = ApiClient.getToken(),
                     onCurrentTimeUpdate = { newTime ->
