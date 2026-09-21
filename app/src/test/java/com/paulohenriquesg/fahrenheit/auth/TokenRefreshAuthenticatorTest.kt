@@ -103,4 +103,23 @@ class TokenRefreshAuthenticatorTest {
 
         assertNull(authenticator.authenticate(null, unauthorized()))
     }
+
+    // Confirmed on a live 2.36.0 server: /auth/refresh rotates the refresh
+    // token and returns the new one, which is why the whole session is
+    // re-persisted. Should a server ever answer without one, keeping what we
+    // spent beats storing nothing: the alternative is a silent sign-out at the
+    // next expiry, with no way back but the login screen.
+    @Test
+    fun `a refresh that returns no refresh token keeps the one we had`() {
+        signedIn(refreshToken = "refresh")
+
+        val authenticator = TokenRefreshAuthenticator(sessionManager) {
+            AuthSession("brand-new-access", null, "testuser")
+        }
+
+        authenticator.authenticate(null, unauthorized())
+
+        assertEquals("refresh", sessionManager.refreshToken())
+        assertEquals("brand-new-access", sessionManager.accessToken())
+    }
 }

@@ -36,7 +36,16 @@ class TokenRefreshAuthenticator(
             return null
         }
 
-        sessionManager.persist(sessionManager.host(), session)
+        // Keep the token we spent if the response carried no replacement.
+        // Storing null there would leave nothing to refresh with, and the next
+        // expiry would drop the user at the login screen. Servers do rotate it
+        // and do send the new one (checked against 2.36.0), so this is a guard,
+        // not the usual path. A fresh sign-in still replaces it outright, which
+        // is how signing in with an API key clears it.
+        sessionManager.persist(
+            sessionManager.host(),
+            session.copy(refreshToken = session.refreshToken ?: refreshToken)
+        )
 
         return response.request.newBuilder()
             .header("Authorization", "Bearer ${session.accessToken}")
