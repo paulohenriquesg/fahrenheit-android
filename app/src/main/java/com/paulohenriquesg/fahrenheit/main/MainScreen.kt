@@ -118,9 +118,14 @@ fun MainScreen(
     var currentLibrary by remember { mutableStateOf<Library?>(null) }
     val listState = rememberLazyListState()
     val isRowLayout by LayoutManager.isRowLayout  // Use LayoutManager instead of local state
-    var currentSection by remember { mutableStateOf("home") }  // Tracks active section
+
     val menuItemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }  // Map menu item ID to FocusRequester
-    var viewMode by remember { mutableStateOf("home") }
+    var view by remember { mutableStateOf(MainView.HOME) }
+    // Which menu row the drawer highlights and focuses when reopened. Kept
+    // apart from `view` because rows like Settings open another screen and
+    // still take the highlight; changing that is a focus change for a TV, not
+    // a refactor.
+    var highlightedMenuItemId by remember { mutableStateOf(MainView.HOME.menuItemId) }
     var shouldRefreshLibrary by remember { mutableStateOf(false) }
     var seriesList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Series>()) }
     var collectionsList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Collection>()) }
@@ -166,8 +171,8 @@ fun MainScreen(
             val newLibrary = libraries.find { it.id == savedLibraryId }
             if (newLibrary != null && newLibrary.id != currentLibrary?.id) {
                 currentLibrary = newLibrary
-                viewMode = "home"
-                currentSection = "home"  // Reset to home section when library changes
+                view = MainView.HOME
+                highlightedMenuItemId = MainView.HOME.menuItemId
 
                 // Fetch data for new library
                 newLibrary.id?.let { libraryId ->
@@ -188,7 +193,7 @@ fun MainScreen(
                     libraries = fetched
                     if (libraries.isNotEmpty()) {
                         val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
-                        currentLibrary = libraries.find { it.id == savedLibraryId } ?: libraries[0]
+                        currentLibrary = LibraryChoice.pick(libraries, savedLibraryId)
                         currentLibrary?.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
                         currentLibrary?.id?.let { libraryId ->
                             shelves = fetchPersonalizedView(libraryId)
@@ -227,19 +232,19 @@ fun MainScreen(
     fun handleMenuAction(action: MenuAction, libraryId: String?) {
         when (action) {
             MenuAction.HOME -> {
-                viewMode = "home"
+                view = MainView.HOME
                 libraryId?.let { id ->
                     scope.launch { shelves = fetchPersonalizedView(id) }
                 }
             }
             MenuAction.LIBRARY -> {
-                viewMode = "library"
+                view = MainView.LIBRARY
                 libraryId?.let { id ->
                     scope.launch { libraryItems = fetchLibraryItems(id) }
                 }
             }
             MenuAction.SERIES -> {
-                viewMode = "series"
+                view = MainView.SERIES
                 seriesList = emptyList()  // Clear old data
                 isLoadingSeries = true
                 if (libraryId != null) {
@@ -255,7 +260,7 @@ fun MainScreen(
                 }
             }
             MenuAction.COLLECTIONS -> {
-                viewMode = "collections"
+                view = MainView.COLLECTIONS
                 collectionsList = emptyList()  // Clear old data
                 isLoadingCollections = true
                 if (libraryId != null) {
@@ -271,13 +276,13 @@ fun MainScreen(
                 }
             }
             MenuAction.AUTHORS -> {
-                viewMode = "authors"
+                view = MainView.AUTHORS
             }
             MenuAction.NARRATORS -> {
                 Toast.makeText(context, "Narrators view - Coming soon", Toast.LENGTH_SHORT).show()
             }
             MenuAction.STATS -> {
-                viewMode = "stats"
+                view = MainView.STATS
                 listeningStats = null  // Clear old data
                 isLoadingStats = true
                 scope.launch {
@@ -315,7 +320,7 @@ fun MainScreen(
         if (drawerState.isOpen) {
             delay(100)  // Wait for drawer animation
             // Request focus on the current section's menu item
-            menuItemFocusRequesters[currentSection]?.requestFocus()
+            menuItemFocusRequesters[highlightedMenuItemId]?.requestFocus()
         }
     }
 
@@ -340,10 +345,10 @@ fun MainScreen(
 
                     MenuItemRow(
                         menuItem = menuItem,
-                        isFocused = currentSection == menuItem.id,
+                        isFocused = highlightedMenuItemId == menuItem.id,
                         focusRequester = focusRequester,
                         onClick = {
-                            currentSection = menuItem.id  // Track active section
+                            highlightedMenuItemId = menuItem.id
                             handleMenuAction(menuItem.action, currentLibrary?.id)
                             scope.launch { drawerState.close() }
                         }
@@ -363,10 +368,10 @@ fun MainScreen(
 
                     MenuItemRow(
                         menuItem = menuItem,
-                        isFocused = currentSection == menuItem.id,
+                        isFocused = highlightedMenuItemId == menuItem.id,
                         focusRequester = focusRequester,
                         onClick = {
-                            currentSection = menuItem.id  // Track active section
+                            highlightedMenuItemId = menuItem.id
                             handleMenuAction(menuItem.action, currentLibrary?.id)
                             if (menuItem.action != MenuAction.SELECT_LIBRARY) {
                                 scope.launch { drawerState.close() }
@@ -423,9 +428,9 @@ fun MainScreen(
                         modifier = Modifier.padding(16.dp)
                     )
                 }
-                when (viewMode) {
-                    "home" -> PersonalizedHomeView(shelves, currentLibrary?.id)
-                    "library" -> {
+                when (view) {
+                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id)
+                    MainView.LIBRARY -> {
                         Column(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
@@ -459,10 +464,10 @@ fun MainScreen(
                             }
                         }
                     }
-                    "series" -> SeriesBrowseView(seriesList, isLoadingSeries)
-                    "authors" -> AuthorsBrowseView(currentLibrary?.id)
-                    "collections" -> CollectionsBrowseView(collectionsList, isLoadingCollections)
-                    "stats" -> StatsBrowseView(listeningStats, isLoadingStats)
+                    MainView.SERIES -> SeriesBrowseView(seriesList, isLoadingSeries)
+                    MainView.AUTHORS -> AuthorsBrowseView(currentLibrary?.id)
+                    MainView.COLLECTIONS -> CollectionsBrowseView(collectionsList, isLoadingCollections)
+                    MainView.STATS -> StatsBrowseView(listeningStats, isLoadingStats)
                 }
             }
         }
