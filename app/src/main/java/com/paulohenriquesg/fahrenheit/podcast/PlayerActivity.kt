@@ -274,6 +274,9 @@ class PlayerActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         mediaSession.release()
+        // Playback already stopped in onStop; without this the player itself
+        // lives on, holding a codec and audio focus for the whole process.
+        GlobalMediaPlayer.release()
     }
 
     companion object {
