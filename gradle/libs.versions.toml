@@ -34,7 +34,6 @@ androidx-material-icons-extended = { module = "androidx.compose.material:materia
 androidx-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 androidx-media = { module = "androidx.media:media", version.ref = "media" }
 androidx-media2-session = { module = "androidx.media2:media2-session", version.ref = "media2Session" }
-androidx-tv-material-v100alpha01 = { module = "androidx.tv:tv-material", version.ref = "tvMaterial" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }

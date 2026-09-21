@@ -2,6 +2,7 @@
 package com.paulohenriquesg.fahrenheit.storage
 
 import android.content.Context
+import androidx.core.content.edit
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -46,7 +47,7 @@ class SharedPreferencesHandler(context: Context) {
     }
 
     fun saveUserPreferences(userPreferences: UserPreferences) {
-        with(sharedPreferences.edit()) {
+        sharedPreferences.edit {
             putString("host", userPreferences.host)
             putString("username", userPreferences.username)
             putString("token", userPreferences.token)
@@ -59,14 +60,12 @@ class SharedPreferencesHandler(context: Context) {
             putInt("pending_install_version_code", userPreferences.pendingInstallVersionCode ?: -1)
             putBoolean("update_check_enabled", userPreferences.updateCheckEnabled)
             putString("selected_library_id", userPreferences.selectedLibraryId)
-            apply()
         }
     }
 
     fun clearPreferences() {
-        with(sharedPreferences.edit()) {
+        sharedPreferences.edit {
             clear()
-            apply()
         }
     }
 

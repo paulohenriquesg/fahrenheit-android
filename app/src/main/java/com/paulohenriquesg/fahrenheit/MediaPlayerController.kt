@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit
 
 import android.net.Uri
+import androidx.core.net.toUri
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
 import androidx.compose.foundation.Canvas
@@ -84,7 +85,7 @@ fun MediaPlayerController(
             if (authToken != null) {
                 val headers = mapOf("Authorization" to "Bearer $authToken")
                 android.util.Log.d("MediaPlayerController", "Setting data source with auth headers")
-                setDataSource(context, Uri.parse(url), headers)
+                setDataSource(context, url.toUri(), headers)
             } else {
                 android.util.Log.d("MediaPlayerController", "Setting data source without auth")
                 setDataSource(url)
@@ -201,7 +202,7 @@ fun MediaPlayerController(
                     isPrepared = false
                     if (authToken != null) {
                         val headers = mapOf("Authorization" to "Bearer $authToken")
-                        mediaPlayer.setDataSource(context, Uri.parse(url), headers)
+                        mediaPlayer.setDataSource(context, url.toUri(), headers)
                     } else {
                         mediaPlayer.setDataSource(url)
                     }
