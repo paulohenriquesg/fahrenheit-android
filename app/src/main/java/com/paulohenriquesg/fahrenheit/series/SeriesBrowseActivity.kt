@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.series
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.utils.Alphabetical
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -77,7 +78,7 @@ fun SeriesBrowseScreen(libraryId: String) {
         val browseApi = ApiClient.getBrowseApi()
         if (browseApi != null) {
             BrowseRepository(browseApi).series(libraryId)
-                .onSuccess { seriesList = it.sortedBy { series -> series.name } }
+                .onSuccess { seriesList = it.sortedWith(Alphabetical.byName { series -> series.name }) }
                 .onFailure { android.util.Log.e("SeriesBrowse", "Failure: ${it.message}", it) }
         }
         isLoading = false
