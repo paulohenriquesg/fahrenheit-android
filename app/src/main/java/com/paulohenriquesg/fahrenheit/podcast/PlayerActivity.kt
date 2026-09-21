@@ -41,6 +41,7 @@ import com.paulohenriquesg.fahrenheit.GlobalMediaPlayer
 import com.paulohenriquesg.fahrenheit.MediaPlayerController
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.player.ProgressSync
 import com.paulohenriquesg.fahrenheit.player.ResumePoint
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
@@ -171,30 +172,28 @@ class PlayerActivity : ComponentActivity() {
         android.util.Log.d("PlayerActivity", "Starting progress update coroutine")
 
         lifecycleScope.launch {
+            var lastSent: Double? = null
             while (isPlaying) {
-                delay(5000L)
-                val currentTimeState = mediaPlayer.currentPosition / 1000.0
-                val totalTime = mediaPlayer.duration / 1000.0
-                val request =
-                    MediaProgressRequest(currentTime = currentTimeState, duration = totalTime)
+                delay(ProgressSync.INTERVAL_MS)
+                val request = ProgressSync.next(
+                    position = mediaPlayer.currentPosition / 1000.0,
+                    total = mediaPlayer.duration / 1000.0,
+                    lastSent = lastSent
+                ) ?: continue
+                lastSent = request.currentTime
+
                 apiClient.userCreateOrUpdateMediaProgress(podcastId, episodeId, request)
                     .enqueue(object : Callback<Void> {
                         override fun onResponse(call: Call<Void>, response: Response<Void>) {
                             if (!response.isSuccessful) {
-                                Toast.makeText(
-                                    this@PlayerActivity,
-                                    "Failed to update media progress",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                // Logged, not shown: this runs every few seconds
+                                // behind playback, and the next round retries.
+                                android.util.Log.w("PlayerActivity", "Progress update rejected: ${response.code()}")
                             }
                         }
 
                         override fun onFailure(call: Call<Void>, t: Throwable) {
-                            Toast.makeText(
-                                this@PlayerActivity,
-                                "Network error: ${t.message}",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            android.util.Log.w("PlayerActivity", "Progress update failed: ${t.message}")
                         }
                     })
             }
