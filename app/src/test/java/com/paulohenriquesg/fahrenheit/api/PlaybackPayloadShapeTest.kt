@@ -116,4 +116,61 @@ class PlaybackPayloadShapeTest {
         assertEquals(538.6500963920058, response.startTime, 1e-9)
         assertEquals(29.154561968609244, response.timeListening, 1e-9)
     }
+
+    /**
+     * The play session embeds a whole library item, and it parses into the
+     * same classes as /api/items now that the duplicated family is gone.
+     * A podcast session, because its metadata is the shape that differed.
+     */
+    @Test
+    fun `a podcast play session parses into the shared item classes`() {
+        val response = Gson().fromJson(
+            """
+            { "id": "play_1", "userId": "u1", "libraryItemId": "li1", "episodeId": "ep1",
+              "mediaType": "podcast", "mediaMetadata": { "title": "The Show", "author": "Someone",
+                "feedUrl": "https://example.invalid/feed.xml", "itunesId": "123456",
+                "itunesArtistId": 789, "explicit": false, "genres": ["News"] },
+              "chapters": [], "displayTitle": "Episode 42", "displayAuthor": "Someone",
+              "coverPath": null, "duration": 1800.5, "playMethod": 0, "mediaPlayer": "unknown",
+              "deviceInfo": { "deviceId": "d1", "clientName": "Fahrenheit", "sdkVersion": 25 },
+              "timeListening": 0.0, "startTime": 0.0, "currentTime": 12.5,
+              "startedAt": 1789812000000, "updatedAt": 1789812000000,
+              "audioTracks": [ { "index": 1, "startOffset": 0.0, "duration": 1800.5,
+                "title": "ep.mp3", "contentUrl": "/audio/ep.mp3", "mimeType": "audio/mpeg",
+                "metadata": { "filename": "ep.mp3", "ext": ".mp3", "path": "/p/ep.mp3",
+                  "relPath": "ep.mp3", "size": 30000000, "mtimeMs": 0, "ctimeMs": 0,
+                  "birthtimeMs": 0 } } ],
+              "videoTrack": null,
+              "libraryItem": { "id": "li1", "ino": "1", "libraryId": "lib", "folderId": "f",
+                "path": "/p", "relPath": "p", "isFile": false, "mtimeMs": 0, "ctimeMs": 0,
+                "birthtimeMs": 0, "addedAt": 0, "updatedAt": 0, "lastScan": 0,
+                "scanVersion": null, "isMissing": false, "isInvalid": false,
+                "mediaType": "podcast",
+                "media": { "id": "m1", "libraryItemId": "li1",
+                  "metadata": { "title": "The Show", "author": "Someone",
+                    "itunesId": "123456", "explicit": false },
+                  "coverPath": null, "tags": [], "size": 30000000,
+                  "episodes": [ { "libraryItemId": "li1", "id": "ep1", "index": null,
+                    "season": "", "episode": "", "episodeType": null, "title": "Episode 42",
+                    "subtitle": null, "description": null, "enclosure": null,
+                    "pubDate": null, "audioFile": null, "audioTrack": null,
+                    "publishedAt": 1789812000000, "addedAt": 0, "updatedAt": 0 } ] },
+                "libraryFiles": [ { "ino": "2", "fileType": "audio" } ], "size": 30000000 }
+            }
+            """.trimIndent(),
+            PlayLibraryItemResponse::class.java
+        )
+
+        assertEquals("Episode 42", response.displayTitle)
+        assertEquals("The Show", response.libraryItem.media.metadata.title)
+        // Podcast metadata used to live on a class of its own and was dropped
+        // from item responses entirely.
+        assertEquals("123456", response.libraryItem.media.metadata.itunesId)
+        assertEquals("https://example.invalid/feed.xml", response.mediaMetadata.feedUrl)
+        // A number where the last feed sent a string.
+        assertEquals("789", response.mediaMetadata.itunesArtistId)
+        assertEquals("Episode 42", response.libraryItem.media.episodes!!.single().title)
+        assertEquals("audio", response.libraryItem.libraryFiles.single().fileType)
+        assertEquals(1, response.audioTracks.size)
+    }
 }
