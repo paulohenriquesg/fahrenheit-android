@@ -6,7 +6,9 @@ import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesTokenStore
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.paulohenriquesg.fahrenheit.BuildConfig
 import okhttp3.logging.HttpLoggingInterceptor
+import java.util.concurrent.TimeUnit
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
@@ -83,7 +85,8 @@ object ApiClient {
 
     /** Auth endpoints for a host the user is not signed in to yet. */
     fun createAuthApi(host: String): AuthApi =
-        buildRetrofit(host, OkHttpClient.Builder().build()).create(AuthApi::class.java)
+        buildRetrofit(host, OkHttpClient.Builder().apply { applyTimeouts() }.build())
+            .create(AuthApi::class.java)
 
     fun generateFullUrl(path: String): String? {
         return host?.let { "$it$path" }
@@ -98,6 +101,7 @@ object ApiClient {
         } else {
             // Pre-login: there is no session to authenticate with yet.
             OkHttpClient.Builder()
+                .apply { applyTimeouts() }
                 .addInterceptor(loggingInterceptor())
                 .addInterceptor { chain ->
                     chain.proceed(
@@ -111,9 +115,20 @@ object ApiClient {
         return buildRetrofit(baseUrl, client).create(ApiService::class.java)
     }
 
-    /** BASIC level on purpose: full bodies OOM on large library responses. */
+    /**
+     * OkHttp defaults to 10 seconds, which one request for a whole library can
+     * exceed: an unminified page of several hundred items over a TV's wifi,
+     * from a server that may be a Raspberry Pi. Connecting is a separate
+     * matter - if that has not happened in 15 seconds, it is not going to.
+     */
+    private fun OkHttpClient.Builder.applyTimeouts() = apply {
+        connectTimeout(15, TimeUnit.SECONDS)
+        readTimeout(60, TimeUnit.SECONDS)
+        writeTimeout(30, TimeUnit.SECONDS)
+    }
+
     private fun loggingInterceptor() = HttpLoggingInterceptor().apply {
-        setLevel(HttpLoggingInterceptor.Level.BASIC)
+        setLevel(HttpLoggingPolicy.level(BuildConfig.DEBUG))
     }
 
     /**
@@ -127,6 +142,7 @@ object ApiClient {
         sessionManager: SessionManager,
         refreshSession: (String) -> AuthSession
     ): OkHttpClient = OkHttpClient.Builder()
+        .apply { applyTimeouts() }
         .addInterceptor(loggingInterceptor())
         .addInterceptor { chain ->
             val requestBuilder: Request.Builder = chain.request().newBuilder()
@@ -154,7 +170,8 @@ object ApiClient {
         // token that just 401'd, nor recurse back into itself.
         val refreshApi = buildRetrofit(
             baseUrl,
-            OkHttpClient.Builder().addInterceptor(loggingInterceptor()).build()
+            OkHttpClient.Builder().apply { applyTimeouts() }
+                .addInterceptor(loggingInterceptor()).build()
         ).create(AuthRefreshApi::class.java)
         return { refreshToken ->
             val response = refreshApi.refresh(refreshToken).execute()
