@@ -2,6 +2,7 @@
 package com.paulohenriquesg.fahrenheit.login
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -87,14 +88,14 @@ fun LoginScreen(
             onValueChange = { host = it },
             label = {
                 Text(
-                    "Host",
+                    stringResource(R.string.host),
                     color = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             leadingIcon = {
                 Icon(
                     Icons.Filled.Language,
-                    contentDescription = "Host Icon",
+                    contentDescription = stringResource(R.string.host_icon),
                     tint = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
@@ -125,20 +126,20 @@ fun LoginScreen(
                 onValueChange = { apiKey = it },
                 label = {
                     Text(
-                        "API key",
+                        stringResource(R.string.api_key),
                         color = if (isApiKeyFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 leadingIcon = {
                     Icon(
                         Icons.Filled.Lock,
-                        contentDescription = "API Key Icon",
+                        contentDescription = stringResource(R.string.api_key_icon),
                         tint = if (isApiKeyFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 supportingText = {
                     Text(
-                        "Create one in Audiobookshelf: Settings > API Keys",
+                        stringResource(R.string.api_key_where_to_create),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
@@ -166,14 +167,14 @@ fun LoginScreen(
                 onValueChange = { username = it },
                 label = {
                     Text(
-                        "Username",
+                        stringResource(R.string.username),
                         color = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 leadingIcon = {
                     Icon(
                         Icons.Filled.Person,
-                        contentDescription = "Username Icon",
+                        contentDescription = stringResource(R.string.username_icon),
                         tint = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
@@ -203,14 +204,14 @@ fun LoginScreen(
                 onValueChange = { password = it },
                 label = {
                     Text(
-                        "Password",
+                        stringResource(R.string.password),
                         color = if (isPasswordFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 leadingIcon = {
                     Icon(
                         Icons.Filled.Lock,
-                        contentDescription = "Password Icon",
+                        contentDescription = stringResource(R.string.password_icon),
                         tint = if (isPasswordFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
@@ -249,7 +250,7 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .testTag("login_submit_button")
             ) {
-                Text("Login", color = MaterialTheme.colorScheme.onPrimary)
+                Text(stringResource(R.string.login), color = MaterialTheme.colorScheme.onPrimary)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(

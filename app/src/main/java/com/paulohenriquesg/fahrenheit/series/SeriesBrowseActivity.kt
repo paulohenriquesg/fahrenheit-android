@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.series
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.Alphabetical
 import android.content.Context
 import android.content.Intent
@@ -105,7 +107,7 @@ fun SeriesBrowseScreen(libraryId: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Loading series...",
+                        text = stringResource(R.string.loading_series),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -116,7 +118,7 @@ fun SeriesBrowseScreen(libraryId: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No series found",
+                        text = stringResource(R.string.no_series_found),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

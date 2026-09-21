@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.author
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.Alphabetical
 import android.content.Context
 import android.content.Intent
@@ -104,7 +106,7 @@ fun AuthorBrowseScreen(libraryId: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Loading authors...",
+                        text = stringResource(R.string.loading_authors),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -115,7 +117,7 @@ fun AuthorBrowseScreen(libraryId: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No authors found",
+                        text = stringResource(R.string.no_authors_found),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

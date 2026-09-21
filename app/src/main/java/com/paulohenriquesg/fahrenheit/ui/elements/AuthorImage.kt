@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.ui.elements
 
 import androidx.compose.foundation.layout.Box
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -63,7 +65,7 @@ fun PlaceholderImage(modifier: Modifier = Modifier) {
     ) {
         Icon(
             imageVector = Icons.Default.Person,
-            contentDescription = "Author placeholder",
+            contentDescription = stringResource(R.string.author_placeholder),
             modifier = Modifier.fillMaxSize(),
             tint = androidx.tv.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
         )

@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.author
 
 import androidx.compose.foundation.layout.Box
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -107,7 +109,7 @@ fun AuthorDetailContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Books",
+            text = stringResource(R.string.books),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = 8.dp)

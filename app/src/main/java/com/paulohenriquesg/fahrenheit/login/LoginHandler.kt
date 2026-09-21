@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.login
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.R
 import android.content.Intent
 import android.util.Log
 import android.widget.Toast
@@ -67,7 +68,7 @@ class LoginHandler(private val context: Context) {
     private fun present(outcome: LoginOutcome) {
         when (outcome) {
             is LoginOutcome.Success -> {
-                Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.login_successful), Toast.LENGTH_SHORT).show()
                 context.startActivity(Intent(context, MainActivity::class.java))
                 if (context is LoginActivity) context.finish()
             }
@@ -87,7 +88,7 @@ class LoginHandler(private val context: Context) {
             is LoginOutcome.UnusableSession ->
                 Toast.makeText(
                     context,
-                    "Signed in, but the server address could not be used",
+                    context.getString(R.string.signed_in_but_host_missing),
                     Toast.LENGTH_LONG
                 ).show()
         }

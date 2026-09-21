@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.ui.components
 
 import androidx.compose.foundation.layout.Row
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -32,7 +34,7 @@ fun BrowseTopBar(
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = stringResource(R.string.back),
                 tint = MaterialTheme.colorScheme.onBackground
             )
         }

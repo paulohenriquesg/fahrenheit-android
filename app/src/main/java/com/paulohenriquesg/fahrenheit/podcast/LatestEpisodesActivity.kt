@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.podcast
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -108,7 +110,7 @@ fun LatestEpisodesScreen(libraryId: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Loading episodes...",
+                        text = stringResource(R.string.loading_episodes),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -119,7 +121,7 @@ fun LatestEpisodesScreen(libraryId: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Could not load recent episodes. Check the connection to your server.",
+                        text = stringResource(R.string.recent_episodes_load_failed),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -130,7 +132,7 @@ fun LatestEpisodesScreen(libraryId: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No recent episodes found",
+                        text = stringResource(R.string.no_recent_episodes_found),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

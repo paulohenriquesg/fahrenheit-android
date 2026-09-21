@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import android.os.Bundle
+import com.paulohenriquesg.fahrenheit.R
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,7 +46,7 @@ class MainActivity : ComponentActivity() {
         // An update handed to the system installer reports nothing back, so the
         // previous dispatch is judged here, once.
         if (AppUpdates.takePendingInstallOutcome(this) == PendingInstall.Outcome.Failed) {
-            Toast.makeText(this, "The last update did not install", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.update_did_not_install), Toast.LENGTH_LONG).show()
         }
 
         // Only from here: a player screen must never be interrupted by this.

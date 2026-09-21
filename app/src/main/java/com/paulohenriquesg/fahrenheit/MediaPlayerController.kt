@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit
 
 import android.net.Uri
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
@@ -169,7 +171,7 @@ fun MediaPlayerController(
                     disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             ) {
-                Icon(Icons.Filled.FastRewind, contentDescription = "Skip back 30 seconds")
+                Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.skip_back_30_seconds))
             }
 
             // Play/Pause (larger)
@@ -216,7 +218,7 @@ fun MediaPlayerController(
                     disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             ) {
-                Icon(Icons.Filled.Stop, contentDescription = "Stop")
+                Icon(Icons.Filled.Stop, contentDescription = stringResource(R.string.stop))
             }
 
             // Skip Forward 30s
@@ -239,7 +241,7 @@ fun MediaPlayerController(
                     disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             ) {
-                Icon(Icons.Filled.FastForward, contentDescription = "Skip forward 30 seconds")
+                Icon(Icons.Filled.FastForward, contentDescription = stringResource(R.string.skip_forward_30_seconds))
             }
         }
 
