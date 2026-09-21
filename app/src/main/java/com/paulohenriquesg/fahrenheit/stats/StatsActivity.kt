@@ -81,6 +81,10 @@ fun StatsScreen() {
                 .fillMaxSize()
                 .padding(horizontal = 48.dp, vertical = 16.dp)
         ) {
+            // A local the compiler can smart-cast: `stats` is a var from
+            // remember, which is why the branch below used to need !!.
+            val listening = stats
+
             if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -92,7 +96,7 @@ fun StatsScreen() {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            } else if (stats == null) {
+            } else if (listening == null) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -110,11 +114,11 @@ fun StatsScreen() {
                     // Total listening time
                     StatCard(
                         title = "Total Listening Time",
-                        value = formatTime(stats!!.totalTime.toLong())
+                        value = formatTime(listening.totalTime.toLong())
                     )
 
                     // Number of items
-                    stats!!.items.size.let { itemCount ->
+                    listening.items.size.let { itemCount ->
                         StatCard(
                             title = "Items Listened To",
                             value = "$itemCount ${if (itemCount == 1) "item" else "items"}"
@@ -122,7 +126,7 @@ fun StatsScreen() {
                     }
 
                     // Number of days tracked
-                    stats!!.days.size.let { dayCount ->
+                    listening.days.size.let { dayCount ->
                         StatCard(
                             title = "Days with Activity",
                             value = "$dayCount ${if (dayCount == 1) "day" else "days"}"
@@ -130,8 +134,8 @@ fun StatsScreen() {
                     }
 
                     // Average per day
-                    if (stats!!.days.isNotEmpty()) {
-                        val avgPerDay = (stats!!.totalTime / stats!!.days.size).toLong()
+                    if (listening.days.isNotEmpty()) {
+                        val avgPerDay = (listening.totalTime / listening.days.size).toLong()
                         StatCard(
                             title = "Average per Day",
                             value = formatTime(avgPerDay)
