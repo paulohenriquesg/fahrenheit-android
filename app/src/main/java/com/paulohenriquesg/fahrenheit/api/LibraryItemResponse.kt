@@ -158,12 +158,14 @@ data class Track(
     @SerializedName("metadata") val metadata: AudioFileMetadata
 )
 
+// Nullable throughout: the play session's copy of a library file omits fields
+// the item endpoint sends, and one class now serves both.
 data class LibraryFile(
-    @SerializedName("ino") val ino: String,
-    @SerializedName("metadata") val metadata: AudioFileMetadata,
-    @SerializedName("addedAt") val addedAt: Long,
-    @SerializedName("updatedAt") val updatedAt: Long,
-    @SerializedName("fileType") val fileType: String
+    @SerializedName("ino") val ino: String? = null,
+    @SerializedName("metadata") val metadata: AudioFileMetadata? = null,
+    @SerializedName("addedAt") val addedAt: Long? = null,
+    @SerializedName("updatedAt") val updatedAt: Long? = null,
+    @SerializedName("fileType") val fileType: String? = null
 )
 
 data class LibraryItemMetadata(
@@ -174,7 +176,7 @@ data class LibraryItemMetadata(
     @SerializedName("authors") val authors: List<Author>? = null,
     @SerializedName("narrators") val narrators: List<String>? = null,
     @SerializedName("series") val series: List<Series>? = null,
-    @SerializedName("genres") val genres: List<String>,
+    @SerializedName("genres") val genres: List<String>? = null,
     @SerializedName("publishedYear") val publishedYear: String?,
     @SerializedName("publishedDate") val publishedDate: String?,
     @SerializedName("publisher") val publisher: String?,
@@ -183,6 +185,16 @@ data class LibraryItemMetadata(
     @SerializedName("asin") val asin: String?,
     @SerializedName("language") val language: String?,
     @SerializedName("explicit") val explicit: Boolean,
+    // Podcast metadata: the same class serves both, so an item response keeps
+    // these instead of dropping them. itunesId and itunesArtistId are String:
+    // the server sends them quoted for some feeds and bare for others.
+    @SerializedName("author") val author: String? = null,
+    @SerializedName("releaseDate") val releaseDate: String? = null,
+    @SerializedName("feedUrl") val feedUrl: String? = null,
+    @SerializedName("imageUrl") val imageUrl: String? = null,
+    @SerializedName("itunesPageUrl") val itunesPageUrl: String? = null,
+    @SerializedName("itunesId") val itunesId: String? = null,
+    @SerializedName("itunesArtistId") val itunesArtistId: String? = null,
     // Minified API responses (string format)
     @SerializedName("authorName") val authorName: String? = null,
     @SerializedName("authorNameLF") val authorNameLF: String? = null,

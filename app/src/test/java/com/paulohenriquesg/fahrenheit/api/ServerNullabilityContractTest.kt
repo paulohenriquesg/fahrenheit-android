@@ -23,11 +23,9 @@ class ServerNullabilityContractTest {
         LibraryItemsResponse::class to listOf("filterBy"),
         Media::class to listOf("coverPath"),
         User::class to listOf("itemTagsAccessible"),
+        // The play session used to carry its own copy of these classes; the
+        // entries it needed are the ones above, now that it shares them.
         PlayLibraryItemResponse::class to listOf("coverPath"),
-        PlayLibraryItemMediaMetadata::class to listOf("description"),
-        PlayLibraryItemLibraryItem::class to listOf("scanVersion"),
-        PlayLibraryItemMedia::class to listOf("coverPath"),
-        PlayLibraryItemEpisode::class to listOf("episodeType", "description", "pubDate"),
     )
 
     @Test
