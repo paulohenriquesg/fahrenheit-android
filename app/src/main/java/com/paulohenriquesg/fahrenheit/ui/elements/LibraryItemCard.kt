@@ -67,16 +67,8 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // For podcasts with recent episode, show episode title
-                // For books/podcasts without recent episode, show item title
-                val displayTitle = if (item.mediaType == "podcast" && item.recentEpisode != null) {
-                    item.recentEpisode.title ?: item.media.metadata.title
-                } else {
-                    item.media.metadata.title
-                }
-
                 MarqueeText(
-                    text = displayTitle,
+                    text = LibraryItemDisplay.title(item),
                     isFocused = isFocused,
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -84,7 +76,8 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
                 )
             }
         }
-        if (item.mediaType == "podcast" && item.numEpisodesIncomplete != null) {
+        val unfinishedBadge = LibraryItemDisplay.unfinishedBadge(item)
+        if (unfinishedBadge != null) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -94,7 +87,7 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
                 contentAlignment = Alignment.Center // Center the text within the badge
             ) {
                 Text(
-                    text = if (item.numEpisodesIncomplete > 99) "99+" else item.numEpisodesIncomplete.toString(),
+                    text = unfinishedBadge,
                     color = MaterialTheme.colorScheme.onError,
                     style = MaterialTheme.typography.bodySmall
                 )
