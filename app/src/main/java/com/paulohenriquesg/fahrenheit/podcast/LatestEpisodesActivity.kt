@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.RecentEpisodesResponse
 import com.paulohenriquesg.fahrenheit.api.RecentPodcastEpisode
@@ -187,6 +188,15 @@ fun EpisodeCard(
                 .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // The podcast's cover: a list of recent episodes is a list of
+            // different podcasts, and the cover is what tells them apart at a
+            // glance. Episodes have no art of their own on the server yet.
+            CoverImage(
+                itemId = episode.libraryItemId,
+                contentDescription = EpisodeRowDisplay.coverDescription(episode),
+                size = 88.dp
+            )
+
             Column(
                 modifier = Modifier
                     .weight(1f)
