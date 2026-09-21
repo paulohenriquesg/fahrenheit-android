@@ -1,7 +1,6 @@
 package com.paulohenriquesg.fahrenheit.update
 
 import android.content.Context
-import android.os.Build
 import com.paulohenriquesg.fahrenheit.BuildConfig
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import kotlinx.coroutines.Dispatchers
@@ -76,11 +75,7 @@ object AppUpdates {
 
     private fun deviceLanguage(context: Context): String {
         val locales = context.resources.configuration.locales
-        val locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !locales.isEmpty) {
-            locales.get(0)
-        } else {
-            @Suppress("DEPRECATION") context.resources.configuration.locale
-        }
+        val locale = locales.get(0)
         return locale?.toLanguageTag() ?: "en"
     }
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The pre-Android-12 half of data_extraction_rules.xml: backup is off in the
+  manifest, and these say the same thing for devices that read this file
+  instead. Nothing here belongs in a cloud backup - see the other file for why
+  the encrypted preferences could not survive a restore anyway.
+-->
+<full-backup-content>
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
+</full-backup-content>
