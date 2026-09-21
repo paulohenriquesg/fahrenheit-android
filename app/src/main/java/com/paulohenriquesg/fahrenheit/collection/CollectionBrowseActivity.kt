@@ -128,7 +128,7 @@ fun CollectionBrowseScreen(libraryId: String) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(collections) { collection ->
+                    items(collections, key = { it.id }) { collection ->
                         CollectionCard(
                             collection = collection,
                             onClick = {

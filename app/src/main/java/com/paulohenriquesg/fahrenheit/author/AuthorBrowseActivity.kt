@@ -127,7 +127,7 @@ fun AuthorBrowseScreen(libraryId: String) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(authors) { author ->
+                    items(authors, key = { it.id }) { author ->
                         AuthorCard(
                             author = author,
                             onClick = {

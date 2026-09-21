@@ -104,7 +104,7 @@ fun LibrarySelectionScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(libraries) { library ->
+            items(libraries, key = { it.id ?: it.name ?: "" }) { library ->
                 LibrarySelectionCard(
                     library = library,
                     isSelected = library.id == currentLibraryId,

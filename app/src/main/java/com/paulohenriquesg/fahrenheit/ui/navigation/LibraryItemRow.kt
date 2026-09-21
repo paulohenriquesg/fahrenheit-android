@@ -23,7 +23,7 @@ fun LibraryItemsRow(libraryItems: List<LibraryItem>, listState: LazyListState) {
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        items(libraryItems) { item ->
+        items(libraryItems, key = { it.id }) { item ->
             LibraryItemCard(item) { clickedItem ->
                 val intent = DetailActivity.createIntent(context, clickedItem.id)
                 context.startActivity(intent)

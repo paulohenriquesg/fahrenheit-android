@@ -29,7 +29,7 @@ fun ShelfRow(shelf: Shelf, onItemClick: (LibraryItem) -> Unit) {
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
             shelf.entities?.let { entities ->
-                items(entities) { item ->
+                items(entities, key = { it.id }) { item ->
                     LibraryItemCard(item = item, onClick = onItemClick)
                 }
             }

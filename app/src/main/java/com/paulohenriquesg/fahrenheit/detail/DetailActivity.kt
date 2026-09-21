@@ -201,7 +201,7 @@ class DetailActivity : ComponentActivity() {
                         Text(text = "Episodes", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                             val listState = rememberLazyListState()
                             LazyColumn(state = listState) {
-                                items(episodes) { episode ->
+                                items(episodes, key = { it.id }) { episode ->
                                     EpisodeCard(episode)
                                 }
                             }

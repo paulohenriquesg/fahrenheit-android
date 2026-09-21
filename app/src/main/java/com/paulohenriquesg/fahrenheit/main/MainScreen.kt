@@ -338,7 +338,7 @@ fun MainScreen(
                 item { Spacer(modifier = Modifier.height(40.dp)) }
 
                 // Library-specific menu items
-                items(menuItems) { menuItem ->
+                items(menuItems, key = { it.id }) { menuItem ->
                     // Create or retrieve FocusRequester for this menu item
                     val focusRequester = menuItemFocusRequesters.getOrPut(menuItem.id) {
                         FocusRequester()
@@ -361,7 +361,7 @@ fun MainScreen(
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
                 // Common items (Switch Library, Settings, Logout)
-                items(MenuConfig.commonItems) { menuItem ->
+                items(MenuConfig.commonItems, key = { it.id }) { menuItem ->
                     // Create or retrieve FocusRequester for this menu item
                     val focusRequester = menuItemFocusRequesters.getOrPut(menuItem.id) {
                         FocusRequester()
@@ -511,7 +511,7 @@ fun PersonalizedHomeView(shelves: List<Shelf>, libraryId: String?) {
         )
 
         androidx.compose.foundation.lazy.LazyColumn {
-            items(nonEmptyShelves) { shelf ->
+            items(nonEmptyShelves, key = { it.id }) { shelf ->
                 when (shelf.type) {
                     "episode" -> {
                         shelf.bookEntities?.let { books ->
