@@ -22,15 +22,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.RecentEpisodesResponse
 import com.paulohenriquesg.fahrenheit.api.RecentPodcastEpisode
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
 import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 
 class LatestEpisodesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,24 +70,22 @@ fun LatestEpisodesScreen(libraryId: String) {
     val context = LocalContext.current
     var episodes by remember { mutableStateOf<List<RecentPodcastEpisode>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var loadFailed by remember { mutableStateOf(false) }
 
     LaunchedEffect(libraryId) {
-        val apiClient = ApiClient.getApiService()
-        apiClient?.getRecentEpisodes(libraryId, limit = 50)?.enqueue(object : Callback<RecentEpisodesResponse> {
-            override fun onResponse(
-                call: Call<RecentEpisodesResponse>,
-                response: Response<RecentEpisodesResponse>
-            ) {
-                if (response.isSuccessful) {
-                    episodes = response.body()?.episodes ?: emptyList()
-                }
-                isLoading = false
-            }
+        val api = ApiClient.getBrowseApi()
+        if (api == null) {
+            loadFailed = true
+            isLoading = false
+            return@LaunchedEffect
+        }
 
-            override fun onFailure(call: Call<RecentEpisodesResponse>, t: Throwable) {
-                isLoading = false
-            }
-        })
+        BrowseRepository(api).recentEpisodes(libraryId)
+            .onSuccess { episodes = it; loadFailed = false }
+            // Without this the screen said "no recent episodes found" whether
+            // the library was empty or the response could not be read at all.
+            .onFailure { episodes = emptyList(); loadFailed = true }
+        isLoading = false
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -114,6 +110,17 @@ fun LatestEpisodesScreen(libraryId: String) {
                         text = "Loading episodes...",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (loadFailed) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Could not load recent episodes. Check the connection to your server.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             } else if (episodes.isEmpty()) {

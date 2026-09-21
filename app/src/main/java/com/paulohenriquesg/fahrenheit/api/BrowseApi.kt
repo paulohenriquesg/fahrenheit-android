@@ -30,6 +30,18 @@ interface BrowseApi {
     @GET("api/me/listening-stats")
     suspend fun getListeningStats(): ListeningStatsResponse
 
+    @GET("api/libraries/{libraryId}/recent-episodes")
+    suspend fun getRecentEpisodes(
+        @Path("libraryId") libraryId: String,
+        @Query("limit") limit: Int = 50
+    ): RecentEpisodesResponse
+
+    @GET("api/authors/{authorId}")
+    suspend fun getAuthor(
+        @Path("authorId") authorId: String,
+        @Query("include") include: String = "items"
+    ): AuthorDetailResponse
+
     @GET("api/libraries/{libraryId}/search")
     suspend fun searchLibraryItems(
         @Path("libraryId") libraryId: String,

@@ -20,14 +20,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.AuthorDetailResponse
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import com.paulohenriquesg.fahrenheit.ui.components.DetailHeader
 import com.paulohenriquesg.fahrenheit.ui.components.ItemsGrid
 import com.paulohenriquesg.fahrenheit.ui.elements.AuthorImage
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 
 @Composable
 fun AuthorDetailScreen(authorId: String) {
@@ -37,31 +35,17 @@ fun AuthorDetailScreen(authorId: String) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(authorId) {
-        val apiClient = ApiClient.getApiService()
-        if (apiClient == null) {
+        val api = ApiClient.getBrowseApi()
+        if (api == null) {
             errorMessage = "API client not initialized"
             isLoading = false
             return@LaunchedEffect
         }
 
-        apiClient.getAuthor(authorId).enqueue(object : Callback<AuthorDetailResponse> {
-            override fun onResponse(
-                call: Call<AuthorDetailResponse>,
-                response: Response<AuthorDetailResponse>
-            ) {
-                isLoading = false
-                if (response.isSuccessful) {
-                    authorDetail = response.body()
-                } else {
-                    errorMessage = "Failed to load author: ${response.code()}"
-                }
-            }
-
-            override fun onFailure(call: Call<AuthorDetailResponse>, t: Throwable) {
-                isLoading = false
-                errorMessage = "Error: ${t.message}"
-            }
-        })
+        BrowseRepository(api).author(authorId)
+            .onSuccess { authorDetail = it }
+            .onFailure { errorMessage = "Failed to load author: ${it.message}" }
+        isLoading = false
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

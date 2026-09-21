@@ -13,9 +13,6 @@ interface ApiService {
     @POST("login")
     fun login(@Body request: LoginRequest): Call<LoginResponse>
 
-    @GET("api/libraries/{libraryId}")
-    fun getLibrary(@Path("libraryId") libraryId: String): Call<Library>
-
     @GET("api/items/{itemId}")
     fun getLibraryItem(
         @Path("itemId") itemId: String,
@@ -63,28 +60,10 @@ interface ApiService {
         @Path("libraryItemId") libraryItemId: String,
     ): Call<MediaProgressResponse>
 
-    @GET("api/libraries/{libraryId}/search")
-    fun searchLibraryItems(
-        @Path("libraryId") libraryId: String,
-        @Query("q") query: String,
-        @Query("limit") limit: Int = 5
-    ): Call<SearchLibraryItemsResponse>
-
-    @GET("api/authors/{authorId}")
-    fun getAuthor(
-        @Path("authorId") authorId: String,
-        @Query("include") include: String = "items"
-    ): Call<AuthorDetailResponse>
-
     @GET("api/libraries/{libraryId}/series/{seriesId}")
     fun getSeries(
         @Path("libraryId") libraryId: String,
         @Path("seriesId") seriesId: String
     ): Call<Series>
 
-    @GET("api/libraries/{libraryId}/recent-episodes")
-    fun getRecentEpisodes(
-        @Path("libraryId") libraryId: String,
-        @Query("limit") limit: Int = 10
-    ): Call<RecentEpisodesResponse>
 }
