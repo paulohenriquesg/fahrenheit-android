@@ -42,9 +42,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.Chapter
+import com.paulohenriquesg.fahrenheit.player.PlaybackPosition
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 @Composable
 fun MediaPlayerController(
@@ -61,7 +61,7 @@ fun MediaPlayerController(
 ) {
     val context = LocalContext.current
     val mediaPlayer = remember { GlobalMediaPlayer.getInstance() }
-    var progress by remember { mutableStateOf(if (duration > 0) (currentTime / duration).toFloat() else 0f) }
+    var progress by remember { mutableStateOf(PlaybackPosition.fraction(currentTime, duration)) }
     var currentTimeState by remember { mutableStateOf(currentTime) }
     var totalTime by remember { mutableStateOf(duration) }
     var sliderSize by remember { mutableStateOf(IntSize.Zero) }
@@ -100,7 +100,7 @@ fun MediaPlayerController(
                     totalTime = mediaPlayer.duration / 1000.0
                 }
                 currentTimeState = currentTime
-                progress = if (totalTime > 0) (currentTime / totalTime).toFloat() else 0f
+                progress = PlaybackPosition.fraction(currentTime, totalTime)
                 android.util.Log.d("MediaPlayerController", "Seeking to position: ${(currentTime * 1000).toInt()}ms")
                 seekTo((currentTime * 1000).toInt()) // Seek to the currentTime position
                 onCurrentTimeUpdate(currentTime) // Notify parent of initial position
@@ -130,7 +130,7 @@ fun MediaPlayerController(
             coroutineScope.launch {
                 while (isPlaying && isPrepared) {
                     currentTimeState = mediaPlayer.currentPosition / 1000.0
-                    progress = if (totalTime > 0) (currentTimeState / totalTime).toFloat() else 0f
+                    progress = PlaybackPosition.fraction(currentTimeState, totalTime)
                     onCurrentTimeUpdate(currentTimeState)
                     delay(1000L)
                 }
@@ -152,10 +152,10 @@ fun MediaPlayerController(
             FilledTonalIconButton(
                 onClick = {
                     if (isPrepared) {
-                        val newPosition = (currentTimeState - 30.0).coerceAtLeast(0.0)
+                        val newPosition = PlaybackPosition.skip(currentTimeState, -SKIP_SECONDS, totalTime)
                         mediaPlayer.seekTo((newPosition * 1000).toInt())
                         currentTimeState = newPosition
-                        progress = if (totalTime > 0) (newPosition / totalTime).toFloat() else 0f
+                        progress = PlaybackPosition.fraction(newPosition, totalTime)
                         onCurrentTimeUpdate(newPosition)
                     }
                 },
@@ -222,10 +222,10 @@ fun MediaPlayerController(
             FilledTonalIconButton(
                 onClick = {
                     if (isPrepared) {
-                        val newPosition = (currentTimeState + 30.0).coerceAtMost(totalTime)
+                        val newPosition = PlaybackPosition.skip(currentTimeState, SKIP_SECONDS, totalTime)
                         mediaPlayer.seekTo((newPosition * 1000).toInt())
                         currentTimeState = newPosition
-                        progress = if (totalTime > 0) (newPosition / totalTime).toFloat() else 0f
+                        progress = PlaybackPosition.fraction(newPosition, totalTime)
                         onCurrentTimeUpdate(newPosition)
                     }
                 },
@@ -260,11 +260,8 @@ fun MediaPlayerController(
 
             val chapterColor = MaterialTheme.colorScheme.onSurfaceVariant
             Canvas(modifier = Modifier.matchParentSize()) {
-                chapters?.dropLast(1)?.forEach { chapter ->
-                    chapter.end?.let { end ->
-                        val percentage = (end / totalTime) * 100
-                        drawLineAtPercentage(percentage.toFloat(), sliderSize.width, 4.dp.toPx(), chapterColor)
-                    }
+                PlaybackPosition.chapterMarks(chapters, totalTime).forEach { percentage ->
+                    drawLineAtPercentage(percentage, sliderSize.width, 4.dp.toPx(), chapterColor)
                 }
             }
         }
@@ -273,12 +270,12 @@ fun MediaPlayerController(
             modifier = Modifier.padding(top = 8.dp)
         ) {
             Text(
-                text = "Current Time: ${formatTime(currentTimeState.toInt() * 1000)}",
+                text = "Current Time: ${PlaybackPosition.clock(currentTimeState)}",
                 modifier = Modifier.weight(1f)
                 , color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Total Time: ${formatTime(totalTime.toInt() * 1000)}",
+                text = "Total Time: ${PlaybackPosition.clock(totalTime)}",
                 modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -295,9 +292,5 @@ fun DrawScope.drawLineAtPercentage(percentage: Float, sliderWidth: Int, trackHei
     )
 }
 
-fun formatTime(milliseconds: Int): String {
-    val hours = (milliseconds / 1000) / 3600
-    val minutes = ((milliseconds / 1000) % 3600) / 60
-    val seconds = (milliseconds / 1000) % 60
-    return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
-}
+/** How far the skip buttons jump. */
+private const val SKIP_SECONDS = 30.0
