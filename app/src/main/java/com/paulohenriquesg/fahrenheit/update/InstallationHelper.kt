@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.update
 
 import android.content.Context
+import androidx.core.net.toUri
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -94,7 +95,7 @@ object InstallationHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
                 val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                    data = Uri.parse("package:${context.packageName}")
+                    data = "package:${context.packageName}".toUri()
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 context.startActivity(intent)
