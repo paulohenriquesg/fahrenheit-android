@@ -2,7 +2,7 @@ package com.paulohenriquesg.fahrenheit.player
 
 import android.content.Context
 import android.net.Uri
-import com.paulohenriquesg.fahrenheit.GlobalMediaPlayer
+import com.paulohenriquesg.fahrenheit.player.GlobalMediaPlayer
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.storage.UserPreferences

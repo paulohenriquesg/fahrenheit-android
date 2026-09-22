@@ -1,4 +1,4 @@
-package com.paulohenriquesg.fahrenheit
+package com.paulohenriquesg.fahrenheit.player
 
 import android.net.Uri
 import com.paulohenriquesg.fahrenheit.R
