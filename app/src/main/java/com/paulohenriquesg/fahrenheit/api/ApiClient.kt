@@ -39,12 +39,7 @@ object ApiClient {
             (hostValue.startsWith("http://") || hostValue.startsWith("https://"))
 
         if (!usable) {
-            apiService = null
-            libraryApi = null
-            browseApi = null
-            host = null
-            token = null
-            sessionManager = null
+            forget()
             sharedPreferencesHandler.clearPreferences()
             return SessionState.NeedsLogin
         }
@@ -62,6 +57,22 @@ object ApiClient {
             buildAuthenticatedClient(sessionManager!!, refreshVia(hostValue))
         ).create(BrowseApi::class.java)
         return SessionState.Ready
+    }
+
+    /**
+     * Drops the signed-in session. Clearing stored credentials is not enough
+     * on its own: the client built from them lives here, and kept working with
+     * the old token for as long as the process did.
+     */
+    fun clearSession() = forget()
+
+    private fun forget() {
+        apiService = null
+        libraryApi = null
+        browseApi = null
+        host = null
+        token = null
+        sessionManager = null
     }
 
     fun getApiService(): ApiService? {

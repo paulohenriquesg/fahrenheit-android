@@ -74,6 +74,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
+import com.paulohenriquesg.fahrenheit.GlobalMediaPlayer
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
@@ -310,7 +311,11 @@ fun MainScreen(
                 context.startActivity(intent)
             }
             MenuAction.LOGOUT -> {
+                // Storage, the client built from it, and anything still
+                // playing with the old token.
                 sharedPreferencesHandler.clearPreferences()
+                ApiClient.clearSession()
+                GlobalMediaPlayer.release()
                 val intent = Intent(context, LoginActivity::class.java)
                 context.startActivity(intent)
                 (context as? Activity)?.finish()

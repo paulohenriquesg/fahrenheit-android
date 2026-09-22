@@ -23,16 +23,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Fahrenheit"
         android:usesCleartextTraffic="true">
+        <!-- Not exported: the launcher entry is LoginActivity, which sends the
+             user here once there is a session. Nothing outside the app has
+             business opening it. -->
         <activity
             android:name="com.paulohenriquesg.fahrenheit.main.MainActivity"
-            android:exported="true">
-<!--            <intent-filter>-->
-<!--                <action android:name="android.intent.action.MAIN" />-->
-
-<!--                <category android:name="android.intent.category.LAUNCHER" />-->
-<!--                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />-->
-<!--            </intent-filter>-->
-        </activity>
+            android:exported="false" />
 
         <activity
             android:name="com.paulohenriquesg.fahrenheit.login.LoginActivity"
