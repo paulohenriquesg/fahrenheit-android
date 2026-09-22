@@ -94,8 +94,8 @@ import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.elements.AuthorShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.SeriesShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.ShelfRow
-import com.paulohenriquesg.fahrenheit.ui.navigation.LibraryItemsFluid
-import com.paulohenriquesg.fahrenheit.ui.navigation.LibraryItemsRow
+import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsFluid
+import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsRow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import retrofit2.Call

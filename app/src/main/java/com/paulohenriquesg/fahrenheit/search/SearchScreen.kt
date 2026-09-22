@@ -31,7 +31,7 @@ import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
-import com.paulohenriquesg.fahrenheit.ui.navigation.LibraryItemsRow
+import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsRow
 import kotlinx.coroutines.delay
 
 @Composable
