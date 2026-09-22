@@ -74,7 +74,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import com.paulohenriquesg.fahrenheit.GlobalMediaPlayer
+import com.paulohenriquesg.fahrenheit.player.GlobalMediaPlayer
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
