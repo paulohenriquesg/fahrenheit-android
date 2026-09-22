@@ -100,4 +100,34 @@ class ApiClientInitializeTest {
 
         assertEquals(SessionState.Ready, ApiClient.initialize(app))
     }
+
+    // Signing out wipes stored credentials, but the client built from them
+    // lived in memory: it kept working, with the old token, for as long as the
+    // process did.
+    @Test
+    fun `signing out leaves nothing behind to make requests with`() {
+        store("http://abs.local:13378", "a-token")
+        ApiClient.initialize(app)
+        assertNotNull(ApiClient.getApiService())
+
+        ApiClient.clearSession()
+
+        assertNull(ApiClient.getApiService())
+        assertNull(ApiClient.getLibraryApi())
+        assertNull(ApiClient.getBrowseApi())
+        assertNull(ApiClient.getToken())
+    }
+
+    @Test
+    fun `signing back in builds a client again`() {
+        store("http://abs.local:13378", "a-token")
+        ApiClient.initialize(app)
+        ApiClient.clearSession()
+
+        store("http://abs.local:13378", "another-token")
+        val state = ApiClient.initialize(app)
+
+        assertEquals(SessionState.Ready, state)
+        assertNotNull(ApiClient.getApiService())
+    }
 }
