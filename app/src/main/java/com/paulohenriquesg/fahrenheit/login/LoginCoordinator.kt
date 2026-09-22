@@ -1,8 +1,8 @@
 package com.paulohenriquesg.fahrenheit.login
 
-import com.paulohenriquesg.fahrenheit.api.AuthSession
-import com.paulohenriquesg.fahrenheit.api.SessionManager
-import com.paulohenriquesg.fahrenheit.api.SessionState
+import com.paulohenriquesg.fahrenheit.auth.AuthSession
+import com.paulohenriquesg.fahrenheit.auth.SessionManager
+import com.paulohenriquesg.fahrenheit.auth.SessionState
 
 /** What signing in produced, so the UI only has to decide how to say it. */
 sealed interface LoginOutcome {

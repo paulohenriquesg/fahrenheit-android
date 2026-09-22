@@ -1,8 +1,5 @@
 package com.paulohenriquesg.fahrenheit.auth
 
-import com.paulohenriquesg.fahrenheit.api.AuthSession
-import com.paulohenriquesg.fahrenheit.api.SessionManager
-import com.paulohenriquesg.fahrenheit.api.SessionState
 import com.paulohenriquesg.fahrenheit.login.LoginCoordinator
 import com.paulohenriquesg.fahrenheit.login.LoginOutcome
 import kotlinx.coroutines.runBlocking

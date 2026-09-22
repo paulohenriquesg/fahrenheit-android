@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.api
 
 import com.google.gson.Gson
+import com.paulohenriquesg.fahrenheit.auth.toAuthSession
 import com.google.gson.GsonBuilder
 import com.paulohenriquesg.fahrenheit.TestFixtures
 import org.junit.Assert.assertEquals

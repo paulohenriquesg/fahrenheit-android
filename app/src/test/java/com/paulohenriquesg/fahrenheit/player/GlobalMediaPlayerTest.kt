@@ -1,4 +1,4 @@
-package com.paulohenriquesg.fahrenheit
+package com.paulohenriquesg.fahrenheit.player
 
 import org.junit.After
 import org.junit.Assert.assertNotSame

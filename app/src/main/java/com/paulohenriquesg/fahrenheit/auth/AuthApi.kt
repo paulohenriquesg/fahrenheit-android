@@ -1,6 +1,10 @@
-package com.paulohenriquesg.fahrenheit.api
+package com.paulohenriquesg.fahrenheit.auth
 
 import retrofit2.http.Body
+import com.paulohenriquesg.fahrenheit.api.ApiService
+import com.paulohenriquesg.fahrenheit.api.ServerStatus
+import com.paulohenriquesg.fahrenheit.api.LoginRequest
+import com.paulohenriquesg.fahrenheit.api.LoginResponse
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST

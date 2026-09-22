@@ -1,7 +1,7 @@
 package com.paulohenriquesg.fahrenheit.storage
 
 import android.content.Context
-import com.paulohenriquesg.fahrenheit.api.StoredCredentials
+import com.paulohenriquesg.fahrenheit.auth.StoredCredentials
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

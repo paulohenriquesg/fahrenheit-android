@@ -1,4 +1,4 @@
-package com.paulohenriquesg.fahrenheit.ui.navigation
+package com.paulohenriquesg.fahrenheit.ui.elements
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,7 +11,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
-import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemCard
 
 @Composable
 fun LibraryItemsRow(libraryItems: List<LibraryItem>, listState: LazyListState) {

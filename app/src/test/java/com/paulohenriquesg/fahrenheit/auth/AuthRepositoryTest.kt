@@ -1,8 +1,6 @@
 package com.paulohenriquesg.fahrenheit.auth
 
 import com.paulohenriquesg.fahrenheit.TestFixtures
-import com.paulohenriquesg.fahrenheit.api.AuthApi
-import com.paulohenriquesg.fahrenheit.api.AuthRepository
 import com.paulohenriquesg.fahrenheit.api.LoginRequest
 import com.paulohenriquesg.fahrenheit.api.LoginResponse
 import com.paulohenriquesg.fahrenheit.api.ServerStatus

@@ -1,4 +1,7 @@
-package com.paulohenriquesg.fahrenheit.api
+package com.paulohenriquesg.fahrenheit.auth
+
+import com.paulohenriquesg.fahrenheit.api.LoginRequest
+import com.paulohenriquesg.fahrenheit.api.LoginResponse
 
 /** The credentials a signed-in session needs, independent of how the server supplied them. */
 data class AuthSession(

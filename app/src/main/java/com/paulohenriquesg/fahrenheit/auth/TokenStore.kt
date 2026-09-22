@@ -1,4 +1,4 @@
-package com.paulohenriquesg.fahrenheit.api
+package com.paulohenriquesg.fahrenheit.auth
 
 /** The signed-in credentials, independent of how they are stored. */
 data class StoredCredentials(

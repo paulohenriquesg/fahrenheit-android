@@ -35,8 +35,8 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.tv.material3.MaterialTheme
-import com.paulohenriquesg.fahrenheit.GlobalMediaPlayer
-import com.paulohenriquesg.fahrenheit.MediaPlayerController
+import com.paulohenriquesg.fahrenheit.player.GlobalMediaPlayer
+import com.paulohenriquesg.fahrenheit.player.MediaPlayerController
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.player.ProgressSync
 import com.paulohenriquesg.fahrenheit.player.ResumePoint

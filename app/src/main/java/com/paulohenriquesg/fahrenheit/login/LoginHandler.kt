@@ -7,8 +7,8 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.MutableState
 import com.paulohenriquesg.fahrenheit.api.ApiClient
-import com.paulohenriquesg.fahrenheit.api.AuthRepository
-import com.paulohenriquesg.fahrenheit.api.SessionManager
+import com.paulohenriquesg.fahrenheit.auth.AuthRepository
+import com.paulohenriquesg.fahrenheit.auth.SessionManager
 import com.paulohenriquesg.fahrenheit.main.MainActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesTokenStore
