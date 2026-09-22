@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.api
 
 import okhttp3.mockwebserver.MockResponse
+import com.paulohenriquesg.fahrenheit.auth.SessionManager
+import com.paulohenriquesg.fahrenheit.auth.AuthSession
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.Request
 import org.junit.After

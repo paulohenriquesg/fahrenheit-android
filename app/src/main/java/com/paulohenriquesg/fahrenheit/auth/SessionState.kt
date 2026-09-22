@@ -1,4 +1,6 @@
-package com.paulohenriquesg.fahrenheit.api
+package com.paulohenriquesg.fahrenheit.auth
+
+import com.paulohenriquesg.fahrenheit.api.ApiClient
 
 /** What [ApiClient.initialize] found, so the caller can decide what to show. */
 enum class SessionState {

@@ -1,4 +1,4 @@
-package com.paulohenriquesg.fahrenheit.api
+package com.paulohenriquesg.fahrenheit.auth
 
 import android.util.Log
 import okhttp3.Authenticator

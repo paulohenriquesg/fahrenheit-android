@@ -1,4 +1,4 @@
-package com.paulohenriquesg.fahrenheit.api
+package com.paulohenriquesg.fahrenheit.auth
 
 /**
  * Single owner of the signed-in token state.

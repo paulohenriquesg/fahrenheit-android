@@ -1,8 +1,5 @@
 package com.paulohenriquesg.fahrenheit.auth
 
-import com.paulohenriquesg.fahrenheit.api.AuthSession
-import com.paulohenriquesg.fahrenheit.api.SessionManager
-import com.paulohenriquesg.fahrenheit.api.TokenRefreshAuthenticator
 import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response

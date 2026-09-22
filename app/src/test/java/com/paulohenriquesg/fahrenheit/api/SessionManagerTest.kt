@@ -1,6 +1,9 @@
 package com.paulohenriquesg.fahrenheit.api
 
 import org.junit.Assert.assertEquals
+import com.paulohenriquesg.fahrenheit.auth.StoredCredentials
+import com.paulohenriquesg.fahrenheit.auth.SessionManager
+import com.paulohenriquesg.fahrenheit.auth.AuthSession
 import org.junit.Assert.assertNull
 import org.junit.Test
 

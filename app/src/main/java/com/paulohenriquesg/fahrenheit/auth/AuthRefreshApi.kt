@@ -1,6 +1,7 @@
-package com.paulohenriquesg.fahrenheit.api
+package com.paulohenriquesg.fahrenheit.auth
 
 import retrofit2.Call
+import com.paulohenriquesg.fahrenheit.api.LoginResponse
 import retrofit2.http.Header
 import retrofit2.http.POST
 

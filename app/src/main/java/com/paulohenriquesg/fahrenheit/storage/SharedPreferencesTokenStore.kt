@@ -1,7 +1,7 @@
 package com.paulohenriquesg.fahrenheit.storage
 
-import com.paulohenriquesg.fahrenheit.api.StoredCredentials
-import com.paulohenriquesg.fahrenheit.api.TokenStore
+import com.paulohenriquesg.fahrenheit.auth.StoredCredentials
+import com.paulohenriquesg.fahrenheit.auth.TokenStore
 
 /**
  * The real [TokenStore], backed by encrypted SharedPreferences.

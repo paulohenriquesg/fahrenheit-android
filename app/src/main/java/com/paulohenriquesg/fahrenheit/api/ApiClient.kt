@@ -1,6 +1,13 @@
 package com.paulohenriquesg.fahrenheit.api
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.auth.toAuthSession
+import com.paulohenriquesg.fahrenheit.auth.TokenRefreshAuthenticator
+import com.paulohenriquesg.fahrenheit.auth.SessionState
+import com.paulohenriquesg.fahrenheit.auth.SessionManager
+import com.paulohenriquesg.fahrenheit.auth.AuthSession
+import com.paulohenriquesg.fahrenheit.auth.AuthRefreshApi
+import com.paulohenriquesg.fahrenheit.auth.AuthApi
 import com.google.gson.GsonBuilder
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesTokenStore

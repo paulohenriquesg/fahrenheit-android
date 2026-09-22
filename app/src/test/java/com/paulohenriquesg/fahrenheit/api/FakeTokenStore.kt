@@ -1,5 +1,8 @@
 package com.paulohenriquesg.fahrenheit.api
 
+import com.paulohenriquesg.fahrenheit.auth.StoredCredentials
+import com.paulohenriquesg.fahrenheit.auth.TokenStore
+
 /**
  * In-memory [TokenStore] so session tests need no Android framework.
  *

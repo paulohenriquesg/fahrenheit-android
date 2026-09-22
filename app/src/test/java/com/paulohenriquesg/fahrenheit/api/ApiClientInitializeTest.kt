@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.api
 
 import android.app.Application
+import com.paulohenriquesg.fahrenheit.auth.SessionState
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.storage.UserPreferences
 import org.junit.Assert.assertEquals
