@@ -105,6 +105,7 @@ fun MainScreen(
     var shouldRefreshLibrary by remember { mutableStateOf(false) }
     var seriesList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Series>()) }
     var collectionsList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Collection>()) }
+    var isLoadingHome by remember { mutableStateOf(false) }
     var isLoadingSeries by remember { mutableStateOf(false) }
     var isLoadingCollections by remember { mutableStateOf(false) }
     var isLoadingStats by remember { mutableStateOf(false) }
@@ -150,11 +151,16 @@ fun MainScreen(
                 view = MainView.HOME
                 highlightedMenuItemId = MainView.HOME.menuItemId
 
-                // Fetch data for new library
+                // Drop what belongs to the library being left: Home showed its
+                // shelves for the second or two the fetch took.
+                shelves = emptyList()
+                libraryItems = emptyList()
+                isLoadingHome = true
                 newLibrary.id?.let { libraryId ->
                     shelves = fetchPersonalizedView(libraryId)
                     libraryItems = fetchLibraryItems(libraryId)
                 }
+                isLoadingHome = false
             }
             shouldRefreshLibrary = false
         }
@@ -344,7 +350,7 @@ fun MainScreen(
                     )
                 }
                 when (view) {
-                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id)
+                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, isLoadingHome)
                     MainView.LIBRARY -> {
                         Column(
                             modifier = Modifier
@@ -448,13 +454,28 @@ fun getIconForMediaType(mediaType: String?): ImageVector {
 }
 
 @Composable
-fun PersonalizedHomeView(shelves: List<Shelf>, libraryId: String?) {
+fun PersonalizedHomeView(
+    shelves: List<Shelf>,
+    libraryId: String?,
+    isLoading: Boolean = false
+) {
     val context = LocalContext.current
     // Filter out empty shelves
     val nonEmptyShelves = shelves.filter {
         (it.bookEntities != null && it.bookEntities.isNotEmpty()) ||
         (it.authorEntities != null && it.authorEntities.isNotEmpty()) ||
         (it.seriesEntities != null && it.seriesEntities.isNotEmpty())
+    }
+
+    if (isLoading && nonEmptyShelves.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = stringResource(R.string.loading),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
     }
 
     Column(
