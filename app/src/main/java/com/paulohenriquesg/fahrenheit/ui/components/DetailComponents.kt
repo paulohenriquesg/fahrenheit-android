@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemCard
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 
 /**
  * Shared header component for detail screens (book/podcast, author, series).
@@ -100,7 +101,9 @@ fun ItemsGrid(
                 contentPadding = PaddingValues(8.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(itemList) { item ->
+                val keys = StableKeys.of(itemList) { i -> i.id }
+                items(itemList.size, key = { keys[it] }) { index ->
+                    val item = itemList[index]
                     LibraryItemCard(
                         item = item,
                         onClick = { onItemClick(item) }

@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.Series
 import com.paulohenriquesg.fahrenheit.api.Shelf
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 
 @Composable
 fun SeriesShelfRow(shelf: Shelf, series: List<Series>, onItemClick: (Series) -> Unit) {
@@ -28,8 +29,9 @@ fun SeriesShelfRow(shelf: Shelf, series: List<Series>, onItemClick: (Series) -> 
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
-            items(series) { seriesItem ->
-                SeriesCard(series = seriesItem, onClick = onItemClick)
+            val keys = StableKeys.of(series) { s -> s.id }
+            items(series.size, key = { keys[it] }) { index ->
+                SeriesCard(series = series[index], onClick = onItemClick)
             }
         }
     }

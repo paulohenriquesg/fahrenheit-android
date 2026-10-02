@@ -35,11 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
+import com.paulohenriquesg.fahrenheit.ui.Border
+import com.paulohenriquesg.fahrenheit.ui.Radius
+import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 
-private val Gap = 16.dp
 private val CoverSize = 44.dp
-private val PanelShape = RoundedCornerShape(10.dp)
 
 /**
  * The listening stats, as boxes: the headline figures in a row, then the week
@@ -54,8 +55,8 @@ fun StatsBoard(summary: StatsSummary, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(Gap)
+            .padding(horizontal = Space.screenH, vertical = Space.gap),
+        verticalArrangement = Arrangement.spacedBy(Space.gap)
     ) {
         Text(
             text = stringResource(R.string.listening_statistics),
@@ -63,7 +64,7 @@ fun StatsBoard(summary: StatsSummary, modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(Gap)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.gap)) {
             StatTile(
                 label = stringResource(R.string.stats_total_listened),
                 value = shortDuration(summary.totalListened),
@@ -91,7 +92,7 @@ fun StatsBoard(summary: StatsSummary, modifier: Modifier = Modifier) {
             )
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(Gap)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.gap)) {
             Panel(
                 title = stringResource(R.string.stats_by_weekday),
                 modifier = Modifier
@@ -121,20 +122,20 @@ private fun StatTile(label: String, value: String, modifier: Modifier = Modifier
     var focused by remember { mutableStateOf(false) }
     Column(
         modifier = modifier
-            .clip(PanelShape)
+            .clip(Radius.panel)
             .background(MaterialTheme.colorScheme.surface)
             .border(
-                width = if (focused) 3.dp else 1.dp,
+                width = if (focused) Border.focus else Border.rest,
                 color = if (focused) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.surfaceVariant
                 },
-                shape = PanelShape
+                shape = Radius.panel
             )
             .onFocusChanged { focused = it.isFocused }
             .focusable()
-            .padding(14.dp)
+            .padding(Space.inset)
     ) {
         Text(
             text = label,
@@ -163,10 +164,10 @@ private fun Panel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(PanelShape)
+            .clip(Radius.panel)
             .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, PanelShape)
-            .padding(14.dp)
+            .border(Border.rest, MaterialTheme.colorScheme.surfaceVariant, Radius.panel)
+            .padding(Space.inset)
     ) {
         Text(
             text = title,
@@ -259,14 +260,14 @@ private fun TopBooks(books: List<BookTime>) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
+                        .clip(Radius.bar)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(book.share.coerceIn(0f, 1f))
                             .fillMaxHeight()
-                            .clip(RoundedCornerShape(3.dp))
+                            .clip(Radius.bar)
                             .background(MaterialTheme.colorScheme.secondary)
                     )
                 }
@@ -285,12 +286,12 @@ private fun Sessions(sessions: List<SessionRow>) {
         )
         return
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(Gap)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Space.gap)) {
         sessions.forEach { session ->
             Row(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(PanelShape)
+                    .clip(Radius.panel)
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
                     .padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -298,7 +299,7 @@ private fun Sessions(sessions: List<SessionRow>) {
                 Box(
                     modifier = Modifier
                         .size(CoverSize)
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(Radius.inner)
                         .background(Color.Black.copy(alpha = 0.35f))
                 ) {
                     CoverImage(
