@@ -27,6 +27,7 @@ object ApiClient {
     private var sessionManager: SessionManager? = null
     private var libraryApi: LibraryApi? = null
     private var browseApi: BrowseApi? = null
+    private var podcastApi: PodcastApi? = null
 
     /**
      * Loads stored credentials and reports whether they are usable.
@@ -63,6 +64,10 @@ object ApiClient {
             hostValue,
             buildAuthenticatedClient(sessionManager!!, refreshVia(hostValue))
         ).create(BrowseApi::class.java)
+        podcastApi = buildRetrofit(
+            hostValue,
+            buildAuthenticatedClient(sessionManager!!, refreshVia(hostValue))
+        ).create(PodcastApi::class.java)
         return SessionState.Ready
     }
 
@@ -77,6 +82,7 @@ object ApiClient {
         apiService = null
         libraryApi = null
         browseApi = null
+        podcastApi = null
         host = null
         token = null
         sessionManager = null
@@ -91,6 +97,9 @@ object ApiClient {
 
     /** Browse endpoints as suspend calls; null until a session is active. */
     fun getBrowseApi(): BrowseApi? = browseApi
+
+    /** Podcast feed endpoints as suspend calls; null until a session is active. */
+    fun getPodcastApi(): PodcastApi? = podcastApi
 
     fun getToken(): String? {
         // Read through the session manager so a refreshed token is picked up.

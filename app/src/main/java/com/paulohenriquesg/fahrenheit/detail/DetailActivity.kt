@@ -54,6 +54,11 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.utils.RichText
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeOrder
+import com.paulohenriquesg.fahrenheit.podcast.FeedCheck
+import com.paulohenriquesg.fahrenheit.podcast.FeedCheckRow
+import com.paulohenriquesg.fahrenheit.podcast.FeedCheckState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.book.BookPlayerActivity
@@ -98,6 +103,9 @@ class DetailActivity : ComponentActivity() {
         var itemDetail by remember { mutableStateOf<LibraryItemResponse?>(null) }
         var expanded by remember { mutableStateOf(false) }
         var loadFailed by remember { mutableStateOf(false) }
+        var mayCheckFeed by remember { mutableStateOf(false) }
+        var feedCheck by remember { mutableStateOf<FeedCheckState>(FeedCheckState.Idle) }
+        val scope = rememberCoroutineScope()
 
         val context = LocalContext.current
 
@@ -110,6 +118,12 @@ class DetailActivity : ComponentActivity() {
             LibraryRepository(api).item(itemId)
                 .onSuccess { itemDetail = it; loadFailed = false }
                 .onFailure { loadFailed = true }
+        }
+
+        val feedUrl = itemDetail?.media?.metadata?.feedUrl
+        LaunchedEffect(feedUrl) {
+            val podcastApi = ApiClient.getPodcastApi() ?: return@LaunchedEffect
+            mayCheckFeed = FeedCheck(podcastApi).mayCheck(feedUrl)
         }
 
         if (loadFailed) {
@@ -195,6 +209,26 @@ class DetailActivity : ComponentActivity() {
                     Text(text = stringResource(R.string.play_book))
                 }
             } else {
+                if (mayCheckFeed) {
+                    FeedCheckRow(state = feedCheck, onCheck = {
+                        val podcastApi = ApiClient.getPodcastApi() ?: return@FeedCheckRow
+                        val libraryApi = ApiClient.getLibraryApi() ?: return@FeedCheckRow
+                        scope.launch {
+                            FeedCheck(podcastApi).run(
+                                podcastId = itemId,
+                                episodesBefore = itemDetail?.media?.episodes?.size ?: 0,
+                                onState = { feedCheck = it },
+                                reload = {
+                                    LibraryRepository(libraryApi).item(itemId).getOrNull()?.let {
+                                        itemDetail = it
+                                        it.media.episodes?.size
+                                    }
+                                }
+                            )
+                        }
+                    })
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
                 itemDetail?.media?.episodes?.let { EpisodeOrder.newestFirst(it) }
                     ?.let { episodes ->
                         if (episodes.isNotEmpty()) {
