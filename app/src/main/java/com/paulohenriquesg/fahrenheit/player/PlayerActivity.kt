@@ -53,6 +53,7 @@ class PlayerActivity : ComponentActivity() {
     private var controller by mutableStateOf<MediaController?>(null)
     private var connecting: ListenableFuture<MediaController>? = null
     private var connectFailed by mutableStateOf(false)
+    private lateinit var start: PlayerStart
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,6 +66,9 @@ class PlayerActivity : ComponentActivity() {
             finish()
             return
         }
+        // auto_play is a request to start, once: not again when this screen
+        // comes back, and not after a configuration change recreates it.
+        start = PlayerStart(autoPlay = autoPlay && savedInstanceState == null)
 
         setContent {
             FahrenheitTheme {
@@ -76,7 +80,7 @@ class PlayerActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
-                    Player(itemId, episodeId, autoPlay)
+                    Player(itemId, episodeId)
                 }
             }
         }
@@ -100,9 +104,8 @@ class PlayerActivity : ComponentActivity() {
     }
 
     @androidx.compose.runtime.Composable
-    private fun Player(itemId: String, episodeId: String?, autoPlay: Boolean) {
+    private fun Player(itemId: String, episodeId: String?) {
         var nowPlaying by remember { mutableStateOf<NowPlaying?>(null) }
-        var progress by remember { mutableStateOf<MediaProgressResponse?>(null) }
         var failed by remember { mutableStateOf(false) }
         var currentTime by remember { mutableDoubleStateOf(0.0) }
 
@@ -110,9 +113,6 @@ class PlayerActivity : ComponentActivity() {
             val api = ApiClient.getLibraryApi()
             val item = api?.let { LibraryRepository(it).item(itemId).getOrNull() }
             val serverFormat = SharedPreferencesHandler(this@PlayerActivity).getUserPreferences().dateFormat
-            // Progress first: the queue is loaded once both are here, and a
-            // position arriving after it would be ignored.
-            progress = savedProgress(itemId, episodeId)
             nowPlaying = item?.let { NowPlaying.of(it, episodeId, System.currentTimeMillis(), serverFormat) }
             failed = nowPlaying == null
             if (episodeId != null) openSession(itemId, episodeId)
@@ -123,7 +123,9 @@ class PlayerActivity : ComponentActivity() {
         var ready by remember(connected, playing) { mutableStateOf(false) }
         LaunchedEffect(connected, playing) {
             if (connected == null || playing == null) return@LaunchedEffect
-            ready = PlayerStart.begin(connected, playing, progress, autoPlay) { ApiClient.generateFullUrl(it) }
+            // The saved position is read when it is needed, not when the
+            // screen opened: by then it may have been listened past elsewhere.
+            ready = start.begin(connected, playing, { savedProgress(itemId, episodeId) }) { ApiClient.generateFullUrl(it) }
             if (!ready) failed = true
         }
         when {

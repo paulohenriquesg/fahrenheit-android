@@ -11,6 +11,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlinx.coroutines.runBlocking
 import org.junit.runner.RunWith
 
 /** What the player screen does with the service it finds: reattach, or load. */
@@ -48,7 +49,7 @@ class PlayerStartTest {
 
     @Test
     fun `a book not yet queued starts at its saved position, waiting for play`() {
-        assertTrue(PlayerStart.begin(player, book("b1"), savedAt(4500.0), autoPlay = false, resolve))
+        assertTrue(runBlocking { PlayerStart(autoPlay = false).begin(player, book("b1"), { savedAt(4500.0) }, resolve) })
 
         assertEquals(2, player.mediaItemCount)
         assertEquals(1, player.currentMediaItemIndex)
@@ -58,7 +59,7 @@ class PlayerStartTest {
 
     @Test
     fun `opened to play, it plays`() {
-        PlayerStart.begin(player, book("b1"), null, autoPlay = true, resolve)
+        runBlocking { PlayerStart(autoPlay = true).begin(player, book("b1"), { null }, resolve) }
 
         assertTrue(player.playWhenReady)
     }
@@ -66,10 +67,10 @@ class PlayerStartTest {
     // Review Focus 3.
     @Test
     fun `the book already playing is left where it is`() {
-        PlayerStart.begin(player, book("b1"), savedAt(4500.0), autoPlay = true, resolve)
+        runBlocking { PlayerStart(autoPlay = true).begin(player, book("b1"), { savedAt(4500.0) }, resolve) }
 
         // Back to the screen: the server's copy is older than what is playing.
-        assertTrue(PlayerStart.begin(player, book("b1"), savedAt(100.0), autoPlay = false, resolve))
+        assertTrue(runBlocking { PlayerStart(autoPlay = false).begin(player, book("b1"), { savedAt(100.0) }, resolve) })
 
         assertEquals(1, player.currentMediaItemIndex)
         assertEquals(900_000L, player.currentPosition)
@@ -78,9 +79,9 @@ class PlayerStartTest {
 
     @Test
     fun `another book replaces what was queued`() {
-        PlayerStart.begin(player, book("b1"), savedAt(4500.0), autoPlay = false, resolve)
+        runBlocking { PlayerStart(autoPlay = false).begin(player, book("b1"), { savedAt(4500.0) }, resolve) }
 
-        PlayerStart.begin(player, book("b2"), null, autoPlay = false, resolve)
+        runBlocking { PlayerStart(autoPlay = false).begin(player, book("b2"), { null }, resolve) }
 
         assertTrue(QueuedFile.of(player.currentMediaItem)!!.isFor("b2", null))
         assertEquals(0, player.currentMediaItemIndex)
@@ -88,19 +89,57 @@ class PlayerStartTest {
 
     @Test
     fun `another episode of the same podcast replaces the one queued`() {
-        PlayerStart.begin(player, episode("e1"), null, autoPlay = false, resolve)
+        runBlocking { PlayerStart(autoPlay = false).begin(player, episode("e1"), { null }, resolve) }
 
-        PlayerStart.begin(player, episode("e2"), null, autoPlay = false, resolve)
+        runBlocking { PlayerStart(autoPlay = false).begin(player, episode("e2"), { null }, resolve) }
 
         assertTrue(QueuedFile.of(player.currentMediaItem)!!.isFor("p1", "e2"))
     }
 
     @Test
     fun `nothing to play leaves the queue alone`() {
-        PlayerStart.begin(player, book("b1"), null, autoPlay = false, resolve)
+        runBlocking { PlayerStart(autoPlay = false).begin(player, book("b1"), { null }, resolve) }
 
-        assertFalse(PlayerStart.begin(player, book("b2", timeline = null), null, autoPlay = false, resolve))
+        assertFalse(runBlocking { PlayerStart(autoPlay = false).begin(player, book("b2", timeline = null), { null }, resolve) })
 
         assertTrue(QueuedFile.of(player.currentMediaItem)!!.isFor("b1", null))
+    }
+
+    // Review: Back from another screen to a player whose book is no longer
+    // queued re-queued it from the position read when the screen first
+    // opened, and played it - writing that stale position over the real one.
+    @Test
+    fun `coming back to a book no longer queued re-reads its position and does not play`() = runBlocking {
+        val start = PlayerStart(autoPlay = true)
+        start.begin(player, book("b1"), { savedAt(600.0) }, resolve)
+        assertTrue(player.playWhenReady)
+        // Listened elsewhere meanwhile; the queue was stopped and emptied.
+        player.stop()
+        player.clearMediaItems()
+
+        start.begin(player, book("b1"), { savedAt(2400.0) }, resolve)
+
+        assertEquals(0, player.currentMediaItemIndex)
+        assertEquals(2_400_000L, player.currentPosition)
+        assertFalse(player.playWhenReady)
+    }
+
+    @Test
+    fun `a book queued without play waits, even over one that was playing`() = runBlocking {
+        PlayerStart(autoPlay = true).begin(player, book("b1"), { null }, resolve)
+
+        PlayerStart(autoPlay = false).begin(player, book("b2"), { null }, resolve)
+
+        assertFalse(player.playWhenReady)
+    }
+
+    @Test
+    fun `the saved position is not asked for when reattaching`() = runBlocking {
+        PlayerStart(autoPlay = false).begin(player, book("b1"), { savedAt(4500.0) }, resolve)
+        var asked = false
+
+        PlayerStart(autoPlay = false).begin(player, book("b1"), { asked = true; null }, resolve)
+
+        assertFalse(asked)
     }
 }
