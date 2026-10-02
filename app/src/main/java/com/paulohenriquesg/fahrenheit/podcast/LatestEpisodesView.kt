@@ -43,6 +43,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.fillMaxWidth
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -53,6 +64,22 @@ fun LatestEpisodesView(libraryId: String) {
     var loadFailed by remember { mutableStateOf(false) }
     // The server decides how a date is written and says so at login.
     val serverDateFormat = remember { SharedPreferencesHandler(context).getUserPreferences().dateFormat }
+    // What has been heard (#78): one GET /api/me, read again each time the
+    // screen comes back, e.g. from the player.
+    var heard by remember { mutableStateOf<Map<String, EpisodeProgress>>(emptyMap()) }
+    var resumes by remember { mutableIntStateOf(0) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumes++
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(resumes) {
+        val podcastApi = ApiClient.getPodcastApi() ?: return@LaunchedEffect
+        runCatching { podcastApi.me() }.onSuccess { heard = EpisodeProgress.byEpisode(it.mediaProgress.orEmpty()) }
+    }
 
     LaunchedEffect(libraryId) {
         val api = ApiClient.getBrowseApi()
@@ -143,6 +170,7 @@ fun LatestEpisodesView(libraryId: String) {
                             EpisodeCard(
                                 episode = recentEpisode,
                                 serverDateFormat = serverDateFormat,
+                                progress = heard[recentEpisode.id],
                                 onClick = {
                                     context.startActivity(latestEpisodeIntent(context, recentEpisode))
                                 }
@@ -160,7 +188,8 @@ fun LatestEpisodesView(libraryId: String) {
 fun EpisodeCard(
     episode: RecentPodcastEpisode,
     onClick: () -> Unit,
-    serverDateFormat: String? = null
+    serverDateFormat: String? = null,
+    progress: EpisodeProgress? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
@@ -214,27 +243,54 @@ fun EpisodeCard(
                 // Podcast name, and when the episode came out: without a date
                 // a new episode looked exactly like one from March.
                 val published = EpisodeRowDisplay.published(episode, serverFormat = serverDateFormat)
-                Text(
-                    text = listOfNotNull(
-                        episode.podcast?.metadata?.title?.takeIf { it.isNotBlank() },
-                        published.takeIf { it.isNotBlank() },
-                        episode.duration?.takeIf { it > 0 }?.let { shortDuration(it) }
-                    ).joinToString("  ·  "),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                // Episode description
-                episode.description?.let { desc ->
+                val inProgress = progress as? EpisodeProgress.InProgress
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = RichText.fromHtml(desc),
-                        style = MaterialTheme.typography.bodySmall,
+                        text = listOfNotNull(
+                            episode.podcast?.metadata?.title?.takeIf { it.isNotBlank() },
+                            published.takeIf { it.isNotBlank() },
+                            episode.duration?.takeIf { it > 0 }?.let { shortDuration(it) },
+                            // The same format as the length beside it.
+                            inProgress?.let { "${shortDuration(it.secondsLeft)} left" }
+                        ).joinToString("  ·  "),
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
+                    // Marked, not hidden or struck through (#78).
+                    if (progress == EpisodeProgress.Heard) {
+                        Spacer(Modifier.width(12.dp))
+                        Icon(
+                            Icons.Filled.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Heard",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                if (inProgress != null) {
+                    ProgressBar(inProgress.fraction)
+                } else {
+                    // Episode description; the bar takes its place on a
+                    // half-heard episode, as the card's height is fixed.
+                    episode.description?.let { desc ->
+                        Text(
+                            text = RichText.fromHtml(desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }

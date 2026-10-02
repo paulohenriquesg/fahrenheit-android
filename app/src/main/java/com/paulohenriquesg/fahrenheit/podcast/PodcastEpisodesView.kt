@@ -180,7 +180,7 @@ object EpisodeRowLabel {
 
 /** How far into a half-heard episode the listener is. */
 @Composable
-private fun ProgressBar(fraction: Double) {
+internal fun ProgressBar(fraction: Double) {
     Box(
         modifier = Modifier
             .padding(top = 4.dp)

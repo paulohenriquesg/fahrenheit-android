@@ -36,4 +36,28 @@ class EpisodeCardTest {
         compose.onNodeWithContentDescription("The Show").assertIsDisplayed()
         compose.onNodeWithText("Episode 42").assertIsDisplayed()
     }
+
+    @Test
+    fun `a heard episode is marked heard`() {
+        compose.setContent { EpisodeCard(episode = episode, onClick = {}, progress = EpisodeProgress.Heard) }
+
+        compose.onNodeWithText("Heard").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a half-heard episode says how long is left`() {
+        compose.setContent {
+            EpisodeCard(episode = episode, onClick = {}, progress = EpisodeProgress.InProgress(0.4, 840.0))
+        }
+
+        compose.onNodeWithText("14 min left", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `an unplayed episode carries neither`() {
+        compose.setContent { EpisodeCard(episode = episode, onClick = {}) }
+
+        compose.onNodeWithText("Heard").assertDoesNotExist()
+        compose.onNodeWithText("left", substring = true).assertDoesNotExist()
+    }
 }

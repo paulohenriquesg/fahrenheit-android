@@ -21,6 +21,15 @@ sealed interface EpisodeProgress {
                 .toMap()
 
         /**
+         * Every episode, by episode id, whatever its podcast: for lists that
+         * mix podcasts, like Latest Episodes. Episode ids are unique on their own.
+         */
+        fun byEpisode(progress: List<MediaProgressResponse>): Map<String, EpisodeProgress> =
+            progress.filter { it.episodeId != null }
+                .mapNotNull { p -> of(p)?.let { p.episodeId!! to it } }
+                .toMap()
+
+        /**
          * The episode to resume: the one played most recently and not finished,
          * among those the server still holds.
          */
