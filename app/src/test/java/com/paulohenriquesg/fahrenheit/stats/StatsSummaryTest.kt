@@ -137,6 +137,25 @@ class StatsSummaryTest {
     }
 
     @Test
+    fun `two sittings with the same book are one row, with the time added up`() {
+        // The server returns sessions, not books: picking a book up twice is two
+        // of them, and a strip repeating one cover says nothing.
+        val summary = StatsSummary.of(
+            stats(
+                recentSessions = listOf(
+                    session("a", "Hail Mary", updatedAt = 100, libraryItemId = "li_hm"),
+                    session("b", "Hail Mary", updatedAt = 300, libraryItemId = "li_hm"),
+                    session("c", "Carl", updatedAt = 200, libraryItemId = "li_carl")
+                )
+            )
+        )
+
+        assertEquals(listOf("Hail Mary", "Carl"), summary.recentSessions.map { it.title })
+        assertEquals(120.0, summary.recentSessions.first().seconds, 0.001)
+        assertEquals(300L, summary.recentSessions.first().updatedAt)
+    }
+
+    @Test
     fun `recent sessions are newest first, and only a few of them`() {
         val summary = StatsSummary.of(
             stats(
@@ -177,10 +196,15 @@ class StatsSummaryTest {
         assertEquals(emptyList<SessionRow>(), summary.recentSessions)
     }
 
-    private fun session(id: String, title: String?, updatedAt: Long) = ListeningSession(
+    private fun session(
+        id: String,
+        title: String?,
+        updatedAt: Long,
+        libraryItemId: String = "li_$id"
+    ) = ListeningSession(
         id = id,
         userId = "u",
-        libraryItemId = "li_$id",
+        libraryItemId = libraryItemId,
         mediaType = "book",
         displayTitle = title,
         timeListening = 60.0,

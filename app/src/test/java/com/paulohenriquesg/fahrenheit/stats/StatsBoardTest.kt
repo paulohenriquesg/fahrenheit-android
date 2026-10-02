@@ -59,7 +59,7 @@ class StatsBoardTest {
         compose.onNodeWithText("181 h").assertIsDisplayed()
         compose.onNodeWithText("Today").assertIsDisplayed()
         compose.onNodeWithText("24 min").assertIsDisplayed()
-        compose.onNodeWithText("Books touched").assertIsDisplayed()
+        compose.onNodeWithText("Titles touched").assertIsDisplayed()
         compose.onNodeWithText("38").assertIsDisplayed()
         compose.onNodeWithText("Days with activity").assertIsDisplayed()
         compose.onNodeWithText("83").assertIsDisplayed()
@@ -82,7 +82,7 @@ class StatsBoardTest {
 
         compose.onNodeWithText("Most listened").assertIsDisplayed()
         compose.onNodeWithText("21 h").assertIsDisplayed()
-        compose.onNodeWithText("Recent sessions").assertIsDisplayed()
+        compose.onNodeWithText("Recently listened").assertIsDisplayed()
         compose.onNodeWithText("38 min").assertIsDisplayed()
         // The same book is both the most listened and the latest session, which
         // is what listening to one book looks like.
@@ -107,6 +107,6 @@ class StatsBoardTest {
             Box(modifier = Modifier.fillMaxWidth().requiredHeight(300.dp)) { StatsBoard(summary) }
         }
 
-        compose.onNodeWithText("Recent sessions").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Recently listened").performScrollTo().assertIsDisplayed()
     }
 }

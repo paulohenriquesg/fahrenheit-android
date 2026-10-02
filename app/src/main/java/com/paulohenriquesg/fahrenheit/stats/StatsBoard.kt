@@ -75,7 +75,7 @@ fun StatsBoard(summary: StatsSummary, modifier: Modifier = Modifier) {
                 modifier = Modifier.weight(1f)
             )
             StatTile(
-                label = stringResource(R.string.stats_books_touched),
+                label = stringResource(R.string.stats_titles_touched),
                 value = summary.booksTouched.toString(),
                 modifier = Modifier.weight(1f)
             )

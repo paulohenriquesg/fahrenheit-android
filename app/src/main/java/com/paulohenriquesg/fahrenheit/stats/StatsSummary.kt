@@ -100,18 +100,25 @@ data class StatsSummary(
             }
         }
 
+        /**
+         * The latest books, not the latest sessions: the server returns one
+         * session per sitting, so picking a book up twice would otherwise fill
+         * the row with the same cover.
+         */
         private fun sessionsOf(stats: ListeningStatsResponse): List<SessionRow> =
             stats.recentSessions.orEmpty()
-                .sortedByDescending { it.updatedAt }
-                .take(RECENT_SESSIONS)
-                .map { session ->
+                .groupBy { it.libraryItemId }
+                .map { (libraryItemId, sittings) ->
+                    val latest = sittings.maxBy { it.updatedAt }
                     SessionRow(
-                        id = session.id,
-                        libraryItemId = session.libraryItemId,
-                        title = session.displayTitle ?: session.libraryItemId,
-                        seconds = session.timeListening,
-                        updatedAt = session.updatedAt
+                        id = latest.id,
+                        libraryItemId = libraryItemId,
+                        title = latest.displayTitle ?: libraryItemId,
+                        seconds = sittings.sumOf { it.timeListening },
+                        updatedAt = latest.updatedAt
                     )
                 }
+                .sortedByDescending { it.updatedAt }
+                .take(RECENT_SESSIONS)
     }
 }
