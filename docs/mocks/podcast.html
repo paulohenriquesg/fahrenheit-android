@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Podcast screen mocks</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+  /* Colours are the app's real Material 3 dark roles, not a palette of my own,
+     so these frames look like what the stick actually renders. */
+  :root {
+    --bg: #0F0D13;
+    --surface: #1C1B1F;
+    --surface-2: #211F26;
+    --variant: #49454F;
+    --on-surface: #E6E1E5;
+    --on-variant: #CAC4D0;
+    --primary: #D0BCFF;
+    --on-primary: #2A1E3F;
+    --secondary: #CCC2DC;
+    --font: Manrope, "Avenir Next", system-ui, sans-serif;
+    /* px = dp x 2, the density these sticks report */
+    --gap: 32px; --inset: 28px; --radius: 20px; --rest: 2px; --focus: 6px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #07070A; color: var(--on-surface); font-family: var(--font); }
+  .page { padding: 40px 40px 100px; max-width: 1180px; }
+  h1 { font-size: 30px; font-weight: 800; margin: 0 0 8px; }
+  .lede { color: var(--on-variant); font-size: 15px; line-height: 1.6; margin: 0 0 14px; }
+  .lede code { background: #17161B; padding: 1px 5px; border-radius: 4px; }
+  .scale-note { color: #8A8694; font-size: 13px; margin: 0 0 36px; }
+  section { margin-bottom: 56px; }
+  h2 { font-size: 19px; font-weight: 700; margin: 0 0 6px; }
+  .why { color: var(--on-variant); font-size: 14.5px; line-height: 1.6; margin: 0 0 14px; }
+  .why b { color: var(--on-surface); }
+  .shell { width: 960px; height: 540px; overflow: hidden; border-radius: 10px; border: 1px solid #2A2831; }
+  .tv { width: 1920px; height: 1080px; transform: scale(0.5); transform-origin: top left; background: var(--bg); position: relative; }
+  .ic { width: 40px; height: 40px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .ic-s { width: 32px; height: 32px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; }
+
+  /* the rail: #58 */
+  .rail { position: absolute; left: 0; top: 0; bottom: 0; width: 112px; background: var(--surface); border-right: var(--rest) solid var(--variant); display: flex; flex-direction: column; align-items: center; padding: 36px 0; gap: 30px; z-index: 3; }
+  .rail.wide { width: 420px; align-items: stretch; padding: 36px 24px; }
+  .rail .row { display: flex; align-items: center; gap: 22px; height: 72px; padding: 0 16px; border-radius: 14px; color: var(--on-variant); }
+  .rail .row .lab { font-size: 30px; font-weight: 600; white-space: nowrap; }
+  .rail .row.on { background: var(--primary); color: var(--on-primary); }
+  .rail .row.foc { outline: var(--focus) solid var(--primary); background: var(--surface-2); color: var(--on-surface); }
+  .rail .slot { width: 64px; height: 64px; border-radius: 14px; display: grid; place-items: center; color: var(--on-variant); flex: none; }
+  .rail .slot.on { background: var(--primary); color: var(--on-primary); }
+
+  .stage { position: absolute; left: 112px; right: 0; top: 0; bottom: 0; padding: 48px 64px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; }
+  .topbar h3 { font-size: 56px; font-weight: 800; margin: 0; letter-spacing: -0.02em; }
+  .topbar .right { display: flex; align-items: center; gap: 28px; color: var(--on-variant); font-size: 28px; }
+
+  .shelf { margin-bottom: 40px; }
+  .shelf h4 { font-size: 32px; font-weight: 700; margin: 0 0 20px; color: var(--on-surface); }
+  .covers { display: flex; gap: var(--gap); }
+  .cover { width: 236px; flex: none; }
+  .art { width: 236px; height: 236px; border-radius: 12px; background: linear-gradient(150deg, #332C44, #1A1721); position: relative; overflow: hidden; }
+  .cover.foc .art { outline: var(--focus) solid var(--primary); outline-offset: 4px; }
+  .cover.foc { transform: translateY(-6px); }
+  .art .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: rgba(0,0,0,.55); }
+  .art .prog i { display: block; height: 100%; background: var(--primary); }
+  .cover .t { font-size: 26px; font-weight: 600; margin-top: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cover .a { font-size: 23px; color: var(--on-variant); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cover.foc .t { color: var(--primary); }
+
+  /* detail */
+  .detail { display: flex; gap: 56px; }
+  .detail .big { width: 440px; height: 440px; border-radius: 16px; background: linear-gradient(150deg, #3A3150, #191620); flex: none; }
+  .meta h3 { font-size: 60px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.02em; line-height: 1.05; }
+  .meta .by { font-size: 30px; color: var(--on-variant); margin-bottom: 10px; }
+  .chips { display: flex; gap: 16px; margin: 22px 0 28px; flex-wrap: wrap; }
+  .chip { font-size: 24px; color: var(--on-variant); border: var(--rest) solid var(--variant); border-radius: 999px; padding: 8px 20px; }
+  .desc { font-size: 28px; line-height: 1.5; color: var(--on-variant); max-width: 1000px; }
+  .actions { display: flex; gap: var(--gap); margin-bottom: 28px; }
+  .btn { font-size: 28px; font-weight: 700; padding: 20px 36px; border-radius: 14px; background: var(--surface); color: var(--on-surface); border: var(--rest) solid var(--variant); display: flex; align-items: center; gap: 14px; }
+  .btn.pri { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+  .btn.foc { outline: var(--focus) solid var(--primary); outline-offset: 4px; }
+
+  /* player */
+  .player { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 64px 96px 72px; }
+  .player .sheen { position: absolute; inset: 0; background: linear-gradient(180deg, #241F30 0%, #0F0D13 62%); }
+  .ptop { position: relative; display: flex; gap: 48px; align-items: flex-end; margin-bottom: 56px; }
+  .ptop .art { width: 320px; height: 320px; border-radius: 16px; }
+  .ptop h3 { font-size: 54px; font-weight: 800; margin: 0 0 14px; }
+  .ptop .ch { font-size: 32px; color: var(--on-variant); }
+  .scrub { position: relative; height: 14px; border-radius: 7px; background: var(--variant); margin-bottom: 18px; }
+  .scrub i { position: absolute; left: 0; top: 0; bottom: 0; width: 41%; border-radius: 7px; background: var(--primary); }
+  .scrub .mk { position: absolute; top: -6px; width: 3px; height: 26px; background: rgba(230,225,229,.55); }
+  .scrub .knob { position: absolute; left: 41%; top: -9px; width: 32px; height: 32px; border-radius: 50%; background: var(--primary); transform: translateX(-50%); outline: var(--focus) solid rgba(208,188,255,.35); }
+  .times { position: relative; display: flex; justify-content: space-between; font-size: 26px; color: var(--on-variant); margin-bottom: 40px; font-variant-numeric: tabular-nums; }
+  .transport { position: relative; display: flex; gap: var(--gap); align-items: center; }
+  .tbtn { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: var(--rest) solid var(--variant); color: var(--on-surface); }
+  .tbtn.pri { width: 120px; height: 120px; background: var(--primary); color: var(--on-primary); border-color: transparent; }
+  .tbtn.foc { outline: var(--focus) solid var(--primary); outline-offset: 5px; }
+
+  /* grid */
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--gap) 28px; }
+  .grid .cover, .grid .art { width: 100%; }
+  .grid .art { height: 196px; }
+  .filters { display: flex; gap: 20px; margin-bottom: 32px; }
+
+  /* search */
+  .sfield { display: flex; align-items: center; gap: 20px; border: var(--focus) solid var(--primary); border-radius: 16px; padding: 22px 28px; margin-bottom: 36px; background: var(--surface); }
+  .sfield .q { font-size: 32px; }
+  .sfield .caret { width: 3px; height: 36px; background: var(--primary); }
+  .group { margin-bottom: 34px; }
+  .group h4 { font-size: 28px; margin: 0 0 18px; color: var(--on-variant); font-weight: 600; }
+
+  ul.pts { margin: 12px 0 0; padding-left: 20px; color: var(--on-variant); font-size: 14.5px; line-height: 1.65; }
+  ul.pts li { margin-bottom: 6px; }
+  ul.pts b { color: var(--on-surface); }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--on-primary); background: var(--primary); padding: 3px 9px; border-radius: 4px; vertical-align: 2px; }
+</style>
+
+<style>
+  /* podcast screen */
+  .phead { display: flex; gap: 44px; margin-bottom: 30px; }
+  .phead .big { width: 260px; height: 260px; border-radius: 16px; background: linear-gradient(150deg, #E8E2D0, #CFC6AE); flex: none; display:grid; place-items:center; color:#1A1A1A; font-weight:800; font-size:56px; line-height:.9; text-align:center; }
+  .phead h3 { font-size: 56px; font-weight: 800; margin: 0 0 10px; letter-spacing: -0.02em; }
+  .phead .by { font-size: 26px; color: var(--on-variant); margin-bottom: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 1300px; }
+  .facts { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+  .fact { font-size: 24px; border-radius: 999px; padding: 8px 20px; border: var(--rest) solid var(--variant); color: var(--on-variant); }
+  .fact b { color: var(--on-surface); }
+  .fact.warn { border-color: #8C6D3C; color: #E8C48A; }
+  .tabs { display: flex; gap: 14px; margin: 0 0 20px; }
+  .tab { font-size: 26px; font-weight: 600; padding: 12px 26px; border-radius: 12px; color: var(--on-variant); border: var(--rest) solid var(--variant); }
+  .tab.on { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+  .tab .n { opacity: .75; margin-left: 8px; }
+  .eps { display: flex; flex-direction: column; gap: 14px; }
+  .ep { display: flex; align-items: center; gap: 28px; padding: 22px 28px; border-radius: var(--radius); background: var(--surface); border: var(--rest) solid var(--variant); }
+  .ep.foc { outline: var(--focus) solid var(--primary); outline-offset: 2px; background: var(--surface-2); }
+  .ep .thumb { width: 88px; height: 88px; border-radius: 10px; flex: none; background: linear-gradient(150deg, #E8E2D0, #CFC6AE); }
+  .ep .heard { font-size: 22px; color: var(--on-variant); border: var(--rest) solid var(--variant); border-radius: 999px; padding: 4px 14px; margin-left: 12px; vertical-align: 3px; }
+  .ep .st { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border-radius: 50%; }
+  .ep .st.have { background: rgba(208,188,255,.16); color: var(--primary); }
+  .ep .st.miss { border: 3px dashed var(--variant); color: var(--variant); }
+  .ep .body { flex: 1; min-width: 0; }
+  .ep .t { font-size: 30px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ep .m { font-size: 23px; color: var(--on-variant); margin-top: 6px; }
+  .ep.missing .t { color: var(--on-variant); }
+  .ep .act { font-size: 24px; font-weight: 700; padding: 12px 24px; border-radius: 12px; background: var(--primary); color: var(--on-primary); white-space: nowrap; }
+  .ep .lbl { font-size: 22px; color: var(--on-variant); white-space: nowrap; }
+  .ep .bar { height: 8px; border-radius: 4px; background: var(--variant); margin-top: 12px; width: 60%; position: relative; }
+  .ep .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--primary); }
+  .note { border-radius: var(--radius); border: var(--rest) solid var(--variant); background: var(--surface); padding: 30px 34px; font-size: 27px; line-height: 1.5; color: var(--on-variant); }
+  .note h4 { font-size: 32px; color: var(--on-surface); margin: 0 0 10px; }
+  .q { background: #121117; border: 1px solid #2A2831; border-radius: 10px; padding: 16px 20px; margin-top: 14px; }
+  .q h5 { margin: 0 0 8px; font-size: 14.5px; color: var(--primary); text-transform: uppercase; letter-spacing: .06em; }
+  .q ol { margin: 0; padding-left: 20px; color: var(--on-variant); font-size: 14.5px; line-height: 1.65; }
+  .q b { color: var(--on-surface); }
+  .grid .count { font-size: 22px; color: var(--on-variant); margin-top: 2px; }
+  .grid .count.zero { color: #E8C48A; }
+  .grid .cover.empty .art { opacity: .45; }
+</style></head><body><div class="page">
+<h1>The podcast screen: every episode, and whether the server has it</h1>
+<p class="lede">The goal: open a podcast and see <b>everything in its feed</b>, with what is on the server told apart from what is not. Today the screen only knows what the server has downloaded, so for 102 of 134 podcasts it shows nothing. Built on PR #77 (check for new episodes) and the #75 branch (why it is empty).</p>
+<p class="scale-note">Each frame is a real 1920&times;1080 screen at half scale. px = dp &times; 2. Admin-only where marked: the feed endpoints answer 403 to anyone else.</p>
+
+<section>
+<h2>A. An admin opens a podcast <span class="tag">admin</span></h2>
+<p class="why">The server reads the feed (<code>POST /podcasts/feed</code>) and matches each episode to what it holds, by <code>guid</code> or enclosure URL, the same rule it uses itself. <b>A tick means it is on the server and plays now; a dashed circle means it is only in the feed.</b> The tabs split the two, with counts, and open on All. Heard episodes say so; a half-heard one shows how far. Centre on a missing episode downloads that one episode: the action is spelled out on the focused row, so a press never fetches something unexpected.</p>
+<div class="shell"><div class="tv"><nav class="rail"><div class="slot"></div><div class="slot"></div><div class="slot on"></div></nav>
+<div class="stage">
+<div class="phead"><div class="big">APIs</div><div><h3>APIs You Won't Hate</h3><div class="by">A no-nonsense (well, some-nonsense) podcast about API design &amp; development, new features in the world of HTTP…</div><div class="facts"><span class="fact"><b>3</b> of <b>56</b> on the server</span><span class="fact">Feed checked today</span><span class="fact warn">Automatic downloads off</span></div><div class="actions" style="margin:0"><div class="btn">Check for new episodes</div></div></div></div>
+<div class="tabs"><div class="tab on">All<span class="n">56</span></div><div class="tab">On the server<span class="n">3</span></div><div class="tab">Not downloaded<span class="n">53</span></div></div>
+<div class="eps">
+<div class="ep"><div class="thumb"></div><div class="st have"><svg class="ic-s" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></div><div class="body"><div class="t">Tabstack: Giving standalone models an API for the Web</div><div class="m">Yesterday · 25 min · 14 min left</div><div class="bar"><i style="width:44%"></i></div></div><span class="lbl">Resume</span></div>
+<div class="ep"><div class="thumb"></div><div class="st have"><svg class="ic-s" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></div><div class="body"><div class="t">Anvil is the Data Company that makes PDFs a breeze <span class="heard">Heard</span></div><div class="m">02/04/2026 · 29 min</div></div><span class="lbl">Play</span></div>
+<div class="ep missing foc"><div class="thumb"></div><div class="st miss"><svg class="ic-s" viewBox="0 0 24 24"><path d="M12 5v10m-4-4 4 4 4-4M6 19h12"/></svg></div><div class="body"><div class="t">Example: an episode only in the feed</div><div class="m">4 days ago · 31 min</div></div><span class="act">Download to server</span></div>
+<div class="ep missing"><div class="thumb"></div><div class="st miss"><svg class="ic-s" viewBox="0 0 24 24"><path d="M12 5v10m-4-4 4 4 4-4M6 19h12"/></svg></div><div class="body"><div class="t">Example: another feed-only episode</div><div class="m">12/08/2026 · 28 min</div></div><span class="lbl">Not downloaded</span></div>
+</div></div></div></div>
+</section>
+
+<section>
+<h2>A2. While it downloads <span class="tag">admin</span></h2>
+<p class="why">The server reports its queue (<code>GET /podcasts/:id/downloads</code>), so a download started from the TV is watched, not guessed at. The row turns into a tick when the file lands and becomes playable in place. This is step 3 of #76; without it the row would just say "Queued".</p>
+<div class="shell"><div class="tv"><nav class="rail"><div class="slot"></div><div class="slot"></div><div class="slot on"></div></nav>
+<div class="stage">
+<div class="phead"><div class="big">APIs</div><div><h3>APIs You Won't Hate</h3><div class="by">A no-nonsense (well, some-nonsense) podcast about API design &amp; development, new features in the world of HTTP…</div><div class="facts"><span class="fact"><b>3</b> of <b>56</b> on the server</span><span class="fact">Feed checked today</span><span class="fact warn">Automatic downloads off</span></div><div class="actions" style="margin:0"><div class="btn">Check for new episodes</div></div></div></div>
+<div class="tabs"><div class="tab on">All<span class="n">56</span></div><div class="tab">On the server<span class="n">3</span></div><div class="tab">Not downloaded<span class="n">53</span></div></div>
+<div class="eps">
+<div class="ep"><div class="thumb"></div><div class="st have"><svg class="ic-s" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></div><div class="body"><div class="t">Tabstack: Giving standalone models an API for the Web</div><div class="m">Yesterday · 25 min</div></div><span class="lbl">Play</span></div>
+<div class="ep missing foc"><div class="thumb"></div><div class="st miss"><svg class="ic-s" viewBox="0 0 24 24"><path d="M12 5v10m-4-4 4 4 4-4M6 19h12"/></svg></div><div class="body"><div class="t">Example: an episode only in the feed</div><div class="m">4 days ago · 31 min</div><div class="bar"><i style="width:40%"></i></div></div><span class="lbl">Downloading · 40%</span></div>
+<div class="ep missing"><div class="thumb"></div><div class="st miss"><svg class="ic-s" viewBox="0 0 24 24"><path d="M12 5v10m-4-4 4 4 4-4M6 19h12"/></svg></div><div class="body"><div class="t">Example: another feed-only episode</div><div class="m">12/08/2026 · 28 min</div></div><span class="lbl">Queued</span></div>
+</div></div></div></div>
+</section>
+
+<section>
+<h2>B. Someone who is not an admin <span class="tag">user</span></h2>
+<p class="why">The feed is out of reach (403), so the list is what the server has, and the screen <b>says that this is a partial list</b> rather than presenting it as the whole podcast. No tabs, because there is only one kind of row. No button that would fail.</p>
+<div class="shell"><div class="tv"><nav class="rail"><div class="slot"></div><div class="slot"></div><div class="slot on"></div></nav>
+<div class="stage">
+<div class="phead"><div class="big">APIs</div><div><h3>APIs You Won't Hate</h3><div class="by">A no-nonsense (well, some-nonsense) podcast about API design &amp; development…</div><div class="facts"><span class="fact"><b>3</b> episodes on the server</span><span class="fact">Feed checked today</span><span class="fact warn">Automatic downloads off</span></div></div></div>
+<div class="eps">
+<div class="ep foc"><div class="thumb"></div><div class="st have"><svg class="ic-s" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></div><div class="body"><div class="t">Tabstack: Giving standalone models an API for the Web</div><div class="m">Yesterday · 25 min</div></div><span class="lbl">Play</span></div>
+<div class="ep"><div class="thumb"></div><div class="st have"><svg class="ic-s" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></div><div class="body"><div class="t">Anvil is the Data Company that makes PDFs a breeze</div><div class="m">02/04/2026 · 29 min</div></div><span class="lbl">Play</span></div>
+</div>
+<div class="note" style="margin-top:20px">Only episodes the server has downloaded are listed. An admin can fetch more from the feed.</div>
+</div></div></div>
+</section>
+
+<section>
+<h2>C. Nothing downloaded, not an admin <span class="tag">user</span></h2>
+<p class="why">What the #75 branch shows today, in the box pattern. These are the three facts that explain the empty screen, and they are the same chips as frame A, so the two read as one screen.</p>
+<div class="shell"><div class="tv"><nav class="rail"><div class="slot"></div><div class="slot"></div><div class="slot on"></div></nav>
+<div class="stage">
+<div class="phead"><div class="big" style="background:linear-gradient(150deg,#FBE38A,#F2D35E)">Auf den<br>Punkt</div><div><h3>Auf den Punkt</h3><div class="by">Die Nachrichten des Tages - von der Süddeutschen Zeitung als Podcast auf den Punkt gebracht…</div><div class="facts"><span class="fact">Feed checked 26/10/2024</span><span class="fact warn">Automatic downloads off</span></div></div></div>
+<div class="note"><h4>Nothing downloaded yet</h4>The server holds no episodes of this podcast, and does not check its feed on its own. An admin can fetch episodes from the feed.</div>
+</div></div></div>
+</section>
+
+<section>
+<h2>D. The library grid</h2>
+<p class="why">The #75 branch adds the count line. The open question is whether an empty podcast should also <b>look</b> empty: dimmed here, so the 32 with something in them stand out among 134.</p>
+<div class="shell"><div class="tv"><nav class="rail"><div class="slot"></div><div class="slot"></div><div class="slot on"></div></nav>
+<div class="stage"><div class="topbar"><h3>Library</h3><div class="right"><span>admin</span></div></div>
+<div class="grid">
+<div class="cover"><div class="art"></div><div class="t">APIs You Won't Hate</div><div class="count">3 episodes</div></div>
+<div class="cover empty"><div class="art"></div><div class="t">Auf den Punkt</div><div class="count zero">Nothing downloaded</div></div>
+<div class="cover foc"><div class="art"></div><div class="t">NerdCast</div><div class="count">212 episodes</div></div>
+<div class="cover empty"><div class="art"></div><div class="t">MIDCast Política</div><div class="count zero">Nothing downloaded</div></div>
+<div class="cover"><div class="art"></div><div class="t">Welcome to Night Vale</div><div class="count">18 episodes</div></div>
+<div class="cover empty"><div class="art"></div><div class="t">/dev/hell</div><div class="count zero">Nothing downloaded</div></div>
+</div></div></div></div>
+</section>
+
+<section>
+<h2>Decided, 2 October</h2>
+<div class="q"><h5>Settled in conversation</h5><ol>
+<li><b>The feed is read on open</b> for an admin, every time. Its episodes are not stored; the server fetches the RSS.</li>
+<li><b>Centre on a missing episode downloads it straight away</b>, with no confirmation. The focused row spells out the action.</li>
+<li><b>All is the first tab.</b></li>
+<li><b>"Check for new episodes" stays</b>: the one-press way to get the newest three.</li>
+<li><b>The cover stays on every row</b>, so it is already in place when per-episode covers arrive.</li>
+<li><b>Heard episodes are marked</b>, and half-heard ones carry a progress bar, from one <code>/api/me</code> call. This also settles the progress-bar question in <code>screens.html</code>.</li>
+<li><b>Empty podcasts on the grid are dimmed</b> and keep their count line.</li>
+<li><b>The player gets "Go to podcast"</b> when it is playing an episode: see frame 4b in <code>screens.html</code>.</li>
+</ol></div>
+<ul class="pts"><li><b>Mocked:</b> the two "Example" episode titles (the feed is not stored, so its real titles are not to hand), the covers, the percentages, the progress, and the episode counts for NerdCast and Night Vale. The facts, the Tabstack and Anvil rows, and the Auf den Punkt dates are real.</li></ul>
+</section>
+</div></body></html>

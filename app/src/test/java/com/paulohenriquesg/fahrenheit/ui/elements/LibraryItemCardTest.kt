@@ -1,4 +1,4 @@
-package com.paulohenriquesg.fahrenheit.podcast
+package com.paulohenriquesg.fahrenheit.ui.elements
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
@@ -6,7 +6,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
-import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemCard
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Rule
 import org.junit.Test
@@ -18,23 +17,10 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w960dp-h540dp")
-class EmptyPodcastViewTest {
+class LibraryItemCardTest {
 
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
-
-    @Test
-    fun `an empty podcast shows every line, not "No Episodes"`() {
-        compose.setContent {
-            FahrenheitTheme {
-                EmptyPodcastView(lines = listOf("Nothing downloaded yet", "Feed never checked"))
-            }
-        }
-
-        compose.onNodeWithText("Nothing downloaded yet").assertIsDisplayed()
-        compose.onNodeWithText("Feed never checked").assertIsDisplayed()
-        compose.onNodeWithText("No Episodes").assertDoesNotExist()
-    }
 
     @Test
     fun `a podcast tile carries its episode count`() {

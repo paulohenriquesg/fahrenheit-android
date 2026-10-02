@@ -95,4 +95,14 @@ class LibraryItemDisplayTest {
     @Test
     fun `a book has no episode count`() =
         assertNull(LibraryItemDisplay.episodeCount(item(mediaType = "book", episodes = 3)))
+
+    // The Home shelves draw episodes on the same card, and the server sends
+    // numEpisodes 0 for every one of them - NerdCast included.
+    @Test
+    fun `a card standing for an episode has no count`() =
+        assertNull(
+            LibraryItemDisplay.episodeCount(
+                item(mediaType = "podcast", recentEpisodeTitle = "NerdCast 754", episodes = 0)
+            )
+        )
 }

@@ -54,8 +54,14 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.utils.RichText
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeOrder
-import com.paulohenriquesg.fahrenheit.podcast.EmptyPodcast
-import com.paulohenriquesg.fahrenheit.podcast.EmptyPodcastView
+import com.paulohenriquesg.fahrenheit.podcast.DownloadState
+import com.paulohenriquesg.fahrenheit.podcast.EpisodeTab
+import com.paulohenriquesg.fahrenheit.podcast.FeedLoad
+import com.paulohenriquesg.fahrenheit.podcast.PodcastEpisodesView
+import com.paulohenriquesg.fahrenheit.podcast.PodcastFeed
+import com.paulohenriquesg.fahrenheit.podcast.PodcastScreenModel
+import com.paulohenriquesg.fahrenheit.utils.EpisodeDate
+import androidx.compose.runtime.mutableStateMapOf
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheck
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheckRow
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheckState
@@ -106,8 +112,6 @@ class DetailActivity : ComponentActivity() {
         var expanded by remember { mutableStateOf(false) }
         var loadFailed by remember { mutableStateOf(false) }
         var mayCheckFeed by remember { mutableStateOf(false) }
-        var feedCheck by remember { mutableStateOf<FeedCheckState>(FeedCheckState.Idle) }
-        val scope = rememberCoroutineScope()
 
         val context = LocalContext.current
 
@@ -211,147 +215,99 @@ class DetailActivity : ComponentActivity() {
                     Text(text = stringResource(R.string.play_book))
                 }
             } else {
-                if (mayCheckFeed) {
-                    FeedCheckRow(state = feedCheck, onCheck = {
-                        val podcastApi = ApiClient.getPodcastApi() ?: return@FeedCheckRow
-                        val libraryApi = ApiClient.getLibraryApi() ?: return@FeedCheckRow
-                        scope.launch {
-                            FeedCheck(podcastApi).run(
-                                podcastId = itemId,
-                                episodesBefore = itemDetail?.media?.episodes?.size ?: 0,
-                                onState = { feedCheck = it },
-                                reload = {
-                                    LibraryRepository(libraryApi).item(itemId).getOrNull()?.let {
-                                        itemDetail = it
-                                        it.media.episodes?.size
-                                    }
-                                }
-                            )
-                        }
-                    })
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-                itemDetail?.media?.episodes?.let { EpisodeOrder.newestFirst(it) }
-                    ?.let { episodes ->
-                        if (episodes.isNotEmpty()) {
-                        Text(text = stringResource(R.string.episodes), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                            val listState = rememberLazyListState()
-                            LazyColumn(state = listState) {
-                                val episodeKeys = StableKeys.of(episodes) { e -> e.id }
-                                items(episodes.size, key = { episodeKeys[it] }) { index ->
-                                    val episode = episodes[index]
-                                    EpisodeCard(episode)
-                                }
-                            }
-                        } else {
-                            val media = itemDetail?.media
-                            EmptyPodcastView(
-                                lines = EmptyPodcast.lines(
-                                    lastEpisodeCheck = media?.lastEpisodeCheck,
-                                    autoDownload = media?.autoDownloadEpisodes,
-                                    now = System.currentTimeMillis(),
-                                    serverFormat = SharedPreferencesHandler(context).getUserPreferences().dateFormat
-                                )
-                            )
-                        }
-                    }
+                PodcastEpisodes(itemId, itemDetail, mayCheckFeed, onReloaded = { itemDetail = it })
             }
         }
     }
 
-
+    /**
+     * The podcast half of this screen (#76): every episode in the feed for an
+     * admin, marked by whether the server has it, and the server's own for
+     * anyone else.
+     */
     @Composable
-    fun EpisodeCard(episode: Episode) {
+    private fun PodcastEpisodes(
+        itemId: String,
+        itemDetail: LibraryItemResponse?,
+        isAdmin: Boolean,
+        onReloaded: (LibraryItemResponse) -> Unit
+    ) {
         val context = LocalContext.current
-        // The server decides how a date is written and says so at login.
-        val serverDateFormat = remember {
-            SharedPreferencesHandler(context).getUserPreferences().dateFormat
+        val scope = rememberCoroutineScope()
+        var feed by remember { mutableStateOf<FeedLoad>(FeedLoad.Unavailable) }
+        var tab by remember { mutableStateOf(EpisodeTab.All) }
+        var feedCheck by remember { mutableStateOf<FeedCheckState>(FeedCheckState.Idle) }
+        val downloads = remember { mutableStateMapOf<String, DownloadState>() }
+        val serverFormat = remember { SharedPreferencesHandler(context).getUserPreferences().dateFormat }
+        val media = itemDetail?.media
+        val feedUrl = media?.metadata?.feedUrl
+
+        // Read on open, every time: nothing of the feed is stored.
+        LaunchedEffect(isAdmin, feedUrl) {
+            val podcastApi = ApiClient.getPodcastApi()
+            if (!isAdmin || feedUrl.isNullOrBlank() || podcastApi == null) {
+                feed = FeedLoad.Unavailable
+                return@LaunchedEffect
+            }
+            feed = FeedLoad.Loading
+            feed = PodcastFeed(podcastApi).episodes(feedUrl)
+                .fold(onSuccess = { FeedLoad.Loaded(it) }, onFailure = { FeedLoad.Failed })
         }
-        var isFocused by remember { mutableStateOf(false) }
 
-        Card(
+        if (media == null) return
+        val now = remember(media) { System.currentTimeMillis() }
+        val screen = PodcastScreenModel.of(
+            server = media.episodes.orEmpty(),
+            feed = feed,
+            tab = tab,
+            lastEpisodeCheck = media.lastEpisodeCheck,
+            autoDownload = media.autoDownloadEpisodes,
+            now = now,
+            serverFormat = serverFormat
+        )
+        val reload: suspend () -> LibraryItemResponse? = {
+            ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }
+                ?.also(onReloaded)
+        }
 
-            scale = CardFocus.noGrowth,
-            onClick = {
-                val intent = PlayerActivity.createIntent(context, episode.libraryItemId, episode.id)
-                context.startActivity(intent)
+        PodcastEpisodesView(
+            screen = screen,
+            tab = tab,
+            onTab = { tab = it },
+            downloads = downloads,
+            onPlay = { episode ->
+                context.startActivity(PlayerActivity.createIntent(context, itemId, episode.id))
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 8.dp)
-                .onFocusChanged { isFocused = it.isFocused },
-            colors = CardDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            border = CardDefaults.border(
-                focusedBorder = Border(
-                    border = androidx.compose.foundation.BorderStroke(
-                        3.dp,
-                        MaterialTheme.colorScheme.primary
+            onDownload = { row ->
+                val podcastApi = ApiClient.getPodcastApi() ?: return@PodcastEpisodesView
+                val episode = row.feed ?: return@PodcastEpisodesView
+                scope.launch {
+                    PodcastFeed(podcastApi).download(
+                        podcastId = itemId,
+                        episode = episode,
+                        onState = { downloads[row.key] = it },
+                        reload = { reload()?.media?.episodes }
                     )
-                )
-            )
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(16.dp)
-            ) {
-                CoverImage(
-                    itemId = episode.libraryItemId,
-                    contentDescription = stringResource(R.string.podcast_logo),
-                    size = 64.dp
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    // Episode title with marquee
-                    MarqueeText(
-                        text = episode.title,
-                        isFocused = isFocused,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2
-                    )
-
-                    // Episode description (2 lines max)
-                    val description = episode.description
-                    if (!description.isNullOrEmpty()) {
-                        Text(
-                            text = RichText.fromHtml(description),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    // Duration and progress row
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Publication date
-                        Text(
-                            text = formatPubDate(episode.pubDate, serverDateFormat),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        // Duration (if available)
-                        episode.duration?.let { duration ->
-                            Text(
-                                text = "• ${formatDuration(duration)}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            },
+            coverItemId = itemId,
+            date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
+            actions = {
+                if (isAdmin) {
+                    FeedCheckRow(state = feedCheck, onCheck = {
+                        val podcastApi = ApiClient.getPodcastApi() ?: return@FeedCheckRow
+                        scope.launch {
+                            FeedCheck(podcastApi).run(
+                                podcastId = itemId,
+                                episodesBefore = media.episodes?.size ?: 0,
+                                onState = { feedCheck = it },
+                                reload = { reload()?.media?.episodes?.size }
                             )
                         }
-                    }
+                    })
                 }
             }
-        }
+        )
     }
 
     companion object {

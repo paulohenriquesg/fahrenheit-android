@@ -1,7 +1,10 @@
 package com.paulohenriquesg.fahrenheit.podcast
 
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import com.paulohenriquesg.fahrenheit.api.CheckNewResponse
+import com.paulohenriquesg.fahrenheit.api.FeedRequest
+import com.paulohenriquesg.fahrenheit.api.FeedResponse
 import com.paulohenriquesg.fahrenheit.api.FeedEpisode
 import com.paulohenriquesg.fahrenheit.api.Me
 import com.paulohenriquesg.fahrenheit.api.PodcastApi
@@ -33,6 +36,9 @@ class FeedCheckTest {
             checkedLimit = limit
             return checkNew.invoke()
         }
+
+        override suspend fun feed(request: FeedRequest) = FeedResponse(null)
+        override suspend fun downloadEpisodes(podcastId: String, episodes: List<JsonObject>) = Unit
     }
 
     private val feed = "https://feeds.example/show.xml"
@@ -179,6 +185,8 @@ class FeedCheckRunTest {
         override suspend fun checkNew(podcastId: String, limit: Int) =
             if (found == null) throw IOException("down")
             else CheckNewResponse(List(found) { FeedEpisode("e$it") })
+        override suspend fun feed(request: FeedRequest) = FeedResponse(null)
+        override suspend fun downloadEpisodes(podcastId: String, episodes: List<JsonObject>) = Unit
     }
 
     private fun run(found: Int?, before: Int = 2, counts: List<Int?> = emptyList()): Pair<List<FeedCheckState>, Int> {

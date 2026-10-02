@@ -1,7 +1,10 @@
 package com.paulohenriquesg.fahrenheit.api
 
+import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -26,7 +29,28 @@ interface PodcastApi {
         @Path("id") podcastId: String,
         @Query("limit") limit: Int
     ): CheckNewResponse
+
+    /**
+     * Reads a feed and returns its episodes without downloading any. Admin or
+     * root only. The episodes stay raw JSON: [downloadEpisodes] takes them
+     * back in exactly this shape.
+     */
+    @POST("api/podcasts/feed")
+    suspend fun feed(@Body request: FeedRequest): FeedResponse
+
+    /** Queues the given feed episodes for download. Admin or root only. */
+    @POST("api/podcasts/{id}/download-episodes")
+    suspend fun downloadEpisodes(
+        @Path("id") podcastId: String,
+        @Body episodes: List<JsonObject>
+    )
 }
+
+data class FeedRequest(@SerializedName("rssFeed") val rssFeed: String)
+
+data class FeedResponse(@SerializedName("podcast") val podcast: FeedPodcast?)
+
+data class FeedPodcast(@SerializedName("episodes") val episodes: List<JsonObject>?)
 
 /** Only what the app reads from GET /api/me. */
 data class Me(@SerializedName("type") val type: String?)
