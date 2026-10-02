@@ -1,6 +1,5 @@
 package com.paulohenriquesg.fahrenheit.player
 
-import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 
 /**
@@ -12,23 +11,12 @@ import androidx.media3.common.Player
  * only the first file is why a book in parts stops at the end of part one, and
  * why a saved position beyond it plays nothing at all (#16).
  *
- * @param resolveUrl turns a track's server path into a URL the player can
- *   fetch, including whatever authentication the server wants.
+ * The queue itself is built by [PlaybackQueue].
  */
 class BookPlayback(
     private val player: Player,
-    private val timeline: TrackTimeline,
-    private val resolveUrl: (String) -> String
+    private val timeline: TrackTimeline
 ) {
-
-    /** Queues every file of the book and positions it at [startAtBookTime]. */
-    fun load(startAtBookTime: Double) {
-        val items = (0 until timeline.size).map { index ->
-            MediaItem.fromUri(resolveUrl(timeline.track(index).contentUrl))
-        }
-        val at = timeline.locate(startAtBookTime)
-        player.setMediaItems(items, at.trackIndex, (at.positionInTrack * 1000).toLong())
-    }
 
     /** Moves to a whole-book time, crossing into another file if it falls there. */
     fun seekToBookTime(seconds: Double) {

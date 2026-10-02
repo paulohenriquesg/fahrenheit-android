@@ -39,38 +39,27 @@ class BookPlaybackTest {
         player.release()
     }
 
-    private fun playback(timeline: TrackTimeline = twoParts) =
-        BookPlayback(player, timeline) { path -> "https://abs.test$path?token=t" }
-
-    @Test
-    fun `every file of the book is queued, in order`() {
-        playback().load(startAtBookTime = 0.0)
-
-        assertEquals(2, player.mediaItemCount)
-        assertEquals("https://abs.test/part1?token=t", player.getMediaItemAt(0).localConfiguration?.uri.toString())
-        assertEquals("https://abs.test/part2?token=t", player.getMediaItemAt(1).localConfiguration?.uri.toString())
-    }
-
-    @Test
-    fun `a saved position in a later file starts there, not at the beginning`() {
-        playback().load(startAtBookTime = 4500.0)
-
-        assertEquals(1, player.currentMediaItemIndex)
-        assertEquals(900_000L, player.currentPosition)
+    /** Queues [timeline] at [startAt] the way the player screen does, and returns its BookPlayback. */
+    private fun loaded(startAt: Double, timeline: TrackTimeline = twoParts): BookPlayback {
+        val nowPlaying = NowPlaying(
+            itemId = "b1", title = "t", timeline = timeline, mediaDuration = null, chapters = null,
+            episodeId = null, goToPodcast = false, description = null, line = { "" }
+        )
+        val queue = PlaybackQueue.of(nowPlaying, startAt) { "https://abs.test$it" }!!
+        player.setMediaItems(queue.items, queue.index, queue.positionMs)
+        return BookPlayback(player, timeline)
     }
 
     @Test
     fun `the position reported back is whole-book time, not time within a file`() {
-        val playback = playback()
-        playback.load(startAtBookTime = 4500.0)
+        val playback = loaded(startAt = 4500.0)
 
         assertEquals(4500.0, playback.bookPosition(), 0.001)
     }
 
     @Test
     fun `seeking while playing crosses into the next file`() {
-        val playback = playback()
-        playback.load(startAtBookTime = 0.0)
+        val playback = loaded(startAt = 0.0)
 
         playback.seekToBookTime(3900.0)
 
@@ -82,8 +71,7 @@ class BookPlaybackTest {
 
     @Test
     fun `a position past the end of the book stops at its end`() {
-        val playback = playback()
-        playback.load(startAtBookTime = 0.0)
+        val playback = loaded(startAt = 0.0)
 
         playback.seekToBookTime(99_999.0)
 
@@ -97,8 +85,7 @@ class BookPlaybackTest {
             listOf(TimelineTrack(index = 1, startOffset = 0.0, duration = 3600.0, contentUrl = "/only"))
         )
 
-        val playback = playback(single)
-        playback.load(startAtBookTime = 900.0)
+        val playback = loaded(startAt = 900.0, timeline = single)
 
         assertEquals(1, player.mediaItemCount)
         assertEquals(0, player.currentMediaItemIndex)
@@ -107,7 +94,7 @@ class BookPlaybackTest {
 
     @Test
     fun `the player is left ready to play, not playing`() {
-        playback().load(startAtBookTime = 0.0)
+        loaded(startAt = 0.0)
 
         assertEquals(Player.STATE_IDLE, player.playbackState)
         assertEquals(false, player.playWhenReady)
