@@ -15,7 +15,10 @@ data class RecentPodcastEpisode(
     @SerializedName("libraryItemId") val libraryItemId: String,
     @SerializedName("title") val title: String?,
     @SerializedName("description") val description: String?,
-    @SerializedName("podcast") val podcast: RecentEpisodePodcast?
+    @SerializedName("podcast") val podcast: RecentEpisodePodcast?,
+    // Epoch millis. The server orders by this and we never read it, so the list
+    // could not say whether an episode was from today or from March.
+    @SerializedName("publishedAt") val publishedAt: Long? = null
 )
 
 data class RecentEpisodePodcast(

@@ -104,4 +104,5 @@
     <string name="switch_library">Switch library</string>
     <string name="switch_library_none">No libraries on this server</string>
     <string name="switch_library_current">Current</string>
+    <string name="latest_episodes">Latest Episodes</string>
 </resources>

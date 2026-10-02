@@ -41,7 +41,6 @@
 
         <activity android:name=".detail.DetailActivity" />
         <activity android:name=".podcast.PlayerActivity" />
-        <activity android:name=".podcast.LatestEpisodesActivity" />
         <activity android:name=".book.BookPlayerActivity" />
         <activity android:name=".search.SearchActivity" />
         <activity android:name=".author.AuthorDetailActivity" />

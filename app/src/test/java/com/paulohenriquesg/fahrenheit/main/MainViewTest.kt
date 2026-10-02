@@ -25,13 +25,14 @@ class MainViewTest {
         // the screen even though they are reached from it (#58).
         assertEquals(MainView.SETTINGS, MainView.forMenuAction(MenuAction.SETTINGS))
         assertEquals(MainView.SWITCH_LIBRARY, MainView.forMenuAction(MenuAction.SELECT_LIBRARY))
+        // Also an Activity of its own until now, so the rail went away with it.
+        assertEquals(MainView.LATEST, MainView.forMenuAction(MenuAction.LATEST))
     }
 
     // These open another screen or do something in place; the view behind them
     // must stay as it was.
     @Test
     fun `menu choices that leave the view alone`() {
-        assertNull(MainView.forMenuAction(MenuAction.LATEST))
         assertNull(MainView.forMenuAction(MenuAction.LOGOUT))
         assertNull(MainView.forMenuAction(MenuAction.NARRATORS))
     }
@@ -46,5 +47,6 @@ class MainViewTest {
         assertEquals("stats", MainView.STATS.menuItemId)
         assertEquals("settings", MainView.SETTINGS.menuItemId)
         assertEquals("select_library", MainView.SWITCH_LIBRARY.menuItemId)
+        assertEquals("latest", MainView.LATEST.menuItemId)
     }
 }
