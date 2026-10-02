@@ -1,7 +1,5 @@
 package com.paulohenriquesg.fahrenheit.player
 
-import android.util.Log
-import android.os.Build
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -13,15 +11,11 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.ApiClient
-import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemDeviceInfo
-import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import retrofit2.awaitResponse
 
 /**
  * Where playback lives, so it outlives the player screen (#16).
@@ -55,7 +49,7 @@ class PlaybackService : MediaSessionService() {
             // Keeps streaming when a TV's screensaver starts.
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
-        val device = PlayLibraryItemDeviceInfo("Fire Stick", getString(R.string.app_name), "0.0.1", "Amazon", Build.MODEL, 25)
+        val device = PlaybackDevice.info(this)
         val reporting = PlaybackReporting(exo, scope, open = { ListeningSession(it, ApiClient::getApiService, device) })
         exo.addListener(reporting)
         exo.addListener(object : Player.Listener {
@@ -79,10 +73,6 @@ class PlaybackService : MediaSessionService() {
         session = null
         scope.cancel()
         super.onDestroy()
-    }
-
-    private companion object {
-        const val TAG = "PlaybackService"
     }
 }
 
