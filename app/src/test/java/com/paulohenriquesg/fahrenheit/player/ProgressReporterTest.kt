@@ -1,6 +1,5 @@
 package com.paulohenriquesg.fahrenheit.player
 
-import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -15,7 +14,7 @@ class ProgressReporterTest {
 
     private fun reporter(
         positions: List<Double>,
-        sent: MutableList<MediaProgressRequest>,
+        sent: MutableList<ListeningReport>,
         failOn: Int = -1
     ): Pair<ProgressReporter, () -> Boolean> {
         val queue = ArrayDeque(positions)
@@ -35,7 +34,7 @@ class ProgressReporterTest {
 
     @Test
     fun `while playing, the position is sent`() = runBlocking {
-        val sent = mutableListOf<MediaProgressRequest>()
+        val sent = mutableListOf<ListeningReport>()
         val (reporter, playing) = reporter(listOf(0.0, 10.0, 20.0, 30.0), sent)
 
         reporter.run(playing)
@@ -45,7 +44,7 @@ class ProgressReporterTest {
 
     @Test
     fun `a position already sent is not sent again`() = runBlocking {
-        val sent = mutableListOf<MediaProgressRequest>()
+        val sent = mutableListOf<ListeningReport>()
         val (reporter, playing) = reporter(listOf(0.0, 10.0, 10.0, 20.0), sent)
 
         reporter.run(playing)
@@ -55,7 +54,7 @@ class ProgressReporterTest {
 
     @Test
     fun `a failed send does not end reporting`() = runBlocking {
-        val sent = mutableListOf<MediaProgressRequest>()
+        val sent = mutableListOf<ListeningReport>()
         val (reporter, playing) = reporter(listOf(0.0, 10.0, 20.0, 30.0), sent, failOn = 0)
 
         reporter.run(playing)
@@ -65,7 +64,7 @@ class ProgressReporterTest {
 
     @Test
     fun `nothing is sent when not playing`() = runBlocking {
-        val sent = mutableListOf<MediaProgressRequest>()
+        val sent = mutableListOf<ListeningReport>()
         val (reporter, _) = reporter(listOf(0.0, 10.0), sent)
 
         reporter.run { false }

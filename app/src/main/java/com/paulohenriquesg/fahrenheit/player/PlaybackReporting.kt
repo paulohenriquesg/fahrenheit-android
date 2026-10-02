@@ -1,7 +1,6 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import androidx.media3.common.Player
-import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -25,7 +24,7 @@ import kotlinx.coroutines.withContext
 class PlaybackReporting(
     private val player: Player,
     private val scope: CoroutineScope,
-    private val send: suspend (QueuedFile, MediaProgressRequest) -> Unit,
+    private val send: suspend (QueuedFile, ListeningReport) -> Unit,
     private val pause: suspend () -> Unit = { delay(ProgressSync.INTERVAL_MS) }
 ) : Player.Listener {
 

@@ -77,7 +77,8 @@ class PlaybackService : MediaSessionService() {
         super.onDestroy()
     }
 
-    private suspend fun sendProgress(file: QueuedFile, request: MediaProgressRequest) {
+    private suspend fun sendProgress(file: QueuedFile, report: ListeningReport) {
+        val request = MediaProgressRequest(currentTime = report.currentTime, duration = report.duration)
         val api = ApiClient.getApiService() ?: error("signed out")
         val call = file.episodeId?.let { api.userCreateOrUpdateMediaProgress(file.itemId, it, request) }
             ?: api.userCreateOrUpdateMediaProgress(file.itemId, request)

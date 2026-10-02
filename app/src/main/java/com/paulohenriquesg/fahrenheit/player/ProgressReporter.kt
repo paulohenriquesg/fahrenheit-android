@@ -1,6 +1,5 @@
 package com.paulohenriquesg.fahrenheit.player
 
-import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import kotlinx.coroutines.delay
 
 /**
@@ -14,7 +13,7 @@ import kotlinx.coroutines.delay
  * @param send the request for this item or episode; throwing is a failed send.
  */
 class ProgressReporter(
-    private val send: suspend (MediaProgressRequest) -> Unit,
+    private val send: suspend (ListeningReport) -> Unit,
     private val position: () -> Double,
     private val total: () -> Double,
     private val pause: suspend () -> Unit = { delay(ProgressSync.INTERVAL_MS) }

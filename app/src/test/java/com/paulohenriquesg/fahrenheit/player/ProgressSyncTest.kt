@@ -52,4 +52,21 @@ class ProgressSyncTest {
     @Test
     fun `a position past the end is reported as the end`() =
         assertEquals(3600.0, ProgressSync.next(position = 3700.0, total = 3600.0, lastSent = 3000.0)!!.currentTime!!, 1e-9)
+
+    // Listening stats need the time even when the position barely moved,
+    // e.g. a round spent buffering (#92).
+    @Test
+    fun `a round with listening time but no movement is sent`() {
+        val report = ProgressSync.next(position = 900.2, total = 3600.0, lastSent = 900.0, listened = 5.0)!!
+
+        assertEquals(5.0, report.timeListened, 1e-9)
+    }
+
+    @Test
+    fun `listening time travels with the report`() =
+        assertEquals(5.0, ProgressSync.next(position = 930.0, total = 3600.0, lastSent = 900.0, listened = 5.0)!!.timeListened, 1e-9)
+
+    @Test
+    fun `under a second of listening, an unmoved round is still skipped`() =
+        assertNull(ProgressSync.next(position = 900.2, total = 3600.0, lastSent = 900.0, listened = 0.5))
 }
