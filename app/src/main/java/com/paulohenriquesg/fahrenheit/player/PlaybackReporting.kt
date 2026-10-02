@@ -5,8 +5,10 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Reports the listening position of whatever [player] is playing.
@@ -60,7 +62,11 @@ class PlaybackReporting(
         rounds = null
         val active = reporter ?: return
         // Undispatched, so the position is read now, before the queue changes.
-        scope.launch(start = CoroutineStart.UNDISPATCHED) { active.finish() }
+        // Not cancellable: on Back the service, and its scope, are gone
+        // within milliseconds, which would drop the report mid-send.
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            withContext(NonCancellable) { active.finish() }
+        }
     }
 
     /** Whole-book time, or -1 (never sent) once the player has moved on to something else. */

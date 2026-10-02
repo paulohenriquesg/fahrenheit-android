@@ -8,7 +8,10 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -133,5 +136,33 @@ class PlaybackReportingTest {
         val (file, time) = sent.single()
         assertEquals("e1", file.episodeId)
         assertEquals(3.0, time, 0.5)
+    }
+
+    // Review: on Back the service is destroyed within milliseconds of the
+    // stop, cancelling its scope - and with it the closing report, mid-send.
+    @Test
+    fun `the closing report survives the service going away`() {
+        val scope = CoroutineScope(Job() + Dispatchers.Unconfined)
+        val delivered = mutableListOf<Double>()
+        val network = CompletableDeferred<Unit>()
+        val reporting = PlaybackReporting(
+            player,
+            scope,
+            send = { _, request -> network.await(); delivered += request.currentTime!! },
+            pause = { awaitCancellation() }
+        )
+        player.addListener(reporting)
+        val guard = LeavingGuard(player, reporting::beforeLeaving)
+        val queue = PlaybackQueue.of(nowPlaying("b1", twoParts), 3602.0) { "https://abs.test$it" }!!
+        guard.setMediaItems(queue.items, queue.index, queue.positionMs)
+        guard.prepare()
+        guard.play()
+        run(player).untilPositionAtLeast(5_000)
+
+        guard.stop()
+        scope.cancel()
+        network.complete(Unit)
+
+        assertEquals(3605.0, delivered.single(), 0.5)
     }
 }
