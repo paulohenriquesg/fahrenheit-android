@@ -2,7 +2,7 @@ package com.paulohenriquesg.fahrenheit.ui.elements
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.Text
+import androidx.tv.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds

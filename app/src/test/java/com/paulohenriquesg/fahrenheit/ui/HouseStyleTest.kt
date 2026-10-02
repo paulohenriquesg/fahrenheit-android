@@ -47,6 +47,23 @@ class HouseStyleTest {
     }
 
     @Test
+    fun `screens use the TV components where the TV library has one`() {
+        // Mixing the two libraries is what put near-white slabs on the dark
+        // login screen: the phone components read a MaterialTheme of their own.
+        // The TV library has no text field, progress indicator or icon, so
+        // those stay; Text, Button, Card and Surface have TV equivalents built
+        // for focus.
+        val phoneOnly = Regex("""import androidx\.compose\.material3\.(Text)$""")
+        val offenders = mutableListOf<String>()
+        sources.forEach { file ->
+            file.readLines().forEachIndexed { index, line ->
+                if (phoneOnly.containsMatchIn(line.trim())) offenders += where(file, index + 1)
+            }
+        }
+        assertEquals(emptyList<String>(), offenders)
+    }
+
+    @Test
     fun `every String format passes a Locale`() {
         // The default locale renders digits in the device's own numerals, so a
         // Persian device would read "۲ h ۱۱ min".
