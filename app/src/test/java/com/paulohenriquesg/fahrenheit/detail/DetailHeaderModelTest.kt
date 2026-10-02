@@ -132,4 +132,12 @@ class DetailHeaderModelTest {
         // The model passes it on whole: a book shows all of it, a podcast a preview.
         assertEquals("<p>Ryland Grace</p>", header.description)
     }
+
+    @Test
+    fun `a podcast with an episode in progress resumes it, by name`() {
+        assertEquals(
+            "Resume E2",
+            DetailHeaderModel.podcast(podcast(), emptyList(), resumeTitle = "E2").primary
+        )
+    }
 }

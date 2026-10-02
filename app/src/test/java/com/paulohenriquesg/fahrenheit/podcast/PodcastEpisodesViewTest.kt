@@ -15,6 +15,7 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
@@ -57,7 +58,8 @@ class PodcastEpisodesViewTest {
     private fun render(
         tab: EpisodeTab = EpisodeTab.All,
         feed: FeedLoad = FeedLoad.Loaded(feedEpisodes),
-        downloads: Map<String, DownloadState> = emptyMap()
+        downloads: Map<String, DownloadState> = emptyMap(),
+        progress: Map<String, EpisodeProgress> = emptyMap()
     ) {
         val screen = PodcastScreenModel.of(listOf(onServer), feed, tab, null, false, now = 10)
         compose.setContent {
@@ -69,6 +71,7 @@ class PodcastEpisodesViewTest {
                     downloads = downloads,
                     onPlay = { played = it },
                     onDownload = { downloaded = it },
+                    progress = progress,
                     title = "The Show",
                     header = {
                         // As tall as the real one: a cover and a description.
@@ -181,5 +184,59 @@ class PodcastEpisodesViewTest {
         compose.onNodeWithTag("episode_tab_All").assertIsDisplayed()
         compose.onNodeWithTag("pinned_title").assertIsDisplayed()
         compose.onNodeWithText("The Show").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a heard episode is marked heard`() {
+        render(progress = mapOf("s1" to EpisodeProgress.Heard))
+
+        compose.onNodeWithText("Heard").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a half-heard episode says how long is left, and resumes`() {
+        render(progress = mapOf("s1" to EpisodeProgress.InProgress(fraction = 0.44, secondsLeft = 840.0)))
+
+        compose.onNodeWithText("14m left", substring = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Resume").assertIsDisplayed()
+    }
+
+    // An episode on the server shows a play icon, not the word "Play".
+    @Test
+    fun `an episode on the server offers a play icon rather than the word`() {
+        render()
+
+        compose.onNodeWithContentDescription("Play").assertIsDisplayed()
+        compose.onNodeWithText("Play").assertDoesNotExist()
+    }
+
+    @Test
+    fun `an episode not on the server still says so in words`() {
+        render()
+
+        compose.onNodeWithText("Not downloaded").assertIsDisplayed()
+    }
+
+    // A tick read as "heard", so it means heard; being on the server is what
+    // the play icon already says.
+    @Test
+    fun `a downloaded episode not yet heard carries no tick`() {
+        render()
+
+        compose.onNodeWithContentDescription("Heard").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a heard episode carries the tick`() {
+        render(progress = mapOf("s1" to EpisodeProgress.Heard))
+
+        compose.onNodeWithContentDescription("Heard").assertIsDisplayed()
+    }
+
+    @Test
+    fun `an episode not on the server carries the download mark`() {
+        render()
+
+        compose.onNodeWithContentDescription("Not on the server").assertIsDisplayed()
     }
 }

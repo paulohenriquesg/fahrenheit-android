@@ -42,4 +42,10 @@ class EpisodeRowLabelTest {
         assertFalse(EpisodeRowLabel.mayDownload(DownloadState.Waiting(0)))
         assertFalse(EpisodeRowLabel.mayDownload(DownloadState.Downloading))
     }
+
+    @Test
+    fun `a half-heard episode resumes, a heard one plays`() {
+        assertEquals("Resume", EpisodeRowLabel.of(true, null, false, EpisodeProgress.InProgress(0.4, 840.0)))
+        assertEquals("Play", EpisodeRowLabel.of(true, null, false, EpisodeProgress.Heard))
+    }
 }

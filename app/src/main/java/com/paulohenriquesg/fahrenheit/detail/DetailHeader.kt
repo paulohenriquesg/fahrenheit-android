@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalLayoutApi::class)
+
 package com.paulohenriquesg.fahrenheit.detail
 
 import androidx.compose.foundation.BorderStroke
@@ -28,7 +30,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -93,7 +97,7 @@ fun DetailHeader(
     itemId: String,
     content: DetailHeaderContent,
     onPrimary: () -> Unit,
-    actions: @Composable RowScope.() -> Unit = {},
+    actions: @Composable () -> Unit = {},
     fullDescription: ScrollState? = null
 ) {
     val initialFocus = rememberInitialFocus(enabled = content.primary != null, itemId, content.primary)
@@ -122,14 +126,18 @@ fun DetailHeader(
                     content.chips.forEach { FactChip(it) }
                 }
             }
-            Row(
+            // Wraps rather than squeezing: in a plain Row a long primary label
+            // left the actions beside it zero width, and their text wrapped one
+            // letter per line - a header taller than the screen.
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(Space.gap),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 content.primary?.let { label ->
                     Button(
                         onClick = onPrimary,
                         modifier = Modifier
+                            .widthIn(max = 420.dp)
                             .focusRequester(initialFocus)
                             .testTag(PRIMARY_ACTION_TAG)
                     ) {
@@ -142,7 +150,8 @@ fun DetailHeader(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text(label)
+                        // An episode title can be any length.
+                        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 actions()

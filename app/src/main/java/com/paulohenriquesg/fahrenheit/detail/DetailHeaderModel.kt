@@ -70,9 +70,10 @@ object DetailHeaderModel {
     }
 
     /**
+     * @param resumeTitle the episode in progress, played most recently (#78).
      * @param facts the feed's facts, from [com.paulohenriquesg.fahrenheit.podcast.PodcastScreenModel].
      */
-    fun podcast(item: LibraryItemResponse, facts: List<Fact>): DetailHeaderContent {
+    fun podcast(item: LibraryItemResponse, facts: List<Fact>, resumeTitle: String? = null): DetailHeaderContent {
         val metadata = item.media.metadata
         // The server's "author" for a podcast is usually its own name again, so
         // the by-line says what it is instead.
@@ -81,8 +82,11 @@ object DetailHeaderModel {
             title = metadata.title,
             byline = listOfNotNull("Podcast", genre).joinToString(" · "),
             chips = facts,
-            // "Resume <episode>" once episode progress is read (#78).
-            primary = if (item.media.episodes.isNullOrEmpty()) null else "Play newest episode",
+            primary = when {
+                resumeTitle != null -> "Resume $resumeTitle"
+                item.media.episodes.isNullOrEmpty() -> null
+                else -> "Play newest episode"
+            },
             description = metadata.description
         )
     }

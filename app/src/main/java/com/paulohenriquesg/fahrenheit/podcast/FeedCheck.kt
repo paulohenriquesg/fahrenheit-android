@@ -7,18 +7,11 @@ import kotlinx.coroutines.delay
  * "Check for new episodes": asks the server to look at a podcast's feed and
  * download what is new (#76).
  *
- * Offered only where the server would honour it. A button that answers 403 for
- * an ordinary account is worse than no button, so anything short of knowing
- * the user is an admin means not offering it.
+ * Offered only where the server would honour it ([mayCheck]). A button that
+ * answers 403 for an ordinary account is worse than no button, so anything
+ * short of knowing the user is an admin means not offering it.
  */
 class FeedCheck(private val api: PodcastApi) {
-
-    suspend fun mayCheck(feedUrl: String?): Boolean {
-        if (feedUrl.isNullOrBlank()) return false
-        val type = runCatching { api.me().type }.getOrNull()
-        // Mirrors the server's isAdminOrUp.
-        return type == "admin" || type == "root"
-    }
 
     /** How many new episodes the server found and queued for download. */
     suspend fun check(podcastId: String): Result<Int> = runCatching {
@@ -51,6 +44,14 @@ class FeedCheck(private val api: PodcastApi) {
     }
 
     companion object {
+        /**
+         * Whether to offer the check, from the user's type in GET /api/me (null
+         * when that could not be read). Mirrors the server's isAdminOrUp, and
+         * needs a feed: otherwise the server answers 403 or 400.
+         */
+        fun mayCheck(type: String?, feedUrl: String?): Boolean =
+            !feedUrl.isNullOrBlank() && (type == "admin" || type == "root")
+
         /**
          * Always sent. The server treats 0 as "no limit", and a podcast unchecked
          * for two years can have dozens of episodes waiting - each one disk on
