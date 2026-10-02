@@ -315,71 +315,25 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
 
 @Composable
 fun StatsBrowseView(stats: com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse?, isLoading: Boolean) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.listening_statistics),
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.loading_stats),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else if (stats == null) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.no_statistics_available),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                com.paulohenriquesg.fahrenheit.stats.StatCard(
-                    title = "Total Listening Time",
-                    value = com.paulohenriquesg.fahrenheit.stats.formatTime(stats.totalTime.toLong())
-                )
-
-                stats.items.size.let { itemCount ->
-                    com.paulohenriquesg.fahrenheit.stats.StatCard(
-                        title = "Items Listened To",
-                        value = "$itemCount ${if (itemCount == 1) "item" else "items"}"
-                    )
-                }
-
-                stats.days.size.let { dayCount ->
-                    com.paulohenriquesg.fahrenheit.stats.StatCard(
-                        title = "Days with Activity",
-                        value = "$dayCount ${if (dayCount == 1) "day" else "days"}"
-                    )
-                }
-
-                if (stats.days.isNotEmpty()) {
-                    val avgPerDay = (stats.totalTime / stats.days.size).toLong()
-                    com.paulohenriquesg.fahrenheit.stats.StatCard(
-                        title = "Average per Day",
-                        value = com.paulohenriquesg.fahrenheit.stats.formatTime(avgPerDay)
-                    )
-                }
-            }
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            isLoading -> CenteredNote(stringResource(R.string.loading_stats))
+            stats == null -> CenteredNote(stringResource(R.string.no_statistics_available))
+            else -> com.paulohenriquesg.fahrenheit.stats.StatsBoard(
+                summary = com.paulohenriquesg.fahrenheit.stats.StatsSummary.of(stats),
+                modifier = Modifier.padding(top = 48.dp)
+            )
         }
+    }
+}
+
+@Composable
+private fun CenteredNote(text: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
