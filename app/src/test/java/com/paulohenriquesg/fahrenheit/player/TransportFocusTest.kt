@@ -1,14 +1,12 @@
 package com.paulohenriquesg.fahrenheit.player
 
-import android.support.v4.media.session.MediaSessionCompat
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.media3.test.utils.TestExoPlayerBuilder
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
-import org.junit.Before
 import org.junit.Rule
-import org.robolectric.shadows.ShadowMediaPlayer
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -17,9 +15,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Seen on the stick: nothing on the player held focus, so no D-pad key reached
- * it - the transport, and "Go to podcast", could not be reached at all. Only
- * the remote's own play button worked, through the media session. Frame 4 of
- * the mocks: play is focused on arrival.
+ * it. Frame 4 of the mocks: play is focused on arrival.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -29,26 +25,17 @@ class TransportFocusTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    @Before
-    fun aFileThatPrepares() {
-        // Any source reads as a 30-minute file.
-        ShadowMediaPlayer.setMediaInfoProvider { ShadowMediaPlayer.MediaInfo(1_800_000, 0) }
-    }
-
     @Test
     fun `play holds focus on arrival`() {
+        val player = TestExoPlayerBuilder(compose.activity).setMediaSourceFactory(hourLongFiles()).build()
+        val timeline = TrackTimeline(listOf(TimelineTrack(index = 1, startOffset = 0.0, duration = 1800.0, contentUrl = "/x")))
         compose.setContent {
             FahrenheitTheme {
-                MediaPlayerController(
-                    url = "http://abs.invalid/never-prepares.mp3",
-                    mediaSession = MediaSessionCompat(compose.activity, "test"),
-                    isPlaying = false,
-                    onPlayPause = {},
-                    duration = 1800.0
-                )
+                MediaPlayerController(player = player, playback = BookPlayback(player, timeline), totalTime = 1800.0)
             }
         }
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Play").assertIsFocused()
+        player.release()
     }
 }

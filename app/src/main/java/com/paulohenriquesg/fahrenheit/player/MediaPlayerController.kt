@@ -11,12 +11,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import androidx.compose.ui.focus.focusRequester
-import android.net.Uri
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
-import androidx.core.net.toUri
-import android.support.v4.media.session.MediaSessionCompat
-import android.util.Log
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,7 +39,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,134 +46,74 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.Chapter
 import com.paulohenriquesg.fahrenheit.player.PlaybackPosition
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
+/**
+ * The transport: skip, play/pause, stop, scrubber and times, for whatever
+ * [player] is playing, in whole-book time (#16).
+ *
+ * It holds no playback of its own. The player is the screen's MediaController,
+ * so this draws what the service is doing and sends it commands; positions
+ * cross file boundaries through [playback].
+ */
 @Composable
 fun MediaPlayerController(
-    url: String,
-    mediaSession: MediaSessionCompat,
-    isPlaying: Boolean,
-    onPlayPause: (Boolean) -> Unit,
-    duration: Double = 0.0,
-    currentTime: Double = 0.0,
+    player: Player,
+    playback: BookPlayback,
+    totalTime: Double,
     chapters: List<Chapter>? = null,
-    authToken: String? = null,
-    shouldAutoPlay: Boolean = false,
     onCurrentTimeUpdate: (Double) -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val mediaPlayer = remember { GlobalMediaPlayer.getInstance() }
-    var progress by remember { mutableStateOf(PlaybackPosition.fraction(currentTime, duration)) }
-    var currentTimeState by remember { mutableStateOf(currentTime) }
-    var totalTime by remember { mutableStateOf(duration) }
+    var isPlaying by remember(player) { mutableStateOf(player.playWhenReady) }
+    var failed by remember(player) { mutableStateOf(player.playerError != null) }
+    var currentTime by remember(player) { mutableDoubleStateOf(playback.bookPosition()) }
     var sliderSize by remember { mutableStateOf(IntSize.Zero) }
-    var isPrepared by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(url) {
-        android.util.Log.d("MediaPlayerController", "LaunchedEffect url: $url")
-        android.util.Log.d("MediaPlayerController", "duration: $duration, currentTime: $currentTime, authToken: ${authToken?.take(20)}...")
-        isPrepared = false
-        mediaPlayer.apply {
-            reset() // Ensure the media player is reset before setting a new data source
-            android.util.Log.d("MediaPlayerController", "MediaPlayer reset")
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            // Play/pause follows what was asked for, so it answers a press at
+            // once rather than after buffering.
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { isPlaying = playWhenReady }
+            override fun onPlayerErrorChanged(error: PlaybackException?) { failed = error != null }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
 
-            setOnErrorListener { mp, what, extra ->
-                android.util.Log.e("MediaPlayerController", "MediaPlayer error - what: $what, extra: $extra")
-                false
-            }
-
-            if (authToken != null) {
-                val headers = mapOf("Authorization" to "Bearer $authToken")
-                android.util.Log.d("MediaPlayerController", "Setting data source with auth headers")
-                setDataSource(context, url.toUri(), headers)
-            } else {
-                android.util.Log.d("MediaPlayerController", "Setting data source without auth")
-                setDataSource(url)
-            }
-            android.util.Log.d("MediaPlayerController", "Data source set, calling prepareAsync")
-
-            setOnPreparedListener {
-                android.util.Log.d("MediaPlayerController", "OnPreparedListener called, shouldAutoPlay: $shouldAutoPlay")
-                // Use the parameter duration (from API) if available, otherwise use MediaPlayer duration
-                if (duration > 0) {
-                    totalTime = duration
-                } else {
-                    totalTime = mediaPlayer.duration / 1000.0
-                }
-                currentTimeState = currentTime
-                progress = PlaybackPosition.fraction(currentTime, totalTime)
-                android.util.Log.d("MediaPlayerController", "Seeking to position: ${(currentTime * 1000).toInt()}ms")
-                seekTo((currentTime * 1000).toInt()) // Seek to the currentTime position
-                onCurrentTimeUpdate(currentTime) // Notify parent of initial position
-                isPrepared = true
-                android.util.Log.d("MediaPlayerController", "MediaPlayer prepared, totalTime: $totalTime, currentTimeState: $currentTimeState")
-
-                // Auto-play if requested
-                if (shouldAutoPlay) {
-                    android.util.Log.d("MediaPlayerController", "Auto-playing after preparation")
-                    onPlayPause(true)
-                }
-            }
-            prepareAsync()
+    // Polls only while playing, as before: a loop that never ends keeps
+    // Compose from ever being idle, which also hangs its UI tests.
+    LaunchedEffect(player, isPlaying) {
+        currentTime = playback.bookPosition()
+        onCurrentTimeUpdate(currentTime)
+        while (isPlaying) {
+            delay(1000L)
+            currentTime = playback.bookPosition()
+            onCurrentTimeUpdate(currentTime)
         }
     }
 
-    LaunchedEffect(isPlaying) {
-        android.util.Log.d("MediaPlayerController", "isPlaying changed to: $isPlaying, isPrepared: $isPrepared, mediaPlayer.isPlaying: ${mediaPlayer.isPlaying}")
-        if (isPlaying) {
-            if (isPrepared && !mediaPlayer.isPlaying) {
-                android.util.Log.d("MediaPlayerController", "Starting media player")
-                mediaPlayer.start()
-                android.util.Log.d("MediaPlayerController", "Media player started, isPlaying: ${mediaPlayer.isPlaying}")
-            } else {
-                android.util.Log.d("MediaPlayerController", "Cannot start - isPrepared: $isPrepared, mediaPlayer.isPlaying: ${mediaPlayer.isPlaying}")
-            }
-            coroutineScope.launch {
-                while (isPlaying && isPrepared) {
-                    currentTimeState = mediaPlayer.currentPosition / 1000.0
-                    progress = PlaybackPosition.fraction(currentTimeState, totalTime)
-                    onCurrentTimeUpdate(currentTimeState)
-                    delay(1000L)
-                }
-            }
-        } else {
-            if (mediaPlayer.isPlaying) {
-                android.util.Log.d("MediaPlayerController", "Pausing media player")
-                mediaPlayer.pause()
-            }
-        }
+    fun seekTo(seconds: Double) {
+        playback.seekToBookTime(seconds)
+        currentTime = seconds
+        onCurrentTimeUpdate(seconds)
     }
 
     // Something must hold focus or no D-pad key reaches this screen at all;
     // play, so the remote's centre button does the obvious thing (frame 4).
-    // The buttons are never disabled for the same reason: a disabled button
-    // cannot take focus, and a press before the file is ready does nothing.
-    val playFocus = rememberInitialFocus(enabled = true, url)
+    val playFocus = rememberInitialFocus(enabled = true, player)
 
     Column(modifier = Modifier.padding(8.dp)) {
         Row(
             modifier = Modifier.align(Alignment.CenterHorizontally),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Skip Back 30s
             TransportButton(
-                onClick = {
-                    if (isPrepared) {
-                        val newPosition = PlaybackPosition.skip(currentTimeState, -SKIP_SECONDS, totalTime)
-                        mediaPlayer.seekTo((newPosition * 1000).toInt())
-                        currentTimeState = newPosition
-                        progress = PlaybackPosition.fraction(newPosition, totalTime)
-                        onCurrentTimeUpdate(newPosition)
-                    }
-                },
+                onClick = { seekTo(PlaybackPosition.skip(currentTime, -SKIP_SECONDS, totalTime)) },
                 size = 48.dp,
                 container = TvMaterialTheme.colorScheme.secondaryContainer,
                 content = TvMaterialTheme.colorScheme.onSecondaryContainer
@@ -182,11 +121,14 @@ fun MediaPlayerController(
                 Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.skip_back_30_seconds))
             }
 
-            // Play/Pause (larger)
             TransportButton(
                 onClick = {
-                    if (isPrepared) {
-                        onPlayPause(!isPlaying)
+                    when {
+                        // After an error the player is idle where it failed;
+                        // preparing again retries from there.
+                        failed -> { player.prepare(); player.play() }
+                        isPlaying -> player.pause()
+                        else -> player.play()
                     }
                 },
                 size = 56.dp,
@@ -200,39 +142,19 @@ fun MediaPlayerController(
                 )
             }
 
-            // Stop
+            // Pauses and keeps the place: returning to 0:00 would now be saved
+            // over the resume point by the closing progress report. Back stops.
             TransportButton(
-                onClick = {
-                    mediaPlayer.stop()
-                    mediaPlayer.reset()
-                    isPrepared = false
-                    if (authToken != null) {
-                        val headers = mapOf("Authorization" to "Bearer $authToken")
-                        mediaPlayer.setDataSource(context, url.toUri(), headers)
-                    } else {
-                        mediaPlayer.setDataSource(url)
-                    }
-                    mediaPlayer.prepareAsync()
-                    onPlayPause(false)
-                },
+                onClick = { player.pause() },
                 size = 48.dp,
-                container = androidx.compose.ui.graphics.Color.Transparent,
+                container = Color.Transparent,
                 content = TvMaterialTheme.colorScheme.onSurface
             ) {
                 Icon(Icons.Filled.Stop, contentDescription = stringResource(R.string.stop))
             }
 
-            // Skip Forward 30s
             TransportButton(
-                onClick = {
-                    if (isPrepared) {
-                        val newPosition = PlaybackPosition.skip(currentTimeState, SKIP_SECONDS, totalTime)
-                        mediaPlayer.seekTo((newPosition * 1000).toInt())
-                        currentTimeState = newPosition
-                        progress = PlaybackPosition.fraction(newPosition, totalTime)
-                        onCurrentTimeUpdate(newPosition)
-                    }
-                },
+                onClick = { seekTo(PlaybackPosition.skip(currentTime, SKIP_SECONDS, totalTime)) },
                 size = 48.dp,
                 container = TvMaterialTheme.colorScheme.secondaryContainer,
                 content = TvMaterialTheme.colorScheme.onSecondaryContainer
@@ -243,20 +165,12 @@ fun MediaPlayerController(
 
         Box(modifier = Modifier.padding(top = 16.dp)) {
             Slider(
-                value = progress,
-                onValueChange = { newValue ->
-                    progress = newValue
-                    mediaPlayer.seekTo((newValue * totalTime * 1000).toInt())
-                    currentTimeState = mediaPlayer.currentPosition / 1000.0
-                    onCurrentTimeUpdate(currentTimeState)
-                },
+                value = PlaybackPosition.fraction(currentTime, totalTime),
+                onValueChange = { seekTo(it * totalTime) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .onGloballyPositioned { coordinates ->
-                        sliderSize = coordinates.size
-                    }
+                    .onGloballyPositioned { sliderSize = it.size }
             )
-
             val chapterColor = MaterialTheme.colorScheme.onSurfaceVariant
             Canvas(modifier = Modifier.matchParentSize()) {
                 PlaybackPosition.chapterMarks(chapters, totalTime).forEach { percentage ->
@@ -265,18 +179,24 @@ fun MediaPlayerController(
             }
         }
 
-        Row(
-            modifier = Modifier.padding(top = 8.dp)
-        ) {
-            Text(
-                text = "Current Time: ${PlaybackPosition.clock(currentTimeState)}",
-                modifier = Modifier.weight(1f)
-                , color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "Total Time: ${PlaybackPosition.clock(totalTime)}",
-                modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface
-            )
+        Row(modifier = Modifier.padding(top = 8.dp)) {
+            if (failed) {
+                Text(
+                    text = stringResource(R.string.playback_failed),
+                    color = MaterialTheme.colorScheme.error
+                )
+            } else {
+                Text(
+                    text = "Current Time: ${PlaybackPosition.clock(currentTime)}",
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Total Time: ${PlaybackPosition.clock(totalTime)}",
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
