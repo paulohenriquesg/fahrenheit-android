@@ -82,6 +82,13 @@ class SharedPreferencesHandler(context: Context) {
         }
     }
 
+    /** Forget the theme choice, so the device's setting decides again. */
+    fun clearThemeChoice() {
+        sharedPreferences.edit {
+            remove("dark_theme")
+        }
+    }
+
     fun clearPreferences() {
         sharedPreferences.edit {
             clear()

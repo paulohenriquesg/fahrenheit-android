@@ -87,4 +87,21 @@
     <string name="stats_most_listened">Most listened</string>
     <string name="stats_recent_sessions">Recently listened</string>
     <string name="stats_nothing_listened_yet">Nothing listened yet</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_subtitle">Follow the device, or pick one</string>
+    <string name="settings_shelves">Shelves</string>
+    <string name="settings_shelves_subtitle">Rows of covers, or a grid</string>
+    <string name="settings_rows">Rows</string>
+    <string name="settings_grid">Grid</string>
+    <string name="settings_updates">Updates</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_check_now">Check now</string>
+    <string name="settings_update_checking">Checking with the server\u2026</string>
+    <string name="settings_update_up_to_date">Up to date on %1$s</string>
+    <string name="settings_update_available">%1$s is ready to install</string>
+    <string name="settings_sign_out">Sign out</string>
+    <string name="switch_library">Switch library</string>
+    <string name="switch_library_none">No libraries on this server</string>
+    <string name="switch_library_current">Current</string>
 </resources>

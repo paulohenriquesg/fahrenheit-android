@@ -28,6 +28,29 @@ object ThemeManager {
         )
     }
 
+    /** What settings should show as chosen. */
+    fun preference(context: Context): ThemePreference {
+        val handler = SharedPreferencesHandler(context)
+        val stored = handler.getUserPreferences().darkTheme.takeIf { handler.hasChosenTheme() }
+        return ThemePreference.of(stored)
+    }
+
+    /**
+     * Apply a choice. System removes the stored one rather than storing a third
+     * value, so the device decides again - now and on every later launch.
+     */
+    fun apply(context: Context, preference: ThemePreference) {
+        val handler = SharedPreferencesHandler(context)
+        val stored = preference.stored()
+        if (stored == null) {
+            handler.clearThemeChoice()
+            _isDarkTheme.value = preference.isDark(context.isSystemDark())
+        } else {
+            handler.saveUserPreferences(handler.getUserPreferences().copy(darkTheme = stored))
+            _isDarkTheme.value = stored
+        }
+    }
+
     fun setTheme(context: Context, isDark: Boolean) {
         _isDarkTheme.value = isDark
         val sharedPreferencesHandler = SharedPreferencesHandler(context)

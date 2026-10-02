@@ -1,6 +1,12 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.settings.SettingsView
+import com.paulohenriquesg.fahrenheit.settings.UpdateCheck
+import com.paulohenriquesg.fahrenheit.library.SwitchLibraryView
+import com.paulohenriquesg.fahrenheit.ui.theme.ThemeManager
+import com.paulohenriquesg.fahrenheit.BuildConfig
+import com.paulohenriquesg.fahrenheit.update.AppUpdates
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.R
@@ -57,14 +63,12 @@ import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.Shelf
-import com.paulohenriquesg.fahrenheit.library.LibrarySelectionActivity
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
 import com.paulohenriquesg.fahrenheit.navigation.MenuAction
 import com.paulohenriquesg.fahrenheit.navigation.MenuConfig
 import com.paulohenriquesg.fahrenheit.podcast.PlayerActivity
 import com.paulohenriquesg.fahrenheit.search.SearchActivity
-import com.paulohenriquesg.fahrenheit.settings.SettingsActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.elements.AuthorShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.SeriesShelfRow
@@ -198,6 +202,8 @@ fun MainScreen(
         view, shelves, libraryItems, seriesList, collectionsList, listeningStats
     )
 
+    var updateCheck by remember { mutableStateOf<UpdateCheck>(UpdateCheck.Idle) }
+
     val backAction = BackAction.decide(view)
     BackHandler(enabled = backAction != BackAction.Exit) {
         when (backAction) {
@@ -215,6 +221,18 @@ fun MainScreen(
     }
 
     // Handle menu actions
+    // Settings offers this too, so it is not only a menu row.
+    fun signOut() {
+        // Storage, the client built from it, and anything still playing with
+        // the old token.
+        sharedPreferencesHandler.clearSession()
+        ApiClient.clearSession()
+        GlobalMediaPlayer.release()
+        val intent = Intent(context, LoginActivity::class.java)
+        context.startActivity(intent)
+        (context as? Activity)?.finish()
+    }
+
     fun handleMenuAction(action: MenuAction, libraryId: String?) {
         when (action) {
             MenuAction.HOME -> {
@@ -285,23 +303,12 @@ fun MainScreen(
                 }
             }
             MenuAction.SELECT_LIBRARY -> {
-                val intent = LibrarySelectionActivity.createIntent(context)
-                context.startActivity(intent)
+                view = MainView.SWITCH_LIBRARY
             }
             MenuAction.SETTINGS -> {
-                val intent = SettingsActivity.createIntent(context)
-                context.startActivity(intent)
+                view = MainView.SETTINGS
             }
-            MenuAction.LOGOUT -> {
-                // Storage, the client built from it, and anything still
-                // playing with the old token.
-                sharedPreferencesHandler.clearSession()
-                ApiClient.clearSession()
-                GlobalMediaPlayer.release()
-                val intent = Intent(context, LoginActivity::class.java)
-                context.startActivity(intent)
-                (context as? Activity)?.finish()
-            }
+            MenuAction.LOGOUT -> signOut()
         }
     }
 
@@ -379,6 +386,40 @@ fun MainScreen(
                     MainView.AUTHORS -> AuthorsBrowseView(currentLibrary?.id)
                     MainView.COLLECTIONS -> CollectionsBrowseView(collectionsList, isLoadingCollections)
                     MainView.STATS -> StatsBrowseView(listeningStats, isLoadingStats)
+                    MainView.SETTINGS -> SettingsView(
+                        theme = ThemeManager.preference(context),
+                        onTheme = { ThemeManager.apply(context, it) },
+                        rowLayout = LayoutManager.isRowLayout.value,
+                        onLayout = { LayoutManager.setLayout(context, it) },
+                        version = BuildConfig.VERSION_NAME,
+                        update = updateCheck,
+                        onCheckUpdates = {
+                            updateCheck = UpdateCheck.Checking
+                            scope.launch {
+                                // Asked for, so it answers even while snoozed.
+                                val available = AppUpdates.checker(context).check(force = true)
+                                updateCheck = if (available != null) {
+                                    UpdateCheck.Available(available.versionName)
+                                } else {
+                                    UpdateCheck.UpToDate
+                                }
+                            }
+                        },
+                        username = username,
+                        server = sharedPreferencesHandler.getUserPreferences().host,
+                        onSignOut = { signOut() }
+                    )
+                    MainView.SWITCH_LIBRARY -> SwitchLibraryView(
+                        libraries = libraries,
+                        currentId = currentLibrary?.id,
+                        onSelect = { chosen ->
+                            chosen.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
+                            currentLibrary = chosen
+                            shouldRefreshLibrary = true
+                            view = MainView.HOME
+                            highlightedMenuItemId = MainView.HOME.menuItemId
+                        }
+                    )
                 }
             }
         }
