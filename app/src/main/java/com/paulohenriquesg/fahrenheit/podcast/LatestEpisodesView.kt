@@ -36,6 +36,7 @@ import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
 import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.utils.RichText
+import com.paulohenriquesg.fahrenheit.stats.shortDuration
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -108,23 +109,36 @@ fun LatestEpisodesView(libraryId: String) {
                     )
                 }
             } else {
+                // Under day headings: a flat list with no dates read as one pile,
+                // so a new episode was invisible among old ones.
+                val groups = remember(episodes) { EpisodeGroups.of(episodes, System.currentTimeMillis()) }
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    val keys = StableKeys.of(episodes) { e -> e.id }
-                    items(episodes.size, key = { keys[it] }) { index ->
-                        val recentEpisode = episodes[index]
-                        EpisodeCard(
-                            episode = recentEpisode,
-                            onClick = {
-                                val intent = DetailActivity.createIntent(
-                                    context,
-                                    recentEpisode.libraryItemId
-                                )
-                                context.startActivity(intent)
-                            }
-                        )
+                    groups.forEach { group ->
+                        item(key = "group_${group.label}") {
+                            Text(
+                                text = group.label,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
+                        val keys = StableKeys.of(group.episodes) { e -> e.id }
+                        items(group.episodes.size, key = { "${group.label}_${keys[it]}" }) { index ->
+                            val recentEpisode = group.episodes[index]
+                            EpisodeCard(
+                                episode = recentEpisode,
+                                onClick = {
+                                    val intent = DetailActivity.createIntent(
+                                        context,
+                                        recentEpisode.libraryItemId
+                                    )
+                                    context.startActivity(intent)
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -192,7 +206,8 @@ fun EpisodeCard(
                 Text(
                     text = listOfNotNull(
                         episode.podcast?.metadata?.title?.takeIf { it.isNotBlank() },
-                        published.takeIf { it.isNotBlank() }
+                        published.takeIf { it.isNotBlank() },
+                        episode.duration?.takeIf { it > 0 }?.let { shortDuration(it) }
                     ).joinToString("  ·  "),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
