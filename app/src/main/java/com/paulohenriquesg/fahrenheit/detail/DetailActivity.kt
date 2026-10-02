@@ -54,6 +54,8 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.utils.RichText
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeOrder
+import com.paulohenriquesg.fahrenheit.podcast.EmptyPodcast
+import com.paulohenriquesg.fahrenheit.podcast.EmptyPodcastView
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheck
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheckRow
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheckState
@@ -242,7 +244,15 @@ class DetailActivity : ComponentActivity() {
                                 }
                             }
                         } else {
-                            Text(text = stringResource(R.string.no_episodes), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            val media = itemDetail?.media
+                            EmptyPodcastView(
+                                lines = EmptyPodcast.lines(
+                                    lastEpisodeCheck = media?.lastEpisodeCheck,
+                                    autoDownload = media?.autoDownloadEpisodes,
+                                    now = System.currentTimeMillis(),
+                                    serverFormat = SharedPreferencesHandler(context).getUserPreferences().dateFormat
+                                )
+                            )
                         }
                     }
             }

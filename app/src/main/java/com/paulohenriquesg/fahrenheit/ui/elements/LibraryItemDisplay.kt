@@ -29,4 +29,18 @@ object LibraryItemDisplay {
         if (unfinished <= 0) return null
         return if (unfinished > MAX_BADGE_COUNT) "${MAX_BADGE_COUNT}+" else unfinished.toString()
     }
+
+    /**
+     * How many episodes the server holds, so a podcast with nothing downloaded
+     * can be told apart before it is opened (#75). Null for books, and when the
+     * server sent no count - a missing count is not a zero.
+     */
+    fun episodeCount(item: LibraryItem): String? {
+        if (item.mediaType != "podcast") return null
+        return when (val count = item.media.numEpisodes ?: return null) {
+            0 -> "Nothing downloaded"
+            1 -> "1 episode"
+            else -> "$count episodes"
+        }
+    }
 }
