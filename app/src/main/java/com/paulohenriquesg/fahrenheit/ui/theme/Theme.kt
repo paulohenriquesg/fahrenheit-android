@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.ui.theme
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -136,12 +137,20 @@ fun FahrenheitTheme(
         )
     }
 
+    // Text that names no colour takes LocalContentColor, which defaults to
+    // near-black in both libraries: on a dark background that is grey on black,
+    // which is what the greeting was. Say what it should be once, here.
     MaterialTheme(
         colorScheme = tvColorScheme,
         typography = Typography
     ) {
         androidx.compose.material3.MaterialTheme(colorScheme = phoneColorScheme) {
-            content()
+            CompositionLocalProvider(
+                androidx.tv.material3.LocalContentColor provides palette.onBackground,
+                androidx.compose.material3.LocalContentColor provides palette.onBackground
+            ) {
+                content()
+            }
         }
     }
 }

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fahrenheit TV — settings and library mock</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --bg:#121212; --surface:#1E1E1E; --variant:#4A3D5C; --on-bg:#FFFFFF;
+    --on-surface:#FFFFFF; --on-variant:#CAC4D0; --primary:#D0BCFF; --on-primary:#381E72;
+    --outline:#8E8699; --good:#A6D7A8;
+    --font: Manrope, "Avenir Next", system-ui, sans-serif;
+    --gap:32px; --inset:28px; --radius:20px; --rest:2px; --focus:6px;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#07070A; color:var(--on-bg); font-family:var(--font); }
+  .page { padding:40px 40px 100px; max-width:1180px; }
+  h1 { font-size:30px; font-weight:800; margin:0 0 8px; }
+  .lede { color:var(--on-variant); font-size:15px; line-height:1.6; margin:0 0 32px; max-width:95ch; }
+  .lede code { background:#17161B; padding:1px 5px; border-radius:4px; }
+  section { margin-bottom:52px; }
+  h2 { font-size:19px; font-weight:700; margin:0 0 6px; }
+  .why { color:var(--on-variant); font-size:14.5px; line-height:1.6; margin:0 0 14px; max-width:95ch; }
+  .why b { color:var(--on-bg); }
+  .shell { width:960px; height:540px; overflow:hidden; border-radius:10px; border:1px solid #2A2831; }
+  .tv { width:1920px; height:1080px; transform:scale(0.5); transform-origin:top left; background:var(--bg); position:relative; }
+
+  .rail { position:absolute; left:0; top:0; bottom:0; width:112px; background:var(--surface); border-right:var(--rest) solid var(--outline); display:flex; flex-direction:column; align-items:center; padding:36px 0; gap:28px; }
+  .rail .slot { width:64px; height:64px; border-radius:14px; display:grid; place-items:center; color:var(--on-variant); }
+  .rail .slot.on { background:var(--primary); color:var(--on-primary); }
+  .stage { position:absolute; left:112px; right:0; top:0; bottom:0; padding:60px 80px; }
+  h3.title { font-size:60px; font-weight:800; margin:0 0 40px; letter-spacing:-0.02em; }
+
+  .group { margin-bottom:34px; }
+  .group h4 { font-size:26px; font-weight:700; color:var(--on-variant); margin:0 0 16px; letter-spacing:.04em; text-transform:uppercase; }
+  .row { display:flex; align-items:center; gap:26px; background:var(--surface); border:var(--rest) solid var(--outline); border-radius:var(--radius); padding:26px 32px; margin-bottom:16px; }
+  .row.foc { outline:var(--focus) solid var(--primary); border-color:transparent; background:#252031; }
+  .row .main { flex:1; min-width:0; }
+  .row .t { font-size:32px; font-weight:600; }
+  .row .s { font-size:25px; color:var(--on-variant); margin-top:6px; }
+  .row .val { font-size:30px; color:var(--primary); font-weight:600; white-space:nowrap; }
+  .row .ico { width:56px; height:56px; border-radius:12px; background:var(--variant); display:grid; place-items:center; flex:none; }
+  .seg { display:flex; gap:14px; }
+  .seg .opt { font-size:28px; padding:14px 30px; border-radius:12px; border:var(--rest) solid var(--outline); color:var(--on-variant); }
+  .seg .opt.on { background:var(--primary); color:var(--on-primary); border-color:transparent; font-weight:700; }
+  .seg .opt.foc { outline:var(--focus) solid var(--primary); outline-offset:3px; color:var(--on-bg); }
+  .status { display:flex; align-items:center; gap:16px; font-size:27px; color:var(--on-variant); margin-top:4px; }
+  .status .dot { width:14px; height:14px; border-radius:50%; background:var(--good); }
+  .spin { width:26px; height:26px; border:4px solid var(--variant); border-top-color:var(--primary); border-radius:50%; }
+
+  .tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--gap); }
+  .tile { background:var(--surface); border:var(--rest) solid var(--outline); border-radius:var(--radius); padding:30px; min-height:280px; display:flex; flex-direction:column; justify-content:space-between; }
+  .tile.foc { outline:var(--focus) solid var(--primary); border-color:transparent; background:#252031; }
+  .tile .nm { font-size:38px; font-weight:700; }
+  .tile .meta { font-size:26px; color:var(--on-variant); margin-top:10px; }
+  .tile .badge { align-self:flex-start; font-size:22px; font-weight:700; background:var(--primary); color:var(--on-primary); padding:8px 18px; border-radius:999px; }
+  .ic { width:34px; height:34px; stroke:currentColor; fill:none; stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round; }
+  ul.pts { margin:12px 0 0; padding-left:20px; color:var(--on-variant); font-size:14.5px; line-height:1.65; }
+  ul.pts li { margin-bottom:7px; } ul.pts b { color:var(--on-bg); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Settings and Switch Library — as sections, not as other screens</h1>
+  <p class="lede">Both are reached from the menu, so they read as sections — but each is a separate Activity that replaces the screen, and the rail disappears. Here they are drawn <b>inside the rail</b>, where the menu stays put and Back still means "up a level". Both also report through Toasts today: a small grey box at the bottom of a television, gone in two seconds.</p>
+
+  <section>
+    <h2>1. Settings</h2>
+    <p class="why">Today: a title, two switches, a version line and a button. Here the same things are <b>grouped boxes</b> with the value on the right, so a row says what it is set to without being focused. The rail is still there, and Settings is highlighted in it.</p>
+    <div class="shell"><div class="tv">
+      <nav class="rail">
+        <div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg></div>
+        <div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h4v16H5zM11 4h4v16h-4z"/></svg></div>
+        <div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M5 20V11M10 20V5M15 20v-6M20 20V8"/></svg></div>
+        <div class="slot on"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.6H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9 3h.1a2 2 0 1 1 4 0V3a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 21 9.4V9.5a2 2 0 1 1 0 4H21a1.6 1.6 0 0 0-1.6 1.5z"/></svg></div>
+      </nav>
+      <div class="stage">
+        <h3 class="title">Settings</h3>
+        <div class="group">
+          <h4>Appearance</h4>
+          <div class="row foc">
+            <div class="main"><div class="t">Theme</div><div class="s">Follow the device, or pick one</div></div>
+            <div class="seg"><span class="opt">System</span><span class="opt">Light</span><span class="opt on foc">Dark</span></div>
+          </div>
+          <div class="row">
+            <div class="main"><div class="t">Shelves</div><div class="s">Rows of covers, or a grid</div></div>
+            <div class="seg"><span class="opt on">Rows</span><span class="opt">Grid</span></div>
+          </div>
+        </div>
+        <div class="group">
+          <h4>Updates</h4>
+          <div class="row">
+            <div class="main"><div class="t">Check for updates</div>
+              <div class="status"><span class="dot"></span>Up to date &middot; checked just now</div></div>
+            <div class="val">v0.0.10</div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>2. Settings — the theme can mean "follow the device" again</h2>
+    <p class="why">The switch is a boolean, so once it is touched there is no way back to following the device — even though <code>ThemeChoice.resolve</code> already supports exactly that, and it is what a fresh install does. Three choices say what the code can already do.</p>
+    <div class="shell"><div class="tv">
+      <nav class="rail"><div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot on"></div></nav>
+      <div class="stage">
+        <h3 class="title">Settings</h3>
+        <div class="group">
+          <h4>Appearance</h4>
+          <div class="row foc">
+            <div class="main"><div class="t">Theme</div><div class="s">Your TV is set to dark right now</div></div>
+            <div class="seg"><span class="opt on foc">System</span><span class="opt">Light</span><span class="opt">Dark</span></div>
+          </div>
+        </div>
+        <div class="group">
+          <h4>Account</h4>
+          <div class="row">
+            <div class="main"><div class="t">admin</div><div class="s">192.168.0.2:13378</div></div>
+            <div class="val">Sign out</div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>3. Checking for updates, without a Toast</h2>
+    <p class="why">A Toast on a television is a small grey box at the bottom of a two-metre screen that disappears while you are still looking at the middle of it. The row that asked the question answers it: <b>checking, up to date, or ready to install</b> — in place, and it stays.</p>
+    <div class="shell"><div class="tv">
+      <nav class="rail"><div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot on"></div></nav>
+      <div class="stage">
+        <h3 class="title">Settings</h3>
+        <div class="group">
+          <h4>Updates</h4>
+          <div class="row"><div class="main"><div class="t">Check for updates</div>
+            <div class="status"><span class="spin"></span>Asking the server…</div></div><div class="val">v0.0.10</div></div>
+          <div class="row foc"><div class="main"><div class="t">Version 0.0.11 is ready</div>
+            <div class="s">18 MB &middot; adds the navigation rail and the new stats screen</div></div>
+            <div class="val">Install</div></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>4. Switch Library</h2>
+    <p class="why">A library is a big, rare choice, so it gets tiles rather than a list: what is in it, how much, and which one you are in. Picking one returns you to Home in that library — and the rail stays put throughout, which is the whole point.</p>
+    <div class="shell"><div class="tv">
+      <nav class="rail">
+        <div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg></div>
+        <div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h4v16H5zM11 4h4v16h-4z"/></svg></div>
+        <div class="slot on"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+        <div class="slot"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></div>
+      </nav>
+      <div class="stage">
+        <h3 class="title">Switch library</h3>
+        <div class="tiles">
+          <div class="tile foc">
+            <div><div class="nm">Audiobooks</div><div class="meta">38 books &middot; 181 hours listened</div></div>
+            <span class="badge">Current</span>
+          </div>
+          <div class="tile">
+            <div><div class="nm">Podcasts</div><div class="meta">12 shows &middot; 340 episodes</div></div>
+          </div>
+          <div class="tile" style="opacity:.55">
+            <div><div class="nm">Add a library</div><div class="meta">On the server, not here</div></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>What this changes in the code</h2>
+    <ul class="pts">
+      <li><b>Both become views inside MainScreen</b> (`MainView.SETTINGS`, `MainView.SWITCH_LIBRARY`) rather than Activities, so the rail stays and Back keeps meaning "up a level". `SettingsActivity` and `LibrarySelectionActivity` then have no callers, like `StatsActivity` before them.</li>
+      <li><b>The theme becomes three choices.</b> `ThemeChoice.resolve(chosen, systemIsDark)` already takes a null for "follow the device"; only the UI cannot say it. This is a behaviour change, so it wants its own tests.</li>
+      <li><b>Toasts go.</b> The update check reports into the row that asked, and errors sit beside what failed.</li>
+      <li><b>Left alone:</b> the players, item detail and search stay full-screen. A player with a menu rail beside it is worse, not better.</li>
+      <li><b>Not decided:</b> whether Sign out belongs in Settings (as drawn) as well as in the rail, or only here.</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

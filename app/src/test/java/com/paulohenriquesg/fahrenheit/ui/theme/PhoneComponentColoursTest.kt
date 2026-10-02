@@ -42,6 +42,38 @@ class PhoneComponentColoursTest {
         return surface to onSurface
     }
 
+    private fun contentOnBackground(dark: Boolean): Pair<Color, Color> {
+        ThemeManager.setTheme(context, isDark = dark)
+        var content = Color.Unspecified
+        var background = Color.Unspecified
+        compose.setContent {
+            FahrenheitTheme {
+                content = androidx.tv.material3.LocalContentColor.current
+                background = androidx.tv.material3.MaterialTheme.colorScheme.background
+            }
+        }
+        compose.waitForIdle()
+        return content to background
+    }
+
+    @Test
+    fun `text that names no colour is still legible in the dark theme`() {
+        // The greeting passed no colour, so it took LocalContentColor, which
+        // defaults to near-black: dark grey on a dark background.
+        val (content, background) = contentOnBackground(dark = true)
+
+        val ratio = Contrast.ratio(content, background)
+        assertTrue("contrast ratio of $ratio", ratio >= 4.5f)
+    }
+
+    @Test
+    fun `text that names no colour is still legible in the light theme`() {
+        val (content, background) = contentOnBackground(dark = false)
+
+        val ratio = Contrast.ratio(content, background)
+        assertTrue("contrast ratio of $ratio", ratio >= 4.5f)
+    }
+
     @Test
     fun `a phone surface is dark in the dark theme`() {
         val (surface, _) = phoneScheme(dark = true)

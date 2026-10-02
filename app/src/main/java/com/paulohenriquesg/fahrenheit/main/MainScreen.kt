@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import kotlin.random.Random
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -386,7 +387,14 @@ fun MainScreen(
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(text = "Hello, $name!", modifier = modifier)
+    // One greeting per visit to the screen, not one per recomposition.
+    val seed = remember { Random.nextInt() }
+    Text(
+        text = Welcome.pick(name, seed),
+        modifier = modifier,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onBackground
+    )
 }
 
 fun getIconForMediaType(mediaType: String?): ImageVector {
