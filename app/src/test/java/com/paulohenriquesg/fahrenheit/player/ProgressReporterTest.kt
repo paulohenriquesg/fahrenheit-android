@@ -72,4 +72,72 @@ class ProgressReporterTest {
 
         assertEquals(emptyList<Double>(), sent.map { it.currentTime })
     }
+
+    private class Listening {
+        val sent = mutableListOf<Double>()
+        var at = 0.0
+        var rounds = 0
+        val reporter = ProgressReporter(
+            send = { sent += it.currentTime!! },
+            position = { at },
+            total = { 1000.0 },
+            pause = { at += 10.0 }
+        )
+        suspend fun play(rounds: Int) {
+            this.rounds = rounds
+            reporter.run { this.rounds-- > 0 }
+        }
+    }
+
+    @Test
+    fun `stopping sends where it stopped, not where the last round left it`() = runBlocking {
+        val listening = Listening()
+        listening.play(rounds = 1)   // sends 10
+        listening.at = 13.0
+
+        listening.reporter.finish()
+
+        assertEquals(listOf(10.0, 13.0), listening.sent)
+    }
+
+    @Test
+    fun `stopping where the last report left off sends nothing more`() = runBlocking {
+        val listening = Listening()
+        listening.play(rounds = 1)
+
+        listening.reporter.finish()
+
+        assertEquals(listOf(10.0), listening.sent)
+    }
+
+    // Review Focus 1: opened, never played, Back. A write here would overwrite
+    // the resume point with itself and bump the book in Continue Listening.
+    @Test
+    fun `stopping before anything played sends nothing`() = runBlocking {
+        val listening = Listening()
+        listening.at = 900.0
+
+        listening.reporter.finish()
+
+        assertEquals(emptyList<Double>(), listening.sent)
+    }
+
+    @Test
+    fun `a stop shorter than one round is still saved`() = runBlocking {
+        val sent = mutableListOf<Double>()
+        var at = 900.0
+        var playing = true
+        val reporter = ProgressReporter(
+            send = { sent += it.currentTime!! },
+            position = { at },
+            total = { 1000.0 },
+            // Paused after three seconds, before the first round's report.
+            pause = { at = 903.0; playing = false; throw kotlinx.coroutines.CancellationException() }
+        )
+        runCatching { reporter.run { playing } }
+
+        reporter.finish()
+
+        assertEquals(listOf(903.0), sent)
+    }
 }
