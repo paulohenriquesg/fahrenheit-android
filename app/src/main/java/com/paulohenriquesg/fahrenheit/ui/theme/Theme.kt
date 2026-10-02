@@ -29,6 +29,8 @@ private class Palette(
     val onSurface: Color,
     val onSurfaceVariant: Color,
     val onPrimary: Color,
+    val onSecondary: Color,
+    val onTertiary: Color,
     val outline: Color
 )
 
@@ -42,7 +44,11 @@ private val DarkPalette = Palette(
     onBackground = Color(0xFFFFFFFF),
     onSurface = Color(0xFFFFFFFF),
     onSurfaceVariant = Color(0xFFCAC4D0),
-    onPrimary = Color(0xFFFFFFFF),
+    // A dark scheme's primary is a light tone, so what sits on it has to be
+    // dark. White on Purple80 measured 1.70:1.
+    onPrimary = Color(0xFF381E72),
+    onSecondary = Color(0xFF332D41),
+    onTertiary = Color(0xFF492532),
     outline = Color(0xFF8E8699)
 )
 
@@ -57,6 +63,8 @@ private val LightPalette = Palette(
     onSurface = Color(0xFF000000),
     onSurfaceVariant = Color(0xFF474152),
     onPrimary = Color(0xFFFFFFFF),
+    onSecondary = Color(0xFFFFFFFF),
+    onTertiary = Color(0xFFFFFFFF),
     outline = Color(0xFF6F6779)
 )
 
@@ -83,9 +91,9 @@ fun FahrenheitTheme(
             onSurface = palette.onSurface,
             onSurfaceVariant = palette.onSurfaceVariant,
             onPrimary = palette.onPrimary,
-            onSecondary = Color(0xFFFFFFFF),
+            onSecondary = palette.onSecondary,
             onSecondaryContainer = Color(0xFFFFFFFF),
-            onTertiary = Color(0xFFFFFFFF),
+            onTertiary = palette.onTertiary,
             onTertiaryContainer = Color(0xFFFFFFFF),
             secondaryContainer = Color(0xFF4A4458),
             tertiaryContainer = Color(0xFF633B48),
@@ -103,6 +111,8 @@ fun FahrenheitTheme(
             onSurface = palette.onSurface,
             onSurfaceVariant = palette.onSurfaceVariant,
             onPrimary = palette.onPrimary,
+            onSecondary = palette.onSecondary,
+            onTertiary = palette.onTertiary,
             border = palette.outline
         )
     }
@@ -119,6 +129,8 @@ fun FahrenheitTheme(
             onSurface = palette.onSurface,
             onSurfaceVariant = palette.onSurfaceVariant,
             onPrimary = palette.onPrimary,
+            onSecondary = palette.onSecondary,
+            onTertiary = palette.onTertiary,
             outline = palette.outline
         )
     } else {
@@ -133,6 +145,8 @@ fun FahrenheitTheme(
             onSurface = palette.onSurface,
             onSurfaceVariant = palette.onSurfaceVariant,
             onPrimary = palette.onPrimary,
+            onSecondary = palette.onSecondary,
+            onTertiary = palette.onTertiary,
             outline = palette.outline
         )
     }
