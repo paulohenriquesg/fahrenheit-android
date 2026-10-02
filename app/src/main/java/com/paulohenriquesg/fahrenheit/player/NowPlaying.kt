@@ -11,16 +11,15 @@ import com.paulohenriquesg.fahrenheit.utils.EpisodeDate
  * is what a player that outlives a screen (#16, an app-wide mini-player) would
  * draw too. Frames 4 and 4b of docs/mocks/screens.html.
  *
- * @property trackTotal the length of what will actually play; trusted over
- *   [mediaDuration] where there is one (see [ResumePoint]).
+ * @property timeline every file that will play, in order; null when there is
+ *   nothing to play. Its length is [trackTotal].
  * @property chapters drawn as marks on the scrubber; null for an episode.
  * @property goToPodcast whether the player offers a way to the episode's podcast.
  */
 data class NowPlaying(
     val itemId: String,
     val title: String,
-    val contentUrl: String?,
-    val trackTotal: Double?,
+    val timeline: TrackTimeline?,
     val mediaDuration: Double?,
     val chapters: List<Chapter>?,
     val episodeId: String?,
@@ -28,6 +27,9 @@ data class NowPlaying(
     val description: String?,
     private val line: (Double) -> String
 ) {
+    /** The length of what will actually play; trusted over [mediaDuration] (see [ResumePoint]). */
+    val trackTotal: Double? get() = timeline?.totalDuration
+
     /** The line under the title; a book's depends on where it is. */
     fun subtitle(currentTime: Double): String = line(currentTime)
 
@@ -46,8 +48,7 @@ data class NowPlaying(
                 return NowPlaying(
                     itemId = item.id,
                     title = metadata.title,
-                    contentUrl = tracks.firstOrNull()?.contentUrl,
-                    trackTotal = timelineOf(tracks)?.totalDuration,
+                    timeline = timelineOf(tracks),
                     mediaDuration = item.media.duration,
                     chapters = chapters,
                     episodeId = null,
@@ -65,8 +66,10 @@ data class NowPlaying(
             return NowPlaying(
                 itemId = item.id,
                 title = episode.title,
-                contentUrl = episode.audioTrack?.contentUrl,
-                trackTotal = episode.audioTrack?.duration,
+                timeline = episode.audioTrack?.let {
+                    // An episode is one file, starting at the start.
+                    TrackTimeline(listOf(TimelineTrack(index = it.index, startOffset = 0.0, duration = it.duration, contentUrl = it.contentUrl)))
+                },
                 mediaDuration = null,
                 chapters = null,
                 episodeId = episode.id,

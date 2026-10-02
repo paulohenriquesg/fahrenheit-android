@@ -56,7 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import com.paulohenriquesg.fahrenheit.player.GlobalMediaPlayer
+import com.paulohenriquesg.fahrenheit.player.Playback
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
@@ -231,11 +231,11 @@ fun MainScreen(
     // Handle menu actions
     // Settings offers this too, so it is not only a menu row.
     fun signOut() {
-        // Storage, the client built from it, and anything still playing with
-        // the old token.
+        // Stop playback first, while its last report can still be sent; then
+        // the stored session and the client built from it.
+        Playback.stop(context)
         sharedPreferencesHandler.clearSession()
         ApiClient.clearSession()
-        GlobalMediaPlayer.release()
         val intent = Intent(context, LoginActivity::class.java)
         context.startActivity(intent)
         (context as? Activity)?.finish()

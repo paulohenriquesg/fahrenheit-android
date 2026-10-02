@@ -4,8 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -22,11 +20,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
+import androidx.core.content.ContextCompat
+import androidx.media3.session.MediaController
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
+import com.google.common.util.concurrent.ListenableFuture
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
@@ -36,8 +36,6 @@ import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemRequest
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import retrofit2.awaitResponse
 
 /**
@@ -47,14 +45,15 @@ import retrofit2.awaitResponse
  * transport and differed in three lines of content, now [NowPlaying]. Every
  * fix had to be made twice, and the second copy was nearly missed each time.
  *
- * Playback still lives and dies with this screen. A player that outlives it
- * (an app-wide mini-player, #16) needs a media service; [NowPlaying] and
- * [ProgressReporter] are kept out of the Activity so they can move there.
+ * Playback lives in [PlaybackService]; this screen drives it through a
+ * MediaController, connected while it is visible. Back stops playback, Home
+ * leaves it playing.
  */
 class PlayerActivity : ComponentActivity() {
-    private lateinit var mediaSession: MediaSessionCompat
-    private var isPlaying by mutableStateOf(false)
-    private var reporting: Job? = null
+    private var controller by mutableStateOf<MediaController?>(null)
+    private var connecting: ListenableFuture<MediaController>? = null
+    private var connectFailed by mutableStateOf(false)
+    private lateinit var start: PlayerStart
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,41 +66,9 @@ class PlayerActivity : ComponentActivity() {
             finish()
             return
         }
-
-        mediaSession = MediaSessionCompat(this, "PlayerActivity").apply {
-            setCallback(object : MediaSessionCompat.Callback() {
-                override fun onPlay() {
-                    if (isPlaying) {
-                        GlobalMediaPlayer.getInstance().pause()
-                        playing(false, itemId, episodeId)
-                    } else {
-                        GlobalMediaPlayer.getInstance().start()
-                        playing(true, itemId, episodeId)
-                    }
-                }
-
-                override fun onPause() {
-                    GlobalMediaPlayer.getInstance().pause()
-                    playing(false, itemId, episodeId)
-                }
-
-                override fun onStop() {
-                    GlobalMediaPlayer.getInstance().stop()
-                    playing(false, itemId, episodeId)
-                }
-            })
-            setPlaybackState(
-                PlaybackStateCompat.Builder()
-                    .setActions(
-                        PlaybackStateCompat.ACTION_PLAY or
-                            PlaybackStateCompat.ACTION_PAUSE or
-                            PlaybackStateCompat.ACTION_PLAY_PAUSE or
-                            PlaybackStateCompat.ACTION_STOP
-                    )
-                    .build()
-            )
-            isActive = true
-        }
+        // auto_play is a request to start, once: not again when this screen
+        // comes back, and not after a configuration change recreates it.
+        start = PlayerStart(autoPlay = autoPlay && savedInstanceState == null)
 
         setContent {
             FahrenheitTheme {
@@ -113,16 +80,32 @@ class PlayerActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
-                    Player(itemId, episodeId, autoPlay)
+                    Player(itemId, episodeId)
                 }
             }
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        val future = Playback.connect(this).also { connecting = it }
+        future.addListener({
+            controller = runCatching { future.get() }.getOrNull()
+            connectFailed = controller == null
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    override fun onStop() {
+        controller?.let { Playback.leave(it, finishing = isFinishing) }
+        controller = null
+        connecting?.let { MediaController.releaseFuture(it) }
+        connecting = null
+        super.onStop()
+    }
+
     @androidx.compose.runtime.Composable
-    private fun Player(itemId: String, episodeId: String?, autoPlay: Boolean) {
+    private fun Player(itemId: String, episodeId: String?) {
         var nowPlaying by remember { mutableStateOf<NowPlaying?>(null) }
-        var progress by remember { mutableStateOf<MediaProgressResponse?>(null) }
         var failed by remember { mutableStateOf(false) }
         var currentTime by remember { mutableDoubleStateOf(0.0) }
 
@@ -130,23 +113,28 @@ class PlayerActivity : ComponentActivity() {
             val api = ApiClient.getLibraryApi()
             val item = api?.let { LibraryRepository(it).item(itemId).getOrNull() }
             val serverFormat = SharedPreferencesHandler(this@PlayerActivity).getUserPreferences().dateFormat
-            // Progress first: the transport takes its start position once, when
-            // it is first drawn, so a position arriving after it was ignored and
-            // playback started from zero.
-            progress = savedProgress(itemId, episodeId)
             nowPlaying = item?.let { NowPlaying.of(it, episodeId, System.currentTimeMillis(), serverFormat) }
             failed = nowPlaying == null
             if (episodeId != null) openSession(itemId, episodeId)
         }
 
         val playing = nowPlaying
+        val connected = controller
+        var ready by remember(connected, playing) { mutableStateOf(false) }
+        LaunchedEffect(connected, playing) {
+            if (connected == null || playing == null) return@LaunchedEffect
+            // The saved position is read when it is needed, not when the
+            // screen opened: by then it may have been listened past elsewhere.
+            ready = start.begin(connected, playing, { savedProgress(itemId, episodeId) }) { ApiClient.generateFullUrl(it) }
+            if (!ready) failed = true
+        }
         when {
-            failed -> Text(
+            failed || connectFailed -> Text(
                 text = stringResource(R.string.item_load_failed),
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(16.dp)
             )
-            playing == null -> Text(
+            playing == null || connected == null || !ready -> Text(
                 text = stringResource(R.string.loading),
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(16.dp)
@@ -154,26 +142,17 @@ class PlayerActivity : ComponentActivity() {
             else -> PlayerScreen(
                 nowPlaying = playing,
                 currentTime = currentTime,
-                onGoToPodcast = { startActivity(podcastIntent(this, itemId)) },
+                onGoToPodcast = { goToPodcast(itemId) },
                 transport = {
-                    val url = playing.contentUrl?.let { ApiClient.generateFullUrl(it) }
-                    // The file that will play decides the length, where it has one.
-                    val start = ResumePoint.decide(
-                        progress = progress,
-                        trackTotal = playing.trackTotal,
-                        mediaDuration = playing.mediaDuration
-                    )
-                    if (url != null) {
+                    // ready implies a timeline: PlayerStart refuses a NowPlaying without one.
+                    val timeline = playing.timeline
+                    if (timeline != null) {
+                        val playback = remember(connected, timeline) { BookPlayback(connected, timeline) }
                         MediaPlayerController(
-                            url,
-                            mediaSession,
-                            isPlaying,
-                            { playing(it, itemId, episodeId) },
-                            start.totalSeconds,
-                            start.positionSeconds,
-                            playing.chapters,
-                            authToken = ApiClient.getToken(),
-                            shouldAutoPlay = autoPlay,
+                            player = connected,
+                            playback = playback,
+                            totalTime = timeline.totalDuration,
+                            chapters = playing.chapters,
                             onCurrentTimeUpdate = { currentTime = it }
                         )
                     }
@@ -182,38 +161,21 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
-    /** Playback started or stopped; while it plays, the position is reported, once. */
-    private fun playing(now: Boolean, itemId: String, episodeId: String?) {
-        isPlaying = now
-        if (!now || reporting?.isActive == true) return
-        val api = ApiClient.getApiService() ?: return
-        val player = GlobalMediaPlayer.getInstance()
-        reporting = lifecycleScope.launch {
-            ProgressReporter(
-                send = { request ->
-                    val call = if (episodeId != null) {
-                        api.userCreateOrUpdateMediaProgress(itemId, episodeId, request)
-                    } else {
-                        api.userCreateOrUpdateMediaProgress(itemId, request)
-                    }
-                    val response = call.awaitResponse()
-                    // Logged, not shown: the next round retries.
-                    if (!response.isSuccessful) error("progress rejected: ${response.code()}")
-                },
-                position = { player.currentPosition / 1000.0 },
-                total = { player.duration / 1000.0 }
-            ).run { isPlaying }
-        }
-    }
+    private fun goToPodcast(podcastId: String) = leaveForPodcast(this, podcastId)
 
-    /** Where the listener left off, or null if never started or unreadable. */
+    /**
+     * Where the listener left off; null starts from the beginning. When the
+     * server could not be read that is said, since playing on will save the
+     * new position over whatever it holds.
+     */
     private suspend fun savedProgress(itemId: String, episodeId: String?): MediaProgressResponse? {
         val api = ApiClient.getApiService() ?: return null
-        val call = if (episodeId != null) api.userGetMediaProgress(itemId, episodeId) else api.userGetMediaProgress(itemId)
-        val response = runCatching { call.awaitResponse() }.getOrNull() ?: return null
-        val body = response.body().takeIf { response.isSuccessful } ?: return null
-        // The server answers for the item when it has nothing for the episode.
-        return body.takeIf { episodeId == null || it.episodeId == episodeId }
+        return SavedProgress.read(episodeId) {
+            val call = if (episodeId != null) api.userGetMediaProgress(itemId, episodeId) else api.userGetMediaProgress(itemId)
+            call.awaitResponse()
+        }.progressOr {
+            Toast.makeText(this, getString(R.string.progress_unreadable), Toast.LENGTH_LONG).show()
+        }
     }
 
     /** Opens a listening session on the server for an episode, as the podcast player did. */
@@ -235,13 +197,6 @@ class PlayerActivity : ComponentActivity() {
         )
         runCatching { api.playLibraryItem(itemId, episodeId, request).awaitResponse() }
             .onFailure { Log.w(TAG, "Play session not opened: ${it.message}") }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        if (::mediaSession.isInitialized) mediaSession.release()
-        // Without this the player lives on, holding a codec and audio focus.
-        GlobalMediaPlayer.release()
     }
 
     companion object {
@@ -266,5 +221,15 @@ class PlayerActivity : ComponentActivity() {
          */
         fun podcastIntent(context: Context, podcastId: String): Intent =
             DetailActivity.createIntent(context, podcastId).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+        /**
+         * "Go to podcast" leaves the episode: closing the player stops it, as
+         * Back does. Opened from the podcast's screen the clear-top closed it
+         * anyway; opened from anywhere else the episode played on behind it.
+         */
+        internal fun leaveForPodcast(player: android.app.Activity, podcastId: String) {
+            player.startActivity(podcastIntent(player, podcastId))
+            player.finish()
+        }
     }
 }

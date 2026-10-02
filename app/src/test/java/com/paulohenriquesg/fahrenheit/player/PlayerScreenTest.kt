@@ -34,8 +34,7 @@ class PlayerScreenTest {
     private fun playing(episode: Boolean) = NowPlaying(
         itemId = "p1",
         title = if (episode) "295 - The Book of Dale" else "Project Hail Mary",
-        contentUrl = "/x",
-        trackTotal = 1800.0,
+        timeline = TrackTimeline(listOf(TimelineTrack(index = 1, startOffset = 0.0, duration = 1800.0, contentUrl = "/x"))),
         mediaDuration = null,
         chapters = null,
         episodeId = if (episode) "e295" else null,

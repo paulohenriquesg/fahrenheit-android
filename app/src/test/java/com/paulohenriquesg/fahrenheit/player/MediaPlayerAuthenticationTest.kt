@@ -2,7 +2,6 @@ package com.paulohenriquesg.fahrenheit.player
 
 import android.content.Context
 import android.net.Uri
-import com.paulohenriquesg.fahrenheit.player.GlobalMediaPlayer
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.storage.UserPreferences
@@ -79,17 +78,6 @@ class MediaPlayerAuthenticationTest {
         assertNotNull(uri)
         assertEquals("https", uri.scheme)
         assertEquals("test.audiobookshelf.org", uri.host)
-    }
-
-    @Test
-    fun `media player can be reset and reinitialized`() {
-        val mediaPlayer = GlobalMediaPlayer.getInstance()
-
-        assertNotNull(mediaPlayer)
-        mediaPlayer.reset()
-
-        // After reset, player should be in idle state
-        assertFalse(mediaPlayer.isPlaying)
     }
 
     @Test
