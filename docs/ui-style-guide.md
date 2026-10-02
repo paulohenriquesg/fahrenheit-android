@@ -39,12 +39,35 @@ Nothing on a TV responds to the remote until something holds focus.
 Back walks up a level, it does not leave: `BackAction.decide(drawerOpen, view)`
 closes the drawer, else goes Home, else lets the system have it (#53).
 
+## The sections are always on screen
+
+The menu is `androidx.tv.material3.NavigationDrawer`: a rail of icons that stays in the layout
+and widens to labels when it holds focus. The phone `ModalNavigationDrawer` it replaced was
+invisible until opened and covered the screen when it was, so the left edge had nothing for a
+D-pad to reach (#58).
+
+The drawer widens itself when focus *enters* the sheet, which does not happen when focus starts
+there, so `NavigationRail` sets the state from `hasFocus` instead of relying on that.
+
 ## Lists
 
 **Every lazy list item carries a key**, and `HouseStyleTest` fails the build if one
 does not. Keys that can repeat (podcast shelves list a library item once per
 in-progress episode) go through `StableKeys.of`, which makes them unique by
 construction — duplicate keys crashed the app on launch (#55).
+
+## Test ids, so a script can name things
+
+A screen's root carries `Modifier.semantics { testTagsAsResourceId = true }`, which turns every
+`testTag` into a `resource-id` in the accessibility tree. `uiautomator dump`, `adb` and Maestro
+can then address an element by name.
+
+Navigation targets carry one each, from `menuItemTestTag(id)`: `menu_item_home`,
+`menu_item_stats`, and so on. Before this, driving the app from a script meant counting D-pad
+presses and hoping focus started where you assumed — which, twice in one session, logged the
+user out instead of opening the screen under test.
+
+Anything a device script or a flow needs to reach gets a tag.
 
 ## Text
 
