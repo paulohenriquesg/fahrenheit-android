@@ -16,6 +16,11 @@
     <string name="recent_episodes_load_failed">Could not load recent episodes. Check the connection to your server.</string>
     <string name="item_load_failed">Could not load this item. Check the connection to your server.</string>
     <string name="playback_failed">Couldn\'t play this</string>
+    <string name="time_left_in_chapter">%1$s left in chapter</string>
+    <string name="time_of">%1$s of %2$s</string>
+    <string name="time_left">%1$s left</string>
+    <string name="previous_chapter">Previous chapter</string>
+    <string name="next_chapter">Next chapter</string>
     <string name="time_left_of">%1$s left of %2$s</string>
     <string name="progress_unreadable">Couldn\'t read where you left off. Starting from the beginning.</string>
     <string name="api_key_where_to_create">Create one in Audiobookshelf: Settings &gt; API Keys</string>
