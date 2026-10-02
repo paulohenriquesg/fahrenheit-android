@@ -16,6 +16,7 @@
     <string name="recent_episodes_load_failed">Could not load recent episodes. Check the connection to your server.</string>
     <string name="item_load_failed">Could not load this item. Check the connection to your server.</string>
     <string name="playback_failed">Couldn\'t play this</string>
+    <string name="time_left_of">%1$s left of %2$s</string>
     <string name="progress_unreadable">Couldn\'t read where you left off. Starting from the beginning.</string>
     <string name="api_key_where_to_create">Create one in Audiobookshelf: Settings &gt; API Keys</string>
     <string name="current_version">Current Version</string>
@@ -66,7 +67,6 @@
     <string name="signed_in_but_host_missing">Signed in, but the server address could not be used</string>
     <string name="skip_back_30_seconds">Skip back 30 seconds</string>
     <string name="skip_forward_30_seconds">Skip forward 30 seconds</string>
-    <string name="stop">Stop</string>
     <string name="update_did_not_install">The last update did not install</string>
     <string name="update_available">Update Available</string>
     <string name="username">Username</string>

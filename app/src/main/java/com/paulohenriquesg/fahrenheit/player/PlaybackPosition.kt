@@ -35,9 +35,23 @@ object PlaybackPosition {
             .map { (it / total * 100).toFloat() }
     }
 
-    /** A position as HH:MM:SS, in Latin digits whatever the device language. */
-    fun clock(seconds: Double): String {
+    /**
+     * A length as frame 4 writes it: "5 h 28 min" over an hour, "12 min 30 s"
+     * under one, "45 s" under a minute, so a short episode visibly moves.
+     * Latin digits whatever the device language, as the units are Latin.
+     */
+    fun spoken(seconds: Double): String {
         val whole = seconds.coerceAtLeast(0.0).toLong()
-        return String.format(Locale.ROOT, "%02d:%02d:%02d", whole / 3600, (whole % 3600) / 60, whole % 60)
+        val h = whole / 3600
+        val m = (whole % 3600) / 60
+        val s = whole % 60
+        return when {
+            h > 0 -> String.format(Locale.ROOT, "%d h %d min", h, m)
+            m > 0 -> String.format(Locale.ROOT, "%d min %d s", m, s)
+            else -> String.format(Locale.ROOT, "%d s", s)
+        }
     }
+
+    /** How much of the book is still ahead, never below nothing. */
+    fun left(current: Double, total: Double): Double = (total - current).coerceAtLeast(0.0)
 }

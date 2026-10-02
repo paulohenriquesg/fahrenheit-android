@@ -95,24 +95,20 @@ class TransportTest {
     }
 
     @Test
-    fun `the times are whole-book times`() {
+    fun `the times are whole-book times, with what is left`() {
         show(queuedAt(3900.0))
 
-        compose.onNodeWithText("Current Time: 01:05:00").assertIsDisplayed()
-        compose.onNodeWithText("Total Time: 01:30:00").assertIsDisplayed()
+        compose.onNodeWithText("1 h 5 min").assertIsDisplayed()
+        compose.onNodeWithText("25 min 0 s left of 1 h 30 min").assertIsDisplayed()
     }
 
+    // Frame 4 has three focus stops. Stop only paused, as Play/Pause does,
+    // and Back is how playback stops (#93).
     @Test
-    fun `stop pauses and keeps the place`() {
-        show(queuedAt(3900.0))
-        compose.onNodeWithContentDescription("Play").performSemanticsAction(SemanticsActions.OnClick)
-        compose.waitForIdle()
+    fun `there is no stop button`() {
+        show(queuedAt(0.0))
 
-        compose.onNodeWithContentDescription(compose.activity.getString(com.paulohenriquesg.fahrenheit.R.string.stop)).performSemanticsAction(SemanticsActions.OnClick)
-        compose.waitForIdle()
-
-        assertFalse(player.playWhenReady)
-        assertEquals(1, player.currentMediaItemIndex)
+        compose.onNodeWithContentDescription("Stop").assertDoesNotExist()
     }
 
     // Review Focus 5.
