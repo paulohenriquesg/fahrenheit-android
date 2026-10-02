@@ -34,7 +34,16 @@ interface ApiService {
         @Path("libraryItemId") libraryItemId: String,
         @Path("episodeId") episodeId: String? = null,
         @Body request: PlayLibraryItemRequest
-    ): Call<PlayLibraryItemResponse>
+    ): Call<OpenedSession>
+
+    @POST("api/items/{libraryItemId}/play")
+    fun playBook(@Path("libraryItemId") libraryItemId: String, @Body request: PlayLibraryItemRequest): Call<OpenedSession>
+
+    @POST("api/session/{sessionId}/sync")
+    fun syncSession(@Path("sessionId") sessionId: String, @Body body: SessionSyncRequest): Call<Void>
+
+    @POST("api/session/{sessionId}/close")
+    fun closeSession(@Path("sessionId") sessionId: String, @Body body: SessionSyncRequest): Call<Void>
 
     @PATCH("api/me/progress/{libraryItemId}/{episodeId}")
     fun userCreateOrUpdateMediaProgress(

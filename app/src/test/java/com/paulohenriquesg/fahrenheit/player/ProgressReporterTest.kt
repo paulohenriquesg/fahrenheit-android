@@ -1,6 +1,5 @@
 package com.paulohenriquesg.fahrenheit.player
 
-import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -15,7 +14,7 @@ class ProgressReporterTest {
 
     private fun reporter(
         positions: List<Double>,
-        sent: MutableList<MediaProgressRequest>,
+        sent: MutableList<ListeningReport>,
         failOn: Int = -1
     ): Pair<ProgressReporter, () -> Boolean> {
         val queue = ArrayDeque(positions)
@@ -35,7 +34,7 @@ class ProgressReporterTest {
 
     @Test
     fun `while playing, the position is sent`() = runBlocking {
-        val sent = mutableListOf<MediaProgressRequest>()
+        val sent = mutableListOf<ListeningReport>()
         val (reporter, playing) = reporter(listOf(0.0, 10.0, 20.0, 30.0), sent)
 
         reporter.run(playing)
@@ -45,7 +44,7 @@ class ProgressReporterTest {
 
     @Test
     fun `a position already sent is not sent again`() = runBlocking {
-        val sent = mutableListOf<MediaProgressRequest>()
+        val sent = mutableListOf<ListeningReport>()
         val (reporter, playing) = reporter(listOf(0.0, 10.0, 10.0, 20.0), sent)
 
         reporter.run(playing)
@@ -55,7 +54,7 @@ class ProgressReporterTest {
 
     @Test
     fun `a failed send does not end reporting`() = runBlocking {
-        val sent = mutableListOf<MediaProgressRequest>()
+        val sent = mutableListOf<ListeningReport>()
         val (reporter, playing) = reporter(listOf(0.0, 10.0, 20.0, 30.0), sent, failOn = 0)
 
         reporter.run(playing)
@@ -65,7 +64,7 @@ class ProgressReporterTest {
 
     @Test
     fun `nothing is sent when not playing`() = runBlocking {
-        val sent = mutableListOf<MediaProgressRequest>()
+        val sent = mutableListOf<ListeningReport>()
         val (reporter, _) = reporter(listOf(0.0, 10.0), sent)
 
         reporter.run { false }
@@ -139,5 +138,83 @@ class ProgressReporterTest {
         reporter.finish()
 
         assertEquals(listOf(903.0), sent)
+    }
+
+    private class Session {
+        val synced = mutableListOf<ListeningReport>()
+        val closed = mutableListOf<ListeningReport?>()
+        val delivered = mutableListOf<Double>()
+        var at = 0.0
+        var heard = 0.0
+        var failNext = false
+        var rounds = 0
+        val reporter = ProgressReporter(
+            send = { if (failNext) { failNext = false; error("offline") }; synced += it },
+            position = { at },
+            total = { 1000.0 },
+            pause = { at += 10.0; heard += 10.0 },
+            listened = { heard },
+            delivered = { delivered += it; heard -= it },
+            close = { closed += it }
+        )
+        suspend fun play(rounds: Int) { this.rounds = rounds; reporter.run { this.rounds-- > 0 } }
+    }
+
+    @Test
+    fun `listening time goes with each report, and is spent once delivered`() = runBlocking {
+        val s = Session()
+        s.play(rounds = 2)
+        assertEquals(listOf(10.0, 10.0), s.synced.map { it.timeListened })
+        assertEquals(listOf(10.0, 10.0), s.delivered)
+    }
+
+    @Test
+    fun `a failed report keeps its listening time for the next`() = runBlocking {
+        val s = Session()
+        s.failNext = true
+        s.play(rounds = 2)
+        assertEquals(listOf(20.0), s.synced.map { it.timeListened })
+    }
+
+    @Test
+    fun `stopping closes with the last report`() = runBlocking {
+        val s = Session()
+        s.play(rounds = 1)
+        s.at = 13.0; s.heard = 3.0
+        s.reporter.finish()
+        assertEquals(13.0, s.closed.single()!!.currentTime, 1e-9)
+        assertEquals(3.0, s.closed.single()!!.timeListened, 1e-9)
+    }
+
+    @Test
+    fun `stopping with nothing new still closes`() = runBlocking {
+        val s = Session()
+        s.play(rounds = 1)
+        s.reporter.finish()
+        assertEquals(listOf<ListeningReport?>(null), s.closed)
+    }
+
+    // Review Focus 1: the guard and the player both announce a stop.
+    @Test
+    fun `stopping twice closes once`() = runBlocking {
+        val s = Session()
+        s.play(rounds = 1)
+        s.reporter.finish(); s.reporter.finish()
+        assertEquals(1, s.closed.size)
+    }
+
+    @Test
+    fun `playing again after a stop closes again at the next stop`() = runBlocking {
+        val s = Session()
+        s.play(rounds = 1); s.reporter.finish()
+        s.play(rounds = 1); s.reporter.finish()
+        assertEquals(2, s.closed.size)
+    }
+
+    @Test
+    fun `stopping before anything played closes nothing`() = runBlocking {
+        val s = Session()
+        s.reporter.finish()
+        assertEquals(emptyList<ListeningReport?>(), s.closed)
     }
 }

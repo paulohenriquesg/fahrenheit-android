@@ -1,6 +1,5 @@
 package com.paulohenriquesg.fahrenheit.player
 
-import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -13,12 +12,10 @@ import androidx.media3.session.MediaSessionService
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.paulohenriquesg.fahrenheit.api.ApiClient
-import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import retrofit2.awaitResponse
 
 /**
  * Where playback lives, so it outlives the player screen (#16).
@@ -52,7 +49,8 @@ class PlaybackService : MediaSessionService() {
             // Keeps streaming when a TV's screensaver starts.
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
-        val reporting = PlaybackReporting(exo, scope, send = ::sendProgress)
+        val device = PlaybackDevice.info(this)
+        val reporting = PlaybackReporting(exo, scope, open = { ListeningSession(it, ApiClient::getApiService, device) })
         exo.addListener(reporting)
         exo.addListener(object : Player.Listener {
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -75,22 +73,6 @@ class PlaybackService : MediaSessionService() {
         session = null
         scope.cancel()
         super.onDestroy()
-    }
-
-    private suspend fun sendProgress(file: QueuedFile, request: MediaProgressRequest) {
-        val api = ApiClient.getApiService() ?: error("signed out")
-        val call = file.episodeId?.let { api.userCreateOrUpdateMediaProgress(file.itemId, it, request) }
-            ?: api.userCreateOrUpdateMediaProgress(file.itemId, request)
-        val response = call.awaitResponse()
-        // Logged, not shown: the next round retries.
-        if (!response.isSuccessful) {
-            Log.w(TAG, "Progress rejected: ${response.code()}")
-            error("progress rejected: ${response.code()}")
-        }
-    }
-
-    private companion object {
-        const val TAG = "PlaybackService"
     }
 }
 

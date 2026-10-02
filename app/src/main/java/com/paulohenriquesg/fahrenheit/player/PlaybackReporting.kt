@@ -1,7 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import android.os.SystemClock
 import androidx.media3.common.Player
-import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Reports the listening position of whatever [player] is playing.
+ * Reports the listening of whatever [player] is playing: where, and for how long.
  *
  * One [ProgressReporter] per item: its ids come from the queued file, so a
  * report can never go to a book other than the one it measured. Positions are
@@ -20,21 +20,40 @@ import kotlinx.coroutines.withContext
  * Install as a listener on the player, and pass [beforeLeaving] to the
  * [LeavingGuard] in front of it.
  *
- * @param send delivers one report for that file's item or episode; throwing is a failed send.
+ * Each item's reports go to its own [ListeningDelivery] - in the app, a
+ * listening session - with the seconds actually played ([ListeningTime]).
+ *
+ * @param open the delivery for an item, made when it first plays.
+ * @param now a monotonic clock in milliseconds, for listening time.
  */
 class PlaybackReporting(
     private val player: Player,
     private val scope: CoroutineScope,
-    private val send: suspend (QueuedFile, MediaProgressRequest) -> Unit,
-    private val pause: suspend () -> Unit = { delay(ProgressSync.INTERVAL_MS) }
+    private val open: (QueuedFile) -> ListeningDelivery,
+    private val pause: suspend () -> Unit = { delay(ProgressSync.INTERVAL_MS) },
+    private val now: () -> Long = { SystemClock.elapsedRealtime() }
 ) : Player.Listener {
 
     private var reportingFor: QueuedFile? = null
     private var reporter: ProgressReporter? = null
+    private var time: ListeningTime? = null
     private var rounds: Job? = null
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
-        if (isPlaying) start() else finish()
+        when {
+            isPlaying -> start()
+            // Buffering - after a seek, on a slow network - is not a stop: the
+            // listener still wants to play. Closing here would end the session
+            // on every skip and open a new one at the next report.
+            player.playWhenReady && player.playbackState == Player.STATE_BUFFERING -> time?.playing(false)
+            else -> finish()
+        }
+    }
+
+    // A pause during buffering: the player already reads as not playing, so
+    // onIsPlayingChanged does not fire again, and only this says it stopped.
+    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+        if (!playWhenReady && !player.isPlaying) finish()
     }
 
     /** The queue is about to be stopped, replaced or cleared. */
@@ -45,13 +64,19 @@ class PlaybackReporting(
         val owner = reportingFor
         if (reporter == null || owner == null || !owner.isFor(current.itemId, current.episodeId)) {
             reportingFor = current
+            val delivery = open(current)
+            val listening = ListeningTime(now).also { time = it }
             reporter = ProgressReporter(
-                send = { send(current, it) },
+                send = delivery::sync,
                 position = { positionIn(current) },
                 total = { current.bookTotal },
-                pause = pause
+                pause = pause,
+                listened = listening::pending,
+                delivered = listening::delivered,
+                close = delivery::close
             )
         }
+        time?.playing(true)
         if (rounds?.isActive == true) return
         val active = reporter ?: return
         rounds = scope.launch { active.run { player.isPlaying } }
@@ -60,6 +85,7 @@ class PlaybackReporting(
     private fun finish() {
         rounds?.cancel()
         rounds = null
+        time?.playing(false)
         val active = reporter ?: return
         // Undispatched, so the position is read now, before the queue changes.
         // Not cancellable: on Back the service, and its scope, are gone

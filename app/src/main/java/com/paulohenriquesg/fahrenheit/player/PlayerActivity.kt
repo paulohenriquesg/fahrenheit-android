@@ -2,9 +2,7 @@ package com.paulohenriquesg.fahrenheit.player
 
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,8 +28,6 @@ import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
-import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemDeviceInfo
-import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemRequest
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
@@ -118,7 +114,6 @@ class PlayerActivity : ComponentActivity() {
             val serverFormat = SharedPreferencesHandler(this@PlayerActivity).getUserPreferences().dateFormat
             nowPlaying = item?.let { NowPlaying.of(it, episodeId, System.currentTimeMillis(), serverFormat) }
             failed = nowPlaying == null
-            if (episodeId != null) openSession(itemId, episodeId)
         }
 
         val playing = nowPlaying
@@ -181,29 +176,7 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
-    /** Opens a listening session on the server for an episode, as the podcast player did. */
-    private suspend fun openSession(itemId: String, episodeId: String) {
-        val api = ApiClient.getApiService() ?: return
-        val request = PlayLibraryItemRequest(
-            deviceInfo = PlayLibraryItemDeviceInfo(
-                deviceId = "Fire Stick",
-                clientName = getString(R.string.app_name),
-                clientVersion = "0.0.1",
-                manufacturer = "Amazon",
-                model = Build.MODEL,
-                sdkVersion = 25
-            ),
-            forceDirectPlay = false,
-            forceTranscode = false,
-            supportedMimeTypes = emptyList(),
-            mediaPlayer = "unknown"
-        )
-        runCatching { api.playLibraryItem(itemId, episodeId, request).awaitResponse() }
-            .onFailure { Log.w(TAG, "Play session not opened: ${it.message}") }
-    }
-
     companion object {
-        private const val TAG = "PlayerActivity"
         private const val EXTRA_ITEM_ID = "item_id"
         private const val EXTRA_EPISODE_ID = "episode_id"
         private const val EXTRA_AUTO_PLAY = "auto_play"
