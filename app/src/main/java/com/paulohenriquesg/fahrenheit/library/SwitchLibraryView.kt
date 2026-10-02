@@ -22,6 +22,7 @@ import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.ui.Space
+import com.paulohenriquesg.fahrenheit.ui.components.ScreenTitle
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.ui.CardFocus
 import androidx.compose.foundation.layout.Row
@@ -51,11 +52,7 @@ fun SwitchLibraryView(
             .padding(horizontal = Space.screenH, vertical = Space.gap),
         verticalArrangement = Arrangement.spacedBy(Space.gap)
     ) {
-        Text(
-            text = stringResource(R.string.switch_library),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        ScreenTitle(stringResource(R.string.switch_library))
 
         if (libraries.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

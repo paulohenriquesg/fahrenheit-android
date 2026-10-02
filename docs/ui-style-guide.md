@@ -19,6 +19,19 @@ you think in px.
 TVs overscan. Keep content inside `Space.screenH` (24dp) horizontally and clear of
 the top bar vertically. Full-width text blocks get `Space.readingH` (48dp).
 
+Every section reached from the rail has a `ScreenTitle` as its first child, so the
+title does not move as you switch sections (#82):
+
+- `headlineMedium`, `onBackground`, one line with ellipsis. `ScreenTitle` does this;
+  its trailing slot holds anything that belongs beside it, such as Library's count.
+- Inside a container padded `horizontal = Space.screenH` and `vertical = Space.gap`,
+  on the same band as the search icon and greeting.
+- Outside any scroller, so it stays put while the content scrolls under it.
+- Shown in every state, loading and empty included.
+
+Item titles next to a cover (detail screens and players), Login and the Update
+screen are not sections and keep their own.
+
 ## Focus
 
 Nothing on a TV responds to the remote until something holds focus.

@@ -2,6 +2,8 @@ package com.paulohenriquesg.fahrenheit.main
 
 import android.app.Activity
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
+import com.paulohenriquesg.fahrenheit.ui.Space
+import com.paulohenriquesg.fahrenheit.ui.components.ScreenTitle
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.Alphabetical
@@ -115,13 +117,11 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
+            .padding(horizontal = Space.screenH, vertical = Space.gap)
     ) {
-        Text(
+        ScreenTitle(
             text = stringResource(R.string.series),
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = Space.gap)
         )
 
         if (isLoading) {
@@ -195,13 +195,11 @@ fun AuthorsBrowseView(libraryId: String?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
+            .padding(horizontal = Space.screenH, vertical = Space.gap)
     ) {
-        Text(
+        ScreenTitle(
             text = stringResource(R.string.authors),
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = Space.gap)
         )
 
         if (isLoading) {
@@ -257,13 +255,11 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 60.dp, start = 48.dp, end = 48.dp, bottom = 16.dp)
+            .padding(horizontal = Space.screenH, vertical = Space.gap)
     ) {
-        Text(
+        ScreenTitle(
             text = stringResource(R.string.collections),
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = Space.gap)
         )
 
         if (isLoading) {
@@ -313,14 +309,58 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
 
 @Composable
 fun StatsBrowseView(stats: com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse?, isLoading: Boolean) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    // The title is here rather than on the board so that it is there while
+    // loading too, and stays put while the board scrolls under it.
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = Space.screenH, vertical = Space.gap)
+    ) {
+        ScreenTitle(
+            text = stringResource(R.string.listening_statistics),
+            modifier = Modifier.padding(bottom = Space.gap)
+        )
         when {
             isLoading -> CenteredNote(stringResource(R.string.loading_stats))
             stats == null -> CenteredNote(stringResource(R.string.no_statistics_available))
             else -> com.paulohenriquesg.fahrenheit.stats.StatsBoard(
-                summary = com.paulohenriquesg.fahrenheit.stats.StatsSummary.of(stats),
-                modifier = Modifier.padding(top = 48.dp)
+                summary = com.paulohenriquesg.fahrenheit.stats.StatsSummary.of(stats)
             )
+        }
+    }
+}
+
+/**
+ * One library's items, under its name and how many there are. Before a library
+ * is chosen it is still titled, so the section does not open on a blank band.
+ */
+@Composable
+fun LibraryBrowseView(
+    name: String?,
+    itemLabel: String,
+    items: List<LibraryItem>,
+    rowLayout: Boolean,
+    listState: androidx.compose.foundation.lazy.LazyListState
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = Space.screenH, vertical = Space.gap)
+    ) {
+        ScreenTitle(
+            text = name ?: stringResource(R.string.library),
+            modifier = Modifier.padding(bottom = Space.gap)
+        ) {
+            Text(
+                text = "(${items.size} $itemLabel)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (rowLayout) {
+            LibraryItemsRow(items, listState)
+        } else {
+            LibraryItemsFluid(items)
         }
     }
 }
