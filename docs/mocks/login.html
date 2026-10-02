@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fahrenheit TV — login mock</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+  /* the app's own palette, read off ui/theme/Theme.kt */
+  :root {
+    --bg: #121212; --surface: #1E1E1E; --variant: #4A3D5C;
+    --on-bg: #FFFFFF; --on-surface: #FFFFFF; --on-variant: #CAC4D0;
+    --primary: #D0BCFF; --on-primary: #381E72; --outline: #8E8699;
+    --danger: #F2B8B5;
+    --font: Manrope, "Avenir Next", system-ui, sans-serif;
+    --gap: 32px; --inset: 28px; --radius: 20px; --rest: 2px; --focus: 6px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #07070A; color: var(--on-bg); font-family: var(--font); }
+  .page { padding: 40px 40px 100px; max-width: 1180px; }
+  h1 { font-size: 30px; font-weight: 800; margin: 0 0 8px; }
+  .lede { color: var(--on-variant); font-size: 15px; line-height: 1.6; margin: 0 0 32px; max-width: 95ch; }
+  .lede code { background: #17161B; padding: 1px 5px; border-radius: 4px; }
+  section { margin-bottom: 52px; }
+  h2 { font-size: 19px; font-weight: 700; margin: 0 0 6px; }
+  .why { color: var(--on-variant); font-size: 14.5px; line-height: 1.6; margin: 0 0 14px; max-width: 95ch; }
+  .why b { color: var(--on-bg); }
+  .shell { width: 960px; height: 540px; overflow: hidden; border-radius: 10px; border: 1px solid #2A2831; }
+  .tv { width: 1920px; height: 1080px; transform: scale(0.5); transform-origin: top left; background: var(--bg); position: relative; }
+  .tv.light { --bg:#FFFFFF; --surface:#F5F5F5; --variant:#E4DFEA; --on-bg:#000000; --on-surface:#000000; --on-variant:#474152; --primary:#6650a4; --on-primary:#FFFFFF; --outline:#6F6779; background: var(--bg); color: var(--on-bg); }
+
+  /* keyboard-safe band: the Fire TV IME owns the bottom 45% */
+  .safe { position: absolute; left: 0; right: 0; top: 0; height: 594px; padding: 72px 120px 0; }
+  .imeband { position: absolute; left: 0; right: 0; bottom: 0; height: 486px; background: #0A0A0C; border-top: 2px dashed #3A3444; display: grid; place-items: center; color: #6C6679; font-size: 30px; font-weight: 600; letter-spacing: .04em; }
+  .ime { position: absolute; left: 0; right: 0; bottom: 0; height: 486px; background: #17161B; border-top: 2px solid #2E2A38; padding: 28px 120px; }
+  .ime .krow { display: flex; gap: 14px; justify-content: center; margin-bottom: 14px; }
+  .ime .k { width: 96px; height: 76px; border-radius: 10px; background: #26222E; display: grid; place-items: center; font-size: 30px; color: #D9D4E2; }
+  .ime .k.on { background: var(--primary); color: var(--on-primary); }
+  .ime .k.wide { width: 220px; font-size: 26px; }
+
+  h3.title { font-size: 64px; font-weight: 800; margin: 0 0 16px; letter-spacing: -0.02em; }
+  p.sub { font-size: 32px; color: var(--on-variant); margin: 0 0 44px; }
+
+  .list { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; }
+  .row { display: flex; align-items: center; gap: 26px; background: var(--surface); border: var(--rest) solid var(--outline); border-radius: var(--radius); padding: 26px 32px; }
+  .row.foc { outline: var(--focus) solid var(--primary); border-color: transparent; background: #252031; }
+  .row .ico { width: 56px; height: 56px; border-radius: 12px; background: var(--variant); display: grid; place-items: center; flex: none; color: var(--on-bg); }
+  .row .main { flex: 1; min-width: 0; }
+  .row .t { font-size: 32px; font-weight: 600; }
+  .row .s { font-size: 26px; color: var(--on-variant); margin-top: 6px; }
+  .row .hint { font-size: 26px; color: var(--primary); font-weight: 600; }
+
+  .field { max-width: 1200px; background: transparent; border: var(--rest) solid var(--outline); border-radius: var(--radius); padding: 24px 30px; display: flex; align-items: center; gap: 22px; margin-bottom: 24px; }
+  .field.foc { border-color: var(--primary); border-width: var(--focus); padding: 20px 26px; }
+  .field .lbl { position: absolute; margin-top: -58px; background: var(--bg); padding: 0 10px; font-size: 24px; color: var(--primary); }
+  .field .val { font-size: 34px; }
+  .field .val.ph { color: #7E7789; }
+  .field .caret { width: 3px; height: 38px; background: var(--primary); }
+  .btnrow { display: flex; gap: var(--gap); margin-top: 36px; }
+  .btn { font-size: 30px; font-weight: 700; padding: 22px 44px; border-radius: 14px; background: var(--surface); color: var(--on-surface); border: var(--rest) solid var(--outline); }
+  .btn.pri { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+  .btn.foc { outline: var(--focus) solid var(--primary); outline-offset: 4px; }
+  .err { display: flex; align-items: center; gap: 18px; background: #2A1A1C; border: var(--rest) solid var(--danger); border-radius: 14px; padding: 22px 28px; max-width: 1200px; margin-bottom: 28px; }
+  .err .t { font-size: 28px; color: var(--danger); }
+  ul.pts { margin: 12px 0 0; padding-left: 20px; color: var(--on-variant); font-size: 14.5px; line-height: 1.65; }
+  ul.pts li { margin-bottom: 7px; }
+  ul.pts b { color: var(--on-bg); }
+  .ic { width: 34px; height: 34px; stroke: currentColor; fill: none; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
+  .pair { display: flex; gap: 40px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Login screen — mock before implementing</h1>
+  <p class="lede">The constraint that shapes all of this: <b>the Fire TV keyboard owns the bottom 45% of the screen</b>. Anything below the dashed line is invisible while you are typing, which is why the current screen hides its own error messages. Jellyfin's 0.14 redesign solved it the same way — move the form up and keep errors beside the field. Their Quick Connect (a code authorised on your phone, no password on the TV) needs server support Audiobookshelf does not have.</p>
+
+  <section>
+    <h2>1. First run — find the server instead of typing it</h2>
+    <p class="why">An address is 24 characters of punctuation on a D-pad; a password is 19 key presses. <b>So scan the subnet for port 13378 and offer what answers.</b> Typing an address becomes the fallback, not the default. Everything sits in the top half, clear of the keyboard.</p>
+    <div class="shell"><div class="tv">
+      <div class="safe">
+        <h3 class="title">Where is your library?</h3>
+        <p class="sub">Looking for Audiobookshelf servers on this network…</p>
+        <div class="list">
+          <div class="row foc">
+            <div class="ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></div>
+            <div class="main"><div class="t">books.local</div><div class="s">192.168.0.2:13378 &middot; 3 libraries</div></div>
+            <div class="hint">Select</div>
+          </div>
+          <div class="row">
+            <div class="ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/></svg></div>
+            <div class="main"><div class="t">attic-nas</div><div class="s">192.168.0.81:13378</div></div>
+          </div>
+          <div class="row">
+            <div class="ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+            <div class="main"><div class="t">Enter an address instead</div><div class="s">For a server outside this network</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="imeband">keyboard area — nothing important lives here</div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>2. First run — signing in, with the keyboard up</h2>
+    <p class="why">The same screen as it really looks <b>while typing</b>: field, label and any error all stay visible above the keyboard. The outlined field with a 3dp focus border is the fix already made; what is new is where the form sits and that the server line is a fact, not a field to fill.</p>
+    <div class="shell"><div class="tv">
+      <div class="safe">
+        <h3 class="title">Sign in to books.local</h3>
+        <div class="field foc" style="position: relative">
+          <span class="lbl">Username</span>
+          <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
+          <span class="val">admin</span><span class="caret"></span>
+        </div>
+        <div class="field">
+          <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          <span class="val ph">Password</span>
+        </div>
+      </div>
+      <div class="ime">
+        <div class="krow"><div class="k">q</div><div class="k">w</div><div class="k">e</div><div class="k">r</div><div class="k">t</div><div class="k">y</div><div class="k">u</div><div class="k">i</div><div class="k">o</div><div class="k">p</div></div>
+        <div class="krow"><div class="k">a</div><div class="k">s</div><div class="k">d</div><div class="k">f</div><div class="k">g</div><div class="k">h</div><div class="k">j</div><div class="k">k</div><div class="k">l</div></div>
+        <div class="krow"><div class="k">z</div><div class="k">x</div><div class="k">c</div><div class="k">v</div><div class="k">b</div><div class="k">n</div><div class="k">m</div><div class="k wide">space</div><div class="k on wide">Next</div></div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>3. Coming back — one field, not four</h2>
+    <p class="why">#63 keeps the address and the username across a sign-out, so a return visit already knows who and where. <b>Show that as a fact and ask for the one thing missing.</b> The API key route stays for OpenID-only servers, and "Use a different server" goes back to screen 1.</p>
+    <div class="pair">
+      <div>
+        <div class="shell"><div class="tv">
+          <div class="safe">
+            <h3 class="title">Welcome back</h3>
+            <div class="list" style="margin-bottom: 44px">
+              <div class="row">
+                <div class="ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg></div>
+                <div class="main"><div class="t">admin</div><div class="s">books.local &middot; 192.168.0.2:13378</div></div>
+              </div>
+            </div>
+            <div class="field foc" style="position: relative">
+              <span class="lbl">Password</span>
+              <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+              <span class="val">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span><span class="caret"></span>
+            </div>
+            <div class="btnrow">
+              <div class="btn pri">Sign in</div>
+              <div class="btn">Use an API key</div>
+              <div class="btn">Different server</div>
+            </div>
+          </div>
+          <div class="imeband">keyboard area</div>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. When it goes wrong — say so, above the keyboard</h2>
+    <p class="why">Today a bad password or an unreachable server shows <b>nothing at all</b>: the request fails and the screen sits there. The error belongs next to the field that caused it, in the visible band, and it says what to do rather than quoting an exception.</p>
+    <div class="shell"><div class="tv">
+      <div class="safe">
+        <h3 class="title">Sign in to books.local</h3>
+        <div class="err">
+          <svg class="ic" viewBox="0 0 24 24" style="color: var(--danger)"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+          <div class="t">That password was not accepted. The username and server are fine.</div>
+        </div>
+        <div class="field foc" style="position: relative">
+          <span class="lbl">Password</span>
+          <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          <span class="val">&bull;&bull;&bull;&bull;&bull;&bull;</span><span class="caret"></span>
+        </div>
+        <div class="btnrow"><div class="btn pri foc">Try again</div><div class="btn">Use an API key</div></div>
+      </div>
+      <div class="imeband">keyboard area</div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>5. The same screen in the light theme</h2>
+    <p class="why">You asked about light mode: it comes from the palette, not a second design. This is frame 3 with the light scheme — the fields are outlines either way, which is what stops the near-white slabs happening again.</p>
+    <div class="shell"><div class="tv light">
+      <div class="safe">
+        <h3 class="title">Welcome back</h3>
+        <div class="list" style="margin-bottom: 44px">
+          <div class="row">
+            <div class="ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg></div>
+            <div class="main"><div class="t">admin</div><div class="s">books.local &middot; 192.168.0.2:13378</div></div>
+          </div>
+        </div>
+        <div class="field foc" style="position: relative">
+          <span class="lbl" style="background: #FFFFFF">Password</span>
+          <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          <span class="val">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span><span class="caret"></span>
+        </div>
+        <div class="btnrow"><div class="btn pri">Sign in</div><div class="btn">Use an API key</div></div>
+      </div>
+      <div class="imeband" style="background:#EFEDF2; border-top-color:#C9C3D4; color:#6F6779">keyboard area</div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>What this costs, in order</h2>
+    <ul class="pts">
+      <li><b>Already done</b> (not yet merged): outlined fields instead of near-white slabs, the phone components given the app's palette, and the form capped at 720dp.</li>
+      <li><b>Small:</b> move the form into the top half, put errors beside the field, and show the server as a fact once it is known.</li>
+      <li><b>Medium:</b> subnet scan for port 13378 — removes the worst typing on the device. Needs a timeout, parallel probes, and a manual fallback.</li>
+      <li><b>Not available:</b> a phone-authorised code like Jellyfin's Quick Connect. That is a server feature, and Audiobookshelf has no equivalent endpoint.</li>
+      <li><b>Open question for you:</b> the remembered-user row in frame 3 — one user is all this device has ever seen. Worth keeping a list if more than one person signs in on the same TV?</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

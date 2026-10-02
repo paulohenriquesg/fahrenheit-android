@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fahrenheit TV — Stats screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --ground: #0B0D10;
+    --surface: #15181D;
+    --raised: #1C2128;
+    --line: #272E38;
+    --text: #F3F5F8;
+    --muted: #9AA4B2;
+    --accent: #E89042;
+    --accent-ink: #1A1206;
+    --cool: #7FB3E0;
+    --font: Manrope, "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #060709;
+    color: var(--text);
+    font-family: var(--font);
+  }
+  .page { padding: 40px 40px 80px; }
+  h1.page-title { font-size: 28px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.01em; }
+  p.page-sub { margin: 0 0 32px; color: var(--muted); font-size: 15px; max-width: 90ch; line-height: 1.55; }
+  .frames { display: flex; flex-wrap: wrap; gap: 48px; }
+  .frame-wrap { }
+  .frame-label { font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .frame-note { font-size: 14px; color: var(--muted); margin: 0 0 12px; max-width: 920px; line-height: 1.5; }
+  .frame-note b { color: var(--text); font-weight: 600; }
+  /* a 1920x1080 TV screen, drawn full size and scaled down to fit this page */
+  .shell { width: 960px; height: 540px; overflow: hidden; border-radius: 10px; border: 1px solid var(--line); }
+  .tv { width: 1920px; height: 1080px; transform: scale(0.5); transform-origin: top left; background: var(--ground); position: relative; overflow: hidden; }
+
+  /* ---------- shared chrome ---------- */
+  .chrome-btn {
+    appearance: none; background: none; border: 0; color: var(--text);
+    font: inherit; padding: 0; cursor: pointer; display: grid; place-items: center;
+  }
+  .greet { color: var(--text); font-size: 30px; font-weight: 600; }
+  .icon { width: 40px; height: 40px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---------- frame A: today ---------- */
+  .a-root { position: absolute; inset: 0; padding: 120px 96px 0; }
+  .a-title { font-size: 64px; font-weight: 700; margin: 0 0 32px; letter-spacing: -0.015em; }
+  .a-card { padding: 32px; }
+  .a-card + .a-card { margin-top: 48px; }
+  .a-card .k { font-size: 32px; font-weight: 600; color: var(--muted); margin-bottom: 16px; }
+  .a-card .v { font-size: 72px; font-weight: 700; line-height: 1.05; }
+  .cut-marker {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--accent);
+  }
+  .cut-tag {
+    position: absolute; right: 96px; bottom: 18px; background: var(--accent); color: var(--accent-ink);
+    font-size: 26px; font-weight: 800; padding: 8px 18px; border-radius: 6px;
+  }
+
+  /* ---------- frame B: proposed ---------- */
+  .b-rail {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 112px;
+    background: var(--surface); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; align-items: center; gap: 36px; padding: 40px 0;
+  }
+  .b-rail .slot { width: 64px; height: 64px; border-radius: 14px; display: grid; place-items: center; color: var(--muted); }
+  .b-rail .slot.on { background: var(--accent); color: var(--accent-ink); }
+  .b-root { position: absolute; left: 112px; right: 0; top: 0; bottom: 0; padding: 64px 80px 48px; display: flex; flex-direction: column; gap: 40px; }
+  .b-head { display: flex; align-items: baseline; justify-content: space-between; }
+  .b-head h2 { font-size: 60px; font-weight: 800; margin: 0; letter-spacing: -0.02em; }
+  .b-head .scope { color: var(--muted); font-size: 28px; font-weight: 500; }
+
+  .tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 28px; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+    padding: 28px 32px 32px; text-align: left; min-height: 196px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .tile .k { font-size: 26px; font-weight: 600; color: var(--muted); }
+  .tile .v { font-size: 66px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+  .tile .v small { font-size: 30px; font-weight: 700; color: var(--muted); margin-left: 8px; letter-spacing: 0; }
+  .tile .v.tight { font-size: 46px; letter-spacing: -0.02em; }
+  .tile.focused {
+    background: var(--raised); border-color: var(--accent); outline: 5px solid var(--accent);
+    outline-offset: 4px; transform: translateY(-4px);
+  }
+
+  .pair { display: grid; grid-template-columns: 1.15fr 1fr; gap: 32px; flex: 1; min-height: 0; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 32px 36px; display: flex; flex-direction: column; }
+  .panel h3 { font-size: 30px; font-weight: 700; margin: 0 0 28px; }
+  .panel h3 span { color: var(--muted); font-weight: 500; font-size: 24px; margin-left: 10px; }
+
+  .week { display: flex; align-items: flex-end; gap: 22px; flex: 1; }
+  .week .day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 14px; height: 100%; justify-content: flex-end; }
+  .week .bar { width: 100%; border-radius: 8px 8px 3px 3px; background: var(--cool); }
+  .week .bar.peak { background: var(--accent); }
+  .week .lbl { font-size: 24px; color: var(--muted); font-weight: 600; }
+
+  .books { display: flex; flex-direction: column; gap: 26px; }
+  .book .row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 10px; }
+  .book .t { font-size: 27px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .book .h { font-size: 25px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .book .track { height: 14px; background: #10141A; border-radius: 7px; overflow: hidden; }
+  .book .fill { height: 100%; background: var(--cool); border-radius: 7px; }
+
+  .sessions { display: flex; gap: 28px; }
+  .sess { flex: 1; display: flex; gap: 20px; align-items: center; background: var(--raised); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; }
+  .sess .cov { width: 86px; height: 86px; border-radius: 8px; background: linear-gradient(145deg, #2A323D, #171C23); flex: none; }
+  .sess .meta { min-width: 0; }
+  .sess .t { font-size: 26px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sess .s { font-size: 23px; color: var(--muted); margin-top: 6px; }
+
+  .sample { border-bottom: 2px dotted var(--accent); }
+  .legend { margin-top: 36px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+  .legend b { color: var(--text); font-weight: 600; }
+  .legend .swatch { border-bottom: 2px dotted var(--accent); color: var(--text); }
+  ul.pts { margin: 10px 0 0; padding-left: 20px; }
+  ul.pts li { margin-bottom: 7px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="page-title">Stats screen — what ships today, and the boxes version</h1>
+  <p class="page-sub">Both frames are a real 1920&times;1080 Fire TV screen, drawn at full size and shown at half scale. Sizes are the app's own dp values doubled, because these sticks report 1080p at density 2.0 — which is what makes today's screen overflow.</p>
+
+  <div class="frames">
+
+    <div class="frame-wrap">
+      <div class="frame-label">Today</div>
+      <p class="frame-note">Four full-width cards stacked in a <b>Column that does not scroll</b>. They need 1208&nbsp;px and the screen has 1080, so <b>Average per Day is cut in half and nothing can reach it</b>. Four numbers out of a response that also carries per-day totals, per-weekday totals, per-book time and recent sessions.</p>
+      <div class="shell">
+        <div class="tv">
+          <div class="a-root">
+            <h2 class="a-title">Listening Statistics</h2>
+            <div class="a-card"><div class="k">Total Listening Time</div><div class="v">181 hours</div></div>
+            <div class="a-card"><div class="k">Items Listened To</div><div class="v">38 items</div></div>
+            <div class="a-card"><div class="k">Days with Activity</div><div class="v">83 days</div></div>
+            <div class="a-card"><div class="k">Average per Day</div><div class="v">2 hours, 11 minutes</div></div>
+          </div>
+          <div class="cut-marker"></div>
+          <div class="cut-tag">cut off here</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame-wrap">
+      <div class="frame-label">Proposed</div>
+      <p class="frame-note">Sets of boxes: <b>five headline tiles in a row</b>, then two panels side by side, then the sessions strip. Everything is on one screen with no scrolling, every box is a focus target, and the rail on the left is the always-visible drawer from&nbsp;#58. The focus ring is drawn on <b>Total listened</b>.</p>
+      <div class="shell">
+        <div class="tv">
+          <nav class="b-rail" aria-label="Sections">
+            <div class="slot"><svg class="icon" viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg></div>
+            <div class="slot"><svg class="icon" viewBox="0 0 24 24"><path d="M5 4h4v16H5zM11 4h4v16h-4zM17.5 5l3 15"/></svg></div>
+            <div class="slot"><svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+            <div class="slot"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h7v5H4zM13 6h7v5h-7zM4 13h7v5H4zM13 13h7v5h-7z"/></svg></div>
+            <div class="slot on"><svg class="icon" viewBox="0 0 24 24"><path d="M5 20V11M10 20V5M15 20v-6M20 20V8"/></svg></div>
+          </nav>
+          <div class="b-root">
+            <div class="b-head">
+              <h2>Listening statistics</h2>
+              <div class="scope">All time &middot; admin</div>
+            </div>
+
+            <div class="tiles">
+              <div class="tile focused"><div class="k">Total listened</div><div class="v">181<small>hours</small></div></div>
+              <div class="tile"><div class="k">Today</div><div class="v sample">24<small>minutes</small></div></div>
+              <div class="tile"><div class="k">Books touched</div><div class="v">38</div></div>
+              <div class="tile"><div class="k">Days with activity</div><div class="v">83</div></div>
+              <div class="tile"><div class="k">Average per day</div><div class="v tight">2 h 11 min</div></div>
+            </div>
+
+            <div class="pair">
+              <div class="panel">
+                <h3>By weekday <span>average per day, all time</span></h3>
+                <div class="week">
+                  <div class="day"><div class="bar" style="height: 38%"></div><div class="lbl">Mon</div></div>
+                  <div class="day"><div class="bar" style="height: 29%"></div><div class="lbl">Tue</div></div>
+                  <div class="day"><div class="bar" style="height: 46%"></div><div class="lbl">Wed</div></div>
+                  <div class="day"><div class="bar" style="height: 34%"></div><div class="lbl">Thu</div></div>
+                  <div class="day"><div class="bar" style="height: 62%"></div><div class="lbl">Fri</div></div>
+                  <div class="day"><div class="bar peak" style="height: 100%"></div><div class="lbl">Sat</div></div>
+                  <div class="day"><div class="bar" style="height: 71%"></div><div class="lbl">Sun</div></div>
+                </div>
+              </div>
+              <div class="panel">
+                <h3>Most listened <span>top of 38</span></h3>
+                <div class="books">
+                  <div class="book">
+                    <div class="row"><div class="t">The Calculating Stars</div><div class="h sample">21 h</div></div>
+                    <div class="track"><div class="fill" style="width: 100%"></div></div>
+                  </div>
+                  <div class="book">
+                    <div class="row"><div class="t">Dungeon Crawler Carl</div><div class="h sample">17 h</div></div>
+                    <div class="track"><div class="fill" style="width: 81%"></div></div>
+                  </div>
+                  <div class="book">
+                    <div class="row"><div class="t">John Dies at the End</div><div class="h sample">9 h</div></div>
+                    <div class="track"><div class="fill" style="width: 43%"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sessions">
+              <div class="sess"><div class="cov"></div><div class="meta"><div class="t">The Calculating Stars</div><div class="s sample">38 min &middot; yesterday</div></div></div>
+              <div class="sess"><div class="cov"></div><div class="meta"><div class="t">Dungeon Crawler Carl</div><div class="s sample">1 h 12 min &middot; Saturday</div></div></div>
+              <div class="sess"><div class="cov"></div><div class="meta"><div class="t">John Dies at the End</div><div class="s sample">26 min &middot; Friday</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <b>Real numbers</b> — 181 hours, 38 books, 83 days and the 2 h 11 min average are what your server returned on the stick. Titles are the three from your Continue Listening shelf.<br>
+    <b><span class="swatch">Dotted underline</span></b> — sample values. The server sends everything needed for them (<code>today</code>, <code>dayOfWeek</code>, <code>items[].timeListening</code>, <code>recentSessions</code>), I just have not read those numbers off your server.
+    <ul class="pts">
+      <li><b>Nothing is invented structurally</b>: every box maps to a field already in <code>ListeningStatsResponse</code>, which today's screen ignores four fifths of.</li>
+      <li><b>Average per day</b> keeps its own tile, fifth in the row, and the weekday panel shows where that average comes from.</li>
+      <li><b>Focus</b>: tiles, both panels and each session are focus targets, so the D-pad has somewhere to go; RIGHT off the rail lands on Total listened.</li>
+      <li><b>If it ever does not fit</b> (a long locale string, a 7-day week that wraps), the whole content column scrolls rather than silently clipping.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>
