@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.Alphabetical
@@ -518,7 +519,9 @@ fun PersonalizedHomeView(shelves: List<Shelf>, libraryId: String?) {
         )
 
         androidx.compose.foundation.lazy.LazyColumn {
-            items(nonEmptyShelves, key = { it.id }) { shelf ->
+            val shelfKeys = StableKeys.of(nonEmptyShelves) { s -> s.id }
+            items(nonEmptyShelves.size, key = { shelfKeys[it] }) { index ->
+                val shelf = nonEmptyShelves[index]
                 when (shelf.type) {
                     "episode" -> {
                         shelf.bookEntities?.let { books ->

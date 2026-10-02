@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.series
 
 import android.app.Activity
+import androidx.compose.runtime.remember
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.Alphabetical
@@ -130,7 +132,9 @@ fun SeriesBrowseScreen(libraryId: String) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(seriesList, key = { it.id }) { series ->
+                    val keys = StableKeys.of(seriesList) { s -> s.id }
+                    items(seriesList.size, key = { keys[it] }) { index ->
+                        val series = seriesList[index]
                         SeriesCard(
                             series = series,
                             onClick = {

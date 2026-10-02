@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.ui.elements
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.runtime.remember
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -23,7 +25,8 @@ fun LibraryItemsFluid(libraryItems: List<LibraryItem>) {
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        items(libraryItems.size, key = { libraryItems[it].id }) { index ->
+        val keys = StableKeys.of(libraryItems) { i -> i.id }
+        items(libraryItems.size, key = { keys[it] }) { index ->
             val item = libraryItems[index]
 
             LibraryItemCard(

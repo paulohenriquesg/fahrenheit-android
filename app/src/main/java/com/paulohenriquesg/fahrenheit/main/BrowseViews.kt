@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.Alphabetical
@@ -154,7 +155,8 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(seriesList.size, key = { seriesList[it].id }) { index ->
+                val seriesKeys = StableKeys.of(seriesList) { s -> s.id }
+                items(seriesList.size, key = { seriesKeys[it] }) { index ->
                     val series = seriesList[index]
                     com.paulohenriquesg.fahrenheit.series.SeriesCard(
                         series = series,
@@ -233,7 +235,8 @@ fun AuthorsBrowseView(libraryId: String?) {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(authors.size, key = { authors[it].id }) { index ->
+                val authorKeys = StableKeys.of(authors) { a -> a.id }
+                items(authors.size, key = { authorKeys[it] }) { index ->
                     val author = authors[index]
                     com.paulohenriquesg.fahrenheit.ui.elements.AuthorCard(
                         author = author,
@@ -294,7 +297,8 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(collectionsList.size, key = { collectionsList[it].id }) { index ->
+                val collectionKeys = StableKeys.of(collectionsList) { c -> c.id }
+                items(collectionsList.size, key = { collectionKeys[it] }) { index ->
                     val collection = collectionsList[index]
                     com.paulohenriquesg.fahrenheit.collection.CollectionCard(
                         collection = collection,
