@@ -13,8 +13,11 @@ object EpisodeRowDisplay {
      * podcasts, and that is the part a cover tells you at a glance.
      */
     /** When the episode came out, as the row shows it. */
-    fun published(episode: RecentPodcastEpisode, now: Long = System.currentTimeMillis()): String =
-        EpisodeDate.of(episode.publishedAt, now)
+    fun published(
+        episode: RecentPodcastEpisode,
+        now: Long = System.currentTimeMillis(),
+        serverFormat: String? = null
+    ): String = EpisodeDate.of(episode.publishedAt, now, serverFormat)
 
     fun coverDescription(episode: RecentPodcastEpisode): String =
         episode.podcast?.metadata?.title?.takeIf { it.isNotBlank() }

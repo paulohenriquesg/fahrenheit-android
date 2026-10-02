@@ -34,4 +34,27 @@ class PubDateFormatTest {
 
     @Test
     fun `an unparseable date is shown as sent`() = assertEquals("sometime", formatPubDate("sometime"))
+
+    // Every date in the app should read the way the server was configured, not
+    // the way this function happened to be written.
+    @Test
+    fun `a feed date is written the way the server asks`() {
+        assertEquals(
+            "09/19/2026",
+            formatPubDate("Sat, 19 Sep 2026 10:00:00 GMT", serverFormat = "MM/dd/yyyy")
+        )
+    }
+
+    @Test
+    fun `without a server format it stays day-first`() {
+        assertEquals("19/09/2026", formatPubDate("Sat, 19 Sep 2026 10:00:00 GMT"))
+    }
+
+    @Test
+    fun `a server format Java cannot use does not break the row`() {
+        assertEquals(
+            "19/09/2026",
+            formatPubDate("Sat, 19 Sep 2026 10:00:00 GMT", serverFormat = "yyyy QQQQ 'o''clock")
+        )
+    }
 }

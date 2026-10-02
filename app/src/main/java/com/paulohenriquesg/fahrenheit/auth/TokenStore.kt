@@ -5,7 +5,8 @@ data class StoredCredentials(
     val host: String = "",
     val username: String = "",
     val accessToken: String = "",
-    val refreshToken: String? = null
+    val refreshToken: String? = null,
+    val dateFormat: String? = null
 ) {
     companion object {
         val EMPTY = StoredCredentials()

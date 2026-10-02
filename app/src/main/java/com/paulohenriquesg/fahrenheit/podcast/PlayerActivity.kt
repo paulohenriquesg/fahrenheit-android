@@ -63,6 +63,7 @@ import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 
 class PlayerActivity : ComponentActivity() {
     private lateinit var mediaSession: MediaSessionCompat
@@ -313,6 +314,9 @@ fun PlayerScreen(
     var playLibraryItemResponse by remember { mutableStateOf<PlayLibraryItemResponse?>(null) }
     var isTitleFocused by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val serverDateFormat = remember {
+        SharedPreferencesHandler(context).getUserPreferences().dateFormat
+    }
 
     LaunchedEffect(podcastId, episodeId) {
         android.util.Log.d("PlayerScreen", "LaunchedEffect - podcastId: $podcastId, episodeId: $episodeId")
@@ -376,7 +380,7 @@ fun PlayerScreen(
                     ) {
                         // Publication date
                         Text(
-                            text = formatPubDate(ep.pubDate),
+                            text = formatPubDate(ep.pubDate, serverDateFormat),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

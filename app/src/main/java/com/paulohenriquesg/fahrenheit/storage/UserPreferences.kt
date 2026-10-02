@@ -11,6 +11,8 @@ data class UserPreferences(
      */
     val refreshToken: String? = null,
     val isRowLayout: Boolean = true,
+    /** How the server writes dates, from the login response. */
+    val dateFormat: String? = null,
     val lastUpdateCheck: Long = 0L,
     /** Version the user pushed away, and when: it stays quiet for a day. */
     val updateSnoozeVersionCode: Int? = null,
