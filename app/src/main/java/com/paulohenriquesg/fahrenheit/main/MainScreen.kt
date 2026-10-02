@@ -329,7 +329,7 @@ fun MainScreen(
             MenuAction.LOGOUT -> {
                 // Storage, the client built from it, and anything still
                 // playing with the old token.
-                sharedPreferencesHandler.clearPreferences()
+                sharedPreferencesHandler.clearSession()
                 ApiClient.clearSession()
                 GlobalMediaPlayer.release()
                 val intent = Intent(context, LoginActivity::class.java)

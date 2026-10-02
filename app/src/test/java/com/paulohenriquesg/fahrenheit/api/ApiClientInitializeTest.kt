@@ -84,14 +84,17 @@ class ApiClientInitializeTest {
         assertEquals(SessionState.NeedsLogin, ApiClient.initialize(app))
     }
 
+    // Changed with #63: the token is what must not survive. The host stays so
+    // the login screen can offer it back for correction - "not-a-url" is one
+    // edit away from working, and retyping an address on a TV keyboard is not.
     @Test
-    fun `needing login clears the unusable credentials`() {
+    fun `needing login drops the token but offers the host back`() {
         store("not-a-url", "a-token")
 
         ApiClient.initialize(app)
 
-        assertEquals("", prefs.getUserPreferences().host)
         assertEquals("", prefs.getUserPreferences().token)
+        assertEquals("not-a-url", prefs.getUserPreferences().host)
     }
 
     @Test

@@ -66,6 +66,22 @@ class SharedPreferencesHandler(context: Context) {
         }
     }
 
+    /**
+     * Signing out: the session goes, the settings stay (#63).
+     *
+     * The tokens are the session. The host and username are settings, the theme
+     * and layout are preferences, and retyping a server address on a TV keyboard
+     * is the most expensive thing this app can ask for. The selected library does
+     * go, because it belongs to the account that just left.
+     */
+    fun clearSession() {
+        sharedPreferences.edit {
+            remove("token")
+            remove("refresh_token")
+            remove("selected_library_id")
+        }
+    }
+
     fun clearPreferences() {
         sharedPreferences.edit {
             clear()
