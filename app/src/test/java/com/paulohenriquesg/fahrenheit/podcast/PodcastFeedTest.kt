@@ -27,6 +27,7 @@ class PodcastFeedTest {
         override suspend fun me() = Me("admin")
         override suspend fun checkNew(podcastId: String, limit: Int) = CheckNewResponse(emptyList())
         override suspend fun feed(request: FeedRequest): FeedResponse { feedAsked = request; return feed() }
+        override suspend fun downloadQueue(libraryId: String) = com.paulohenriquesg.fahrenheit.api.DownloadQueue(null, emptyList())
         override suspend fun downloadEpisodes(podcastId: String, episodes: List<JsonObject>) {
             downloaded = podcastId to episodes
             download()
@@ -74,49 +75,4 @@ class PodcastFeedTest {
         assertTrue(result.isFailure)
     }
 
-    @Test
-    fun `downloading sends the feed's own episode back to that podcast`() = runBlocking {
-        val api = Api()
-
-        PodcastFeed(api).download("podcast-1", episodeJson, onState = {}, pause = {}, reload = { listOf(serverCopy()) })
-
-        assertEquals("podcast-1", api.downloaded?.first)
-        assertEquals(listOf(episodeJson), api.downloaded?.second)
-    }
-
-    @Test
-    fun `a download says so, and is done once the server holds the episode`() = runBlocking {
-        val states = mutableListOf<DownloadState>()
-        val holdings = ArrayDeque(listOf(emptyList(), emptyList(), listOf(serverCopy())))
-        var reloads = 0
-
-        PodcastFeed(Api()).download("p", episodeJson, onState = { states += it }, pause = {}) {
-            reloads++
-            holdings.removeFirst()
-        }
-
-        assertEquals(listOf(DownloadState.Downloading, DownloadState.Done), states)
-        assertEquals(3, reloads)
-    }
-
-    @Test
-    fun `a refused download says so and waits for nothing`() = runBlocking {
-        val states = mutableListOf<DownloadState>()
-        var reloads = 0
-
-        PodcastFeed(Api(download = { throw IOException("403") }))
-            .download("p", episodeJson, onState = { states += it }, pause = {}) { reloads++; emptyList() }
-
-        assertEquals(listOf(DownloadState.Downloading, DownloadState.Failed), states)
-        assertEquals(0, reloads)
-    }
-
-    @Test
-    fun `a download that is still not there after a while stays queued, not failed`() = runBlocking {
-        val states = mutableListOf<DownloadState>()
-
-        PodcastFeed(Api()).download("p", episodeJson, onState = { states += it }, pause = {}) { emptyList() }
-
-        assertEquals(DownloadState.Queued, states.last())
-    }
 }

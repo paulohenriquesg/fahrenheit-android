@@ -160,9 +160,10 @@ object EpisodeRowLabel {
 
     fun of(downloaded: Boolean, state: DownloadState?, focused: Boolean): String = when {
         downloaded -> "Play"
+        state == DownloadState.Requested -> "Requested…"
+        // The server reports a place in its queue, not a percentage.
+        state is DownloadState.Waiting -> if (state.ahead == 0) "Waiting · next" else "Waiting · ${state.ahead} ahead"
         state == DownloadState.Downloading -> "Downloading…"
-        state == DownloadState.Queued -> "Queued on the server"
-        state == DownloadState.Done -> "Downloaded"
         state == DownloadState.Failed -> "Download failed"
         // Spelled out only where a press would do it, so a press never
         // fetches something the viewer did not see offered.

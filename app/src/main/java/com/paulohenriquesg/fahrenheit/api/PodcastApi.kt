@@ -38,6 +38,13 @@ interface PodcastApi {
     @POST("api/podcasts/feed")
     suspend fun feed(@Body request: FeedRequest): FeedResponse
 
+    /**
+     * The download queue for a library: which episode is downloading now and
+     * which wait, in order. No percentage - the server does not track one.
+     */
+    @GET("api/libraries/{id}/episode-downloads")
+    suspend fun downloadQueue(@Path("id") libraryId: String): DownloadQueue
+
     /** Queues the given feed episodes for download. Admin or root only. */
     @POST("api/podcasts/{id}/download-episodes")
     suspend fun downloadEpisodes(
@@ -45,6 +52,18 @@ interface PodcastApi {
         @Body episodes: List<JsonObject>
     )
 }
+
+/** The server's one download queue, for a library: what is downloading, and what waits. */
+data class DownloadQueue(
+    @SerializedName("currentDownload") val currentDownload: QueuedDownload?,
+    @SerializedName("queue") val queue: List<QueuedDownload>?
+)
+
+data class QueuedDownload(
+    @SerializedName("libraryItemId") val libraryItemId: String?,
+    @SerializedName("guid") val guid: String?,
+    @SerializedName("url") val url: String?
+)
 
 data class FeedRequest(@SerializedName("rssFeed") val rssFeed: String)
 
