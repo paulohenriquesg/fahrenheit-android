@@ -3,13 +3,17 @@ package com.paulohenriquesg.fahrenheit.player
 import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
+import android.os.Bundle
+import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.test.utils.robolectric.RobolectricUtil.runMainLooperUntil
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -117,5 +121,51 @@ class PlaybackServiceTest {
         Playback.stop(context)
 
         runMainLooperUntil { service.get().sessionPlayer!!.mediaItemCount == 0 }
+    }
+
+    // Review: a screen coming back reattaches through a new controller, so the
+    // queued book's facts must reach a controller that was not the one to set them.
+    @Test
+    fun `a controller connecting later sees which book is queued`() {
+        queued(connect(), startAt = 0.0)
+
+        val later = Playback.connect(context).let { future ->
+            runMainLooperUntil { future.isDone }
+            future.get()
+        }
+        runMainLooperUntil { later.mediaItemCount == 2 }
+
+        assertEquals(QueuedFile("b1", null, 0.0, 5400.0), QueuedFile.of(later.currentMediaItem))
+        later.release()
+    }
+
+    // Review: audio is fetched with the listener's token, so another app must
+    // not be able to queue a URL of its own. Media3's default connection gives
+    // an untrusted controller read-only commands; this pins that we keep it.
+    @Test
+    fun `an app that is not trusted cannot queue anything`() {
+        val session = service.get().sessionPlayer!!.let { MediaSession.Builder(context, it).setId("pin").build() }
+        val stranger = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            "com.example.stranger", 0, 0, 0, 0, false, Bundle.EMPTY, true
+        )
+
+        val commands = PlaybackSessionCallback.onConnectAsync(session, stranger).get().availablePlayerCommands
+
+        assertFalse(commands.contains(Player.COMMAND_SET_MEDIA_ITEM))
+        assertFalse(commands.contains(Player.COMMAND_CHANGE_MEDIA_ITEMS))
+        session.release()
+    }
+
+    @Test
+    fun `the app itself can queue`() {
+        val session = service.get().sessionPlayer!!.let { MediaSession.Builder(context, it).setId("pin-own").build() }
+        val own = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            context.packageName, 0, 0, 0, 0, true, Bundle.EMPTY, true
+        )
+
+        val commands = PlaybackSessionCallback.onConnectAsync(session, own).get().availablePlayerCommands
+
+        assertTrue(commands.contains(Player.COMMAND_SET_MEDIA_ITEM))
+        session.release()
     }
 }

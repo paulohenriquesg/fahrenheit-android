@@ -61,7 +61,7 @@ class PlaybackService : MediaSessionService() {
             }
         })
         session = MediaSession.Builder(this, LeavingGuard(exo, reporting::beforeLeaving))
-            .setCallback(QueueCallback)
+            .setCallback(PlaybackSessionCallback)
             .build()
     }
 
@@ -89,20 +89,30 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    /** Makes items from a controller playable again (see [PlayableItems]). */
-    private object QueueCallback : MediaSession.Callback {
-        override fun onAddMediaItems(
-            mediaSession: MediaSession,
-            controller: MediaSession.ControllerInfo,
-            mediaItems: MutableList<MediaItem>
-        ): ListenableFuture<MutableList<MediaItem>> {
-            val playable = PlayableItems.resolve(mediaItems)
-                ?: return Futures.immediateFailedFuture(UnsupportedOperationException("An item has no URI"))
-            return Futures.immediateFuture(playable.toMutableList())
-        }
-    }
-
     private companion object {
         const val TAG = "PlaybackService"
+    }
+}
+
+/**
+ * The session's answers to controllers.
+ *
+ * Connections keep Media3's default on purpose: only this app, the system and
+ * apps holding the media-control permission may queue anything. Queued audio
+ * is fetched with the listener's token, so an app that could queue a URL of
+ * its own could collect that token. PlaybackServiceTest pins this.
+ *
+ * Items arriving from a controller in another process have lost their URI;
+ * [PlayableItems] rebuilds it.
+ */
+internal object PlaybackSessionCallback : MediaSession.Callback {
+    override fun onAddMediaItems(
+        mediaSession: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        mediaItems: MutableList<MediaItem>
+    ): ListenableFuture<MutableList<MediaItem>> {
+        val playable = PlayableItems.resolve(mediaItems)
+            ?: return Futures.immediateFailedFuture(UnsupportedOperationException("An item has no URI"))
+        return Futures.immediateFuture(playable.toMutableList())
     }
 }
