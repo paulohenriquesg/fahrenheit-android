@@ -48,7 +48,7 @@ class PlaybackReportingTest {
 
     private fun nowPlaying(itemId: String, timeline: TrackTimeline, episodeId: String? = null) = NowPlaying(
         itemId = itemId, title = itemId, timeline = timeline, mediaDuration = null, chapters = null,
-        episodeId = episodeId, goToPodcast = episodeId != null, description = null, line = { "" }
+        episodeId = episodeId, goToPodcast = episodeId != null, description = null
     )
 
     private val twoParts = TrackTimeline(

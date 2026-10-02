@@ -42,7 +42,7 @@ class PlaybackServiceTest {
                 TimelineTrack(index = 2, startOffset = 3600.0, duration = 1800.0, contentUrl = "/part2")
             )
         ),
-        mediaDuration = null, chapters = null, episodeId = null, goToPodcast = false, description = null, line = { "" }
+        mediaDuration = null, chapters = null, episodeId = null, goToPodcast = false, description = null
     )
 
     @Before

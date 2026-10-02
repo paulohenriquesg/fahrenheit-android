@@ -68,7 +68,7 @@ fun PlayerScreen(
                     maxLines = 2,
                     modifier = Modifier.onFocusChanged { titleFocused = it.isFocused }
                 )
-                nowPlaying.subtitle(currentTime).takeIf { it.isNotEmpty() }?.let {
+                nowPlaying.kicker?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.titleMedium,

@@ -28,10 +28,10 @@ class PlayerStartTest {
     )
 
     private fun book(id: String, timeline: TrackTimeline? = twoParts) =
-        NowPlaying(id, id, timeline, null, null, null, false, null) { "" }
+        NowPlaying(id, id, timeline, null, null, null, false, null)
 
     private fun episode(id: String) =
-        NowPlaying("p1", id, TrackTimeline(listOf(TimelineTrack(1, 0.0, 1800.0, "/$id"))), null, null, id, true, null) { "" }
+        NowPlaying("p1", id, TrackTimeline(listOf(TimelineTrack(1, 0.0, 1800.0, "/$id"))), null, null, id, true, null)
 
     private fun savedAt(seconds: Double) = MediaProgressResponse(currentTime = seconds)
 

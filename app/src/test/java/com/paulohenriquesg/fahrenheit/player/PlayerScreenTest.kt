@@ -40,7 +40,7 @@ class PlayerScreenTest {
         episodeId = if (episode) "e295" else null,
         goToPodcast = episode,
         description = null,
-        line = { if (episode) "Welcome to Night Vale · Yesterday" else "Chapter 2 · Andy Weir" }
+        kicker = if (episode) "Welcome to Night Vale · Yesterday" else "Chapter 2 · Andy Weir"
     )
 
     private fun render(episode: Boolean) {

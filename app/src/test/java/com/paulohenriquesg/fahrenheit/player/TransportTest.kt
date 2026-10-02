@@ -64,7 +64,7 @@ class TransportTest {
     /** Queued but not prepared: an unprepared player keeps the position it is given, exactly. */
     private fun queuedAt(startAt: Double): ExoPlayer {
         val p = TestExoPlayerBuilder(compose.activity).setMediaSourceFactory(hourLongFiles()).build()
-        val nowPlaying = NowPlaying("b1", "t", twoParts, null, null, null, false, null) { "" }
+        val nowPlaying = NowPlaying("b1", "t", twoParts, null, null, null, false, null)
         val queue = PlaybackQueue.of(nowPlaying, startAt) { "https://abs.test$it" }!!
         p.setMediaItems(queue.items, queue.index, queue.positionMs)
         return p
