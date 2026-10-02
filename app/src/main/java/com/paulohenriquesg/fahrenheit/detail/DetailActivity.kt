@@ -48,8 +48,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
-import com.paulohenriquesg.fahrenheit.book.BookPlayerActivity
-import com.paulohenriquesg.fahrenheit.podcast.PlayerActivity
+import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 
@@ -147,7 +146,7 @@ class DetailActivity : ComponentActivity() {
                 BookDetailView(
                     itemId = itemId,
                     content = DetailHeaderModel.book(item),
-                    onPrimary = { context.startActivity(BookPlayerActivity.createIntent(context, itemId)) }
+                    onPrimary = { context.startActivity(PlayerActivity.createIntent(context, itemId)) }
                 )
             }
         }

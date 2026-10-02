@@ -7,6 +7,7 @@ import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
 import android.content.Context
 import android.content.Intent
+import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent

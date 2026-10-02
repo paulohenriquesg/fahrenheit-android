@@ -1,5 +1,16 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.compose.foundation.BorderStroke
+import androidx.tv.material3.Border
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.IconButton as TvIconButton
+import androidx.tv.material3.IconButtonDefaults as TvIconButtonDefaults
+import androidx.tv.material3.MaterialTheme as TvMaterialTheme
+import androidx.tv.material3.LocalContentColor as TvLocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
+
+import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
+import androidx.compose.ui.focus.focusRequester
 import android.net.Uri
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
@@ -20,11 +31,7 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
@@ -146,13 +153,19 @@ fun MediaPlayerController(
         }
     }
 
+    // Something must hold focus or no D-pad key reaches this screen at all;
+    // play, so the remote's centre button does the obvious thing (frame 4).
+    // The buttons are never disabled for the same reason: a disabled button
+    // cannot take focus, and a press before the file is ready does nothing.
+    val playFocus = rememberInitialFocus(enabled = true, url)
+
     Column(modifier = Modifier.padding(8.dp)) {
         Row(
             modifier = Modifier.align(Alignment.CenterHorizontally),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Skip Back 30s
-            FilledTonalIconButton(
+            TransportButton(
                 onClick = {
                     if (isPrepared) {
                         val newPosition = PlaybackPosition.skip(currentTimeState, -SKIP_SECONDS, totalTime)
@@ -162,33 +175,24 @@ fun MediaPlayerController(
                         onCurrentTimeUpdate(newPosition)
                     }
                 },
-                enabled = isPrepared,
-                modifier = Modifier.size(48.dp),
-                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                size = 48.dp,
+                container = TvMaterialTheme.colorScheme.secondaryContainer,
+                content = TvMaterialTheme.colorScheme.onSecondaryContainer
             ) {
                 Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.skip_back_30_seconds))
             }
 
             // Play/Pause (larger)
-            FilledIconButton(
+            TransportButton(
                 onClick = {
                     if (isPrepared) {
                         onPlayPause(!isPlaying)
                     }
                 },
-                enabled = isPrepared,
-                modifier = Modifier.size(56.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                size = 56.dp,
+                container = TvMaterialTheme.colorScheme.primary,
+                content = TvMaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.focusRequester(playFocus)
             ) {
                 Icon(
                     if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
@@ -197,7 +201,7 @@ fun MediaPlayerController(
             }
 
             // Stop
-            IconButton(
+            TransportButton(
                 onClick = {
                     mediaPlayer.stop()
                     mediaPlayer.reset()
@@ -211,18 +215,15 @@ fun MediaPlayerController(
                     mediaPlayer.prepareAsync()
                     onPlayPause(false)
                 },
-                enabled = isPrepared,
-                modifier = Modifier.size(48.dp),
-                colors = IconButtonDefaults.iconButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                size = 48.dp,
+                container = androidx.compose.ui.graphics.Color.Transparent,
+                content = TvMaterialTheme.colorScheme.onSurface
             ) {
                 Icon(Icons.Filled.Stop, contentDescription = stringResource(R.string.stop))
             }
 
             // Skip Forward 30s
-            FilledTonalIconButton(
+            TransportButton(
                 onClick = {
                     if (isPrepared) {
                         val newPosition = PlaybackPosition.skip(currentTimeState, SKIP_SECONDS, totalTime)
@@ -232,14 +233,9 @@ fun MediaPlayerController(
                         onCurrentTimeUpdate(newPosition)
                     }
                 },
-                enabled = isPrepared,
-                modifier = Modifier.size(48.dp),
-                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                size = 48.dp,
+                container = TvMaterialTheme.colorScheme.secondaryContainer,
+                content = TvMaterialTheme.colorScheme.onSecondaryContainer
             ) {
                 Icon(Icons.Filled.FastForward, contentDescription = stringResource(R.string.skip_forward_30_seconds))
             }
@@ -297,3 +293,42 @@ fun DrawScope.drawLineAtPercentage(percentage: Float, sliderWidth: Int, trackHei
 
 /** How far the skip buttons jump. */
 private const val SKIP_SECONDS = 30.0
+
+/**
+ * A transport button: the TV IconButton, which takes focus by key as well as
+ * by touch and shows it - the phone ones this replaced did neither on the
+ * stick. Focus inverts the colours and adds a 3dp primary border; nothing grows.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TransportButton(
+    onClick: () -> Unit,
+    size: androidx.compose.ui.unit.Dp,
+    container: androidx.compose.ui.graphics.Color,
+    content: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+    icon: @Composable () -> Unit
+) {
+    TvIconButton(
+        onClick = onClick,
+        modifier = modifier.size(size),
+        scale = TvIconButtonDefaults.scale(focusedScale = 1f),
+        colors = TvIconButtonDefaults.colors(
+            containerColor = container,
+            contentColor = content,
+            // Inverted on focus, as every TV button in the app is: a primary
+            // border on the primary play button could not be seen.
+            focusedContainerColor = TvMaterialTheme.colorScheme.onSurface,
+            focusedContentColor = TvMaterialTheme.colorScheme.surface
+        ),
+        border = TvIconButtonDefaults.border(
+            focusedBorder = Border(BorderStroke(3.dp, TvMaterialTheme.colorScheme.primary))
+        )
+    ) {
+        // The icons are phone Icons, which read the phone content colour and
+        // would not follow the TV button's focus colours.
+        CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides TvLocalContentColor.current) {
+            icon()
+        }
+    }
+}

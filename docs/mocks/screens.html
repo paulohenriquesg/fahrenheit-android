@@ -241,6 +241,37 @@
     </div></div>
   </section>
 
+
+  <section>
+    <h2>4b. The same player, playing a podcast</h2>
+    <p class="why">There are two player screens today - one for books, one for episodes - and they already share the transport and the scrubber. What differs is three lines of content, so this is the same frame with those three changed: the <b>show</b> where the chapter was, <b>the episode's own title</b>, and <b>no chapter marks</b> unless the feed supplies them (some do; our own DTO has a <code>chapters</code> field for episodes). "Next" means the next episode rather than the next chapter. <b>Go to podcast</b> opens the show's own screen, with the whole feed; it appears only when an episode is playing, since a book already has its detail screen one Back away.</p>
+    <div class="shell"><div class="tv">
+      <div class="player">
+        <div class="sheen"></div>
+        <div class="ptop">
+          <div class="art" style="width:320px;height:320px"></div>
+          <div>
+            <h3>295 - The Book of Dale</h3>
+            <div class="ch">Welcome to Night Vale &middot; Yesterday</div>
+            <div class="btn" style="margin-top:28px;display:inline-flex;font-size:26px;padding:16px 28px"><svg class="ic-s" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Go to podcast</div>
+          </div>
+        </div>
+        <div class="scrub">
+          <i style="width:22%"></i>
+          <span class="knob" style="left:22%"></span>
+        </div>
+        <div class="times"><span>6 min 40 s</span><span>23 min left of 30 min</span></div>
+        <div class="transport">
+          <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M11 5 4 12l7 7"/><path d="M20 5l-7 7 7 7"/></svg></div>
+          <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 0 7 7"/><path d="M12 5V1l-4 4 4 4z" fill="currentColor" stroke="none"/></svg></div>
+          <div class="tbtn pri foc"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z" fill="currentColor" stroke="none"/></svg></div>
+          <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 1-7 7"/><path d="M12 5V1l4 4-4 4z" fill="currentColor" stroke="none"/></svg></div>
+          <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M13 5l7 7-7 7"/><path d="M4 5l7 7-7 7"/></svg></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
   <section>
     <h2>5. Search <span class="tag">#51</span></h2>
     <p class="why">Typing on this thing is the worst job on the device — the keyboard covers the middle of the screen and the field gives no sign it has focus. So the field is <b>the arrival focus with a visible caret</b>, results <b>group by kind</b> instead of one undifferentiated list, and each group clips to one row so the whole answer fits above where the keyboard lands.</p>
@@ -279,6 +310,7 @@
       <li><b>Mocked:</b> positions and times on the covers, the search result counts, and the cover art itself (flat panels, not your real images).</li>
       <li><b>Not designed yet:</b> settings, library picker, the update screen, and the empty and error states of all of the above — the empty state is usually where a TV app falls over, so it is worth a pass of its own.</li>
       <li>Each section is one PR's worth of work. The rail (#58) comes first because the Home, detail and search frames all assume it.</li>
+      <li><b>One player, not two.</b> BookPlayerActivity is 441 lines and the podcast PlayerActivity is 525, and they already share the 299-line transport. The difference is a subtitle line, whether chapter marks are drawn, and what "next" skips to. Keeping them apart has cost three double-fixes in one day: the Surface swap, the Text swap and the scroll rule all had to be applied twice.</li>
     </ul>
   </section>
 </div>
