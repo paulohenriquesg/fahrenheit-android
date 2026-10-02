@@ -26,7 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Button
+import androidx.tv.material3.Button
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
@@ -193,9 +193,8 @@ class DetailActivity : ComponentActivity() {
                         val intent = BookPlayerActivity.createIntent(context, itemId)
                         context.startActivity(intent)
                     },
-                    modifier = Modifier.fillMaxWidth()
                 ) {
-                Text(text = stringResource(R.string.play_book), color = MaterialTheme.colorScheme.onPrimary)
+                    Text(text = stringResource(R.string.play_book))
                 }
             } else {
                 itemDetail?.media?.episodes?.let { EpisodeOrder.newestFirst(it) }

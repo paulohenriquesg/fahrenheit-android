@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performImeAction
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -66,10 +68,16 @@ class LoginScreenImeTest {
     }
 
     @Test
+    @OptIn(ExperimentalTestApi::class)
     fun `finishing the api key signs in with it`() {
         var key: String? = null
         compose.setContent { LoginScreen({ _, _, _, _ -> }, { _, k, _ -> key = k }) }
-        compose.onNodeWithTag("login_mode_toggle").performClick()
+        // A TV button answers the centre key, not a tap.
+        compose.onNodeWithTag("login_mode_toggle")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.onNodeWithTag("login_mode_toggle")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
         compose.onNodeWithTag("login_host_field").performTextInput("http://abs.local:13378")
         compose.onNodeWithTag("login_api_key_field").performTextInput("abc123")
 
