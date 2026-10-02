@@ -20,7 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Podcasts
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.tv.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
