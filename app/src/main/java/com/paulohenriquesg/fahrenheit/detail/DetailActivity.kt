@@ -1,57 +1,32 @@
 package com.paulohenriquesg.fahrenheit.detail
 
 import android.content.Context
-import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
-import com.paulohenriquesg.fahrenheit.utils.formatPubDate
-import com.paulohenriquesg.fahrenheit.utils.formatDuration
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.tv.material3.Button
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.text.HtmlCompat
-import androidx.tv.material3.Border
-import androidx.tv.material3.Card
-import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
-import com.paulohenriquesg.fahrenheit.utils.RichText
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeOrder
 import com.paulohenriquesg.fahrenheit.podcast.DownloadState
@@ -71,14 +46,7 @@ import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.book.BookPlayerActivity
 import com.paulohenriquesg.fahrenheit.podcast.PlayerActivity
-import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
-import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import java.util.Locale
-import com.paulohenriquesg.fahrenheit.ui.CardFocus
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 
 class DetailActivity : ComponentActivity() {
@@ -109,7 +77,6 @@ class DetailActivity : ComponentActivity() {
     @Composable
     fun DetailScreen(itemId: String) {
         var itemDetail by remember { mutableStateOf<LibraryItemResponse?>(null) }
-        var expanded by remember { mutableStateOf(false) }
         var loadFailed by remember { mutableStateOf(false) }
         var mayCheckFeed by remember { mutableStateOf(false) }
 
@@ -144,78 +111,29 @@ class DetailActivity : ComponentActivity() {
             return
         }
 
+        val item = itemDetail
+        if (item == null) {
+            Text(
+                text = stringResource(R.string.loading),
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(16.dp)
+            )
+            return
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-            ) {
-                CoverImage(
-                    itemId = itemId,
-                    contentDescription = itemDetail?.media?.metadata?.title ?: "Cover Image"
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column(
-                    modifier = Modifier.height(200.dp)
-                ) {
-                    itemDetail?.let {
-                        Text(
-                            text = it.media.metadata.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                        ) {
-                            val description =
-                                it.media.metadata.description ?: "No description available"
-                            // Was converted to a plain string, which dropped the
-                            // emphasis along with the tags.
-                            val annotatedDescription = remember(description) {
-                                RichText.fromHtml(description)
-                            }
-                            Text(
-                                text = annotatedDescription,
-                                style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = if (expanded) Int.MAX_VALUE else Int.MAX_VALUE,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Box(
-                                modifier = Modifier.fillMaxHeight(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = if (expanded) "View Less" else "View More",
-                                color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.clickable { expanded = !expanded }
-                                )
-                            }
-                        }
-                } ?: Text(text = stringResource(R.string.loading), color = MaterialTheme.colorScheme.onSurface)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            if (itemDetail?.mediaType == "book") {
-                Button(
-                    onClick = {
-                        val intent = BookPlayerActivity.createIntent(context, itemId)
-                        context.startActivity(intent)
-                    },
-                ) {
-                    Text(text = stringResource(R.string.play_book))
-                }
+            if (item.mediaType == "podcast") {
+                PodcastEpisodes(itemId, item, mayCheckFeed, onReloaded = { itemDetail = it })
             } else {
-                PodcastEpisodes(itemId, itemDetail, mayCheckFeed, onReloaded = { itemDetail = it })
+                DetailHeader(
+                    itemId = itemId,
+                    content = DetailHeaderModel.book(item),
+                    onPrimary = { context.startActivity(BookPlayerActivity.createIntent(context, itemId)) }
+                )
             }
         }
     }
@@ -223,12 +141,13 @@ class DetailActivity : ComponentActivity() {
     /**
      * The podcast half of this screen (#76): every episode in the feed for an
      * admin, marked by whether the server has it, and the server's own for
-     * anyone else.
+     * anyone else. The header is the top of the episode list, so it scrolls
+     * away as the viewer moves into the episodes.
      */
     @Composable
     private fun PodcastEpisodes(
         itemId: String,
-        itemDetail: LibraryItemResponse?,
+        item: LibraryItemResponse,
         isAdmin: Boolean,
         onReloaded: (LibraryItemResponse) -> Unit
     ) {
@@ -239,8 +158,8 @@ class DetailActivity : ComponentActivity() {
         var feedCheck by remember { mutableStateOf<FeedCheckState>(FeedCheckState.Idle) }
         val downloads = remember { mutableStateMapOf<String, DownloadState>() }
         val serverFormat = remember { SharedPreferencesHandler(context).getUserPreferences().dateFormat }
-        val media = itemDetail?.media
-        val feedUrl = media?.metadata?.feedUrl
+        val media = item.media
+        val feedUrl = media.metadata.feedUrl
 
         // Read on open, every time: nothing of the feed is stored.
         LaunchedEffect(isAdmin, feedUrl) {
@@ -254,7 +173,6 @@ class DetailActivity : ComponentActivity() {
                 .fold(onSuccess = { FeedLoad.Loaded(it) }, onFailure = { FeedLoad.Failed })
         }
 
-        if (media == null) return
         val now = remember(media) { System.currentTimeMillis() }
         val screen = PodcastScreenModel.of(
             server = media.episodes.orEmpty(),
@@ -265,9 +183,13 @@ class DetailActivity : ComponentActivity() {
             now = now,
             serverFormat = serverFormat
         )
+        val header = DetailHeaderModel.podcast(item, screen.facts)
         val reload: suspend () -> LibraryItemResponse? = {
             ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }
                 ?.also(onReloaded)
+        }
+        val play: (Episode) -> Unit = { episode ->
+            context.startActivity(PlayerActivity.createIntent(context, itemId, episode.id))
         }
 
         PodcastEpisodesView(
@@ -275,9 +197,7 @@ class DetailActivity : ComponentActivity() {
             tab = tab,
             onTab = { tab = it },
             downloads = downloads,
-            onPlay = { episode ->
-                context.startActivity(PlayerActivity.createIntent(context, itemId, episode.id))
-            },
+            onPlay = play,
             onDownload = { row ->
                 val podcastApi = ApiClient.getPodcastApi() ?: return@PodcastEpisodesView
                 val episode = row.feed ?: return@PodcastEpisodesView
@@ -292,20 +212,31 @@ class DetailActivity : ComponentActivity() {
             },
             coverItemId = itemId,
             date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
-            actions = {
-                if (isAdmin) {
-                    FeedCheckRow(state = feedCheck, onCheck = {
-                        val podcastApi = ApiClient.getPodcastApi() ?: return@FeedCheckRow
-                        scope.launch {
-                            FeedCheck(podcastApi).run(
-                                podcastId = itemId,
-                                episodesBefore = media.episodes?.size ?: 0,
-                                onState = { feedCheck = it },
-                                reload = { reload()?.media?.episodes?.size }
-                            )
+            focusFirstRow = header.primary == null,
+            title = media.metadata.title,
+            header = {
+                DetailHeader(
+                    itemId = itemId,
+                    content = header,
+                    onPrimary = {
+                        EpisodeOrder.newestFirst(media.episodes.orEmpty()).firstOrNull()?.let(play)
+                    },
+                    actions = {
+                        if (isAdmin) {
+                            FeedCheckRow(state = feedCheck, onCheck = {
+                                val podcastApi = ApiClient.getPodcastApi() ?: return@FeedCheckRow
+                                scope.launch {
+                                    FeedCheck(podcastApi).run(
+                                        podcastId = itemId,
+                                        episodesBefore = media.episodes?.size ?: 0,
+                                        onState = { feedCheck = it },
+                                        reload = { reload()?.media?.episodes?.size }
+                                    )
+                                }
+                            })
                         }
-                    })
-                }
+                    }
+                )
             }
         )
     }

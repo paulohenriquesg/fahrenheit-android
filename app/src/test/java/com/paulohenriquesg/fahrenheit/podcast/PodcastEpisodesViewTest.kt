@@ -5,6 +5,13 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Text
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -41,7 +48,7 @@ class PodcastEpisodesViewTest {
         """{"title":"$title","guid":"$guid","publishedAt":$at,"enclosure":{"url":"https://cdn/$guid.mp3"}}""",
         JsonObject::class.java
     )
-    private val feedEpisodes = listOf(feed("g1", "Tabstack", 3), feed("g2", "Supergood", 2))
+    private var feedEpisodes = listOf(feed("g1", "Tabstack", 3), feed("g2", "Supergood", 2))
 
     private var played: Episode? = null
     private var downloaded: EpisodeRow? = null
@@ -61,7 +68,12 @@ class PodcastEpisodesViewTest {
                     onTab = { tabChosen = it },
                     downloads = downloads,
                     onPlay = { played = it },
-                    onDownload = { downloaded = it }
+                    onDownload = { downloaded = it },
+                    title = "The Show",
+                    header = {
+                        // As tall as the real one: a cover and a description.
+                        Text("HEADER", modifier = Modifier.height(260.dp).testTag("podcast_header"))
+                    }
                 )
             }
         }
@@ -73,14 +85,6 @@ class PodcastEpisodesViewTest {
         compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.RequestFocus)
         compose.onNodeWithTag(tag).performKeyInput { pressKey(Key.DirectionCenter) }
         compose.waitForIdle()
-    }
-
-    @Test
-    fun `the facts are on screen`() {
-        render()
-
-        compose.onNodeWithText("1 of 2 on the server").assertIsDisplayed()
-        compose.onNodeWithText("Automatic downloads off").assertIsDisplayed()
     }
 
     @Test
@@ -148,5 +152,34 @@ class PodcastEpisodesViewTest {
         render(feed = FeedLoad.Failed)
 
         compose.onNodeWithText("Could not read the feed. Showing what the server has.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `without a primary action in the header, the first episode holds focus`() {
+        render()
+
+        compose.onNodeWithTag("episode_row_server:s1").assertIsFocused()
+    }
+
+    @Test
+    fun `on arrival the header is there and the pinned title is not`() {
+        render()
+
+        compose.onNodeWithTag("podcast_header").assertIsDisplayed()
+        compose.onNodeWithTag("pinned_title").assertDoesNotExist()
+    }
+
+    @Test
+    fun `moving into the list scrolls the header away and keeps the tabs and the name`() {
+        feedEpisodes = listOf(feed("g1", "Tabstack", 30)) + (1..20).map { feed("x$it", "Episode $it", 29L - it) }
+        render()
+
+        compose.onNodeWithTag("podcast_list").performScrollToIndex(12)
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("podcast_header").assertDoesNotExist()
+        compose.onNodeWithTag("episode_tab_All").assertIsDisplayed()
+        compose.onNodeWithTag("pinned_title").assertIsDisplayed()
+        compose.onNodeWithText("The Show").assertIsDisplayed()
     }
 }

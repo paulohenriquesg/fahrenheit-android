@@ -1,6 +1,12 @@
 package com.paulohenriquesg.fahrenheit.podcast
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.focus.focusRequester
+import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -52,10 +58,11 @@ private val tabNames = mapOf(
  * A podcast's episodes: every one in the feed for an admin, marked by whether
  * the server has it; the server's own for anyone else (#76).
  *
- * @param actions drawn under the facts, for the admin's feed check.
+ * @param focusFirstRow whether the newest episode takes focus on arrival:
+ *   false when the header's primary action already does.
  * @param date how a row writes its publication date.
  */
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PodcastEpisodesView(
     screen: PodcastScreen,
@@ -66,45 +73,82 @@ fun PodcastEpisodesView(
     onDownload: (EpisodeRow) -> Unit,
     coverItemId: String? = null,
     date: (EpisodeRow) -> String = { "" },
-    actions: @Composable () -> Unit = {}
+    focusFirstRow: Boolean = true,
+    title: String = "",
+    header: @Composable () -> Unit = {}
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Space.gap)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            screen.facts.forEach { FactChip(it) }
+    // One list, header included, so moving down into the episodes pushes the
+    // header off: under a fixed one only about 1.5 rows fitted in 540dp.
+    val listState = rememberLazyListState()
+    val scrolled by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
+    // Something must hold focus or the remote does nothing. Usually the
+    // header's primary action has it; failing that, the newest episode.
+    val firstKey = screen.rows.firstOrNull()?.key
+    val initialFocus = rememberInitialFocus(enabled = focusFirstRow && firstKey != null, firstKey)
+
+    LazyColumn(
+        state = listState,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.testTag("podcast_list")
+    ) {
+        item(key = "header") {
+            Column(verticalArrangement = Arrangement.spacedBy(Space.gap)) {
+                header()
+                screen.note?.let { NoteBox(it) }
+            }
         }
-        actions()
-        screen.note?.let { NoteBox(it) }
-        screen.tabs?.let { tabs ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                tabs.forEach { (each, count) ->
-                    FilterChip(
-                        selected = each == tab,
-                        onClick = { onTab(each) },
-                        modifier = Modifier.testTag("episode_tab_${each.name}")
-                    ) {
-                        Text("${tabNames.getValue(each)} · $count")
+        // Pinned: which podcast, and which filter, stay in view while the
+        // header is gone - and a tab stays one Up away.
+        stickyHeader(key = "pinned") {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (scrolled && title.isNotEmpty()) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag("pinned_title")
+                    )
+                }
+                screen.tabs?.let { tabs ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        tabs.forEach { (each, count) ->
+                            FilterChip(
+                                selected = each == tab,
+                                onClick = { onTab(each) },
+                                modifier = Modifier.testTag("episode_tab_${each.name}")
+                            ) {
+                                Text("${tabNames.getValue(each)} · $count")
+                            }
+                        }
                     }
                 }
             }
         }
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            val keys = StableKeys.of(screen.rows) { it.key }
-            items(screen.rows.size, key = { keys[it] }) { index ->
-                val row = screen.rows[index]
-                EpisodeRowCard(
-                    row = row,
-                    state = downloads[row.key],
-                    coverItemId = coverItemId,
-                    date = date(row),
-                    onPress = {
-                        val episode = row.onServer
-                        when {
-                            episode != null -> onPlay(episode)
-                            EpisodeRowLabel.mayDownload(downloads[row.key]) -> onDownload(row)
-                        }
+        val keys = StableKeys.of(screen.rows) { it.key }
+        items(screen.rows.size, key = { keys[it] }) { index ->
+            val row = screen.rows[index]
+            EpisodeRowCard(
+                row = row,
+                state = downloads[row.key],
+                coverItemId = coverItemId,
+                date = date(row),
+                modifier = if (index == 0) Modifier.focusRequester(initialFocus) else Modifier,
+                onPress = {
+                    val episode = row.onServer
+                    when {
+                        episode != null -> onPlay(episode)
+                        EpisodeRowLabel.mayDownload(downloads[row.key]) -> onDownload(row)
                     }
-                )
-            }
+                }
+            )
         }
     }
 }
@@ -128,19 +172,6 @@ object EpisodeRowLabel {
 }
 
 @Composable
-private fun FactChip(fact: Fact) {
-    val colour = if (fact.warn) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
-    Text(
-        text = fact.text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = colour,
-        modifier = Modifier
-            .border(BorderStroke(1.dp, if (fact.warn) colour else MaterialTheme.colorScheme.surfaceVariant), RoundedCornerShape(50))
-            .padding(horizontal = 14.dp, vertical = 6.dp)
-    )
-}
-
-@Composable
 private fun NoteBox(note: Note) {
     Column(
         modifier = Modifier
@@ -161,13 +192,14 @@ private fun EpisodeRowCard(
     state: DownloadState?,
     coverItemId: String?,
     date: String,
+    modifier: Modifier = Modifier,
     onPress: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }
     Card(
         scale = CardFocus.noGrowth,
         onClick = onPress,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp)
             .testTag("episode_row_${row.key}")
