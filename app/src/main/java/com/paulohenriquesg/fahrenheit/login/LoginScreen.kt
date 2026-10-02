@@ -3,6 +3,9 @@ package com.paulohenriquesg.fahrenheit.login
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,7 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
+import androidx.tv.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -71,6 +74,7 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .testTag("login_screen")
             .padding(16.dp),
         verticalArrangement = Arrangement.Center,
@@ -230,7 +234,9 @@ fun LoginScreen(
                     .formWidth()
                     .testTag("login_submit_button")
             ) {
-                Text(stringResource(R.string.login), color = MaterialTheme.colorScheme.onPrimary)
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.login))
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(
@@ -239,11 +245,12 @@ fun LoginScreen(
                     .formWidth()
                     .testTag("login_mode_toggle")
             ) {
-                Text(
-                    if (useApiKey) "Use username and password instead"
-                    else "Sign in with an API key instead",
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(
+                        if (useApiKey) "Use username and password instead"
+                        else "Sign in with an API key instead"
+                    )
+                }
             }
         }
     }

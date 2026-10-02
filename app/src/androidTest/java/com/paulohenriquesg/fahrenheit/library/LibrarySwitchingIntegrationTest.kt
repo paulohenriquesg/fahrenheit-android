@@ -1,7 +1,5 @@
 package com.paulohenriquesg.fahrenheit.library
 
-import android.content.Intent
-import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.paulohenriquesg.fahrenheit.api.Library
@@ -157,44 +155,6 @@ class LibrarySwitchingIntegrationTest {
             libraryIdWithSpecialChars,
             savedLibraryId
         )
-    }
-
-    @Test
-    fun librarySelectionActivity_savesLibraryOnSelection() {
-        // Given - Launch the activity
-        val intent = Intent(context, LibrarySelectionActivity::class.java)
-        val scenario = ActivityScenario.launch<LibrarySelectionActivity>(intent)
-
-        // When - Simulate selecting a library by manually saving
-        // (In the real app, this happens when clicking a library card)
-        val testLibraryId = "selected-library-789"
-        sharedPreferencesHandler.saveSelectedLibraryId(testLibraryId)
-
-        // Then - Verify it was saved
-        val savedId = sharedPreferencesHandler.getSelectedLibraryId()
-        assertEquals(
-            "LibrarySelectionActivity should save selected library",
-            testLibraryId,
-            savedId
-        )
-
-        scenario.close()
-    }
-
-    @Test
-    fun librarySelectionActivity_closesAfterSelection() {
-        // Given
-        val intent = Intent(context, LibrarySelectionActivity::class.java)
-        val scenario = ActivityScenario.launch<LibrarySelectionActivity>(intent)
-
-        // When - Simulate library selection
-        sharedPreferencesHandler.saveSelectedLibraryId("test-lib")
-
-        // Then - In the real app, the activity should close after selection
-        // We verify the state is ready for the activity to finish
-        scenario.use {
-            assertNotNull("Activity should be in a valid state", it)
-        }
     }
 
     @Test
