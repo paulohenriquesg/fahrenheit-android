@@ -22,6 +22,7 @@ import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemCard
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
+import com.paulohenriquesg.fahrenheit.utils.RichText
 
 /**
  * Shared header component for detail screens (book/podcast, author, series).
@@ -67,7 +68,7 @@ fun DetailHeader(
             description?.let { desc ->
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = desc,
+                    text = RichText.fromHtml(desc),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 5,

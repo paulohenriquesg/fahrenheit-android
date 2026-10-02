@@ -51,6 +51,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.utils.RichText
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeOrder
 import com.paulohenriquesg.fahrenheit.api.Episode
@@ -152,15 +153,10 @@ class DetailActivity : ComponentActivity() {
                         ) {
                             val description =
                                 it.media.metadata.description ?: "No description available"
+                            // Was converted to a plain string, which dropped the
+                            // emphasis along with the tags.
                             val annotatedDescription = remember(description) {
-                                buildAnnotatedString {
-                                    append(
-                                        HtmlCompat.fromHtml(
-                                            description,
-                                            HtmlCompat.FROM_HTML_MODE_COMPACT
-                                        ).toString()
-                                    )
-                                }
+                                RichText.fromHtml(description)
                             }
                             Text(
                                 text = annotatedDescription,
@@ -272,7 +268,7 @@ class DetailActivity : ComponentActivity() {
                     val description = episode.description
                     if (!description.isNullOrEmpty()) {
                         Text(
-                            text = description,
+                            text = RichText.fromHtml(description),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,

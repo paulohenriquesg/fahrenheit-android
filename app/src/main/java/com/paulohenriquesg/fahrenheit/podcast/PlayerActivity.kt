@@ -45,6 +45,7 @@ import com.paulohenriquesg.fahrenheit.player.GlobalMediaPlayer
 import com.paulohenriquesg.fahrenheit.player.MediaPlayerController
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.utils.RichText
 import com.paulohenriquesg.fahrenheit.player.ProgressSync
 import com.paulohenriquesg.fahrenheit.player.ResumePoint
 import com.paulohenriquesg.fahrenheit.api.Episode
@@ -405,7 +406,7 @@ fun PlayerScreen(
                     val description = ep.description
                     if (!description.isNullOrEmpty()) {
                         Text(
-                            text = description,
+                            text = RichText.fromHtml(description),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 5,
