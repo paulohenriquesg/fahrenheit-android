@@ -37,8 +37,12 @@ import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.utils.RichText
 import com.paulohenriquesg.fahrenheit.stats.shortDuration
+import com.paulohenriquesg.fahrenheit.ui.CardFocus
+import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.fillMaxWidth
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LatestEpisodesView(libraryId: String) {
     val context = LocalContext.current
@@ -117,12 +121,18 @@ fun LatestEpisodesView(libraryId: String) {
                     modifier = Modifier.fillMaxSize()
                 ) {
                     groups.forEach { group ->
-                        item(key = "group_${group.label}") {
+                        // Sticky: the heading stays put while its own episodes
+                        // scroll under it, so you always know which day you are
+                        // looking at.
+                        stickyHeader(key = "group_${group.label}") {
                             Text(
                                 text = group.label,
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 8.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.background)
+                                    .padding(vertical = 8.dp)
                             )
                         }
                         val keys = StableKeys.of(group.episodes) { e -> e.id }
@@ -155,6 +165,7 @@ fun EpisodeCard(
     var isFocused by remember { mutableStateOf(false) }
 
     Card(
+        scale = CardFocus.noGrowth,
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()

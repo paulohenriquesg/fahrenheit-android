@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fahrenheit TV — latest episodes mock</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --bg:#121212; --surface:#1E1E1E; --variant:#4A3D5C; --on-bg:#FFFFFF;
+    --on-surface:#FFFFFF; --on-variant:#CAC4D0; --primary:#D0BCFF; --on-primary:#381E72;
+    --outline:#8E8699;
+    --font: Manrope, "Avenir Next", system-ui, sans-serif;
+    --gap:32px; --inset:28px; --radius:20px; --rest:2px; --focus:6px;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#07070A; color:var(--on-bg); font-family:var(--font); }
+  .page { padding:40px 40px 100px; max-width:1180px; }
+  h1 { font-size:30px; font-weight:800; margin:0 0 8px; }
+  .lede { color:var(--on-variant); font-size:15px; line-height:1.6; margin:0 0 32px; max-width:95ch; }
+  .lede code { background:#17161B; padding:1px 5px; border-radius:4px; }
+  section { margin-bottom:52px; }
+  h2 { font-size:19px; font-weight:700; margin:0 0 6px; }
+  .why { color:var(--on-variant); font-size:14.5px; line-height:1.6; margin:0 0 14px; max-width:95ch; }
+  .why b { color:var(--on-bg); }
+  .shell { width:960px; height:540px; overflow:hidden; border-radius:10px; border:1px solid #2A2831; }
+  .tv { width:1920px; height:1080px; transform:scale(0.5); transform-origin:top left; background:var(--bg); position:relative; }
+
+  .rail { position:absolute; left:0; top:0; bottom:0; width:112px; background:var(--surface); border-right:var(--rest) solid var(--outline); display:flex; flex-direction:column; align-items:center; padding:36px 0; gap:28px; }
+  .rail .slot { width:64px; height:64px; border-radius:14px; display:grid; place-items:center; color:var(--on-variant); }
+  .rail .slot.on { background:var(--primary); color:var(--on-primary); }
+  .stage { position:absolute; left:112px; right:0; top:0; bottom:0; padding:48px 64px; }
+  .head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:30px; }
+  .head h3 { font-size:58px; font-weight:800; margin:0; letter-spacing:-0.02em; }
+  .head .note { font-size:25px; color:var(--on-variant); }
+
+  .daygroup { font-size:26px; font-weight:700; color:var(--on-variant); text-transform:uppercase; letter-spacing:.06em; margin:22px 0 14px; }
+  .row { display:flex; gap:26px; align-items:center; background:var(--surface); border:var(--rest) solid var(--outline); border-radius:var(--radius); padding:20px 24px; margin-bottom:14px; }
+  .row.foc { outline:var(--focus) solid var(--primary); border-color:transparent; background:#262031; }
+  .art { width:120px; height:120px; border-radius:12px; background:linear-gradient(145deg,#3A3150,#191620); flex:none; position:relative; overflow:hidden; }
+  .art .prog { position:absolute; left:0; right:0; bottom:0; height:8px; background:rgba(0,0,0,.5); }
+  .art .prog i { display:block; height:100%; background:var(--primary); }
+  .meta { flex:1; min-width:0; }
+  .meta .t { font-size:32px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .meta .sub { font-size:25px; color:var(--on-variant); margin-top:8px; display:flex; gap:14px; align-items:center; }
+  .meta .desc { font-size:23px; color:var(--on-variant); margin-top:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.85; }
+  .chip { font-size:21px; border:var(--rest) solid var(--outline); border-radius:999px; padding:4px 14px; color:var(--on-variant); }
+  .chip.new { background:var(--primary); color:var(--on-primary); border-color:transparent; font-weight:700; }
+  .play { width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:var(--variant); color:var(--on-bg); flex:none; }
+  .row.foc .play { background:var(--primary); color:var(--on-primary); }
+  .ic { width:34px; height:34px; stroke:currentColor; fill:none; stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round; }
+  .empty { display:grid; place-items:center; height:70%; text-align:center; }
+  .empty .big { font-size:40px; font-weight:700; }
+  .empty .sm { font-size:27px; color:var(--on-variant); margin-top:14px; max-width:900px; line-height:1.5; }
+  ul.pts { margin:12px 0 0; padding-left:20px; color:var(--on-variant); font-size:14.5px; line-height:1.65; }
+  ul.pts li { margin-bottom:7px; } ul.pts b { color:var(--on-bg); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Latest Episodes — giving the list something to say</h1>
+  <p class="lede">Today it is a flat list of covers and titles with no dates, so an episode from this morning looks exactly like one from March. That is most of why it felt stale. The server already orders by <code>publishedAt</code> and we now read it — this is what it can show once it does.</p>
+
+  <section>
+    <h2>1. Grouped by when, with what is new marked</h2>
+    <p class="why">Days do the sorting work the eye wants: <b>Today</b>, <b>Yesterday</b>, then the week, then dates. Each row carries its <b>duration</b> and, if you have started it, <b>how far in you are</b> — on the artwork, where the eye already is. A row is one focus stop; the centre button plays it.</p>
+    <div class="shell"><div class="tv">
+      <nav class="rail">
+        <div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg></div>
+        <div class="slot on"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h4v16H5zM11 4h4v16h-4z"/></svg></div>
+        <div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+      </nav>
+      <div class="stage">
+        <div class="head">
+          <h3>Latest episodes</h3>
+          <div class="note">Unfinished only &middot; 6 podcasts</div>
+        </div>
+
+        <div class="daygroup">Today</div>
+        <div class="row foc">
+          <div class="art"></div>
+          <div class="meta">
+            <div class="t">RESUMÃO DE SETEMBRO: KOJIMA TROCA DE LADO</div>
+            <div class="sub"><span class="chip new">New</span> Bom dia, minha vida <span>&middot;</span> 28 min</div>
+            <div class="desc">As novidades do mês em games, cinema e tecnologia, com Isadora Basile.</div>
+          </div>
+          <div class="play"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z" fill="currentColor" stroke="none"/></svg></div>
+        </div>
+
+        <div class="daygroup">Yesterday</div>
+        <div class="row">
+          <div class="art"><div class="prog"><i style="width:38%"></i></div></div>
+          <div class="meta">
+            <div class="t">295 - The Book of Dale</div>
+            <div class="sub"><span class="chip">38% in</span> Welcome to Night Vale <span>&middot;</span> 24 min left</div>
+            <div class="desc">A new book arrives at the library. The librarians are not pleased.</div>
+          </div>
+          <div class="play"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z" fill="currentColor" stroke="none"/></svg></div>
+        </div>
+
+        <div class="daygroup">Earlier</div>
+        <div class="row">
+          <div class="art"></div>
+          <div class="meta">
+            <div class="t">NerdCast 1037 - 1 Otimista vs. 10 Filmes Ruins</div>
+            <div class="sub"><span class="chip">03/07/2026</span> NerdCast <span>&middot;</span> 1 h 52 min</div>
+            <div class="desc">Dez filmes ruins contra um otimista incorrigível.</div>
+          </div>
+          <div class="play"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z" fill="currentColor" stroke="none"/></svg></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>2. Empty, and honest about why</h2>
+    <p class="why">The list can be empty for two very different reasons and today says the same thing for both. The server returns <b>only unfinished episodes</b>, so a diligent listener empties it — that is not an error and should not read like one. The other reason is the one you just hit: <b>nothing is being fetched</b>, because a podcast has auto-download off and its feed has not been checked in two years.</p>
+    <div class="shell"><div class="tv">
+      <nav class="rail">
+        <div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg></div>
+        <div class="slot on"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      </nav>
+      <div class="stage">
+        <div class="head"><h3>Latest episodes</h3><div class="note">Unfinished only</div></div>
+        <div class="empty">
+          <div>
+            <div class="big">You are all caught up</div>
+            <div class="sm">Finished episodes are not listed here. New ones appear when your server next checks the feeds — it last checked 89 days ago.</div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>What this needs from the code</h2>
+    <ul class="pts">
+      <li><b>Already done</b> (in #70): <code>publishedAt</code> parsed, and the row says Today / Yesterday / 4 days ago / a date.</li>
+      <li><b>Small:</b> group the rows by day, and mark anything from the last day or two as New. Pure function over the list, easy to test.</li>
+      <li><b>Needs more fields:</b> duration and progress are not in <code>RecentPodcastEpisode</code> — the server sends <code>audioFile.duration</code> and the user's media progress separately. Worth one audit of the real response before designing against it, the way the DTO audit was done.</li>
+      <li><b>The empty state</b> needs to know when the server last checked, which is per podcast (<code>lastEpisodeCheck</code>) and not in this response at all. Possibly worth leaving as the plain "all caught up" line until that is cheap.</li>
+      <li><b>Open question:</b> should finished episodes be shown struck through rather than hidden? The server can return them with a different filter, and "where did it go?" is a fair complaint.</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

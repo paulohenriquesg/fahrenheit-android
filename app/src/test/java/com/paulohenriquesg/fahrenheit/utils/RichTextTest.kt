@@ -81,4 +81,14 @@ class RichTextTest {
     fun `no stray blank lines at either end`() {
         assertTrue(RichText.fromHtml("<p>About it</p>\n\n").text == "About it")
     }
+
+    @Test
+    fun `an ampersand that was only escaped once still reads as one`() {
+        assertEquals("Fish & Chips", RichText.fromHtml("Fish &amp; Chips").text)
+    }
+
+    @Test
+    fun `text that merely mentions an ampersand is left alone`() {
+        assertEquals("rock & roll", RichText.fromHtml("rock & roll").text)
+    }
 }

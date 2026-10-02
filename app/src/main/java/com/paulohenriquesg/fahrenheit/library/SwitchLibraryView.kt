@@ -23,6 +23,7 @@ import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
+import com.paulohenriquesg.fahrenheit.ui.CardFocus
 
 /**
  * Picking a library is a big, rare choice, so it gets tiles rather than a list:
@@ -68,6 +69,7 @@ fun SwitchLibraryView(
                 val library = libraries[index]
                 val current = library.id != null && library.id == currentId
                 Card(
+                    scale = CardFocus.noGrowth,
                     onClick = { onSelect(library) },
                     modifier = Modifier
                         .fillMaxWidth()

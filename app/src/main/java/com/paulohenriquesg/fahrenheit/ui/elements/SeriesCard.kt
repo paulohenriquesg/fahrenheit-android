@@ -19,6 +19,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.Series
+import com.paulohenriquesg.fahrenheit.ui.CardFocus
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -30,6 +31,7 @@ fun SeriesCard(series: Series, onClick: (Series) -> Unit) {
             .height(300.dp)
     ) {
         Card(
+            scale = CardFocus.noGrowth,
             onClick = { onClick(series) },
             modifier = Modifier.fillMaxSize(),
             colors = CardDefaults.colors(

@@ -23,11 +23,13 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.Author
+import com.paulohenriquesg.fahrenheit.ui.CardFocus
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun AuthorCard(author: Author, onClick: () -> Unit) {
     Card(
+        scale = CardFocus.noGrowth,
         onClick = onClick,
         modifier = Modifier
             .width(180.dp)

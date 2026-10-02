@@ -65,6 +65,7 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.util.Locale
+import com.paulohenriquesg.fahrenheit.ui.CardFocus
 
 class DetailActivity : ComponentActivity() {
     @OptIn(ExperimentalTvMaterial3Api::class)
@@ -220,6 +221,8 @@ class DetailActivity : ComponentActivity() {
         var isFocused by remember { mutableStateOf(false) }
 
         Card(
+
+            scale = CardFocus.noGrowth,
             onClick = {
                 val intent = PlayerActivity.createIntent(context, episode.libraryItemId, episode.id)
                 context.startActivity(intent)
