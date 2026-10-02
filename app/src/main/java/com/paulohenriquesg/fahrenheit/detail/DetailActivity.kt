@@ -129,7 +129,7 @@ class DetailActivity : ComponentActivity() {
             if (item.mediaType == "podcast") {
                 PodcastEpisodes(itemId, item, mayCheckFeed, onReloaded = { itemDetail = it })
             } else {
-                DetailHeader(
+                BookDetailView(
                     itemId = itemId,
                     content = DetailHeaderModel.book(item),
                     onPrimary = { context.startActivity(BookPlayerActivity.createIntent(context, itemId)) }

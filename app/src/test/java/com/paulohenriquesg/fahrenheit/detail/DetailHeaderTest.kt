@@ -5,6 +5,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performKeyInput
+import org.junit.Assert.assertTrue
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -92,5 +96,68 @@ class DetailHeaderTest {
         render(primary = null)
 
         compose.onNodeWithTag(PRIMARY_ACTION_TAG).assertDoesNotExist()
+    }
+
+    private val longBlurb = (1..30).joinToString("<br /><br />") { "Paragraph $it of a book's very long blurb, long enough to need a second line." }
+
+    private fun renderBook(description: String) {
+        compose.setContent {
+            FahrenheitTheme {
+                BookDetailView(
+                    itemId = "b1",
+                    content = DetailHeaderContent("A Book", null, emptyList(), "Play", description),
+                    onPrimary = { pressed++ }
+                )
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    private fun scrollPosition(): Float =
+        compose.onNodeWithTag(DETAIL_SCROLL_TAG).fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange].value()
+
+    @Test
+    fun `a book shows its whole description, paragraphs and all`() {
+        renderBook("<p>First paragraph.</p><p>Second paragraph.</p>")
+
+        compose.onNodeWithText("Second paragraph.", substring = true).assertExists()
+        compose.onNodeWithTag(DESCRIPTION_TAG).assertExists()
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun `a description longer than the screen is reached with Down and scrolled with Down`() {
+        renderBook(longBlurb)
+
+        compose.onNodeWithTag(PRIMARY_ACTION_TAG).performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(DESCRIPTION_TAG).assertIsFocused()
+
+        val before = scrollPosition()
+        compose.onNodeWithTag(DESCRIPTION_TAG).performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+
+        assertTrue("Down scrolls the text", scrollPosition() > before)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun `Up at the top of the description goes back to the button`() {
+        renderBook(longBlurb)
+
+        compose.onNodeWithTag(PRIMARY_ACTION_TAG).performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(DESCRIPTION_TAG).performKeyInput { pressKey(Key.DirectionUp) }
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(PRIMARY_ACTION_TAG).assertIsFocused()
+    }
+
+    @Test
+    fun `the podcast header keeps a short preview`() {
+        render()
+
+        compose.onNodeWithTag(DESCRIPTION_TAG).assertDoesNotExist()
     }
 }

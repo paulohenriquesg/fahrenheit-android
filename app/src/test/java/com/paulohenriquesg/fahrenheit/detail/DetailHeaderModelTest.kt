@@ -129,6 +129,7 @@ class DetailHeaderModelTest {
         val broken = DetailHeaderModel.previewOf("<b>The first novel!</b><br /><br />When a shuttle fails,<p>Pike</p><p>suspects</p>")
 
         assertEquals("<b>The first novel!</b> When a shuttle fails, Pike suspects", broken)
-        assertEquals("<p>Ryland Grace</p>".let(DetailHeaderModel::previewOf), header.description)
+        // The model passes it on whole: a book shows all of it, a podcast a preview.
+        assertEquals("<p>Ryland Grace</p>", header.description)
     }
 }

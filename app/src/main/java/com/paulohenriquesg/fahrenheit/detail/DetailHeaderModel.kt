@@ -24,7 +24,7 @@ data class DetailHeaderContent(
 object DetailHeaderModel {
 
     /**
-     * The description as a three-line preview: paragraphs and line breaks run
+     * The description for a three-line preview (the podcast header): paragraphs and line breaks run
      * together, or `<br /><br />` spends the lines on a blank one and a lone
      * ellipsis. Inline emphasis is kept.
      */
@@ -65,7 +65,7 @@ object DetailHeaderModel {
             // Says where it resumes, rather than a bare "Play".
             // Under a minute in, a position would read "0m".
             primary = resumeAt?.let { if (it < 60) "Resume" else "Resume at ${formatDuration(it)}" } ?: "Play",
-            description = metadata.description?.let(::previewOf)
+            description = metadata.description
         )
     }
 
@@ -83,7 +83,7 @@ object DetailHeaderModel {
             chips = facts,
             // "Resume <episode>" once episode progress is read (#78).
             primary = if (item.media.episodes.isNullOrEmpty()) null else "Play newest episode",
-            description = metadata.description?.let(::previewOf)
+            description = metadata.description
         )
     }
 }
