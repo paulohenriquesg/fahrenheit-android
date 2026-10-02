@@ -4,6 +4,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.paulohenriquesg.fahrenheit.api.RecentEpisodePodcast
 import com.paulohenriquesg.fahrenheit.api.RecentEpisodePodcastMetadata
 import com.paulohenriquesg.fahrenheit.api.RecentPodcastEpisode
+import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,7 +32,7 @@ class LatestEpisodePressTest {
         val intent = latestEpisodeIntent(ApplicationProvider.getApplicationContext(), episode)
 
         assertEquals(PlayerActivity::class.java.name, intent.component?.className)
-        assertEquals("podcast-3", intent.getStringExtra("podcast_id"))
+        assertEquals("podcast-3", intent.getStringExtra("item_id"))
         assertEquals("ep-7", intent.getStringExtra("episode_id"))
         assertEquals(true, intent.getBooleanExtra("auto_play", false))
     }

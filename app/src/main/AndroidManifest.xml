@@ -40,8 +40,7 @@
         </activity>
 
         <activity android:name=".detail.DetailActivity" />
-        <activity android:name=".podcast.PlayerActivity" />
-        <activity android:name=".book.BookPlayerActivity" />
+        <activity android:name=".player.PlayerActivity" />
         <activity android:name=".search.SearchActivity" />
         <activity android:name=".author.AuthorDetailActivity" />
         <activity android:name=".series.SeriesDetailActivity" />

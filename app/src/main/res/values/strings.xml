@@ -7,7 +7,6 @@
     <string name="author_placeholder">Author placeholder</string>
     <string name="authors">Authors</string>
     <string name="back">Back</string>
-    <string name="book_id_is_missing">Book ID is missing</string>
     <string name="books">Books</string>
     <string name="library">Library</string>
     <string name="cancel">Cancel</string>
@@ -25,10 +24,6 @@
     <string name="download_install">Download &amp; Install</string>
     <string name="downloading_update">Downloading Update</string>
     <string name="episodes">Episodes</string>
-    <string name="failed_to_create_media_progress">Failed to create media progress</string>
-    <string name="failed_to_load_book_details">Failed to load book details</string>
-    <string name="failed_to_load_episode_details">Failed to load episode details</string>
-    <string name="failed_to_load_media_progress">Failed to load media progress</string>
     <string name="home">Home</string>
     <string name="host">Host</string>
     <string name="host_icon">Host Icon</string>
@@ -58,7 +53,6 @@
     <string name="play_book">Play Book</string>
     <string name="install_permission_needed">Please grant permission to install apps</string>
     <string name="podcast_logo">Podcast Logo</string>
-    <string name="podcast_or_episode_id_is_missing">Podcast or Episode ID is missing</string>
     <string name="retry">Retry</string>
     <string name="row_layout_grid_if_disabled">Row Layout (Grid if disabled)</string>
     <string name="search">Search</string>

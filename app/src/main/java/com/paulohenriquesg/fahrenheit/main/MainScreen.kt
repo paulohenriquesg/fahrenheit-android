@@ -69,7 +69,7 @@ import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.components.ScreenTitle
 import com.paulohenriquesg.fahrenheit.navigation.MenuAction
 import com.paulohenriquesg.fahrenheit.navigation.MenuConfig
-import com.paulohenriquesg.fahrenheit.podcast.PlayerActivity
+import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import com.paulohenriquesg.fahrenheit.search.SearchActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.elements.AuthorShelfRow
