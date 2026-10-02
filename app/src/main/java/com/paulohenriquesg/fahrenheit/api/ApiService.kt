@@ -36,6 +36,15 @@ interface ApiService {
         @Body request: PlayLibraryItemRequest
     ): Call<PlayLibraryItemResponse>
 
+    @POST("api/items/{libraryItemId}/play")
+    fun playBook(@Path("libraryItemId") libraryItemId: String, @Body request: PlayLibraryItemRequest): Call<PlayLibraryItemResponse>
+
+    @POST("api/session/{sessionId}/sync")
+    fun syncSession(@Path("sessionId") sessionId: String, @Body body: SessionSyncRequest): Call<Void>
+
+    @POST("api/session/{sessionId}/close")
+    fun closeSession(@Path("sessionId") sessionId: String, @Body body: SessionSyncRequest): Call<Void>
+
     @PATCH("api/me/progress/{libraryItemId}/{episodeId}")
     fun userCreateOrUpdateMediaProgress(
         @Path("libraryItemId") libraryItemId: String,
