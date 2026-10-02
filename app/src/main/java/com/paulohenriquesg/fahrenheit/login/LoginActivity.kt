@@ -26,12 +26,10 @@ class LoginActivity : ComponentActivity() {
 
         loginHandler = LoginHandler(this)
 
-        // Use SharedPreferencesHandler to check if host exists in local storage
         val sharedPreferencesHandler = SharedPreferencesHandler(this)
         val userPreferences = sharedPreferencesHandler.getUserPreferences()
-        val host = userPreferences.host
-        if (host.isNotEmpty()) {
-            // Redirect to MainActivity
+        val destination = StartDestination.of(userPreferences.host, userPreferences.token)
+        if (destination == StartDestination.Main) {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
             finish()
