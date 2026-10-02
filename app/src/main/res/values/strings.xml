@@ -16,6 +16,7 @@
     <string name="recent_episodes_load_failed">Could not load recent episodes. Check the connection to your server.</string>
     <string name="item_load_failed">Could not load this item. Check the connection to your server.</string>
     <string name="playback_failed">Couldn\'t play this</string>
+    <string name="progress_unreadable">Couldn\'t read where you left off. Starting from the beginning.</string>
     <string name="api_key_where_to_create">Create one in Audiobookshelf: Settings &gt; API Keys</string>
     <string name="current_version">Current Version</string>
     <string name="currently_selected">✓ Currently Selected</string>

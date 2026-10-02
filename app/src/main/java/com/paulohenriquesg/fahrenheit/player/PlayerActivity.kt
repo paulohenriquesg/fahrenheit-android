@@ -142,7 +142,7 @@ class PlayerActivity : ComponentActivity() {
             else -> PlayerScreen(
                 nowPlaying = playing,
                 currentTime = currentTime,
-                onGoToPodcast = { startActivity(podcastIntent(this, itemId)) },
+                onGoToPodcast = { goToPodcast(itemId) },
                 transport = {
                     // ready implies a timeline: PlayerStart refuses a NowPlaying without one.
                     val timeline = playing.timeline
@@ -161,14 +161,21 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
-    /** Where the listener left off, or null if never started or unreadable. */
+    private fun goToPodcast(podcastId: String) = leaveForPodcast(this, podcastId)
+
+    /**
+     * Where the listener left off; null starts from the beginning. When the
+     * server could not be read that is said, since playing on will save the
+     * new position over whatever it holds.
+     */
     private suspend fun savedProgress(itemId: String, episodeId: String?): MediaProgressResponse? {
         val api = ApiClient.getApiService() ?: return null
-        val call = if (episodeId != null) api.userGetMediaProgress(itemId, episodeId) else api.userGetMediaProgress(itemId)
-        val response = runCatching { call.awaitResponse() }.getOrNull() ?: return null
-        val body = response.body().takeIf { response.isSuccessful } ?: return null
-        // The server answers for the item when it has nothing for the episode.
-        return body.takeIf { episodeId == null || it.episodeId == episodeId }
+        return SavedProgress.read(episodeId) {
+            val call = if (episodeId != null) api.userGetMediaProgress(itemId, episodeId) else api.userGetMediaProgress(itemId)
+            call.awaitResponse()
+        }.progressOr {
+            Toast.makeText(this, getString(R.string.progress_unreadable), Toast.LENGTH_LONG).show()
+        }
     }
 
     /** Opens a listening session on the server for an episode, as the podcast player did. */
@@ -214,5 +221,15 @@ class PlayerActivity : ComponentActivity() {
          */
         fun podcastIntent(context: Context, podcastId: String): Intent =
             DetailActivity.createIntent(context, podcastId).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+        /**
+         * "Go to podcast" leaves the episode: closing the player stops it, as
+         * Back does. Opened from the podcast's screen the clear-top closed it
+         * anyway; opened from anywhere else the episode played on behind it.
+         */
+        internal fun leaveForPodcast(player: android.app.Activity, podcastId: String) {
+            player.startActivity(podcastIntent(player, podcastId))
+            player.finish()
+        }
     }
 }
