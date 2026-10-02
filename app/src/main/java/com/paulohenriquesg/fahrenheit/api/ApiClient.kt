@@ -47,7 +47,7 @@ object ApiClient {
 
         if (!usable) {
             forget()
-            sharedPreferencesHandler.clearPreferences()
+            sharedPreferencesHandler.clearSession()
             return SessionState.NeedsLogin
         }
 
