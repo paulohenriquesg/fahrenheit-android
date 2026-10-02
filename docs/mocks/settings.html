@@ -55,6 +55,20 @@
   .tile .meta { font-size:26px; color:var(--on-variant); margin-top:10px; }
   .tile .badge { align-self:flex-start; font-size:22px; font-weight:700; background:var(--primary); color:var(--on-primary); padding:8px 18px; border-radius:999px; }
   .ic { width:34px; height:34px; stroke:currentColor; fill:none; stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round; }
+  .prev { display:flex; gap:18px; align-items:center; }
+  .pv { border:var(--rest) solid var(--outline); border-radius:12px; padding:12px; background:#161419; }
+  .pv.on { border-color:var(--primary); border-width:var(--focus); padding:8px; }
+  .pv .cap { font-size:20px; color:var(--on-variant); text-align:center; margin-top:10px; }
+  .pv.on .cap { color:var(--primary); font-weight:700; }
+  .mini { display:flex; gap:8px; }
+  .mini i { display:block; width:46px; height:46px; border-radius:5px; background:linear-gradient(150deg,#3C3450,#1C1A22); }
+  .mini.rows { flex-direction:column; }
+  .mini.rows span { display:flex; gap:8px; }
+  .mini.grid { display:grid; grid-template-columns:repeat(3,46px); gap:8px; }
+  .swatch { width:120px; height:74px; border-radius:10px; border:var(--rest) solid var(--outline); overflow:hidden; }
+  .swatch .bar { height:22px; }
+  .swatch .body { height:52px; display:flex; gap:6px; padding:8px; }
+  .swatch .body i { flex:1; border-radius:3px; }
   ul.pts { margin:12px 0 0; padding-left:20px; color:var(--on-variant); font-size:14.5px; line-height:1.65; }
   ul.pts li { margin-bottom:7px; } ul.pts b { color:var(--on-bg); }
 </style>
@@ -84,7 +98,16 @@
           </div>
           <div class="row">
             <div class="main"><div class="t">Shelves</div><div class="s">Rows of covers, or a grid</div></div>
-            <div class="seg"><span class="opt on">Rows</span><span class="opt">Grid</span></div>
+            <div class="prev">
+              <div class="pv on">
+                <div class="mini rows"><span><i></i><i></i><i></i><i></i></span><span><i></i><i></i><i></i><i></i></span></div>
+                <div class="cap">Rows</div>
+              </div>
+              <div class="pv">
+                <div class="mini grid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                <div class="cap">Grid</div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="group">
@@ -101,7 +124,7 @@
 
   <section>
     <h2>2. Settings — the theme can mean "follow the device" again</h2>
-    <p class="why">The switch is a boolean, so once it is touched there is no way back to following the device — even though <code>ThemeChoice.resolve</code> already supports exactly that, and it is what a fresh install does. Three choices say what the code can already do.</p>
+    <p class="why">Each choice shows what it looks like, so you are picking a picture rather than a word. The switch is a boolean, so once it is touched there is no way back to following the device — even though <code>ThemeChoice.resolve</code> already supports exactly that, and it is what a fresh install does. Three choices say what the code can already do.</p>
     <div class="shell"><div class="tv">
       <nav class="rail"><div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot on"></div></nav>
       <div class="stage">
@@ -110,7 +133,23 @@
           <h4>Appearance</h4>
           <div class="row foc">
             <div class="main"><div class="t">Theme</div><div class="s">Your TV is set to dark right now</div></div>
-            <div class="seg"><span class="opt on foc">System</span><span class="opt">Light</span><span class="opt">Dark</span></div>
+            <div class="prev">
+              <div class="pv on">
+                <div class="swatch"><div class="bar" style="background:linear-gradient(90deg,#F5F5F5 50%,#1E1E1E 50%)"></div>
+                  <div class="body" style="background:linear-gradient(90deg,#FFFFFF 50%,#121212 50%)"><i style="background:#6650a4"></i><i style="background:#D0BCFF"></i></div></div>
+                <div class="cap">System</div>
+              </div>
+              <div class="pv">
+                <div class="swatch"><div class="bar" style="background:#F5F5F5"></div>
+                  <div class="body" style="background:#FFFFFF"><i style="background:#6650a4"></i><i style="background:#E4DFEA"></i></div></div>
+                <div class="cap">Light</div>
+              </div>
+              <div class="pv">
+                <div class="swatch"><div class="bar" style="background:#1E1E1E"></div>
+                  <div class="body" style="background:#121212"><i style="background:#D0BCFF"></i><i style="background:#4A3D5C"></i></div></div>
+                <div class="cap">Dark</div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="group">
@@ -178,6 +217,7 @@
       <li><b>The theme becomes three choices.</b> `ThemeChoice.resolve(chosen, systemIsDark)` already takes a null for "follow the device"; only the UI cannot say it. This is a behaviour change, so it wants its own tests.</li>
       <li><b>Toasts go.</b> The update check reports into the row that asked, and errors sit beside what failed.</li>
       <li><b>Left alone:</b> the players, item detail and search stay full-screen. A player with a menu rail beside it is worse, not better.</li>
+      <li><b>The previews are the point of the row:</b> Rows-versus-Grid and the three themes are visual choices, so each option carries a thumbnail of itself. They are cheap - a few boxes in the app's own colours, no screenshots to keep up to date.</li>
       <li><b>Not decided:</b> whether Sign out belongs in Settings (as drawn) as well as in the rail, or only here.</li>
     </ul>
   </section>

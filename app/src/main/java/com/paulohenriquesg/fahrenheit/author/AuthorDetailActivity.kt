@@ -6,7 +6,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.compose.ui.Modifier
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
@@ -35,7 +37,8 @@ class AuthorDetailActivity : ComponentActivity() {
             FahrenheitTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
+                    shape = RectangleShape,
                 ) {
                     AuthorDetailScreen(authorId = authorId)
                 }

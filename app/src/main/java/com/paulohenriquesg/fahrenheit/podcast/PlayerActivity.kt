@@ -21,7 +21,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Surface
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -121,8 +122,7 @@ class PlayerActivity : ComponentActivity() {
         setContent {
             FahrenheitTheme {
                 Surface(
-                    color = androidx.tv.material3.MaterialTheme.colorScheme.background,
-                    contentColor = androidx.tv.material3.MaterialTheme.colorScheme.onBackground,
+                    colors = SurfaceDefaults.colors(containerColor = androidx.tv.material3.MaterialTheme.colorScheme.background, contentColor = androidx.tv.material3.MaterialTheme.colorScheme.onBackground),
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
@@ -144,7 +144,7 @@ class PlayerActivity : ComponentActivity() {
                             }
                         }
                     } else {
-                        Toast.makeText(this, getString(R.string.podcast_or_episode_id_is_missing), Toast.LENGTH_SHORT)
+                        Toast.makeText(this@PlayerActivity, getString(R.string.podcast_or_episode_id_is_missing), Toast.LENGTH_SHORT)
                             .show()
                         finish()
                     }

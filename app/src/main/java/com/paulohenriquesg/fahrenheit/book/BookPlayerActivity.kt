@@ -19,7 +19,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Surface
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -105,8 +106,7 @@ class BookPlayerActivity : ComponentActivity() {
         setContent {
             FahrenheitTheme {
                 Surface(
-                    color = MaterialTheme.colorScheme.background,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.onBackground),
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
@@ -124,7 +124,7 @@ class BookPlayerActivity : ComponentActivity() {
                             isPlaying = newIsPlaying
                         }
                     } else {
-                        Toast.makeText(this, getString(R.string.book_id_is_missing), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@BookPlayerActivity, getString(R.string.book_id_is_missing), Toast.LENGTH_SHORT).show()
                         finish()
                     }
                 }

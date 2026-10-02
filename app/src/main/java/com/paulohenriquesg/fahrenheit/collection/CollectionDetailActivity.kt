@@ -6,7 +6,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.compose.ui.Modifier
 import androidx.tv.material3.MaterialTheme
 import com.google.gson.Gson
@@ -41,10 +43,11 @@ class CollectionDetailActivity : ComponentActivity() {
             FahrenheitTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
+                    shape = RectangleShape,
                 ) {
                     CollectionDetailContent(collection = collection, onBookClick = { book ->
-                        val intent = com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(this, book.id)
+                        val intent = com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(this@CollectionDetailActivity, book.id)
                         startActivity(intent)
                     })
                 }
