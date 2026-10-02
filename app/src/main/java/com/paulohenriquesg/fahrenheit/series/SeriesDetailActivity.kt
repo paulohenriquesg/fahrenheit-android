@@ -14,6 +14,8 @@ import androidx.tv.material3.MaterialTheme
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.Series
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import com.paulohenriquesg.fahrenheit.ui.components.BookGroup
+import com.paulohenriquesg.fahrenheit.ui.components.BookGroupDetailContent
 
 class SeriesDetailActivity : ComponentActivity() {
     companion object {
@@ -46,7 +48,7 @@ class SeriesDetailActivity : ComponentActivity() {
                     colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
                     shape = RectangleShape,
                 ) {
-                    SeriesDetailContent(series = series, onBookClick = { book ->
+                    BookGroupDetailContent(group = BookGroup.of(series), emptyMessage = "No books found in this series", onBookClick = { book ->
                         val intent = com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(this@SeriesDetailActivity, book.id)
                         startActivity(intent)
                     })
