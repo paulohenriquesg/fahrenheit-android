@@ -49,6 +49,13 @@ D-pad to reach (#58).
 The drawer widens itself when focus *enters* the sheet, which does not happen when focus starts
 there, so `NavigationRail` sets the state from `hasFocus` instead of relying on that.
 
+## Focus does not move things
+
+Focus is a 3dp border and nothing else. The TV `Card` grows by a tenth when focused, and the
+lazy row or grid holding it clips the result — the focused cover is cut off at its own edges —
+while every other focus in the app stays put. `CardFocus.noGrowth` is what every card passes as
+its `scale`.
+
 ## Lists
 
 **Every lazy list item carries a key**, and `HouseStyleTest` fails the build if one
