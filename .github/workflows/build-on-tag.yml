@@ -13,6 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # Full history and tags: the versionCode comes from git describe.
           fetch-depth: 0
 
       - name: Set up JDK 17
@@ -57,7 +58,11 @@ jobs:
 
       - name: Build update manifest
         run: |
-          read -r version_code version_name < <(./gradlew -q printVersionInfo | tail -1)
+          # Captured first: a failure inside <(...) would be swallowed and read
+          # would carry on with empty numbers. printVersionInfo fails when no
+          # tag can be read, which is why checkout fetches full history.
+          version_info=$(./gradlew -q printVersionInfo | tail -1)
+          read -r version_code version_name <<< "$version_info"
           # The manifest published now, for its version history. Absent on the
           # first run, and a 404 page must not end up parsed as one.
           curl -sfL -o previous-manifest.json \
