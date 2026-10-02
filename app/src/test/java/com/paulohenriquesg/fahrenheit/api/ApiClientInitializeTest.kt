@@ -118,6 +118,7 @@ class ApiClientInitializeTest {
         assertNull(ApiClient.getApiService())
         assertNull(ApiClient.getLibraryApi())
         assertNull(ApiClient.getBrowseApi())
+        assertNull(ApiClient.getPodcastApi())
         assertNull(ApiClient.getToken())
     }
 
@@ -132,5 +133,14 @@ class ApiClientInitializeTest {
 
         assertEquals(SessionState.Ready, state)
         assertNotNull(ApiClient.getApiService())
+    }
+
+    @Test
+    fun `a ready session can ask about podcast feeds`() {
+        store("http://abs.local:13378", "a-token")
+
+        ApiClient.initialize(app)
+
+        assertNotNull(ApiClient.getPodcastApi())
     }
 }
