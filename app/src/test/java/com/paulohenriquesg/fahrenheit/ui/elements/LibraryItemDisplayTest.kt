@@ -4,6 +4,8 @@ import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /** What a card on the library grid shows. */
@@ -105,4 +107,23 @@ class LibraryItemDisplayTest {
                 item(mediaType = "podcast", recentEpisodeTitle = "NerdCast 754", episodes = 0)
             )
         )
+
+    // Decided on #75: empty podcasts are dimmed on the grid, so the 32 with
+    // something in them stand out among 134.
+    @Test
+    fun `a podcast with nothing downloaded is drawn dimmed`() {
+        assertTrue(LibraryItemDisplay.dimmed(item(mediaType = "podcast", episodes = 0)))
+    }
+
+    @Test
+    fun `a podcast with episodes, a book, or an unknown count is not`() {
+        assertFalse(LibraryItemDisplay.dimmed(item(mediaType = "podcast", episodes = 3)))
+        assertFalse(LibraryItemDisplay.dimmed(item(mediaType = "book")))
+        assertFalse(LibraryItemDisplay.dimmed(item(mediaType = "podcast")))
+    }
+
+    @Test
+    fun `an episode card is never dimmed, since the server sends 0 for every one`() {
+        assertFalse(LibraryItemDisplay.dimmed(item(mediaType = "podcast", recentEpisodeTitle = "E1", episodes = 0)))
+    }
 }

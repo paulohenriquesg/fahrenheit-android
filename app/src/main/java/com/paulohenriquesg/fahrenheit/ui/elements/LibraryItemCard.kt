@@ -19,6 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,10 +65,13 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
-                CoverImage(
-                    itemId = item.id,
-                    contentDescription = item.media.metadata.title
-                )
+                val dimmed = LibraryItemDisplay.dimmed(item)
+                Box(modifier = Modifier.alpha(if (dimmed) DIMMED_ALPHA else 1f)) {
+                    CoverImage(
+                        itemId = item.id,
+                        contentDescription = item.media.metadata.title
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
 
                 MarqueeText(
@@ -80,7 +85,8 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
                     Text(
                         text = count,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // The warning colour of the feed facts on the podcast's screen.
+                        color = if (dimmed) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1
                     )
                 }
@@ -91,6 +97,9 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
+                    // The focused Card raises itself and drew over the badge,
+                    // hiding the count on exactly the card being looked at.
+                    .zIndex(1f)
                     .size(24.dp) // Set a fixed size for the badge
                     .background(MaterialTheme.colorScheme.error, shape = CircleShape)
                     .clip(CircleShape),
@@ -105,3 +114,6 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
         }
     }
 }
+
+/** How far an empty podcast's cover fades on the grid (#75). */
+private const val DIMMED_ALPHA = 0.45f
