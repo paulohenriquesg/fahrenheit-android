@@ -47,4 +47,12 @@ object LibraryItemDisplay {
             else -> "$count episodes"
         }
     }
+
+    /**
+     * Whether the card is drawn dimmed: a podcast the server holds nothing of,
+     * so the ones with something in them stand out (#75). The same podcasts
+     * whose count line says "Nothing downloaded".
+     */
+    fun dimmed(item: LibraryItem): Boolean =
+        item.mediaType == "podcast" && item.recentEpisode == null && item.media.numEpisodes == 0
 }
