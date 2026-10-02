@@ -35,6 +35,7 @@ import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
 import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import com.paulohenriquesg.fahrenheit.utils.RichText
 
 class LatestEpisodesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -230,7 +231,7 @@ fun EpisodeCard(
                 // Episode description
                 episode.description?.let { desc ->
                     Text(
-                        text = desc,
+                        text = RichText.fromHtml(desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
