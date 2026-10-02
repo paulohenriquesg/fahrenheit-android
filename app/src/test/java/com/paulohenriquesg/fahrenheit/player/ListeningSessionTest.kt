@@ -3,6 +3,8 @@ package com.paulohenriquesg.fahrenheit.player
 import com.google.gson.JsonParser
 import com.paulohenriquesg.fahrenheit.api.ApiService
 import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemDeviceInfo
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -139,5 +141,32 @@ class ListeningSessionTest {
     fun `closing a session never opened, with nothing to say, sends nothing`() = runBlocking {
         session().close(null)
         assertEquals(0, server.requestCount)
+    }
+
+    // Review: the server's answer to opening a session is the whole session,
+    // library item included. A book with an ebook carries ebookFile as an
+    // object, which the app's item model does not expect; reading only the
+    // id must not depend on the rest.
+    @Test
+    fun `a session opens whatever else the server says about the book`() = runBlocking {
+        server.enqueue(ok("""{"id":"s1","libraryItem":{"id":"b1","media":{"ebookFile":{"ino":"7","ebookFormat":"epub"}}}}"""))
+        server.enqueue(ok())
+        session().sync(report)
+        next()
+        assertEquals("/api/session/s1/sync", next().path)
+    }
+
+    // Review: a stop cancels the round in flight. A round cancelled while the
+    // session was opening must not fall back to the PATCH on its way out.
+    @Test
+    fun `a round cancelled while opening sends nothing more`() = runBlocking {
+        server.enqueue(opened("s1").setHeadersDelay(1, TimeUnit.SECONDS))
+        server.enqueue(ok())
+        val round = launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { session().sync(report) } }
+        delay(300)
+        round.cancel()
+        round.join()
+        next()
+        assertEquals(null, server.takeRequest(2, TimeUnit.SECONDS))
     }
 }
