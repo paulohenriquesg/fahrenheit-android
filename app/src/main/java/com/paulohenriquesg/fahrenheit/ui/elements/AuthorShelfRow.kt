@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.Author
 import com.paulohenriquesg.fahrenheit.api.Shelf
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 
 @Composable
 fun AuthorShelfRow(shelf: Shelf, authors: List<Author>, onItemClick: (Author) -> Unit) {
@@ -28,7 +29,9 @@ fun AuthorShelfRow(shelf: Shelf, authors: List<Author>, onItemClick: (Author) ->
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
-            items(authors) { author ->
+            val keys = StableKeys.of(authors) { a -> a.id }
+            items(authors.size, key = { keys[it] }) { index ->
+                val author = authors[index]
                 AuthorCard(author = author, onClick = { onItemClick(author) })
             }
         }

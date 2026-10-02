@@ -1,0 +1,98 @@
+# UI style guide
+
+This is a TV app driven by a D-pad from across a room. Most of the rules below
+exist because breaking them shipped a bug; the issue number is on each one.
+
+## The screen is 540dp, not 1080
+
+These sticks report 1920x1080 at density 2.0, so **every dp is two pixels** and a
+whole screen is **960 x 540dp**. A design that looks roomy in dp is half the size
+you think in px.
+
+- Budget 540dp of height, minus the top bar.
+- **Any screen whose content can exceed that must scroll.** Four 104dp cards and
+  three gaps did not, and the fourth was unreachable (#54).
+- Over-tall and scrollable beats exactly-fitting and clipped: server strings grow.
+
+## Safe area
+
+TVs overscan. Keep content inside `Space.screenH` (24dp) horizontally and clear of
+the top bar vertically. Full-width text blocks get `Space.readingH` (48dp).
+
+## Focus
+
+Nothing on a TV responds to the remote until something holds focus.
+
+- Every screen requests focus on arrival with `rememberInitialFocus`, attached to a
+  **real focusable target** (#53).
+- Never request focus on a container. Until a child is focusable the focus group
+  takes it itself, highlights nothing, refuses `moveFocus(Enter)`, and sends the
+  first press to the second item.
+- Every focusable box shows focus by itself: `Border.focus` (3dp primary) against
+  `Border.rest` (1dp surfaceVariant). A focus state that only changes background
+  is invisible at viewing distance.
+- Touch targets are irrelevant here; focus targets are not. Anything a viewer must
+  reach is `focusable()`, not a `Box` with a click.
+
+## Back
+
+Back walks up a level, it does not leave: `BackAction.decide(drawerOpen, view)`
+closes the drawer, else goes Home, else lets the system have it (#53).
+
+## Lists
+
+**Every lazy list item carries a key**, and `HouseStyleTest` fails the build if one
+does not. Keys that can repeat (podcast shelves list a library item once per
+in-progress episode) go through `StableKeys.of`, which makes them unique by
+construction — duplicate keys crashed the app on launch (#55).
+
+## Text
+
+- Body 16sp and up, secondary 14sp and up. Below that is unreadable at 3 metres.
+- Every string that came from the server gets `maxLines` and
+  `TextOverflow.Ellipsis`. Titles run long and wrap into the next box otherwise.
+- Server descriptions may contain HTML; strip it before display (#57).
+
+## Numbers and dates
+
+Formatters pass an explicit `Locale` — `ROOT` where the suffix is English —
+because the default locale renders Latin digits in other numerals: a Persian
+device would show "۲ h ۱۱ min". `HouseStyleTest` enforces this.
+
+Durations: `shortDuration` for a tile ("181 h", "2 h 11 min"), `formatDuration`
+for inline text ("3h 5m"). A real listen shorter than a minute says "under a
+minute" rather than rounding to zero.
+
+## Components
+
+Prefer **`androidx.tv.material3`**: its components are built for focus. Reach for
+`androidx.compose.material3` only where TV has no equivalent — text fields,
+progress indicators, icons.
+
+Most screens predate this rule and still import the phone components; they are
+being moved over screen by screen rather than in one sweep.
+
+## Colour
+
+Use `MaterialTheme.colorScheme` roles, never literal colours, so the app keeps
+following the device's dark/light setting. Scrims are the exception.
+
+| role | for |
+|---|---|
+| `background` / `onBackground` | the screen behind everything |
+| `surface` / `onSurface` | a box sitting on it |
+| `surfaceVariant` | a box's border, a bar's track |
+| `onSurfaceVariant` | labels, secondary text |
+| `primary` | focus, and the one value a chart is pointing at |
+| `secondary` | the rest of a chart |
+
+## The box pattern
+
+Boxes next to each other, not cards stacked down the page:
+
+- `Radius.panel` (10dp) corners, `surface` fill, 1dp `surfaceVariant` border.
+- `Space.gap` (16dp) between boxes, `Space.inset` (14dp) inside one.
+- A label in `labelLarge` `onSurfaceVariant`, its value in `headlineSmall`
+  `onSurface`.
+
+`stats/StatsBoard.kt` is the reference implementation.
