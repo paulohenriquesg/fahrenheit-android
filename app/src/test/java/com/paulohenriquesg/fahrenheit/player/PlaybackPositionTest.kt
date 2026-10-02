@@ -75,20 +75,41 @@ class PlaybackPositionTest {
     fun `chapters without an end are skipped`() =
         assertEquals(emptyList<Float>(), PlaybackPosition.chapterMarks(listOf(Chapter(end = null), Chapter(end = null)), total = 3600.0))
 
+    // Frame 4: lengths read as words, not a clock, and what is left matters
+    // more than what has passed on a 16-hour book (#93).
     @Test
-    fun `the clock reads hours, minutes and seconds`() =
-        assertEquals("01:02:03", PlaybackPosition.clock(3723.0))
+    fun `a length over an hour reads in hours and minutes`() =
+        assertEquals("5 h 28 min", PlaybackPosition.spoken(19_680.0))
+
+    @Test
+    fun `a whole hour still says its minutes`() =
+        assertEquals("1 h 0 min", PlaybackPosition.spoken(3_600.0))
+
+    @Test
+    fun `under an hour the seconds show, so a short episode visibly moves`() =
+        assertEquals("12 min 30 s", PlaybackPosition.spoken(750.0))
+
+    @Test
+    fun `under a minute it is only seconds`() =
+        assertEquals("45 s", PlaybackPosition.spoken(45.0))
 
     @Test
     fun `a position before the start reads as zero`() =
-        assertEquals("00:00:00", PlaybackPosition.clock(-5.0))
+        assertEquals("0 s", PlaybackPosition.spoken(-5.0))
 
-    // Same reason the duration formatter uses a fixed locale: the separators
-    // are ASCII, so the digits have to be too.
     @Test
-    fun `the clock keeps Latin digits on a device with its own numerals`() {
+    fun `what is left is the rest of the book`() =
+        assertEquals("10 h 42 min", PlaybackPosition.spoken(PlaybackPosition.left(current = 19_680.0, total = 58_200.0)))
+
+    @Test
+    fun `nothing is left past the end`() =
+        assertEquals(0.0, PlaybackPosition.left(current = 6_000.0, total = 5_400.0), 0.0)
+
+    // The digits are composed with Latin units, so they have to be Latin too.
+    @Test
+    fun `lengths keep Latin digits on a device with its own numerals`() {
         Locale.setDefault(Locale.forLanguageTag("fa"))
 
-        assertEquals("01:02:03", PlaybackPosition.clock(3723.0))
+        assertEquals("5 h 28 min", PlaybackPosition.spoken(19_680.0))
     }
 }

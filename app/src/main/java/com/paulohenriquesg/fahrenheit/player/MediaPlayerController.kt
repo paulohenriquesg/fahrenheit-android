@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.tv.material3.Text
@@ -142,17 +141,6 @@ fun MediaPlayerController(
                 )
             }
 
-            // Pauses and keeps the place: returning to 0:00 would now be saved
-            // over the resume point by the closing progress report. Back stops.
-            TransportButton(
-                onClick = { player.pause() },
-                size = 48.dp,
-                container = Color.Transparent,
-                content = TvMaterialTheme.colorScheme.onSurface
-            ) {
-                Icon(Icons.Filled.Stop, contentDescription = stringResource(R.string.stop))
-            }
-
             TransportButton(
                 onClick = { seekTo(PlaybackPosition.skip(currentTime, SKIP_SECONDS, totalTime)) },
                 size = 48.dp,
@@ -186,14 +174,19 @@ fun MediaPlayerController(
                     color = MaterialTheme.colorScheme.error
                 )
             } else {
+                // Frame 4: what is left matters more than what has passed on a
+                // long book, so it reads in full, against the total.
                 Text(
-                    text = "Current Time: ${PlaybackPosition.clock(currentTime)}",
+                    text = PlaybackPosition.spoken(currentTime),
                     modifier = Modifier.weight(1f),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Total Time: ${PlaybackPosition.clock(totalTime)}",
-                    modifier = Modifier.weight(1f),
+                    text = stringResource(
+                        R.string.time_left_of,
+                        PlaybackPosition.spoken(PlaybackPosition.left(currentTime, totalTime)),
+                        PlaybackPosition.spoken(totalTime)
+                    ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
