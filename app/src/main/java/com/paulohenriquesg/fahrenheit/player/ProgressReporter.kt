@@ -16,35 +16,48 @@ class ProgressReporter(
     private val send: suspend (ListeningReport) -> Unit,
     private val position: () -> Double,
     private val total: () -> Double,
-    private val pause: suspend () -> Unit = { delay(ProgressSync.INTERVAL_MS) }
+    private val pause: suspend () -> Unit = { delay(ProgressSync.INTERVAL_MS) },
+    private val listened: () -> Double = { 0.0 },
+    private val delivered: (Double) -> Unit = {},
+    private val close: suspend (ListeningReport?) -> Unit = { it?.let { r -> send(r) } }
 ) {
     private var lastSent: Double? = null
 
     /** Whether anything has played; a reporter that never played has nothing to say. */
     private var played = false
 
+    /** Whether this stretch of listening is closed already: a stop arrives twice. */
+    private var closed = false
+
     suspend fun run(isPlaying: () -> Boolean) {
         while (isPlaying()) {
             played = true
+            closed = false
             pause()
-            val request = ProgressSync.next(position(), total(), lastSent) ?: continue
-            // Only a delivered position counts as sent; a failed one is retried.
-            if (runCatching { send(request) }.isSuccess) lastSent = request.currentTime
+            val report = ProgressSync.next(position(), total(), lastSent, listened()) ?: continue
+            // Only a delivered report counts as sent; a failed one is retried,
+            // and its listening time goes with the next.
+            if (runCatching { send(report) }.isSuccess) {
+                lastSent = report.currentTime
+                delivered(report.timeListened)
+            }
         }
     }
 
     /**
-     * The closing update, when playback stops or the queue is about to change.
+     * Closes this stretch of listening: once, with whatever is new since the
+     * last report, when playback stops or the queue is about to change.
      *
      * Without it up to one round of listening is lost on every pause. The
-     * position is read before anything suspends, so a caller that starts this
-     * undispatched captures the position as it is now, before the queue
-     * changes under it. Not retried: there is no next round to retry in.
+     * position and time are read before anything suspends, so a caller that
+     * starts this undispatched captures them as they are now, before the
+     * queue changes under it. Not retried: there is no next round to retry in.
      */
     suspend fun finish() {
-        if (!played) return
-        val request = ProgressSync.next(position(), total(), lastSent) ?: return
-        lastSent = request.currentTime
-        runCatching { send(request) }
+        if (!played || closed) return
+        closed = true
+        val report = ProgressSync.next(position(), total(), lastSent, listened())
+        report?.let { lastSent = it.currentTime }
+        if (runCatching { close(report) }.isSuccess) report?.let { delivered(it.timeListened) }
     }
 }
