@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsFocused
@@ -18,6 +19,7 @@ import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -80,6 +82,51 @@ class InitialFocusTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag("row0").assertIsFocused()
+    }
+
+    @Test
+    fun `asking a target that never appears for focus gives up instead of crashing`() {
+        // The drawer used to open, wait 100ms and ask: on a slow frame the items
+        // were not attached yet and the exception killed the app.
+        var outcome: Boolean? = null
+        compose.setContent {
+            val orphan = remember { FocusRequester() }
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                outcome = orphan.requestFocusWhenAttached()
+            }
+        }
+
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.waitForIdle()
+
+        assertEquals(false, outcome)
+    }
+
+    @Test
+    fun `it takes focus as soon as the target is attached`() {
+        var outcome: Boolean? = null
+        compose.setContent {
+            val requester = remember { FocusRequester() }
+            var attached by remember { mutableStateOf(false) }
+            LaunchedEffectOnce { attached = true }
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                outcome = requester.requestFocusWhenAttached()
+            }
+            if (attached) {
+                BasicText(
+                    text = "late",
+                    modifier = Modifier
+                        .testTag("late")
+                        .focusRequester(requester)
+                        .focusable()
+                )
+            }
+        }
+
+        compose.waitUntil { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
+
+        compose.onNodeWithTag("late").assertIsFocused()
+        assertEquals(true, outcome)
     }
 
     @Composable

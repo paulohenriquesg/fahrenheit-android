@@ -9,6 +9,21 @@ import androidx.compose.ui.focus.FocusRequester
 private const val FRAMES_TO_KEEP_TRYING = 60
 
 /**
+ * Asks for focus, waiting for the target to be attached.
+ *
+ * [FocusRequester.requestFocus] throws when nothing is attached yet, which is
+ * what killed the app when the drawer opened before its items had been
+ * composed. Returns whether focus was taken.
+ */
+suspend fun FocusRequester.requestFocusWhenAttached(): Boolean {
+    repeat(FRAMES_TO_KEEP_TRYING) {
+        if (runCatching { requestFocus() }.isSuccess) return true
+        withFrameNanos { }
+    }
+    return false
+}
+
+/**
  * A [FocusRequester] for the first thing a screen wants focused on arrival:
  * nothing on a TV responds to a D-pad until something holds focus.
  *
@@ -28,13 +43,8 @@ fun rememberInitialFocus(enabled: Boolean, vararg keys: Any?): FocusRequester {
     val requester = remember { FocusRequester() }
     LaunchedEffect(enabled, *keys) {
         if (!enabled) return@LaunchedEffect
-        // The target is attached a frame or two after the data it is built from,
-        // and requesting focus before then throws, so keep asking for a short
-        // while rather than silently giving up.
-        repeat(FRAMES_TO_KEEP_TRYING) {
-            if (runCatching { requester.requestFocus() }.isSuccess) return@LaunchedEffect
-            withFrameNanos { }
-        }
+        // The target is attached a frame or two after the data it is built from.
+        requester.requestFocusWhenAttached()
     }
     return requester
 }
