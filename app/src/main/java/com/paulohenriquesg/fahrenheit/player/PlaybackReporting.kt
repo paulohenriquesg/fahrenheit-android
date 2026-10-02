@@ -50,6 +50,12 @@ class PlaybackReporting(
         }
     }
 
+    // A pause during buffering: the player already reads as not playing, so
+    // onIsPlayingChanged does not fire again, and only this says it stopped.
+    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+        if (!playWhenReady && !player.isPlaying) finish()
+    }
+
     /** The queue is about to be stopped, replaced or cleared. */
     fun beforeLeaving() = finish()
 

@@ -218,4 +218,17 @@ class PlaybackReportingTest {
 
         assertEquals(2, reports.size)
     }
+
+    // Review: buffering is not a stop, but a pause during it is. The player
+    // already reads as not playing, so only the pause itself can say so.
+    @Test
+    fun `pausing while buffering still closes`() {
+        queue(nowPlaying("b1", twoParts), startAt = 3602.0)
+        playUntil(5_000)
+        guarded.seekTo(1, 600_000)
+        guarded.pause()
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        assertEquals(1, reports.size)
+    }
 }

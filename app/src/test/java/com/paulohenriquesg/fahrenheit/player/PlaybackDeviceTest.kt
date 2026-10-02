@@ -16,11 +16,29 @@ class PlaybackDeviceTest {
     fun `the device says what it really is`() {
         val info = PlaybackDevice.info(ApplicationProvider.getApplicationContext())
 
-        // Unchanged, so the server's device records stay as they were.
-        assertEquals("Fire Stick", info.deviceId)
         assertEquals(BuildConfig.VERSION_NAME, info.clientVersion)
         assertEquals(Build.VERSION.SDK_INT, info.sdkVersion)
         assertEquals(Build.MANUFACTURER, info.manufacturer)
         assertEquals(Build.MODEL, info.model)
+    }
+
+    // Review: one shared id made two TVs on one account close each other's
+    // sessions; the server closes a user's open sessions on the same device.
+    @Test
+    fun `each install has its own id, kept across calls`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val first = PlaybackDevice.info(context).deviceId
+
+        assertEquals(first, PlaybackDevice.info(context).deviceId)
+        org.junit.Assert.assertNotEquals("Fire Stick", first)
+    }
+
+    @Test
+    fun `another install gets another id`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val here = PlaybackDevice.info(context).deviceId
+        PlaybackDevice.forgetForTest(context)
+
+        org.junit.Assert.assertNotEquals(here, PlaybackDevice.info(context).deviceId)
     }
 }

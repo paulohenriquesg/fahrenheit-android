@@ -45,12 +45,14 @@ class ListeningSession(
             val call = if (closing) service().closeSession(session, body) else service().syncSession(session, body)
             val response = call.awaitResponse()
             if (response.isSuccessful) {
-                if (closing) id = null
+                // Only this session is over: a slow close must not forget one
+                // a later round opened meanwhile.
+                if (closing && id == session) id = null
                 return
             }
             if (response.code() != 404) error("session rejected: ${response.code()}")
             // The server forgot the session (restart, or idle too long).
-            id = null
+            if (id == session) id = null
         }
         patch(report)
     }

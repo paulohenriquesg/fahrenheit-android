@@ -169,4 +169,26 @@ class ListeningSessionTest {
         next()
         assertEquals(null, server.takeRequest(2, TimeUnit.SECONDS))
     }
+
+    // Review: a close slower than a round. Meanwhile the next round found the
+    // session gone and opened another; the close finishing must not forget it.
+    @Test
+    fun `a slow close keeps the session opened meanwhile`() = runBlocking {
+        val s = session()
+        server.enqueue(opened("s1")); server.enqueue(ok())
+        s.sync(report)
+        server.enqueue(ok().setHeadersDelay(1, TimeUnit.SECONDS))   // the close of s1
+        server.enqueue(MockResponse().setResponseCode(404))         // a sync to s1, already gone
+        server.enqueue(opened("s2")); server.enqueue(ok())
+        server.enqueue(ok())
+
+        val closing = launch(kotlinx.coroutines.Dispatchers.IO) { s.close(report) }
+        delay(300)
+        s.sync(report)
+        closing.join()
+        s.sync(report)
+
+        val paths = List(7) { next().path }
+        assertEquals("/api/session/s2/sync", paths.last())
+    }
 }

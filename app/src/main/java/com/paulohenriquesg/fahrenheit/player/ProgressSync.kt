@@ -14,6 +14,9 @@ object ProgressSync {
     /** Below this, the position has not really moved. */
     private const val MIN_MOVEMENT_SECONDS = 1.0
 
+    /** Below this, there is no listening time worth a round of its own. */
+    private const val MIN_LISTENED_SECONDS = 1.0
+
     /**
      * The update to send, or null to skip this round.
      *
@@ -34,7 +37,7 @@ object ProgressSync {
         // A round that barely moved is still worth sending when it carries
         // listening time: stats need the time, e.g. after buffering (#92).
         val moved = lastSent == null || kotlin.math.abs(reported - lastSent) >= MIN_MOVEMENT_SECONDS
-        if (!moved && listened < MIN_MOVEMENT_SECONDS) return null
+        if (!moved && listened < MIN_LISTENED_SECONDS) return null
 
         return ListeningReport(currentTime = reported, duration = total, timeListened = listened.coerceAtLeast(0.0))
     }
