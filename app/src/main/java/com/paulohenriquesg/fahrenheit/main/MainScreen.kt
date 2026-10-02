@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
@@ -60,7 +61,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -223,9 +223,24 @@ fun MainScreen(
         }
     }
 
-    // Handle back button press
-    BackHandler(enabled = drawerState.isOpen) {
-        scope.launch { drawerState.close() }
+    // Something must hold focus or the remote does nothing at all (#53). The menu
+    // button is the one target every view has, and it puts the drawer one press
+    // away; content focus order comes with the TV navigation drawer (#58).
+    val initialFocus = rememberInitialFocus(
+        enabled = !drawerState.isOpen,
+        view, shelves, libraryItems, seriesList, collectionsList, listeningStats
+    )
+
+    val backAction = BackAction.decide(drawerState.isOpen, view)
+    BackHandler(enabled = backAction != BackAction.Exit) {
+        when (backAction) {
+            BackAction.CloseDrawer -> scope.launch { drawerState.close() }
+            BackAction.GoHome -> {
+                view = MainView.HOME
+                highlightedMenuItemId = MainView.HOME.menuItemId
+            }
+            BackAction.Exit -> Unit
+        }
     }
 
     // Get menu items for current library type
@@ -414,7 +429,9 @@ fun MainScreen(
             ) {
                 IconButton(
                     onClick = { if (!listState.isScrollInProgress) scope.launch { drawerState.open() } },
-                    modifier = Modifier.align(Alignment.TopStart)
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .focusRequester(initialFocus)
                 ) {
                     Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))
                 }
