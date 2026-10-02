@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.detail
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.formatPubDate
@@ -203,7 +204,9 @@ class DetailActivity : ComponentActivity() {
                         Text(text = stringResource(R.string.episodes), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                             val listState = rememberLazyListState()
                             LazyColumn(state = listState) {
-                                items(episodes, key = { it.id }) { episode ->
+                                val episodeKeys = StableKeys.of(episodes) { e -> e.id }
+                                items(episodes.size, key = { episodeKeys[it] }) { index ->
+                                    val episode = episodes[index]
                                     EpisodeCard(episode)
                                 }
                             }

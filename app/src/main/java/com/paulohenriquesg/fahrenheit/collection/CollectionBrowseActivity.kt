@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.collection
 
 import android.app.Activity
+import androidx.compose.runtime.remember
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
 import com.paulohenriquesg.fahrenheit.utils.Alphabetical
@@ -130,7 +132,9 @@ fun CollectionBrowseScreen(libraryId: String) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(collections, key = { it.id }) { collection ->
+                    val keys = StableKeys.of(collections) { c -> c.id }
+                    items(collections.size, key = { keys[it] }) { index ->
+                        val collection = collections[index]
                         CollectionCard(
                             collection = collection,
                             onClick = {

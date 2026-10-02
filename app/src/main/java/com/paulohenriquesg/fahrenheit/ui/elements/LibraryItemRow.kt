@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.ui.elements
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.remember
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -22,7 +24,9 @@ fun LibraryItemsRow(libraryItems: List<LibraryItem>, listState: LazyListState) {
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        items(libraryItems, key = { it.id }) { item ->
+        val keys = StableKeys.of(libraryItems) { i -> i.id }
+        items(libraryItems.size, key = { keys[it] }) { index ->
+            val item = libraryItems[index]
             LibraryItemCard(item) { clickedItem ->
                 val intent = DetailActivity.createIntent(context, clickedItem.id)
                 context.startActivity(intent)

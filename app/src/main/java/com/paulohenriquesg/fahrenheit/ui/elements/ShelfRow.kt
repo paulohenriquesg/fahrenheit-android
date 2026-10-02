@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.ui.elements
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.runtime.remember
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -29,7 +31,9 @@ fun ShelfRow(shelf: Shelf, onItemClick: (LibraryItem) -> Unit) {
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
             shelf.entities?.let { entities ->
-                items(entities, key = { it.id }) { item ->
+                val keys = StableKeys.of(entities) { e -> e.id }
+                items(entities.size, key = { keys[it] }) { index ->
+                    val item = entities[index]
                     LibraryItemCard(item = item, onClick = onItemClick)
                 }
             }

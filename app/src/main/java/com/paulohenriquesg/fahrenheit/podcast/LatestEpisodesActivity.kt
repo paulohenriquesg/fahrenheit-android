@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.podcast
 
 import android.app.Activity
+import androidx.compose.runtime.remember
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
 import android.content.Context
@@ -142,7 +144,9 @@ fun LatestEpisodesScreen(libraryId: String) {
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(episodes, key = { it.id }) { recentEpisode ->
+                    val keys = StableKeys.of(episodes) { e -> e.id }
+                    items(episodes.size, key = { keys[it] }) { index ->
+                        val recentEpisode = episodes[index]
                         EpisodeCard(
                             episode = recentEpisode,
                             onClick = {

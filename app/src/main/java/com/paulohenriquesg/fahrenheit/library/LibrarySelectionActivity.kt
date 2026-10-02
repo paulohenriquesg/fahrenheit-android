@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.library
 
 import android.content.Context
+import androidx.compose.runtime.remember
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
 import android.content.Intent
@@ -106,7 +108,9 @@ fun LibrarySelectionScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(libraries, key = { it.id ?: it.name ?: "" }) { library ->
+            val keys = StableKeys.of(libraries) { l -> l.id ?: l.name ?: "" }
+            items(libraries.size, key = { keys[it] }) { index ->
+                val library = libraries[index]
                 LibrarySelectionCard(
                     library = library,
                     isSelected = library.id == currentLibraryId,
