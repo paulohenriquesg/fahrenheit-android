@@ -76,6 +76,14 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
                 )
+                LibraryItemDisplay.episodeCount(item)?.let { count ->
+                    Text(
+                        text = count,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
             }
         }
         val unfinishedBadge = LibraryItemDisplay.unfinishedBadge(item)

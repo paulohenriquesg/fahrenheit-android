@@ -52,7 +52,9 @@ data class Media(
     @SerializedName("numChapters") val numChapters: Int,
     @SerializedName("duration") val duration: Double,
     @SerializedName("size") val size: Long,
-    @SerializedName("ebookFileFormat") val ebookFileFormat: String?
+    @SerializedName("ebookFileFormat") val ebookFileFormat: String?,
+    /** Podcasts only: how many episodes the server holds, i.e. has downloaded. */
+    @SerializedName("numEpisodes") val numEpisodes: Int? = null
 )
 
 data class CollapsedSeries(

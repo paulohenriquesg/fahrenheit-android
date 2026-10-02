@@ -14,7 +14,8 @@ class LibraryItemDisplayTest {
         title: String = "Dune",
         recentEpisodeTitle: String? = null,
         hasRecentEpisode: Boolean = recentEpisodeTitle != null,
-        unfinished: Int? = null
+        unfinished: Int? = null,
+        episodes: Int? = null
     ): LibraryItem {
         val episode = if (hasRecentEpisode) {
             """"recentEpisode":{"id":"e1","libraryItemId":"li1"${recentEpisodeTitle?.let { ""","title":"$it"""" } ?: ""}},"""
@@ -25,7 +26,7 @@ class LibraryItemDisplayTest {
                 "isFile":true,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0,"addedAt":0,"updatedAt":0,
                 "isMissing":false,"isInvalid":false,"mediaType":"$mediaType",$episode$incomplete
                 "media":{"metadata":{"title":"$title"},"tags":[],"numTracks":0,"numAudioFiles":0,
-                "numChapters":0,"duration":0.0,"size":0}}""",
+                "numChapters":0,"duration":0.0,"size":0${episodes?.let { ""","numEpisodes":$it""" } ?: ""}}}""",
             LibraryItem::class.java
         )
     }
@@ -72,4 +73,36 @@ class LibraryItemDisplayTest {
     @Test
     fun `a podcast the server says nothing about carries no badge`() =
         assertNull(LibraryItemDisplay.unfinishedBadge(item(mediaType = "podcast")))
+
+    // #75: 102 of 134 podcasts on the test server had nothing downloaded, and
+    // the grid drew all 134 the same.
+    @Test
+    fun `a podcast says how many episodes the server holds`() =
+        assertEquals("56 episodes", LibraryItemDisplay.episodeCount(item(mediaType = "podcast", episodes = 56)))
+
+    @Test
+    fun `one episode is one episode`() =
+        assertEquals("1 episode", LibraryItemDisplay.episodeCount(item(mediaType = "podcast", episodes = 1)))
+
+    @Test
+    fun `an empty podcast is visible before it is opened`() =
+        assertEquals("Nothing downloaded", LibraryItemDisplay.episodeCount(item(mediaType = "podcast", episodes = 0)))
+
+    @Test
+    fun `no count from the server means no line, not a zero`() =
+        assertNull(LibraryItemDisplay.episodeCount(item(mediaType = "podcast")))
+
+    @Test
+    fun `a book has no episode count`() =
+        assertNull(LibraryItemDisplay.episodeCount(item(mediaType = "book", episodes = 3)))
+
+    // The Home shelves draw episodes on the same card, and the server sends
+    // numEpisodes 0 for every one of them - NerdCast included.
+    @Test
+    fun `a card standing for an episode has no count`() =
+        assertNull(
+            LibraryItemDisplay.episodeCount(
+                item(mediaType = "podcast", recentEpisodeTitle = "NerdCast 754", episodes = 0)
+            )
+        )
 }

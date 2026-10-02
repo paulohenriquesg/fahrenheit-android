@@ -29,4 +29,22 @@ object LibraryItemDisplay {
         if (unfinished <= 0) return null
         return if (unfinished > MAX_BADGE_COUNT) "${MAX_BADGE_COUNT}+" else unfinished.toString()
     }
+
+    /**
+     * How many episodes the server holds, so a podcast with nothing downloaded
+     * can be told apart before it is opened (#75). Null for books, and when the
+     * server sent no count - a missing count is not a zero.
+     *
+     * Null too when the card stands for an episode, as on the Home shelves: the
+     * line would describe the podcast rather than the card, and the server
+     * sends 0 there for every podcast anyway.
+     */
+    fun episodeCount(item: LibraryItem): String? {
+        if (item.mediaType != "podcast" || item.recentEpisode != null) return null
+        return when (val count = item.media.numEpisodes ?: return null) {
+            0 -> "Nothing downloaded"
+            1 -> "1 episode"
+            else -> "$count episodes"
+        }
+    }
 }

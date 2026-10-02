@@ -65,7 +65,9 @@ data class Episode(
     @SerializedName("addedAt") val addedAt: Long,
     @SerializedName("updatedAt") val updatedAt: Long,
     @SerializedName("duration") val duration: Double? = null,  // From PlayLibraryItemEpisode
-    @SerializedName("size") val size: Int? = null  // From PlayLibraryItemEpisode
+    @SerializedName("size") val size: Int? = null,  // From PlayLibraryItemEpisode
+    /** The feed's id for this episode; how the server matches it to the feed. */
+    @SerializedName("guid") val guid: String? = null
 )
 
 data class Enclosure(
