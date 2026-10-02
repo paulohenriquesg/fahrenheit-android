@@ -156,7 +156,7 @@ class PlayerActivity : ComponentActivity() {
                 currentTime = currentTime,
                 onGoToPodcast = { startActivity(podcastIntent(this, itemId)) },
                 transport = {
-                    val url = playing.contentUrl?.let { ApiClient.generateFullUrl(it) }
+                    val url = playing.timeline?.track(0)?.contentUrl?.let { ApiClient.generateFullUrl(it) }
                     // The file that will play decides the length, where it has one.
                     val start = ResumePoint.decide(
                         progress = progress,

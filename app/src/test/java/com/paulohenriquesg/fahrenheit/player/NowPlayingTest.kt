@@ -27,6 +27,17 @@ class NowPlayingTest {
         LibraryItemResponse::class.java
     )
 
+    private val bookInTwoFiles: LibraryItemResponse = Gson().fromJson(
+        """{"id":"b2","mediaType":"book","media":{"duration":5400.0,
+            "metadata":{"title":"A Book in Parts","authorName":"An Author","explicit":false},
+            "tracks":[
+              {"index":1,"startOffset":0.0,"duration":3600.0,"title":"t1","contentUrl":"/api/items/b2/file/1","mimeType":"audio/mpeg",
+               "metadata":{"filename":"a","ext":"mp3","path":"/a","relPath":"a","size":1,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0}},
+              {"index":2,"startOffset":3600.0,"duration":1800.0,"title":"t2","contentUrl":"/api/items/b2/file/2","mimeType":"audio/mpeg",
+               "metadata":{"filename":"b","ext":"mp3","path":"/b","relPath":"b","size":1,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0}}]}}""",
+        LibraryItemResponse::class.java
+    )
+
     private val podcast: LibraryItemResponse = Gson().fromJson(
         """{"id":"p1","mediaType":"podcast","media":{"metadata":{"title":"Welcome to Night Vale","explicit":false},
             "episodes":[{"libraryItemId":"p1","id":"e295","index":1,"title":"295 - The Book of Dale","publishedAt":${now - day - 1000},
@@ -49,11 +60,21 @@ class NowPlayingTest {
     fun `a book plays its tracks, with chapter marks, and trusts the tracks' length`() {
         val playing = NowPlaying.of(book, episodeId = null, now = now)!!
 
-        assertEquals("/api/items/b1/file/1", playing.contentUrl)
+        assertEquals("/api/items/b1/file/1", playing.timeline!!.track(0).contentUrl)
         assertEquals(2, playing.chapters?.size)
         assertEquals(58000.0, playing.trackTotal!!, 0.0)
         assertEquals(58200.0, playing.mediaDuration!!, 0.0)
         assertNull(playing.episodeId)
+    }
+
+    @Test
+    fun `a book in several files plays all of them, not just the first`() {
+        val playing = NowPlaying.of(bookInTwoFiles, episodeId = null, now = now)!!
+
+        val timeline = playing.timeline!!
+        assertEquals(2, timeline.size)
+        assertEquals("/api/items/b2/file/2", timeline.track(1).contentUrl)
+        assertEquals(5400.0, playing.trackTotal!!, 0.0)
     }
 
     @Test
@@ -73,7 +94,10 @@ class NowPlayingTest {
     fun `an episode plays its one file, without chapter marks, and offers its podcast`() {
         val playing = NowPlaying.of(podcast, episodeId = "e295", now = now)!!
 
-        assertEquals("/api/items/p1/file/9", playing.contentUrl)
+        val timeline = playing.timeline!!
+        assertEquals(1, timeline.size)
+        assertEquals("/api/items/p1/file/9", timeline.track(0).contentUrl)
+        assertEquals(0.0, timeline.track(0).startOffset, 0.0)
         assertNull(playing.chapters)
         assertEquals(1800.0, playing.trackTotal!!, 0.0)
         assertEquals("e295", playing.episodeId)
