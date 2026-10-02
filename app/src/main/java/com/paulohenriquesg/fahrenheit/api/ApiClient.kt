@@ -28,6 +28,8 @@ object ApiClient {
     private var libraryApi: LibraryApi? = null
     private var browseApi: BrowseApi? = null
     private var podcastApi: PodcastApi? = null
+    // Read on ExoPlayer's loading thread (AudioHttp), written on the main one.
+    @Volatile
     private var audioClient: OkHttpClient? = null
 
     /**

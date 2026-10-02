@@ -231,8 +231,10 @@ fun MainScreen(
     // Handle menu actions
     // Settings offers this too, so it is not only a menu row.
     fun signOut() {
-        // Stop playback first, while its last report can still be sent; then
-        // the stored session and the client built from it.
+        // Stop playback, then drop the stored session and the client built
+        // from it. The stop is asynchronous, so its closing progress report
+        // usually goes out after the session is gone and is lost: at most
+        // one round of listening, accepted rather than holding sign-out up.
         Playback.stop(context)
         sharedPreferencesHandler.clearSession()
         ApiClient.clearSession()

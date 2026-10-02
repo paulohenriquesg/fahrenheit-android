@@ -26,7 +26,6 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
-import com.google.common.util.concurrent.ListenableFuture
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
@@ -51,8 +50,18 @@ import retrofit2.awaitResponse
  */
 class PlayerActivity : ComponentActivity() {
     private var controller by mutableStateOf<MediaController?>(null)
-    private var connecting: ListenableFuture<MediaController>? = null
     private var connectFailed by mutableStateOf(false)
+    private val connection by lazy {
+        ControllerSlot(
+            connect = { Playback.connect(this) },
+            release = { it.release() },
+            executor = ContextCompat.getMainExecutor(this),
+            onChange = {
+                controller = it
+                connectFailed = it == null
+            }
+        )
+    }
     private lateinit var start: PlayerStart
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,18 +97,12 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        val future = Playback.connect(this).also { connecting = it }
-        future.addListener({
-            controller = runCatching { future.get() }.getOrNull()
-            connectFailed = controller == null
-        }, ContextCompat.getMainExecutor(this))
+        connection.open()
     }
 
     override fun onStop() {
-        controller?.let { Playback.leave(it, finishing = isFinishing) }
+        connection.close { Playback.leave(it, finishing = isFinishing) }
         controller = null
-        connecting?.let { MediaController.releaseFuture(it) }
-        connecting = null
         super.onStop()
     }
 
