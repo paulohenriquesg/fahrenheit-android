@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -20,7 +21,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -101,7 +102,7 @@ fun LoginScreen(
             },
             singleLine = true,
             modifier = Modifier
-                .fillMaxWidth()
+                .formWidth()
                 .testTag("login_host_field")
                 .onFocusChanged {
                     isHostFocused = it.isFocused
@@ -112,13 +113,7 @@ fun LoginScreen(
             keyboardActions = KeyboardActions(
                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
             ),
-            colors = TextFieldDefaults.colors(
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                cursorColor = MaterialTheme.colorScheme.primary,
-                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            colors = fieldColors()
         )
         Spacer(modifier = Modifier.height(8.dp))
         if (useApiKey) {
@@ -147,20 +142,14 @@ fun LoginScreen(
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .formWidth()
                     .testTag("login_api_key_field")
                     .onFocusChanged { isApiKeyFocused = it.isFocused },
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
                     onDone = { handleApiKeyLogin(host, apiKey, isLoading) }
                 ),
-                colors = TextFieldDefaults.colors(
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                colors = fieldColors()
             )
         } else {
             OutlinedTextField(
@@ -181,7 +170,7 @@ fun LoginScreen(
                 },
                 singleLine = true,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .formWidth()
                     .testTag("login_username_field")
                     .onFocusChanged {
                         isUsernameFocused = it.isFocused
@@ -192,13 +181,7 @@ fun LoginScreen(
                 keyboardActions = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
                 ),
-                colors = TextFieldDefaults.colors(
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                colors = fieldColors()
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
@@ -220,7 +203,7 @@ fun LoginScreen(
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .formWidth()
                     .testTag("login_password_field")
                     .onFocusChanged {
                         isPasswordFocused = it.isFocused
@@ -231,13 +214,7 @@ fun LoginScreen(
                 keyboardActions = KeyboardActions(
                     onDone = { handleLogin(host, username, password, isLoading) }
                 ),
-                colors = TextFieldDefaults.colors(
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                colors = fieldColors()
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -250,7 +227,7 @@ fun LoginScreen(
                     else handleLogin(host, username, password, isLoading)
                 },
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .formWidth()
                     .testTag("login_submit_button")
             ) {
                 Text(stringResource(R.string.login), color = MaterialTheme.colorScheme.onPrimary)
@@ -259,7 +236,7 @@ fun LoginScreen(
             Button(
                 onClick = { useApiKey = !useApiKey },
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .formWidth()
                     .testTag("login_mode_toggle")
             ) {
                 Text(
@@ -271,3 +248,22 @@ fun LoginScreen(
         }
     }
 }
+
+// A TV screen is 960dp wide. A field across all of it is a metre of empty box
+// behind an eight-character username.
+private val FormWidth = 720.dp
+
+// widthIn first: constraints flow outside-in, so filling the width before
+// capping it fills the whole screen and caps only the content inside.
+private fun Modifier.formWidth(): Modifier = this
+    .widthIn(max = FormWidth)
+    .fillMaxWidth()
+
+@Composable
+private fun fieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+    cursorColor = MaterialTheme.colorScheme.primary,
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant
+)
