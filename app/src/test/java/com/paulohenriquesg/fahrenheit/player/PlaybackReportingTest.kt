@@ -32,6 +32,19 @@ class PlaybackReportingTest {
     private lateinit var player: ExoPlayer
     private lateinit var guarded: Player
     private val sent = mutableListOf<Pair<QueuedFile, Double>>()
+    private val reports = mutableListOf<Pair<QueuedFile, ListeningReport>>()
+
+    /** Stands in for the item's listening session, recording what reaches it. */
+    private inner class Recorder(val file: QueuedFile) : ListeningDelivery {
+        override suspend fun sync(report: ListeningReport) {
+            reports += file to report
+            sent += file to report.currentTime
+        }
+
+        override suspend fun close(report: ListeningReport?) {
+            report?.let { sync(it) }
+        }
+    }
 
     private fun nowPlaying(itemId: String, timeline: TrackTimeline, episodeId: String? = null) = NowPlaying(
         itemId = itemId, title = itemId, timeline = timeline, mediaDuration = null, chapters = null,
@@ -54,9 +67,10 @@ class PlaybackReportingTest {
         val reporting = PlaybackReporting(
             player,
             CoroutineScope(Dispatchers.Unconfined),
-            send = { file, request -> sent += file to request.currentTime!! },
+            open = { Recorder(it) },
             // Rounds never come round: only the closing reports are under test.
-            pause = { awaitCancellation() }
+            pause = { awaitCancellation() },
+            now = { player.clock.elapsedRealtime() }
         )
         player.addListener(reporting)
         guarded = LeavingGuard(player, reporting::beforeLeaving)
@@ -148,8 +162,17 @@ class PlaybackReportingTest {
         val reporting = PlaybackReporting(
             player,
             scope,
-            send = { _, request -> network.await(); delivered += request.currentTime!! },
-            pause = { awaitCancellation() }
+            open = { _ ->
+                object : ListeningDelivery {
+                    override suspend fun sync(report: ListeningReport) = Unit
+                    override suspend fun close(report: ListeningReport?) {
+                        network.await()
+                        report?.let { delivered += it.currentTime }
+                    }
+                }
+            },
+            pause = { awaitCancellation() },
+            now = { player.clock.elapsedRealtime() }
         )
         player.addListener(reporting)
         val guard = LeavingGuard(player, reporting::beforeLeaving)
@@ -164,5 +187,35 @@ class PlaybackReportingTest {
         network.complete(Unit)
 
         assertEquals(3605.0, delivered.single(), 0.5)
+    }
+
+    // Review Focus 3.
+    @Test
+    fun `listening time is what was played, not how far it moved`() {
+        queue(nowPlaying("b1", twoParts), startAt = 3602.0)
+        playUntil(5_000)
+        guarded.seekTo(1, 600_000)
+        run(player).untilPositionAtLeast(602_000)
+
+        guarded.pause()
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        val heard = reports.single().second.timeListened
+        assertTrue("heard $heard s", heard in 4.0..6.5)
+    }
+
+    @Test
+    fun `pausing closes, and playing on reports again`() {
+        queue(nowPlaying("b1", twoParts), startAt = 3602.0)
+        playUntil(5_000)
+        guarded.pause()
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        guarded.play()
+        run(player).untilPositionAtLeast(8_000)
+        guarded.pause()
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        assertEquals(2, reports.size)
     }
 }

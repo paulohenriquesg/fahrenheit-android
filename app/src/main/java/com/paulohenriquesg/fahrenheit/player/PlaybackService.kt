@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import android.util.Log
+import android.os.Build
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -12,7 +13,9 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.PlayLibraryItemDeviceInfo
 import com.paulohenriquesg.fahrenheit.api.MediaProgressRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,7 +55,8 @@ class PlaybackService : MediaSessionService() {
             // Keeps streaming when a TV's screensaver starts.
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
-        val reporting = PlaybackReporting(exo, scope, send = ::sendProgress)
+        val device = PlayLibraryItemDeviceInfo("Fire Stick", getString(R.string.app_name), "0.0.1", "Amazon", Build.MODEL, 25)
+        val reporting = PlaybackReporting(exo, scope, open = { ListeningSession(it, ApiClient::getApiService, device) })
         exo.addListener(reporting)
         exo.addListener(object : Player.Listener {
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -75,19 +79,6 @@ class PlaybackService : MediaSessionService() {
         session = null
         scope.cancel()
         super.onDestroy()
-    }
-
-    private suspend fun sendProgress(file: QueuedFile, report: ListeningReport) {
-        val request = MediaProgressRequest(currentTime = report.currentTime, duration = report.duration)
-        val api = ApiClient.getApiService() ?: error("signed out")
-        val call = file.episodeId?.let { api.userCreateOrUpdateMediaProgress(file.itemId, it, request) }
-            ?: api.userCreateOrUpdateMediaProgress(file.itemId, request)
-        val response = call.awaitResponse()
-        // Logged, not shown: the next round retries.
-        if (!response.isSuccessful) {
-            Log.w(TAG, "Progress rejected: ${response.code()}")
-            error("progress rejected: ${response.code()}")
-        }
     }
 
     private companion object {
