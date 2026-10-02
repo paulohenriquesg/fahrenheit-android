@@ -90,4 +90,20 @@ class EpisodeProgressTest {
         assertEquals("root", me.type)
         assertEquals("0fdc", me.mediaProgress?.single()?.episodeId)
     }
+
+    // Latest Episodes mixes podcasts, so it looks episodes up across all of them.
+    @Test
+    fun `across podcasts, episodes are looked up by their own id`() {
+        val index = EpisodeProgress.byEpisode(
+            listOf(
+                progress("e1", podcast = "p", finished = true),
+                progress("e2", podcast = "q", currentTime = 300.0, duration = 1200.0),
+                MediaProgressResponse(libraryItemId = "book", episodeId = null, currentTime = 10.0, duration = 100.0)
+            )
+        )
+
+        assertEquals(EpisodeProgress.Heard, index["e1"])
+        assertEquals(900.0, (index["e2"] as EpisodeProgress.InProgress).secondsLeft, 0.0001)
+        assertEquals(2, index.size)
+    }
 }
