@@ -1,8 +1,10 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.annotation.OptIn
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 
 /**
  * The session's player, announcing a stop, a new queue or an empty one before
@@ -12,6 +14,7 @@ import androidx.media3.common.Player
  * A listener hears about these changes only after the queue has moved on, so
  * the report would go out with the next book's position, or none.
  */
+@OptIn(UnstableApi::class) // ForwardingPlayer: the documented way to intercept session commands.
 class LeavingGuard(player: Player, private val beforeLeaving: () -> Unit) : ForwardingPlayer(player) {
 
     override fun stop() { beforeLeaving(); super.stop() }

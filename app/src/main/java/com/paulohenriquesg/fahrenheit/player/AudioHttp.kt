@@ -1,5 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import okhttp3.OkHttpClient
@@ -12,6 +14,7 @@ import okhttp3.OkHttpClient
  * outlive a sign-out and sign-in, and the next file must go out as whoever is
  * signed in now.
  */
+@OptIn(UnstableApi::class) // OkHttpDataSource
 object AudioHttp {
     private val signedOut by lazy { OkHttpClient() }
 

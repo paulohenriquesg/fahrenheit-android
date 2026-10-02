@@ -1,6 +1,6 @@
 package com.paulohenriquesg.fahrenheit.player
 
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 
@@ -38,7 +38,7 @@ object PlaybackQueue {
                 .setUri(url)
                 .setRequestMetadata(
                     MediaItem.RequestMetadata.Builder()
-                        .setMediaUri(Uri.parse(url))
+                        .setMediaUri(url.toUri())
                         .setExtras(file.toBundle())
                         .build()
                 )
