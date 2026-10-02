@@ -28,6 +28,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
+import com.paulohenriquesg.fahrenheit.ui.CardFocus
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -41,6 +42,7 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
             .height(300.dp)
     ) {
         Card(
+            scale = CardFocus.noGrowth,
             onClick = { onClick(item) },
             modifier = Modifier
                 .fillMaxSize()

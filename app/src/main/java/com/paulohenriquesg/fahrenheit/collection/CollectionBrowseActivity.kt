@@ -37,6 +37,7 @@ import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.paulohenriquesg.fahrenheit.ui.CardFocus
 
 class CollectionBrowseActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -156,6 +157,7 @@ fun CollectionCard(
     onClick: () -> Unit
 ) {
     Card(
+        scale = CardFocus.noGrowth,
         onClick = onClick,
         modifier = Modifier
             .width(200.dp)

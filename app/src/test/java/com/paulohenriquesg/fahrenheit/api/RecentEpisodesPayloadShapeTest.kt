@@ -44,4 +44,15 @@ class RecentEpisodesPayloadShapeTest {
         assertEquals("<p>About it</p>", episode.description)
         assertEquals("Podcast title", episode.podcast?.metadata?.title)
     }
+
+    // The screen read six of the twenty-four fields on an episode. These two
+    // were there all along: the list could not say when anything came out or
+    // how long it was.
+    @Test
+    fun `an episode carries when it came out and how long it is`() {
+        val episode = Gson().fromJson(json, RecentEpisodesResponse::class.java).episodes.single()
+
+        assertEquals(1789812000000L, episode.publishedAt)
+        assertEquals(1800.5, episode.duration!!, 0.001)
+    }
 }

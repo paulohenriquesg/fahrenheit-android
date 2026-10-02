@@ -15,7 +15,13 @@ data class RecentPodcastEpisode(
     @SerializedName("libraryItemId") val libraryItemId: String,
     @SerializedName("title") val title: String?,
     @SerializedName("description") val description: String?,
-    @SerializedName("podcast") val podcast: RecentEpisodePodcast?
+    @SerializedName("podcast") val podcast: RecentEpisodePodcast?,
+    // Epoch millis. The server orders by this and we never read it, so the list
+    // could not say whether an episode was from today or from March.
+    @SerializedName("publishedAt") val publishedAt: Long? = null,
+    // Seconds, fractional. The response carries 24 top-level fields and this
+    // screen read six of them; the row had no idea how long anything was.
+    @SerializedName("duration") val duration: Double? = null
 )
 
 data class RecentEpisodePodcast(

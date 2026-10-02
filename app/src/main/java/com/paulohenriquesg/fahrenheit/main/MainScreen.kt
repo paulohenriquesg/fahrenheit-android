@@ -297,10 +297,7 @@ fun MainScreen(
                 }
             }
             MenuAction.LATEST -> {
-                libraryId?.let { id ->
-                    val intent = com.paulohenriquesg.fahrenheit.podcast.LatestEpisodesActivity.createIntent(context, id)
-                    context.startActivity(intent)
-                }
+                view = MainView.LATEST
             }
             MenuAction.SELECT_LIBRARY -> {
                 view = MainView.SWITCH_LIBRARY
@@ -386,6 +383,9 @@ fun MainScreen(
                     MainView.AUTHORS -> AuthorsBrowseView(currentLibrary?.id)
                     MainView.COLLECTIONS -> CollectionsBrowseView(collectionsList, isLoadingCollections)
                     MainView.STATS -> StatsBrowseView(listeningStats, isLoadingStats)
+                    MainView.LATEST -> currentLibrary?.id?.let { id ->
+                        com.paulohenriquesg.fahrenheit.podcast.LatestEpisodesView(libraryId = id)
+                    }
                     MainView.SETTINGS -> SettingsView(
                         theme = ThemeManager.preference(context),
                         onTheme = { ThemeManager.apply(context, it) },

@@ -35,43 +35,16 @@ import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
 import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import com.paulohenriquesg.fahrenheit.utils.RichText
+import com.paulohenriquesg.fahrenheit.stats.shortDuration
+import com.paulohenriquesg.fahrenheit.ui.CardFocus
+import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.fillMaxWidth
 
-class LatestEpisodesActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        val libraryId = intent.getStringExtra(EXTRA_LIBRARY_ID) ?: run {
-            finish()
-            return
-        }
-
-        setContent {
-            FahrenheitTheme {
-                Surface(
-                    colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.onBackground),
-                    modifier = Modifier.fillMaxSize(),
-                    shape = RectangleShape
-                ) {
-                    LatestEpisodesScreen(libraryId = libraryId)
-                }
-            }
-        }
-    }
-
-    companion object {
-        private const val EXTRA_LIBRARY_ID = "library_id"
-
-        fun createIntent(context: Context, libraryId: String): Intent {
-            return Intent(context, LatestEpisodesActivity::class.java).apply {
-                putExtra(EXTRA_LIBRARY_ID, libraryId)
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun LatestEpisodesScreen(libraryId: String) {
+fun LatestEpisodesView(libraryId: String) {
     val context = LocalContext.current
     var episodes by remember { mutableStateOf<List<RecentPodcastEpisode>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -94,12 +67,12 @@ fun LatestEpisodesScreen(libraryId: String) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        BrowseTopBar(
-            title = "Latest Episodes",
-            onBackClick = { (context as? Activity)?.finish() }
+        Text(
+            text = stringResource(R.string.latest_episodes),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(start = 48.dp, top = 16.dp)
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
 
         Box(
             modifier = Modifier
@@ -140,23 +113,42 @@ fun LatestEpisodesScreen(libraryId: String) {
                     )
                 }
             } else {
+                // Under day headings: a flat list with no dates read as one pile,
+                // so a new episode was invisible among old ones.
+                val groups = remember(episodes) { EpisodeGroups.of(episodes, System.currentTimeMillis()) }
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    val keys = StableKeys.of(episodes) { e -> e.id }
-                    items(episodes.size, key = { keys[it] }) { index ->
-                        val recentEpisode = episodes[index]
-                        EpisodeCard(
-                            episode = recentEpisode,
-                            onClick = {
-                                val intent = DetailActivity.createIntent(
-                                    context,
-                                    recentEpisode.libraryItemId
-                                )
-                                context.startActivity(intent)
-                            }
-                        )
+                    groups.forEach { group ->
+                        // Sticky: the heading stays put while its own episodes
+                        // scroll under it, so you always know which day you are
+                        // looking at.
+                        stickyHeader(key = "group_${group.label}") {
+                            Text(
+                                text = group.label,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.background)
+                                    .padding(vertical = 8.dp)
+                            )
+                        }
+                        val keys = StableKeys.of(group.episodes) { e -> e.id }
+                        items(group.episodes.size, key = { "${group.label}_${keys[it]}" }) { index ->
+                            val recentEpisode = group.episodes[index]
+                            EpisodeCard(
+                                episode = recentEpisode,
+                                onClick = {
+                                    val intent = DetailActivity.createIntent(
+                                        context,
+                                        recentEpisode.libraryItemId
+                                    )
+                                    context.startActivity(intent)
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -173,6 +165,7 @@ fun EpisodeCard(
     var isFocused by remember { mutableStateOf(false) }
 
     Card(
+        scale = CardFocus.noGrowth,
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
@@ -218,9 +211,15 @@ fun EpisodeCard(
                     maxLines = 2
                 )
 
-                // Podcast name
+                // Podcast name, and when the episode came out: without a date
+                // a new episode looked exactly like one from March.
+                val published = EpisodeRowDisplay.published(episode)
                 Text(
-                    text = episode.podcast?.metadata?.title.orEmpty(),
+                    text = listOfNotNull(
+                        episode.podcast?.metadata?.title?.takeIf { it.isNotBlank() },
+                        published.takeIf { it.isNotBlank() },
+                        episode.duration?.takeIf { it > 0 }?.let { shortDuration(it) }
+                    ).joinToString("  ·  "),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -230,7 +229,7 @@ fun EpisodeCard(
                 // Episode description
                 episode.description?.let { desc ->
                     Text(
-                        text = desc,
+                        text = RichText.fromHtml(desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,

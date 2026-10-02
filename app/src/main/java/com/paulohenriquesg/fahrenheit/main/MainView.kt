@@ -16,7 +16,8 @@ enum class MainView(val menuItemId: String) {
     AUTHORS("authors"),
     STATS("stats"),
     SETTINGS("settings"),
-    SWITCH_LIBRARY("select_library");
+    SWITCH_LIBRARY("select_library"),
+    LATEST("latest");
 
     companion object {
         /**
@@ -32,8 +33,8 @@ enum class MainView(val menuItemId: String) {
             MenuAction.STATS -> STATS
             MenuAction.SETTINGS -> SETTINGS
             MenuAction.SELECT_LIBRARY -> SWITCH_LIBRARY
+            MenuAction.LATEST -> LATEST
             MenuAction.NARRATORS,
-            MenuAction.LATEST,
             MenuAction.LOGOUT -> null
         }
     }
