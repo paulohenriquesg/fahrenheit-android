@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -185,7 +186,9 @@ private fun ProgressBar(fraction: Double) {
             .padding(top = 4.dp)
             .fillMaxWidth(0.5f)
             .height(4.dp)
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(2.dp))
+            // Not surfaceVariant: that is also the focused row's fill, and the
+            // track vanished into it.
+            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
     ) {
         Box(
             modifier = Modifier
@@ -244,12 +247,22 @@ private fun EpisodeRowCard(
                 CoverImage(itemId = it, contentDescription = row.title, size = 64.dp)
                 Spacer(Modifier.width(Space.gap))
             }
-            Icon(
-                imageVector = if (row.downloaded) Icons.Filled.CheckCircle else Icons.Outlined.Download,
-                contentDescription = if (row.downloaded) "On the server" else "Not downloaded",
-                tint = if (row.downloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
-            )
+            // A tick reads as "done", so it means heard. Being on the server is
+            // what the play icon at the end of the row says.
+            Box(modifier = Modifier.size(24.dp)) {
+                when {
+                    progress == EpisodeProgress.Heard -> Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = "Heard",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    !row.downloaded -> Icon(
+                        imageVector = Icons.Outlined.Download,
+                        contentDescription = "Not on the server",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             Spacer(Modifier.width(Space.gap))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -288,11 +301,22 @@ private fun EpisodeRowCard(
                 inProgress?.let { ProgressBar(it.fraction) }
             }
             Spacer(Modifier.width(Space.gap))
-            Text(
-                text = EpisodeRowLabel.of(row.downloaded, state, focused, progress),
-                style = MaterialTheme.typography.labelLarge,
-                color = if (focused && !row.downloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            val label = EpisodeRowLabel.of(row.downloaded, state, focused, progress)
+            if (row.downloaded) {
+                // Playable: an icon, with the word ("Play" / "Resume") as its description.
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = label,
+                    tint = if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(32.dp)
+                )
+            } else {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
