@@ -9,8 +9,14 @@ data class WeekdayShare(val label: String, val seconds: Double, val share: Float
 /** A book and the time spent in it, sized against the most listened one. */
 data class BookTime(val id: String, val title: String, val seconds: Double, val share: Float)
 
-/** One listening session, as a row. */
-data class SessionRow(val id: String, val title: String, val seconds: Double, val updatedAt: Long)
+/** One listening session, as a row. [libraryItemId] is where its cover comes from. */
+data class SessionRow(
+    val id: String,
+    val libraryItemId: String,
+    val title: String,
+    val seconds: Double,
+    val updatedAt: Long
+)
 
 /**
  * Everything the stats screen draws, worked out from one response.
@@ -101,6 +107,7 @@ data class StatsSummary(
                 .map { session ->
                     SessionRow(
                         id = session.id,
+                        libraryItemId = session.libraryItemId,
                         title = session.displayTitle ?: session.libraryItemId,
                         seconds = session.timeListening,
                         updatedAt = session.updatedAt

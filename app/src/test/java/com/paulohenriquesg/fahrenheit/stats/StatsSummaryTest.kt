@@ -153,6 +153,15 @@ class StatsSummaryTest {
     }
 
     @Test
+    fun `a session carries the item its cover comes from`() {
+        val summary = StatsSummary.of(
+            stats(recentSessions = listOf(session("7", "Anything", updatedAt = 1)))
+        )
+
+        assertEquals("li_7", summary.recentSessions.single().libraryItemId)
+    }
+
+    @Test
     fun `a session with no title falls back to something printable`() {
         val summary = StatsSummary.of(
             stats(recentSessions = listOf(session("1", null, updatedAt = 1)))

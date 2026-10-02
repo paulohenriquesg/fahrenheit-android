@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
@@ -45,8 +46,8 @@ class StatsBoardTest {
             BookTime("b", "John Dies at the End", 32_400.0, 0.43f)
         ),
         recentSessions = listOf(
-            SessionRow("s1", "The Calculating Stars", 2_280.0, 20),
-            SessionRow("s2", "John Dies at the End", 1_560.0, 10)
+            SessionRow("s1", "li_1", "The Calculating Stars", 2_280.0, 20),
+            SessionRow("s2", "li_2", "John Dies at the End", 1_560.0, 10)
         )
     )
 
@@ -86,6 +87,14 @@ class StatsBoardTest {
         // The same book is both the most listened and the latest session, which
         // is what listening to one book looks like.
         compose.onAllNodesWithText("The Calculating Stars").assertCountEquals(2)
+    }
+
+    @Test
+    fun `each recent session shows its cover`() {
+        compose.setContent { StatsBoard(summary) }
+
+        compose.onAllNodesWithContentDescription("The Calculating Stars").assertCountEquals(1)
+        compose.onAllNodesWithContentDescription("John Dies at the End").assertCountEquals(1)
     }
 
     @Test

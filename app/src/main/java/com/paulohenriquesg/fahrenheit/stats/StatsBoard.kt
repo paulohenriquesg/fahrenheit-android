@@ -35,8 +35,10 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
+import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 
 private val Gap = 16.dp
+private val CoverSize = 44.dp
 private val PanelShape = RoundedCornerShape(10.dp)
 
 /**
@@ -295,10 +297,16 @@ private fun Sessions(sessions: List<SessionRow>) {
             ) {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(CoverSize)
                         .clip(RoundedCornerShape(6.dp))
                         .background(Color.Black.copy(alpha = 0.35f))
-                )
+                ) {
+                    CoverImage(
+                        itemId = session.libraryItemId,
+                        contentDescription = session.title,
+                        size = CoverSize
+                    )
+                }
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
