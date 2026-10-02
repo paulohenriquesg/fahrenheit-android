@@ -31,7 +31,6 @@ import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.RecentEpisodesResponse
 import com.paulohenriquesg.fahrenheit.api.RecentPodcastEpisode
-import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
 import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
@@ -145,11 +144,7 @@ fun LatestEpisodesView(libraryId: String) {
                                 episode = recentEpisode,
                                 serverDateFormat = serverDateFormat,
                                 onClick = {
-                                    val intent = DetailActivity.createIntent(
-                                        context,
-                                        recentEpisode.libraryItemId
-                                    )
-                                    context.startActivity(intent)
+                                    context.startActivity(latestEpisodeIntent(context, recentEpisode))
                                 }
                             )
                         }
@@ -245,3 +240,10 @@ fun EpisodeCard(
         }
     }
 }
+
+/**
+ * Choosing an episode here plays it, as it does on a Home shelf. It used to open
+ * the podcast's screen, leaving the viewer to find the episode again.
+ */
+fun latestEpisodeIntent(context: Context, episode: RecentPodcastEpisode): Intent =
+    PlayerActivity.createIntent(context, episode.libraryItemId, episode.id, autoPlay = true)
