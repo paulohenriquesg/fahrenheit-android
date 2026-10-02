@@ -64,6 +64,32 @@ class HouseStyleTest {
     }
 
     @Test
+    fun `the sections on the rail take their title from ScreenTitle`() {
+        // Each one styled and placed its own, and they sat in nine different
+        // places (#82). A title-sized headline in one of these files is a title
+        // that has gone back to doing that; headlineSmall is a figure on a tile.
+        val titleStyle = Regex("""typography\.headline(Large|Medium)""")
+        val railSections = listOf(
+            "main/MainScreen.kt",
+            "main/BrowseViews.kt",
+            "stats/StatsBoard.kt",
+            "podcast/LatestEpisodesView.kt",
+            "settings/SettingsView.kt",
+            "library/SwitchLibraryView.kt"
+        )
+        val root = File("src/main/java/com/paulohenriquesg/fahrenheit")
+        val offenders = mutableListOf<String>()
+        railSections.forEach { path ->
+            val file = File(root, path)
+            assert(file.isFile) { "$path has moved; point this rule at its new place" }
+            file.readLines().forEachIndexed { index, line ->
+                if (titleStyle.containsMatchIn(line)) offenders += where(file, index + 1)
+            }
+        }
+        assertEquals(emptyList<String>(), offenders)
+    }
+
+    @Test
     fun `every String format passes a Locale`() {
         // The default locale renders digits in the device's own numerals, so a
         // Persian device would read "۲ h ۱۱ min".

@@ -47,23 +47,17 @@ private val CoverSize = 44.dp
  * and the most listened books side by side, then the latest sessions.
  *
  * It scrolls. The screen it replaces did not, and its fourth card fell off the
- * bottom of a 1080p TV where nothing could reach it.
+ * bottom of a 1080p TV where nothing could reach it. The title is not part of
+ * it: StatsBrowseView puts one above it that stays put while it scrolls.
  */
 @Composable
 fun StatsBoard(summary: StatsSummary, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = Space.screenH, vertical = Space.gap),
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(Space.gap)
     ) {
-        Text(
-            text = stringResource(R.string.listening_statistics),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
         Row(horizontalArrangement = Arrangement.spacedBy(Space.gap)) {
             StatTile(
                 label = stringResource(R.string.stats_total_listened),

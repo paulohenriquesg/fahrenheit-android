@@ -31,6 +31,7 @@ import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.ui.Border
 import com.paulohenriquesg.fahrenheit.ui.Radius
 import com.paulohenriquesg.fahrenheit.ui.Space
+import com.paulohenriquesg.fahrenheit.ui.components.ScreenTitle
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemePreference
 
 /** Where an update check has got to, said in the row that asked rather than in a Toast. */
@@ -59,74 +60,77 @@ fun SettingsView(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = Space.screenH, vertical = Space.gap),
         verticalArrangement = Arrangement.spacedBy(Space.gap)
     ) {
-        Text(
-            text = stringResource(R.string.settings),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        // Outside the scroller, so it stays put while the settings scroll under it.
+        ScreenTitle(stringResource(R.string.settings))
 
-        Group(stringResource(R.string.settings_appearance)) {
-            SettingRow(
-                title = stringResource(R.string.settings_theme),
-                subtitle = stringResource(R.string.settings_theme_subtitle)
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ThemePreference.entries.forEach { option ->
-                        Choice(
-                            label = option.name,
-                            selected = option == theme,
-                            tag = "theme_${option.name}",
-                            onClick = { onTheme(option) }
-                        ) {
-                            ThemeSwatch(option)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(Space.gap)
+        ) {
+            Group(stringResource(R.string.settings_appearance)) {
+                SettingRow(
+                    title = stringResource(R.string.settings_theme),
+                    subtitle = stringResource(R.string.settings_theme_subtitle)
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ThemePreference.entries.forEach { option ->
+                            Choice(
+                                label = option.name,
+                                selected = option == theme,
+                                tag = "theme_${option.name}",
+                                onClick = { onTheme(option) }
+                            ) {
+                                ThemeSwatch(option)
+                            }
                         }
                     }
                 }
-            }
-            SettingRow(
-                title = stringResource(R.string.settings_shelves),
-                subtitle = stringResource(R.string.settings_shelves_subtitle)
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Choice(
-                        label = stringResource(R.string.settings_rows),
-                        selected = rowLayout,
-                        tag = "layout_rows",
-                        onClick = { onLayout(true) }
-                    ) { LayoutPreview(rows = true) }
-                    Choice(
-                        label = stringResource(R.string.settings_grid),
-                        selected = !rowLayout,
-                        tag = "layout_grid",
-                        onClick = { onLayout(false) }
-                    ) { LayoutPreview(rows = false) }
-                }
-            }
-        }
-
-        Group(stringResource(R.string.settings_updates)) {
-            SettingRow(
-                title = stringResource(R.string.check_for_updates),
-                subtitle = updateLine(update, version)
-            ) {
-                Button(
-                    onClick = onCheckUpdates,
-                    enabled = update != UpdateCheck.Checking,
-                    modifier = Modifier.testTag("check_for_updates")
+                SettingRow(
+                    title = stringResource(R.string.settings_shelves),
+                    subtitle = stringResource(R.string.settings_shelves_subtitle)
                 ) {
-                    Text(stringResource(R.string.settings_check_now))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Choice(
+                            label = stringResource(R.string.settings_rows),
+                            selected = rowLayout,
+                            tag = "layout_rows",
+                            onClick = { onLayout(true) }
+                        ) { LayoutPreview(rows = true) }
+                        Choice(
+                            label = stringResource(R.string.settings_grid),
+                            selected = !rowLayout,
+                            tag = "layout_grid",
+                            onClick = { onLayout(false) }
+                        ) { LayoutPreview(rows = false) }
+                    }
                 }
             }
-        }
 
-        Group(stringResource(R.string.settings_account)) {
-            SettingRow(title = username, subtitle = server) {
-                Button(onClick = onSignOut, modifier = Modifier.testTag("sign_out")) {
-                    Text(stringResource(R.string.settings_sign_out))
+            Group(stringResource(R.string.settings_updates)) {
+                SettingRow(
+                    title = stringResource(R.string.check_for_updates),
+                    subtitle = updateLine(update, version)
+                ) {
+                    Button(
+                        onClick = onCheckUpdates,
+                        enabled = update != UpdateCheck.Checking,
+                        modifier = Modifier.testTag("check_for_updates")
+                    ) {
+                        Text(stringResource(R.string.settings_check_now))
+                    }
+                }
+            }
+
+            Group(stringResource(R.string.settings_account)) {
+                SettingRow(title = username, subtitle = server) {
+                    Button(onClick = onSignOut, modifier = Modifier.testTag("sign_out")) {
+                        Text(stringResource(R.string.settings_sign_out))
+                    }
                 }
             }
         }

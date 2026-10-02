@@ -33,6 +33,8 @@ import com.paulohenriquesg.fahrenheit.api.RecentEpisodesResponse
 import com.paulohenriquesg.fahrenheit.api.RecentPodcastEpisode
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
+import com.paulohenriquesg.fahrenheit.ui.components.ScreenTitle
+import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.utils.RichText
@@ -69,19 +71,17 @@ fun LatestEpisodesView(libraryId: String) {
         isLoading = false
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = Space.screenH, vertical = Space.gap)
+    ) {
+        ScreenTitle(
             text = stringResource(R.string.latest_episodes),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(start = 48.dp, top = 16.dp)
+            modifier = Modifier.padding(bottom = Space.gap)
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 48.dp, vertical = 16.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

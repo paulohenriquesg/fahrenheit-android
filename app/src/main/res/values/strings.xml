@@ -9,6 +9,7 @@
     <string name="back">Back</string>
     <string name="book_id_is_missing">Book ID is missing</string>
     <string name="books">Books</string>
+    <string name="library">Library</string>
     <string name="cancel">Cancel</string>
     <string name="check_for_updates">Check for Updates</string>
     <string name="close">Close</string>

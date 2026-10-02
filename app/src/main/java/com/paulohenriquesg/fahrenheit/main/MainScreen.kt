@@ -65,6 +65,8 @@ import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
+import com.paulohenriquesg.fahrenheit.ui.Space
+import com.paulohenriquesg.fahrenheit.ui.components.ScreenTitle
 import com.paulohenriquesg.fahrenheit.navigation.MenuAction
 import com.paulohenriquesg.fahrenheit.navigation.MenuConfig
 import com.paulohenriquesg.fahrenheit.podcast.PlayerActivity
@@ -351,40 +353,13 @@ fun MainScreen(
                 }
                 when (view) {
                     MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, isLoadingHome)
-                    MainView.LIBRARY -> {
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = 30.dp)
-                        ) {
-                            val itemCount = libraryItems.size
-                            val itemLabel =
-                                if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts"
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(16.dp)
-                            ) {
-                                currentLibrary?.name?.let {
-                                    Text(
-                                        text = it,
-                                        style = MaterialTheme.typography.headlineLarge,
-                                        modifier = Modifier.padding(bottom = 16.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "($itemCount $itemLabel)",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            if (isRowLayout) {
-                                LibraryItemsRow(libraryItems, listState)
-                            } else {
-                                LibraryItemsFluid(libraryItems)
-                            }
-                        }
-                    }
+                    MainView.LIBRARY -> LibraryBrowseView(
+                        name = currentLibrary?.name,
+                        itemLabel = if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts",
+                        items = libraryItems,
+                        rowLayout = isRowLayout,
+                        listState = listState
+                    )
                     MainView.SERIES -> SeriesBrowseView(seriesList, isLoadingSeries)
                     MainView.AUTHORS -> AuthorsBrowseView(currentLibrary?.id)
                     MainView.COLLECTIONS -> CollectionsBrowseView(collectionsList, isLoadingCollections)
@@ -467,28 +442,26 @@ fun PersonalizedHomeView(
         (it.seriesEntities != null && it.seriesEntities.isNotEmpty())
     }
 
-    if (isLoading && nonEmptyShelves.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = stringResource(R.string.loading),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        return
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 60.dp, start = 16.dp, end = 16.dp)
+            .padding(horizontal = Space.screenH, vertical = Space.gap)
     ) {
-        Text(
+        ScreenTitle(
             text = stringResource(R.string.home),
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = Space.gap)
         )
+
+        if (isLoading && nonEmptyShelves.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.loading),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            return@Column
+        }
 
         androidx.compose.foundation.lazy.LazyColumn {
             val shelfKeys = StableKeys.of(nonEmptyShelves) { s -> s.id }
