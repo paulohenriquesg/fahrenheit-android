@@ -6,15 +6,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-fun getVersionFromGit(): String {
-    return try {
-        val process = Runtime.getRuntime().exec("git describe --tags --abbrev=0")
-        process.inputStream.bufferedReader().readText().trim()
-    } catch (e: Exception) {
-        "1.0"
-    }
-}
-
 /**
  * The tag as one increasing number: v1.2.3 -> 10203. The in-app updater compares
  * these, and Android refuses to install an APK whose code is lower than the one
@@ -31,8 +22,52 @@ fun versionCodeFromVersionName(versionName: String): Int {
     return numbers[0] * 10000 + numbers[1] * 100 + numbers[2]
 }
 
-val appVersionName = getVersionFromGit()
+// The newest version tag, read in the project directory. Without workingDir git
+// ran wherever the Gradle daemon happened to start, and outside the repository
+// that printed nothing and built versionCode 1 (#81). --match skips the moving
+// "latest" tag the release workflow publishes, which is not a version.
+val gitDescribe = providers.exec {
+    workingDir = rootDir
+    commandLine("git", "describe", "--tags", "--abbrev=0", "--match", "v[0-9]*")
+    isIgnoreExitValue = true
+}
+
+// Why no tag could be read, or null when one was.
+val missingTagReason: String? = try {
+    val exitValue = gitDescribe.result.get().exitValue
+    when {
+        exitValue != 0 ->
+            "git describe exited $exitValue: ${gitDescribe.standardError.asText.get().trim()}"
+        gitDescribe.standardOutput.asText.get().isBlank() -> "git describe printed no tag"
+        else -> null
+    }
+} catch (e: Exception) {
+    "git could not be run: ${e.message}"
+}
+
+val appVersionName =
+    if (missingTagReason == null) gitDescribe.standardOutput.asText.get().trim() else "untagged"
 val appVersionCode = versionCodeFromVersionName(appVersionName)
+
+// A release built without a tag would ship as versionCode 1, below every install,
+// and the updater could never replace it, so anything that builds a release
+// variant or feeds the update manifest refuses. Debug builds carry on, but say so.
+gradle.taskGraph.whenReady {
+    val reason = missingTagReason ?: return@whenReady
+    val needsTag = allTasks.filter { it.name == "printVersionInfo" || it.name.contains("Release") }
+    if (needsTag.isNotEmpty()) {
+        throw GradleException(
+            "No version tag could be read in $rootDir ($reason), so the versionCode would be " +
+                "$appVersionCode. ${needsTag.first().path} needs a v-prefixed tag such as " +
+                "v1.2.3 reachable from HEAD; fetch tags (git fetch --tags, or fetch-depth: 0 " +
+                "in CI) or tag the commit."
+        )
+    }
+    logger.warn(
+        "w: No version tag could be read in $rootDir ($reason). Falling back to versionName " +
+            "\"$appVersionName\", versionCode $appVersionCode, for this non-release build."
+    )
+}
 
 // The release workflow reads these to build the update manifest, so the numbers
 // in it cannot drift from the ones compiled into the APK.
