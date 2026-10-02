@@ -72,7 +72,11 @@ data class FeedResponse(@SerializedName("podcast") val podcast: FeedPodcast?)
 data class FeedPodcast(@SerializedName("episodes") val episodes: List<JsonObject>?)
 
 /** Only what the app reads from GET /api/me. */
-data class Me(@SerializedName("type") val type: String?)
+data class Me(
+    @SerializedName("type") val type: String?,
+    /** Everything the user has started, books and episodes alike (#78). */
+    @SerializedName("mediaProgress") val mediaProgress: List<MediaProgressResponse>? = null
+)
 
 data class CheckNewResponse(@SerializedName("episodes") val episodes: List<FeedEpisode>?)
 

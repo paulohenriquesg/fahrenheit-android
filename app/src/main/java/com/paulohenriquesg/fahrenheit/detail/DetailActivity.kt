@@ -30,6 +30,9 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeOrder
 import com.paulohenriquesg.fahrenheit.podcast.DownloadProgress
+import com.paulohenriquesg.fahrenheit.podcast.EpisodeProgress
+import com.paulohenriquesg.fahrenheit.api.Me
+import androidx.compose.runtime.mutableIntStateOf
 import com.paulohenriquesg.fahrenheit.podcast.DownloadWatch
 import com.paulohenriquesg.fahrenheit.api.DownloadQueue
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeTab
@@ -51,6 +54,14 @@ import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 
 class DetailActivity : ComponentActivity() {
+    /** Counts returns to this screen, so progress is read again after the player. */
+    private var resumes by mutableIntStateOf(0)
+
+    override fun onResume() {
+        super.onResume()
+        resumes++
+    }
+
     @OptIn(ExperimentalTvMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,7 +90,7 @@ class DetailActivity : ComponentActivity() {
     fun DetailScreen(itemId: String) {
         var itemDetail by remember { mutableStateOf<LibraryItemResponse?>(null) }
         var loadFailed by remember { mutableStateOf(false) }
-        var mayCheckFeed by remember { mutableStateOf(false) }
+        var me by remember { mutableStateOf<Me?>(null) }
 
         val context = LocalContext.current
 
@@ -94,10 +105,13 @@ class DetailActivity : ComponentActivity() {
                 .onFailure { loadFailed = true }
         }
 
-        val feedUrl = itemDetail?.media?.metadata?.feedUrl
-        LaunchedEffect(feedUrl) {
+        // One call for both who the user is (the admin check) and what they
+        // have heard (#78); read again on every return, e.g. from the player.
+        val isPodcast = itemDetail?.mediaType == "podcast"
+        LaunchedEffect(isPodcast, resumes) {
+            if (!isPodcast) return@LaunchedEffect
             val podcastApi = ApiClient.getPodcastApi() ?: return@LaunchedEffect
-            mayCheckFeed = FeedCheck(podcastApi).mayCheck(feedUrl)
+            runCatching { podcastApi.me() }.onSuccess { me = it }
         }
 
         if (loadFailed) {
@@ -128,7 +142,7 @@ class DetailActivity : ComponentActivity() {
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
             if (item.mediaType == "podcast") {
-                PodcastEpisodes(itemId, item, mayCheckFeed, onReloaded = { itemDetail = it })
+                PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it })
             } else {
                 BookDetailView(
                     itemId = itemId,
@@ -149,7 +163,7 @@ class DetailActivity : ComponentActivity() {
     private fun PodcastEpisodes(
         itemId: String,
         item: LibraryItemResponse,
-        isAdmin: Boolean,
+        me: Me?,
         onReloaded: (LibraryItemResponse) -> Unit
     ) {
         val context = LocalContext.current
@@ -166,6 +180,11 @@ class DetailActivity : ComponentActivity() {
         val serverFormat = remember { SharedPreferencesHandler(context).getUserPreferences().dateFormat }
         val media = item.media
         val feedUrl = media.metadata.feedUrl
+        val isAdmin = FeedCheck.mayCheck(me?.type, feedUrl)
+        val heard = EpisodeProgress.index(me?.mediaProgress.orEmpty(), itemId)
+        val resumeEpisode = EpisodeProgress.resumable(
+            me?.mediaProgress.orEmpty(), itemId, onServer = media.episodes.orEmpty().map { it.id }.toSet()
+        )?.let { id -> media.episodes?.firstOrNull { it.id == id } }
 
         // Read on open, every time: nothing of the feed is stored.
         LaunchedEffect(isAdmin, feedUrl) {
@@ -189,7 +208,7 @@ class DetailActivity : ComponentActivity() {
             now = now,
             serverFormat = serverFormat
         )
-        val header = DetailHeaderModel.podcast(item, screen.facts)
+        val header = DetailHeaderModel.podcast(item, screen.facts, resumeTitle = resumeEpisode?.title)
         val reload: suspend () -> LibraryItemResponse? = {
             ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }
                 ?.also(onReloaded)
@@ -228,6 +247,7 @@ class DetailActivity : ComponentActivity() {
             onTab = { tab = it },
             downloads = downloads,
             onPlay = play,
+            progress = heard,
             onDownload = { row ->
                 val episode = row.feed ?: return@PodcastEpisodesView
                 if (watch == null) return@PodcastEpisodesView
@@ -249,7 +269,7 @@ class DetailActivity : ComponentActivity() {
                     itemId = itemId,
                     content = header,
                     onPrimary = {
-                        EpisodeOrder.newestFirst(media.episodes.orEmpty()).firstOrNull()?.let(play)
+                        (resumeEpisode ?: EpisodeOrder.newestFirst(media.episodes.orEmpty()).firstOrNull())?.let(play)
                     },
                     actions = {
                         if (isAdmin) {

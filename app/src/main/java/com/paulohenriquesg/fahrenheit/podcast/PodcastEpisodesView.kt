@@ -9,6 +9,9 @@ import androidx.compose.ui.focus.focusRequester
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import com.paulohenriquesg.fahrenheit.detail.FactChip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -71,6 +74,7 @@ fun PodcastEpisodesView(
     downloads: Map<String, DownloadState>,
     onPlay: (Episode) -> Unit,
     onDownload: (EpisodeRow) -> Unit,
+    progress: Map<String, EpisodeProgress> = emptyMap(),
     coverItemId: String? = null,
     date: (EpisodeRow) -> String = { "" },
     focusFirstRow: Boolean = true,
@@ -138,6 +142,7 @@ fun PodcastEpisodesView(
             EpisodeRowCard(
                 row = row,
                 state = downloads[row.key],
+                progress = row.onServer?.id?.let(progress::get),
                 coverItemId = coverItemId,
                 date = date(row),
                 modifier = if (index == 0) Modifier.focusRequester(initialFocus) else Modifier,
@@ -158,8 +163,8 @@ object EpisodeRowLabel {
 
     fun mayDownload(state: DownloadState?): Boolean = state == null || state == DownloadState.Failed
 
-    fun of(downloaded: Boolean, state: DownloadState?, focused: Boolean): String = when {
-        downloaded -> "Play"
+    fun of(downloaded: Boolean, state: DownloadState?, focused: Boolean, progress: EpisodeProgress? = null): String = when {
+        downloaded -> if (progress is EpisodeProgress.InProgress) "Resume" else "Play"
         state == DownloadState.Requested -> "Requested…"
         // The server reports a place in its queue, not a percentage.
         state is DownloadState.Waiting -> if (state.ahead == 0) "Waiting · next" else "Waiting · ${state.ahead} ahead"
@@ -169,6 +174,25 @@ object EpisodeRowLabel {
         // fetches something the viewer did not see offered.
         focused -> "Download to server"
         else -> "Not downloaded"
+    }
+}
+
+/** How far into a half-heard episode the listener is. */
+@Composable
+private fun ProgressBar(fraction: Double) {
+    Box(
+        modifier = Modifier
+            .padding(top = 4.dp)
+            .fillMaxWidth(0.5f)
+            .height(4.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(2.dp))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction.toFloat().coerceIn(0f, 1f))
+                .height(4.dp)
+                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
+        )
     }
 }
 
@@ -191,6 +215,7 @@ private fun NoteBox(note: Note) {
 private fun EpisodeRowCard(
     row: EpisodeRow,
     state: DownloadState?,
+    progress: EpisodeProgress?,
     coverItemId: String?,
     date: String,
     modifier: Modifier = Modifier,
@@ -227,13 +252,21 @@ private fun EpisodeRowCard(
             )
             Spacer(Modifier.width(Space.gap))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = row.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (row.downloaded) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = row.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (row.downloaded) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    // Marked, not hidden or struck through (#78).
+                    if (progress == EpisodeProgress.Heard) {
+                        Spacer(Modifier.width(12.dp))
+                        FactChip(Fact("Heard"))
+                    }
+                }
                 row.description?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         text = RichText.fromHtml(it),
@@ -243,17 +276,20 @@ private fun EpisodeRowCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                val inProgress = progress as? EpisodeProgress.InProgress
                 val meta = listOfNotNull(
                     date.takeIf { it.isNotEmpty() },
-                    row.durationSeconds?.takeIf { it > 0 }?.let { formatDuration(it) }
+                    row.durationSeconds?.takeIf { it > 0 }?.let { formatDuration(it) },
+                    inProgress?.let { "${formatDuration(it.secondsLeft)} left" }
                 ).joinToString(" • ")
                 if (meta.isNotEmpty()) {
                     Text(meta, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                inProgress?.let { ProgressBar(it.fraction) }
             }
             Spacer(Modifier.width(Space.gap))
             Text(
-                text = EpisodeRowLabel.of(row.downloaded, state, focused),
+                text = EpisodeRowLabel.of(row.downloaded, state, focused, progress),
                 style = MaterialTheme.typography.labelLarge,
                 color = if (focused && !row.downloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )

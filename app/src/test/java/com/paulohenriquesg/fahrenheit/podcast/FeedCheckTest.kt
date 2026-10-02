@@ -45,35 +45,31 @@ class FeedCheckTest {
     private val feed = "https://feeds.example/show.xml"
 
     @Test
-    fun `an admin is offered the check`() = runBlocking {
-        assertTrue(FeedCheck(FakePodcastApi(me = { Me("admin") })).mayCheck(feed))
+    fun `an admin is offered the check`() {
+        assertTrue(FeedCheck.mayCheck("admin", feed))
     }
 
     @Test
-    fun `root is offered the check`() = runBlocking {
-        assertTrue(FeedCheck(FakePodcastApi(me = { Me("root") })).mayCheck(feed))
+    fun `root is offered the check`() {
+        assertTrue(FeedCheck.mayCheck("root", feed))
     }
 
     @Test
-    fun `an ordinary account is not, because the server would answer 403`() = runBlocking {
+    fun `an ordinary account is not, because the server would answer 403`() {
         listOf("user", "guest").forEach { type ->
-            assertFalse(type, FeedCheck(FakePodcastApi(me = { Me(type) })).mayCheck(feed))
+            assertFalse(type, FeedCheck.mayCheck(type, feed))
         }
     }
 
     @Test
-    fun `a podcast with no feed is not, because the server would answer 400`() = runBlocking {
-        val check = FeedCheck(FakePodcastApi(me = { Me("root") }))
-
-        assertFalse(check.mayCheck(null))
-        assertFalse(check.mayCheck(""))
+    fun `a podcast with no feed is not, because the server would answer 400`() {
+        assertFalse(FeedCheck.mayCheck("root", null))
+        assertFalse(FeedCheck.mayCheck("root", ""))
     }
 
     @Test
-    fun `not knowing who we are means no button rather than one that fails`() = runBlocking {
-        val check = FeedCheck(FakePodcastApi(me = { throw IOException("offline") }))
-
-        assertFalse(check.mayCheck(feed))
+    fun `not knowing who we are means no button rather than one that fails`() {
+        assertFalse(FeedCheck.mayCheck(null, feed))
     }
 
     @Test

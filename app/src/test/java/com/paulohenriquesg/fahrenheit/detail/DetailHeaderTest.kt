@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import org.junit.Assert.assertTrue
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -159,5 +160,39 @@ class DetailHeaderTest {
         render()
 
         compose.onNodeWithTag(DESCRIPTION_TAG).assertDoesNotExist()
+    }
+
+    // Seen on the stick with NerdCast: "Resume <a long episode title>" took the
+    // whole row, the feed check beside it was squeezed to zero width, and its
+    // text wrapped one letter per line - pushing everything below off screen.
+    @Test
+    fun `a long primary action leaves room for the others and keeps the header on screen`() {
+        compose.setContent {
+            FahrenheitTheme {
+                DetailHeader(
+                    itemId = "p1",
+                    content = DetailHeaderContent(
+                        title = "NerdCast",
+                        byline = "Podcast · Society & Culture",
+                        chips = listOf(Fact("1087 of 1736 on the server")),
+                        primary = "Resume NerdCast 1048 - O Segredo de Widow's Bay: A Melhor Série do Ano! Azaghal Cravou!",
+                        description = "Lambda lambda lambda, nerds!"
+                    ),
+                    onPrimary = {},
+                    actions = {
+                        com.paulohenriquesg.fahrenheit.podcast.FeedCheckRow(
+                            state = com.paulohenriquesg.fahrenheit.podcast.FeedCheckState.Idle,
+                            onCheck = {}
+                        )
+                    }
+                )
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Check for new episodes").assertIsDisplayed()
+        compose.onNodeWithText("Lambda lambda lambda, nerds!").assertIsDisplayed()
+        val height = compose.onRoot().fetchSemanticsNode().size.height / compose.density.density
+        assertTrue("header is ${height}dp tall", height < 540f)
     }
 }
