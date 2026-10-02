@@ -413,11 +413,12 @@ fun MainScreen(
                         libraries = libraries,
                         currentId = currentLibrary?.id,
                         onSelect = { chosen ->
+                            // Save and ask for a refresh, and nothing else: the
+                            // refresh compares the saved library with the current
+                            // one, so setting the current one here first made them
+                            // equal and the shelves were never fetched again.
                             chosen.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
-                            currentLibrary = chosen
                             shouldRefreshLibrary = true
-                            view = MainView.HOME
-                            highlightedMenuItemId = MainView.HOME.menuItemId
                         }
                     )
                 }

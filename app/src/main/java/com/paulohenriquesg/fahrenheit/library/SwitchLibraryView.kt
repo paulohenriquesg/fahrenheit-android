@@ -24,6 +24,15 @@ import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.ui.CardFocus
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Podcasts
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.tv.material3.Icon
 
 /**
  * Picking a library is a big, rare choice, so it gets tiles rather than a list:
@@ -82,19 +91,25 @@ fun SwitchLibraryView(
                             .padding(Space.inset),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = iconFor(library.mediaType),
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = library.name.orEmpty(),
                                 style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Text(
-                                text = library.mediaType.orEmpty(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
+                        Text(
+                            text = library.mediaType.orEmpty(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         if (current) {
                             Text(
                                 text = stringResource(R.string.switch_library_current),
@@ -108,4 +123,10 @@ fun SwitchLibraryView(
             }
         }
     }
+}
+
+/** The old picker showed one; a wall of identical tiles tells you nothing. */
+private fun iconFor(mediaType: String?): ImageVector = when (mediaType) {
+    "podcast" -> Icons.Filled.Podcasts
+    else -> Icons.Filled.Book
 }
