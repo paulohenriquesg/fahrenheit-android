@@ -38,6 +38,7 @@ class FeedCheckTest {
         }
 
         override suspend fun feed(request: FeedRequest) = FeedResponse(null)
+        override suspend fun downloadQueue(libraryId: String) = com.paulohenriquesg.fahrenheit.api.DownloadQueue(null, emptyList())
         override suspend fun downloadEpisodes(podcastId: String, episodes: List<JsonObject>) = Unit
     }
 
@@ -186,6 +187,7 @@ class FeedCheckRunTest {
             if (found == null) throw IOException("down")
             else CheckNewResponse(List(found) { FeedEpisode("e$it") })
         override suspend fun feed(request: FeedRequest) = FeedResponse(null)
+        override suspend fun downloadQueue(libraryId: String) = com.paulohenriquesg.fahrenheit.api.DownloadQueue(null, emptyList())
         override suspend fun downloadEpisodes(podcastId: String, episodes: List<JsonObject>) = Unit
     }
 

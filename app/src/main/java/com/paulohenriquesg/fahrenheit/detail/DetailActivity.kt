@@ -29,14 +29,15 @@ import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeOrder
-import com.paulohenriquesg.fahrenheit.podcast.DownloadState
+import com.paulohenriquesg.fahrenheit.podcast.DownloadProgress
+import com.paulohenriquesg.fahrenheit.podcast.DownloadWatch
+import com.paulohenriquesg.fahrenheit.api.DownloadQueue
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeTab
 import com.paulohenriquesg.fahrenheit.podcast.FeedLoad
 import com.paulohenriquesg.fahrenheit.podcast.PodcastEpisodesView
 import com.paulohenriquesg.fahrenheit.podcast.PodcastFeed
 import com.paulohenriquesg.fahrenheit.podcast.PodcastScreenModel
 import com.paulohenriquesg.fahrenheit.utils.EpisodeDate
-import androidx.compose.runtime.mutableStateMapOf
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheck
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheckRow
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheckState
@@ -156,7 +157,12 @@ class DetailActivity : ComponentActivity() {
         var feed by remember { mutableStateOf<FeedLoad>(FeedLoad.Unavailable) }
         var tab by remember { mutableStateOf(EpisodeTab.All) }
         var feedCheck by remember { mutableStateOf<FeedCheckState>(FeedCheckState.Idle) }
-        val downloads = remember { mutableStateMapOf<String, DownloadState>() }
+        var queue by remember { mutableStateOf(DownloadQueue(null, emptyList())) }
+        var misses by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+        val watch = remember(itemId) {
+            ApiClient.getPodcastApi()?.let { DownloadWatch(it, item.libraryId, itemId) }
+        }
+        var watching by remember { mutableStateOf(false) }
         val serverFormat = remember { SharedPreferencesHandler(context).getUserPreferences().dateFormat }
         val media = item.media
         val feedUrl = media.metadata.feedUrl
@@ -188,6 +194,30 @@ class DetailActivity : ComponentActivity() {
             ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }
                 ?.also(onReloaded)
         }
+        // One watcher at a time; it stops once nothing here is queued or
+        // awaited, and starts again on the next download.
+        fun startWatch() {
+            if (watching || watch == null) return
+            watching = true
+            scope.launch {
+                try {
+                    do {
+                        watch.watch(
+                            onUpdate = { q, m -> queue = q; misses = m },
+                            reload = { reload()?.media?.episodes }
+                        )
+                    } while (watch.waiting)
+                } finally {
+                    watching = false
+                }
+            }
+        }
+        // On open too: episodes queued elsewhere show where they are.
+        LaunchedEffect(isAdmin) { if (isAdmin) startWatch() }
+        val downloads = screen.rows.mapNotNull { row ->
+            DownloadProgress.state(row, queue, misses[row.key])?.let { row.key to it }
+        }.toMap()
+
         val play: (Episode) -> Unit = { episode ->
             context.startActivity(PlayerActivity.createIntent(context, itemId, episode.id))
         }
@@ -199,15 +229,15 @@ class DetailActivity : ComponentActivity() {
             downloads = downloads,
             onPlay = play,
             onDownload = { row ->
-                val podcastApi = ApiClient.getPodcastApi() ?: return@PodcastEpisodesView
                 val episode = row.feed ?: return@PodcastEpisodesView
+                if (watch == null) return@PodcastEpisodesView
+                misses = misses + (row.key to 0)
                 scope.launch {
-                    PodcastFeed(podcastApi).download(
-                        podcastId = itemId,
-                        episode = episode,
-                        onState = { downloads[row.key] = it },
-                        reload = { reload()?.media?.episodes }
-                    )
+                    if (watch.request(row.key, episode)) {
+                        startWatch()
+                    } else {
+                        misses = misses + (row.key to DownloadProgress.MISSES_BEFORE_FAILED)
+                    }
                 }
             },
             coverItemId = itemId,
@@ -229,7 +259,11 @@ class DetailActivity : ComponentActivity() {
                                     FeedCheck(podcastApi).run(
                                         podcastId = itemId,
                                         episodesBefore = media.episodes?.size ?: 0,
-                                        onState = { feedCheck = it },
+                                        onState = {
+                                            feedCheck = it
+                                            // What it found is queued; watch it arrive in the list.
+                                            if (it is FeedCheckState.Found && it.count > 0) startWatch()
+                                        },
                                         reload = { reload()?.media?.episodes?.size }
                                     )
                                 }
