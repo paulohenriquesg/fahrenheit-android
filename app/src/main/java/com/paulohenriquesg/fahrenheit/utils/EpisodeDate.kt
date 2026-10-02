@@ -14,8 +14,13 @@ import java.util.Locale
 object EpisodeDate {
 
     private const val DAY = 24 * 60 * 60 * 1000L
+    private const val FALLBACK = "dd/MM/yyyy"
 
-    fun of(publishedAt: Long?, now: Long): String {
+    /**
+     * @param serverFormat how the server writes dates, from the login response.
+     *   Anything Java cannot use falls back to day-first.
+     */
+    fun of(publishedAt: Long?, now: Long, serverFormat: String? = null): String {
         if (publishedAt == null || publishedAt <= 0) return ""
         val age = now - publishedAt
         return when {
@@ -23,7 +28,10 @@ object EpisodeDate {
             age < DAY -> "Today"
             age < 2 * DAY -> "Yesterday"
             age < 7 * DAY -> "${age / DAY} days ago"
-            else -> SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(publishedAt))
+            else -> {
+                val pattern = ServerDateFormat.pattern(serverFormat) ?: FALLBACK
+                SimpleDateFormat(pattern, Locale.getDefault()).format(Date(publishedAt))
+            }
         }
     }
 }

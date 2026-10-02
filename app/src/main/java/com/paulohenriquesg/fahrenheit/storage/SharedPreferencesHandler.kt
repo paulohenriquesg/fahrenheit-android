@@ -39,6 +39,7 @@ class SharedPreferencesHandler(context: Context) {
             refreshToken = sharedPreferences.getString("refresh_token", null),
             darkTheme = sharedPreferences.getBoolean("dark_theme", false),
             isRowLayout = sharedPreferences.getBoolean("is_row_layout", true),
+            dateFormat = sharedPreferences.getString("date_format", null),
             lastUpdateCheck = sharedPreferences.getLong("last_update_check", 0L),
             // -1 stands for "never": SharedPreferences has no nullable Int.
             updateSnoozeVersionCode = sharedPreferences.getInt("update_snooze_version_code", -1).takeIf { it > 0 },
@@ -57,6 +58,7 @@ class SharedPreferencesHandler(context: Context) {
             putString("refresh_token", userPreferences.refreshToken)
             putBoolean("dark_theme", userPreferences.darkTheme)
             putBoolean("is_row_layout", userPreferences.isRowLayout)
+            putString("date_format", userPreferences.dateFormat)
             putLong("last_update_check", userPreferences.lastUpdateCheck)
             putInt("update_snooze_version_code", userPreferences.updateSnoozeVersionCode ?: -1)
             putLong("update_snooze_at", userPreferences.updateSnoozeAt ?: -1L)

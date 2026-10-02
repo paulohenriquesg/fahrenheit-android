@@ -7,7 +7,9 @@ import com.paulohenriquesg.fahrenheit.api.LoginResponse
 data class AuthSession(
     val accessToken: String,
     val refreshToken: String?,
-    val username: String
+    val username: String,
+    /** How the server was configured to write dates, sent only at login. */
+    val dateFormat: String? = null
 )
 
 /**
@@ -62,5 +64,6 @@ class AuthRepository(private val api: AuthApi) {
 fun LoginResponse.toAuthSession() = AuthSession(
     accessToken = user.accessToken ?: user.token,
     refreshToken = user.refreshToken,
-    username = user.username
+    username = user.username,
+    dateFormat = serverSettings?.dateFormat
 )

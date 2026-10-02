@@ -28,7 +28,9 @@ class SharedPreferencesTokenStore(
             host = credentials.host,
             username = credentials.username,
             token = credentials.accessToken,
-            refreshToken = credentials.refreshToken
+            refreshToken = credentials.refreshToken,
+            // A server setting, so a sign-out keeps it: the server has not changed.
+            dateFormat = credentials.dateFormat ?: preferences.getUserPreferences().dateFormat
         )
         preferences.saveUserPreferences(updated)
     }

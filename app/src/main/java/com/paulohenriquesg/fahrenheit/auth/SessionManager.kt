@@ -17,7 +17,8 @@ class SessionManager(private val store: TokenStore) {
                 host = host,
                 username = session.username,
                 accessToken = session.accessToken,
-                refreshToken = session.refreshToken
+                refreshToken = session.refreshToken,
+                dateFormat = session.dateFormat
             )
         )
     }

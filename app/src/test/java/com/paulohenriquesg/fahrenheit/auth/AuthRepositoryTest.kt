@@ -163,4 +163,15 @@ class AuthRepositoryTest {
 
         assertEquals("testuser", AuthRepository(api).signInWithApiKey("my-api-key").username)
     }
+
+    // The server says how it writes dates, once, at login. It used to be parsed
+    // and then dropped on the floor here.
+    @Test
+    fun `login keeps the date format the server was configured with`() = runBlocking {
+        val api = FakeAuthApi(loginResponse = TestFixtures.createMockLoginResponse(accessToken = "a"))
+
+        val session = AuthRepository(api).login("testuser", "hunter2", "http://abs.local")
+
+        assertEquals("MM/dd/yyyy", session.dateFormat)
+    }
 }

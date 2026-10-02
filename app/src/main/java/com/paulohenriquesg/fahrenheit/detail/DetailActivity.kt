@@ -66,6 +66,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.util.Locale
 import com.paulohenriquesg.fahrenheit.ui.CardFocus
+import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 
 class DetailActivity : ComponentActivity() {
     @OptIn(ExperimentalTvMaterial3Api::class)
@@ -218,6 +219,10 @@ class DetailActivity : ComponentActivity() {
     @Composable
     fun EpisodeCard(episode: Episode) {
         val context = LocalContext.current
+        // The server decides how a date is written and says so at login.
+        val serverDateFormat = remember {
+            SharedPreferencesHandler(context).getUserPreferences().dateFormat
+        }
         var isFocused by remember { mutableStateOf(false) }
 
         Card(
@@ -286,7 +291,7 @@ class DetailActivity : ComponentActivity() {
                     ) {
                         // Publication date
                         Text(
-                            text = formatPubDate(episode.pubDate),
+                            text = formatPubDate(episode.pubDate, serverDateFormat),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

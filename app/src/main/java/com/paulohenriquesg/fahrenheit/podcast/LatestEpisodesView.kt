@@ -41,6 +41,7 @@ import com.paulohenriquesg.fahrenheit.ui.CardFocus
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.fillMaxWidth
+import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -49,6 +50,8 @@ fun LatestEpisodesView(libraryId: String) {
     var episodes by remember { mutableStateOf<List<RecentPodcastEpisode>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var loadFailed by remember { mutableStateOf(false) }
+    // The server decides how a date is written and says so at login.
+    val serverDateFormat = remember { SharedPreferencesHandler(context).getUserPreferences().dateFormat }
 
     LaunchedEffect(libraryId) {
         val api = ApiClient.getBrowseApi()
@@ -140,6 +143,7 @@ fun LatestEpisodesView(libraryId: String) {
                             val recentEpisode = group.episodes[index]
                             EpisodeCard(
                                 episode = recentEpisode,
+                                serverDateFormat = serverDateFormat,
                                 onClick = {
                                     val intent = DetailActivity.createIntent(
                                         context,
@@ -160,7 +164,8 @@ fun LatestEpisodesView(libraryId: String) {
 @Composable
 fun EpisodeCard(
     episode: RecentPodcastEpisode,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    serverDateFormat: String? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
@@ -213,7 +218,7 @@ fun EpisodeCard(
 
                 // Podcast name, and when the episode came out: without a date
                 // a new episode looked exactly like one from March.
-                val published = EpisodeRowDisplay.published(episode)
+                val published = EpisodeRowDisplay.published(episode, serverFormat = serverDateFormat)
                 Text(
                     text = listOfNotNull(
                         episode.podcast?.metadata?.title?.takeIf { it.isNotBlank() },
