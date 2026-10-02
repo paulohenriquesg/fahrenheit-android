@@ -78,4 +78,13 @@
     <string name="update_snoozed">We\'ll remind you tomorrow</string>
     <string name="what_s_new">What\'s New</string>
     <string name="you_re_up_to_date">You\'re up to date!</string>
+    <string name="stats_total_listened">Total listened</string>
+    <string name="stats_today">Today</string>
+    <string name="stats_books_touched">Books touched</string>
+    <string name="stats_days_with_activity">Days with activity</string>
+    <string name="stats_average_per_day">Average per day</string>
+    <string name="stats_by_weekday">By weekday</string>
+    <string name="stats_most_listened">Most listened</string>
+    <string name="stats_recent_sessions">Recent sessions</string>
+    <string name="stats_nothing_listened_yet">Nothing listened yet</string>
 </resources>
