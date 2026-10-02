@@ -5,7 +5,8 @@ import com.paulohenriquesg.fahrenheit.R
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,7 +47,7 @@ class MainActivity : ComponentActivity() {
         // An update handed to the system installer reports nothing back, so the
         // previous dispatch is judged here, once.
         if (AppUpdates.takePendingInstallOutcome(this) == PendingInstall.Outcome.Failed) {
-            Toast.makeText(this, getString(R.string.update_did_not_install), Toast.LENGTH_LONG).show()
+            Toast.makeText(this@MainActivity, getString(R.string.update_did_not_install), Toast.LENGTH_LONG).show()
         }
 
         // Only from here: a player screen must never be interrupted by this.
@@ -61,8 +62,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             FahrenheitTheme() {
                 Surface(
-                    color = MaterialTheme.colorScheme.background,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.onBackground),
                     modifier = Modifier
                         .fillMaxSize()
                         // Surfaces testTag as resource-id for UiAutomator/Maestro

@@ -27,7 +27,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
-import androidx.compose.material3.Surface
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,15 +75,14 @@ class DetailActivity : ComponentActivity() {
         setContent {
             FahrenheitTheme {
                 Surface(
-                    color = MaterialTheme.colorScheme.background,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.onBackground),
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
                     if (itemId != null) {
                         DetailScreen(itemId)
                     } else {
-                        Toast.makeText(this, getString(R.string.item_id_is_missing), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@DetailActivity, getString(R.string.item_id_is_missing), Toast.LENGTH_SHORT).show()
                         finish()
                     }
                 }

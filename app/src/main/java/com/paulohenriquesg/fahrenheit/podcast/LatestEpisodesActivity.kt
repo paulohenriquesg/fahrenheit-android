@@ -14,7 +14,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Surface
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.*
@@ -47,8 +48,7 @@ class LatestEpisodesActivity : ComponentActivity() {
         setContent {
             FahrenheitTheme {
                 Surface(
-                    color = MaterialTheme.colorScheme.background,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.onBackground),
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {

@@ -19,7 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Podcasts
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,8 +45,7 @@ class LibrarySelectionActivity : ComponentActivity() {
         setContent {
             FahrenheitTheme {
                 Surface(
-                    color = MaterialTheme.colorScheme.background,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.onBackground),
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {

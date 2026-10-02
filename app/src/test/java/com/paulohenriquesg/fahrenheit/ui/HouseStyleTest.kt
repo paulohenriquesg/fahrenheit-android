@@ -53,7 +53,7 @@ class HouseStyleTest {
         // The TV library has no text field, progress indicator or icon, so
         // those stay; Text, Button, Card and Surface have TV equivalents built
         // for focus.
-        val phoneOnly = Regex("""import androidx\.compose\.material3\.(Text)$""")
+        val phoneOnly = Regex("""import androidx\.compose\.material3\.(Text|Surface)$""")
         val offenders = mutableListOf<String>()
         sources.forEach { file ->
             file.readLines().forEachIndexed { index, line ->
