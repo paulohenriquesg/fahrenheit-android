@@ -99,6 +99,7 @@ fun LoginScreen(
                     tint = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
+            singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("login_host_field")
@@ -149,9 +150,9 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .testTag("login_api_key_field")
                     .onFocusChanged { isApiKeyFocused = it.isFocused },
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    onDone = { handleApiKeyLogin(host, apiKey, isLoading) }
                 ),
                 colors = TextFieldDefaults.colors(
                     unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -178,6 +179,7 @@ fun LoginScreen(
                         tint = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
+                singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("login_username_field")
@@ -216,6 +218,7 @@ fun LoginScreen(
                     )
                 },
                 visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("login_password_field")
@@ -223,10 +226,10 @@ fun LoginScreen(
                         isPasswordFocused = it.isFocused
                     },
                 keyboardOptions = KeyboardOptions.Default.copy(
-                    imeAction = ImeAction.Next
+                    imeAction = ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    onDone = { handleLogin(host, username, password, isLoading) }
                 ),
                 colors = TextFieldDefaults.colors(
                     unfocusedTextColor = MaterialTheme.colorScheme.onSurface,

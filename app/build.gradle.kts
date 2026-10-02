@@ -72,6 +72,10 @@ android {
     buildTypes {
         debug {
             enableUnitTestCoverage = true
+            // Its own id, so a debug build installs beside a released one
+            // rather than demanding the release signing key to replace it.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
         getByName("release") {
             signingConfig = signingConfigs.getByName("release")
