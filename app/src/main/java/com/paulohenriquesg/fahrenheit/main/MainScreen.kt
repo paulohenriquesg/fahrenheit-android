@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.main
 
 import android.app.Activity
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
+import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
@@ -98,7 +99,6 @@ import com.paulohenriquesg.fahrenheit.ui.elements.SeriesShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.ShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsFluid
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsRow
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
@@ -339,12 +339,13 @@ fun MainScreen(
         }
     }
 
-    // Restore focus to current section when drawer opens
+    // Put focus on the current section when the drawer opens. The items are
+    // composed as the drawer animates, so this waits for the one it wants
+    // rather than guessing at a delay: a slow frame made that guess wrong and
+    // requestFocus() threw, which killed the app.
     LaunchedEffect(drawerState.isOpen) {
         if (drawerState.isOpen) {
-            delay(100)  // Wait for drawer animation
-            // Request focus on the current section's menu item
-            menuItemFocusRequesters[highlightedMenuItemId]?.requestFocus()
+            menuItemFocusRequesters[highlightedMenuItemId]?.requestFocusWhenAttached()
         }
     }
 
