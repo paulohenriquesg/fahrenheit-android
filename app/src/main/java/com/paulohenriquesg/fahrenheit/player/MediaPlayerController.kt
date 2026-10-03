@@ -126,7 +126,8 @@ fun MediaPlayerController(
             failed -> TimesRow(stringResource(R.string.playback_failed), null, error = true)
             chapter != null -> TimesRow(
                 PlaybackPosition.spoken(chapter.elapsed(currentTime)),
-                stringResource(R.string.time_left_in_chapter, PlaybackPosition.spoken(chapter.left(currentTime)))
+                // Real listening time at the speed, as the book's time left is.
+                stringResource(R.string.time_left_in_chapter, PlaybackPosition.spoken(chapter.left(currentTime) / speed))
             )
             speed == ListeningSpeed.NORMAL -> TimesRow(
                 PlaybackPosition.spoken(currentTime),

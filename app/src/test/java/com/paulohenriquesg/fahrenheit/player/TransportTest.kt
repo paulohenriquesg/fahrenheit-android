@@ -266,7 +266,8 @@ class TransportTest {
         val p = queuedAt(3900.0).apply { setPlaybackSpeed(1.25f) }
         show(p, chapters = chapters)
 
-        compose.onNodeWithText("25 min 0 s left in chapter").assertIsDisplayed()
+        // One meaning of "left": real listening time, in the chapter as in the book.
+        compose.onNodeWithText("20 min 0 s left in chapter").assertIsDisplayed()
         compose.onNodeWithText("20 min 0 s left at 1.25×").assertIsDisplayed()
     }
 
@@ -285,5 +286,6 @@ class TransportTest {
         compose.waitForIdle()
 
         compose.onNodeWithText("12 min 30 s left at 2×").assertIsDisplayed()
+        compose.onNodeWithText("12 min 30 s left in chapter").assertIsDisplayed()
     }
 }

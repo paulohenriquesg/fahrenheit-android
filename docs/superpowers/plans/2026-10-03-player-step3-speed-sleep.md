@@ -22,14 +22,14 @@
 - Lengths via `PlaybackPosition.spoken`.
 - **Not in this step:** the Chapters and About chips (step "Chapters and About"), skip lengths (step "Settings").
 
-## Rulings (made here; listed in the PR for the maintainer)
+## Rulings (made here; confirmed by the maintainer on #120)
 
 1. **The sleep countdown counts listening time, not wall time.** A pause for tea does not eat the timer. This matches End of chapter, which also only moves while playing, so the chip's minutes mean the same thing in both modes.
 2. **End of chapter follows the listener:** the target is the end of the chapter playback is in; a seek or chapter skip retargets it. Playing across a chapter end pauses. The screen sends the chapter ends in book time, so the service still knows nothing about books.
 3. **For End of chapter the chip shows the minutes left in the chapter at the current speed**, like the minute modes.
 4. **A new queue (another book, Back, sign-out) turns the timer off.** It was set for what was playing.
 5. **Without chapters, End of chapter is not offered.**
-6. **"Left in chapter" stays in book time** (spec §Times). Only the book's time left counts at the speed: "M left at 1.25×", or "M left" at 1×. Without chapters the single row reads "M left of T at 1.25×".
+6. **Every "left" counts at the speed.** The book: "M left at 1.25×", or "M left" at 1×; without chapters "M left of T at 1.25×". The chapter: "M left in chapter" in real minutes, so it agrees with the Sleep chip (the maintainer's decision on #120, replacing book time here).
 7. **Speed is applied by the screen** on every start and reattach (1× when nothing is remembered), since the service's player keeps the last book's speed.
 
 ## Review Focus
