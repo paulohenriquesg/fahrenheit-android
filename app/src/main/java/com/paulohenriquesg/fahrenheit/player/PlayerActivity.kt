@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -181,8 +182,13 @@ class PlayerActivity : ComponentActivity() {
             val ref = playing?.series ?: return@LaunchedEffect
             val libraryId = playing.libraryId ?: return@LaunchedEffect
             val api = ApiClient.getLibraryApi() ?: return@LaunchedEffect
-            series = LibraryRepository(api).seriesBooks(libraryId, ref.id).getOrNull()
+            // Said in the log when it fails: the row simply not being there hid
+            // a reply the app could not read (device check, #130).
+            series = LibraryRepository(api).seriesBooks(libraryId, ref.id)
+                .onFailure { Log.w(TAG, "Couldn't read the series ${ref.id}", it) }
+                .getOrNull()
                 ?.let { SeriesBooks.of(it, currentId = itemId) }
+                ?.also { if (it.current == null) Log.w(TAG, "The series ${ref.id} does not list $itemId") }
                 ?.takeIf { it.current != null }
         }
         when {
@@ -290,6 +296,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val TAG = "PlayerActivity"
         private const val EXTRA_ITEM_ID = "item_id"
 
         /** How long the player waits for its cover's colour before it shows anyway. */

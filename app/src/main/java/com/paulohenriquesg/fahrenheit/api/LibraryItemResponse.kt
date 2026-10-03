@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.api
 
+import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
 
 data class LibraryItemResponse(
@@ -177,6 +178,8 @@ data class LibraryItemMetadata(
     // Detailed API responses (array format)
     @SerializedName("authors") val authors: List<Author>? = null,
     @SerializedName("narrators") val narrators: List<String>? = null,
+    // One object, not a list, on a list filtered by series.
+    @JsonAdapter(SeriesListDeserializer::class)
     @SerializedName("series") val series: List<Series>? = null,
     @SerializedName("genres") val genres: List<String>? = null,
     @SerializedName("publishedYear") val publishedYear: String?,
