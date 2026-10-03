@@ -36,7 +36,16 @@ data class NowPlaying(
     /** About's facts, one line each. */
     val facts: List<AboutFact> = emptyList(),
     /** Whether the server has the book finished; null for an episode, which has no Mark finished. */
-    val finished: Boolean? = null
+    val finished: Boolean? = null,
+    /** An episode's type when it is not a regular one: "Bonus", "Trailer" (#108). */
+    val badge: String? = null,
+    /** An episode's "Season S · Episode E · <length>". */
+    val details: String? = null,
+    /** The first lines of an episode's notes. */
+    val notes: String? = null,
+    /** The episodes either side, by when they came out, among those with audio; null at either end, and for a book. */
+    val previous: EpisodeRef? = null,
+    val next: EpisodeRef? = null
 ) {
     /**
      * "Series · Book N of M", once the series' size is known. Unchanged for a
@@ -96,6 +105,7 @@ data class NowPlaying(
                 )
             }
             val episode = item.media.episodes?.firstOrNull { it.id == episodeId } ?: return null
+            val around = EpisodeNeighbours.of(item.media.episodes.orEmpty(), episodeId)
             // Fixed once: "Yesterday" should not tick over while listening.
             val published = EpisodeDate.of(episode.publishedAt, now, serverFormat)
             return NowPlaying(
@@ -113,7 +123,12 @@ data class NowPlaying(
                 kicker = listOfNotNull(metadata.title.takeIf { it.isNotBlank() }, published.takeIf { it.isNotEmpty() })
                     .joinToString(" · ").takeIf { it.isNotEmpty() },
                 byline = null,
-                facts = AboutFacts.episode(published, episode.audioTrack?.duration)
+                facts = AboutFacts.episode(published, episode.audioTrack?.duration),
+                badge = EpisodeDetails.badge(episode.episodeType),
+                details = EpisodeDetails.line(episode.season, episode.episode, episode.audioTrack?.duration),
+                notes = EpisodeDetails.notes(episode.subtitle, episode.description),
+                previous = around.previous,
+                next = around.next
             )
         }
     }

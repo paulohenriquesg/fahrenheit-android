@@ -1,5 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -298,5 +300,45 @@ class TransportTest {
         compose.waitForIdle()
 
         compose.onNodeWithText("25 min 0 s left in chapter").assertIsDisplayed()
+    }
+
+    private fun showEpisode(previous: (() -> Unit)?, next: (() -> Unit)?) {
+        player = queuedAt(0.0)
+        compose.setContent {
+            FahrenheitTheme {
+                MediaPlayerController(
+                    player = player, playback = BookPlayback(player, twoParts), totalTime = twoParts.totalDuration,
+                    episodes = EpisodeSkip(onPrevious = previous, onNext = next)
+                )
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    // #108: an episode's outer buttons go to the episodes either side.
+    @Test
+    fun `an episode's outer buttons go to the previous and next episode`() {
+        var went = ""
+        showEpisode(previous = { went += "<" }, next = { went += ">" })
+
+        press(compose.activity.getString(R.string.next_episode))
+        press(compose.activity.getString(R.string.previous_episode))
+
+        assertEquals("><", went)
+    }
+
+    @Test
+    fun `the newest episode's Next is there, but off`() {
+        showEpisode(previous = {}, next = null)
+
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.next_episode)).assertIsNotEnabled()
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.previous_episode)).assertIsEnabled()
+    }
+
+    // Review Focus 4.
+    @Test
+    fun `a book has no episode buttons`() {
+        show(queuedAt(1900.0), chapters = chapters)
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.next_episode)).assertDoesNotExist()
     }
 }

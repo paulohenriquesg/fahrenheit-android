@@ -80,4 +80,28 @@ class PlaybackQueueTest {
     @Test
     fun `no server to resolve against is no queue`() =
         assertNull(PlaybackQueue.of(nowPlaying(threeParts), startAt = 0.0) { null })
+
+    // #108: with auto-advance on, the next newer episode follows the one playing.
+    @Test
+    fun `the next episode is queued after the current one, as itself`() {
+        val oneFile = TrackTimeline(listOf(TimelineTrack(1, 0.0, 1800.0, "/e1")))
+        val current = NowPlaying("p1", "e1", oneFile, null, null, "e1", true, null)
+        val next = NowPlaying("p1", "e2", TrackTimeline(listOf(TimelineTrack(1, 0.0, 1500.0, "/e2"))), null, null, "e2", true, null)
+
+        val queue = PlaybackQueue.of(current, 60.0, resolve, next = next)!!
+
+        assertEquals(2, queue.items.size)
+        assertEquals(0, queue.index)
+        assertEquals(60_000L, queue.positionMs)
+        assertEquals(QueuedFile("p1", "e2", 0.0, 1500.0), QueuedFile.of(queue.items[1]))
+        assertEquals("https://abs.test/e2", queue.items[1].localConfiguration?.uri.toString())
+    }
+
+    // Review (#108), Ruling 4: an episode moved on to starts where it was left.
+    @Test
+    fun `the next episode carries where to start it`() {
+        val e2 = NowPlaying("p1", "e2", TrackTimeline(listOf(TimelineTrack(1, 0.0, 1500.0, "/e2"))), null, null, "e2", true, null)
+        val items = PlaybackQueue.itemsOf(e2, resolve, startAt = 600.0)!!
+        assertEquals(600.0, QueuedFile.of(items.single())!!.startAt, 0.0)
+    }
 }

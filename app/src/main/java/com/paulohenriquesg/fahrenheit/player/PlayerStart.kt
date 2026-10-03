@@ -13,10 +13,24 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
  * @param startAt where the screen that opened the player asked to start, in
  *   whole-book seconds - a chapter chosen on the details screen (#105). It wins
  *   over the saved position, and moves a book already queued. Honoured once.
+ * @param resumed the screen was recreated (a configuration change) rather
+ *   than opened: it has started before, and follows what plays (see [follows]).
  */
-class PlayerStart(private val autoPlay: Boolean, private val startAt: Double? = null) {
+class PlayerStart(private val autoPlay: Boolean, private val startAt: Double? = null, resumed: Boolean = false) {
 
-    private var started = false
+    private var started = resumed
+
+    /**
+     * The episode to show instead of [nowPlaying], when this screen has started
+     * before and the queue has since moved on by itself to another episode of
+     * the same show (#108) - with the screen closed, say. Null to begin as
+     * usual: a screen opened fresh on an episode is the listener asking for it.
+     */
+    fun follows(player: Player, nowPlaying: NowPlaying): String? {
+        if (!started) return null
+        return EpisodeFollow.shown(QueuedFile.of(player.currentMediaItem), nowPlaying.itemId, nowPlaying.episodeId)
+            ?.takeIf { it != nowPlaying.episodeId }
+    }
 
     /**
      * Reattaches if [player] is already on this book or episode - leaving it
@@ -25,32 +39,70 @@ class PlayerStart(private val autoPlay: Boolean, private val startAt: Double? = 
      *
      * @param progress the server's saved position, asked for only when the
      *   queue is built: a copy read when the screen opened can be stale by now.
+     * @param next with auto-advance on (#108), the episode to queue after this
+     *   one - and, reattaching to this one, behind it if it is not there yet.
+     *   Null drops a next episode queued before (the setting was turned off).
+     * @param nextStartAt where [next] starts when playback moves on to it.
      * @return false when there is nothing to play; the queue is then untouched.
      */
     suspend fun begin(
         player: Player,
         nowPlaying: NowPlaying,
         progress: suspend () -> MediaProgressResponse?,
-        resolveUrl: (String) -> String?
+        resolveUrl: (String) -> String?,
+        next: NowPlaying? = null,
+        nextStartAt: Double = 0.0
     ): Boolean {
         val firstTime = !started
         started = true
         val asked = startAt?.takeIf { firstTime }
         if (QueuedFile.of(player.currentMediaItem)?.isFor(nowPlaying.itemId, nowPlaying.episodeId) == true) {
+            dropWhatHasPlayed(player, nowPlaying)
             val timeline = nowPlaying.timeline
             if (asked != null && timeline != null) {
                 BookPlayback(player, timeline).seekToBookTime(asked)
                 if (autoPlay) player.play()
             }
+            if (next != null) queueBehind(player, next, nextStartAt, resolveUrl) else dropWhatFollows(player, nowPlaying)
             return true
         }
         val start = asked ?: ResumePoint.decide(progress(), nowPlaying.trackTotal, nowPlaying.mediaDuration).positionSeconds
-        val queue = PlaybackQueue.of(nowPlaying, start, resolveUrl) ?: return false
+        val queue = PlaybackQueue.of(nowPlaying, start, resolveUrl, next, nextStartAt) ?: return false
         player.setMediaItems(queue.items, queue.index, queue.positionMs)
         player.prepare()
         // Explicitly either way: the player keeps playWhenReady across a new
         // queue, so what replaced a playing book would otherwise start too.
         if (autoPlay && firstTime) player.play() else player.pause()
         return true
+    }
+
+    /**
+     * After a move to the next episode (#108), what played before it is still
+     * at the front of the queue: drop it, so this one is first again and the
+     * screen's timeline maps onto the queue.
+     */
+    private fun dropWhatHasPlayed(player: Player, nowPlaying: NowPlaying) {
+        val first = (0 until player.mediaItemCount).firstOrNull {
+            QueuedFile.of(player.getMediaItemAt(it))?.isFor(nowPlaying.itemId, nowPlaying.episodeId) == true
+        } ?: return
+        if (first > 0) player.removeMediaItems(0, first)
+    }
+
+    /** Drops another episode queued after this one: auto-advance is off now. */
+    private fun dropWhatFollows(player: Player, nowPlaying: NowPlaying) {
+        val after = (0 until player.mediaItemCount).firstOrNull {
+            val file = QueuedFile.of(player.getMediaItemAt(it))
+            it > player.currentMediaItemIndex && file != null && !file.isFor(nowPlaying.itemId, nowPlaying.episodeId)
+        } ?: return
+        player.removeMediaItems(after, player.mediaItemCount)
+    }
+
+    /** Puts [next] after what plays, unless it is queued already: the screen follows a move and asks again. */
+    private fun queueBehind(player: Player, next: NowPlaying, startAt: Double, resolveUrl: (String) -> String?) {
+        val queued = (0 until player.mediaItemCount).any {
+            QueuedFile.of(player.getMediaItemAt(it))?.isFor(next.itemId, next.episodeId) == true
+        }
+        if (queued) return
+        PlaybackQueue.itemsOf(next, resolveUrl, startAt)?.let { player.addMediaItems(it) }
     }
 }

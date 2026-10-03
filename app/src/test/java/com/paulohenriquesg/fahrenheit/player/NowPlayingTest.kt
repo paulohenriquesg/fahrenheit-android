@@ -7,12 +7,16 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import androidx.test.ext.junit.runners.AndroidJUnit4
 
 /**
  * One player for books and episodes (#73). What differs is three things: the
  * line under the title, whether chapter marks are drawn, and which file plays.
  * Frames 4 and 4b of docs/mocks/screens.html.
  */
+// Robolectric: an episode's notes are read through Android's HTML parser.
+@RunWith(AndroidJUnit4::class)
 class NowPlayingTest {
 
     private val day = 24 * 60 * 60 * 1000L
@@ -211,4 +215,42 @@ class NowPlayingTest {
     @Test
     fun `a series of one says no more than Book N`() =
         assertEquals("The Long Way · Book 1", NowPlaying.of(inSeries("1"), episodeId = null, now = now)!!.withSeriesTotal(1).kicker)
+
+    private fun show(vararg episodes: String): LibraryItemResponse = Gson().fromJson(
+        """{"id":"p2","mediaType":"podcast","media":{"metadata":{"title":"A Show","explicit":false},"episodes":[${episodes.joinToString(",")}]}}""",
+        LibraryItemResponse::class.java
+    )
+
+    private fun episodeJson(id: String, publishedAt: Long, extra: String = "") =
+        """{"libraryItemId":"p2","id":"$id","index":1,"title":"Episode $id","publishedAt":$publishedAt,"addedAt":0,"updatedAt":0$extra,
+            "audioTrack":{"index":1,"startOffset":0.0,"duration":1800.0,"title":"t","contentUrl":"/f/$id","mimeType":"audio/mpeg","codec":"mp3",
+              "metadata":{"filename":"a","ext":"mp3","path":"/a","relPath":"a","size":1,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0}}}"""
+
+    @Test
+    fun `an episode says what it is under its title`() {
+        val playing = NowPlaying.of(
+            show(episodeJson("e2", 2_000, ""","season":"2","episode":"295","episodeType":"bonus","subtitle":"A short subtitle"""")),
+            episodeId = "e2", now = now
+        )!!
+        assertEquals("Bonus", playing.badge)
+        assertEquals("Season 2 · Episode 295 · 30 min 0 s", playing.details)
+        assertEquals("A short subtitle", playing.notes)
+    }
+
+    @Test
+    fun `an episode knows the ones either side`() {
+        val playing = NowPlaying.of(show(episodeJson("e1", 1_000), episodeJson("e2", 2_000), episodeJson("e3", 3_000)), episodeId = "e2", now = now)!!
+        assertEquals("e1", playing.previous!!.id)
+        assertEquals(EpisodeRef("e3", "Episode e3", 1800.0), playing.next)
+    }
+
+    @Test
+    fun `a book has none of an episode's extras`() {
+        val playing = NowPlaying.of(book, episodeId = null, now = now)!!
+        assertNull(playing.badge)
+        assertNull(playing.details)
+        assertNull(playing.notes)
+        assertNull(playing.previous)
+        assertNull(playing.next)
+    }
 }

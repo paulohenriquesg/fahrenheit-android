@@ -24,7 +24,15 @@ class BookPlayback(
         player.seekTo(at.trackIndex, (at.positionInTrack * 1000).toLong())
     }
 
-    /** Where playback is, in whole-book time - what progress sync must report. */
-    fun bookPosition(): Double =
-        timeline.bookTime(player.currentMediaItemIndex, player.currentPosition / 1000.0)
+    /**
+     * Where playback is, in whole-book time - what progress sync must report.
+     * Read from the playing item's own [QueuedFile] where it has one: once a
+     * queue has moved on to the next episode (#108), its index is past this
+     * timeline until the screen follows.
+     */
+    fun bookPosition(): Double {
+        val seconds = player.currentPosition / 1000.0
+        QueuedFile.of(player.currentMediaItem)?.let { return it.bookTime(seconds) }
+        return timeline.bookTime(player.currentMediaItemIndex.coerceIn(0, timeline.size - 1), seconds)
+    }
 }

@@ -11,6 +11,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.LaunchedEffect
+import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -88,7 +90,8 @@ class PlayerActivity : ComponentActivity() {
         // comes back, and not after a configuration change recreates it.
         start = PlayerStart(
             autoPlay = autoPlay && savedInstanceState == null,
-            startAt = startAtOf(intent)?.takeIf { savedInstanceState == null }
+            startAt = startAtOf(intent)?.takeIf { savedInstanceState == null },
+            resumed = savedInstanceState != null
         )
 
         setContent {
@@ -127,6 +130,11 @@ class PlayerActivity : ComponentActivity() {
         var failed by remember { mutableStateOf(false) }
         var currentTime by remember { mutableDoubleStateOf(0.0) }
         var wash by remember { mutableStateOf<Color?>(null) }
+        // The item as loaded, and the episode shown: with auto-advance the
+        // queue moves on by itself, and the screen follows it (#108).
+        var loaded by remember { mutableStateOf<LibraryItemResponse?>(null) }
+        var shownEpisode by remember { mutableStateOf(episodeId) }
+        val serverFormat = remember { SharedPreferencesHandler(this@PlayerActivity).getUserPreferences().dateFormat }
 
         LaunchedEffect(itemId, episodeId) {
             // The cover's colour, worked out alongside the item: the screen
@@ -137,7 +145,7 @@ class PlayerActivity : ComponentActivity() {
             val colour = async { washOrNothing { coverWashOf(coverBitmap(this@PlayerActivity, itemId)) } }
             val api = ApiClient.getLibraryApi()
             val item = api?.let { LibraryRepository(it).item(itemId).getOrNull() }
-            val serverFormat = SharedPreferencesHandler(this@PlayerActivity).getUserPreferences().dateFormat
+            loaded = item
             val playing = item?.let { NowPlaying.of(it, episodeId, System.currentTimeMillis(), serverFormat) }
             if (playing != null) {
                 wash = washBeforeShowing(
@@ -152,9 +160,28 @@ class PlayerActivity : ComponentActivity() {
             failed = nowPlaying == null
         }
 
+        // The queue moved on to the next episode: show that one, from the item
+        // already loaded - no request, and no "Loading" in between.
+        // Keyed on the item too: a move made before it loaded is followed once it has.
+        LaunchedEffect(shownEpisode, loaded) {
+            if (shownEpisode == nowPlaying?.episodeId) return@LaunchedEffect
+            val item = loaded ?: return@LaunchedEffect
+            NowPlaying.of(item, shownEpisode, System.currentTimeMillis(), serverFormat)?.let { nowPlaying = it }
+        }
+
         val playing = nowPlaying
         val connected = controller
-        var ready by remember(connected, playing) { mutableStateOf(false) }
+        DisposableEffect(connected) {
+            val follow = object : androidx.media3.common.Player.Listener {
+                override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                    shownEpisode = EpisodeFollow.shown(QueuedFile.of(mediaItem), itemId, shownEpisode)
+                }
+            }
+            connected?.addListener(follow)
+            onDispose { connected?.removeListener(follow) }
+        }
+        // Keyed on the item, not the episode: following a move is not a new start.
+        var ready by remember(connected, playing?.itemId) { mutableStateOf(false) }
         val listening = remember(connected, playing) {
             if (connected == null || playing == null) null
             else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds, connected::sendCustomCommand)
@@ -165,7 +192,27 @@ class PlayerActivity : ComponentActivity() {
             listening?.applyRememberedSpeed()
             // The saved position is read when it is needed, not when the
             // screen opened: by then it may have been listened past elsewhere.
-            ready = start.begin(connected, playing, { savedProgress(itemId, episodeId) }) { ApiClient.generateFullUrl(it) }
+            // Coming back after the queue moved on with the screen closed: show
+            // the episode playing, and begin again with that (#108).
+            start.follows(connected, playing)?.let {
+                shownEpisode = it
+                return@LaunchedEffect
+            }
+            // With auto-advance on, the next newer episode follows this one, from
+            // where it was left (#108).
+            val next = playing.next?.takeIf { playerSettings.playNextEpisode }
+                ?.let { ref -> loaded?.let { NowPlaying.of(it, ref.id, System.currentTimeMillis(), serverFormat) } }
+            val nextStartAt = next?.let {
+                ResumePoint.decide(savedProgress(itemId, it.episodeId), it.trackTotal, it.mediaDuration).positionSeconds
+            } ?: 0.0
+            ready = start.begin(
+                connected,
+                playing,
+                progress = { savedProgress(itemId, playing.episodeId) },
+                resolveUrl = { ApiClient.generateFullUrl(it) },
+                next = next,
+                nextStartAt = nextStartAt
+            )
             if (!ready) failed = true
         }
         // Above the screen's states, so a mark made in this visit survives Home and back.
@@ -220,6 +267,13 @@ class PlayerActivity : ComponentActivity() {
                                 totalTime = timeline.totalDuration,
                                 chapters = playing.chapters,
                                 onCurrentTimeUpdate = { currentTime = it },
+                                // An episode's outer buttons open the episodes either side (#108).
+                                episodes = playing.episodeId?.let {
+                                    EpisodeSkip(
+                                        onPrevious = playing.previous?.let { other -> { goToEpisode(connected, other.id) } },
+                                        onNext = playing.next?.let { other -> { goToEpisode(connected, other.id) } }
+                                    )
+                                },
                                 trailing = {
                                     // Frame C's actions; an episode has Go to podcast where a book has Chapters.
                                     if (playing.goToPodcast) GoToPodcastButton { goToPodcast(itemId) }
@@ -290,6 +344,15 @@ class PlayerActivity : ComponentActivity() {
 
     private fun goToPodcast(podcastId: String) = leaveForPodcast(this, podcastId)
 
+    private val playerSettings by lazy { PlayerSettings(this) }
+
+    /** Previous or Next episode: this one stops, and the other opens, playing (see [switchTo]). */
+    private fun goToEpisode(controller: androidx.media3.common.Player, episodeId: String) {
+        handedOver = true
+        val itemId = intent.getStringExtra(EXTRA_ITEM_ID) ?: return
+        switchTo(this, controller, itemId, episodeId)
+    }
+
     /**
      * Where the listener left off; null starts from the beginning. When the
      * server could not be read that is said, since playing on will save the
@@ -339,14 +402,15 @@ class PlayerActivity : ComponentActivity() {
             if (intent.hasExtra(EXTRA_START_AT)) intent.getDoubleExtra(EXTRA_START_AT, 0.0) else null
 
         /**
-         * About's "Play <title> instead?": this book stops - its closing
+         * About's "Play <title> instead?", or Previous and Next episode
+         * (#108): this book or episode stops - its closing
          * report going to it - before the other opens and plays. The caller
          * must not stop playback again when it closes: by then the other book
          * may already be queued.
          */
-        internal fun switchTo(player: android.app.Activity, controller: androidx.media3.common.Player, itemId: String) {
+        internal fun switchTo(player: android.app.Activity, controller: androidx.media3.common.Player, itemId: String, episodeId: String? = null) {
             Playback.leave(controller, finishing = true)
-            player.startActivity(createIntent(player, itemId, autoPlay = true))
+            player.startActivity(createIntent(player, itemId, episodeId, autoPlay = true))
             player.finish()
         }
 

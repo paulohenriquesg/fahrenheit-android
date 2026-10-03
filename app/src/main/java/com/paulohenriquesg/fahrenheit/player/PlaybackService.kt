@@ -70,6 +70,8 @@ class PlaybackService : MediaSessionService() {
         exo.addListener(reporting)
         val watch = SleepWatch(exo, now = { SystemClock.elapsedRealtime() }, publish = { session?.setSessionExtras(it) })
         exo.addListener(watch)
+        // The next episode starts where it was left, with or without a screen (#108).
+        exo.addListener(ResumeOnArrival(exo))
         sleep = watch
         exo.addListener(object : Player.Listener {
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {

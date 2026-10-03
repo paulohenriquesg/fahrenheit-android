@@ -231,4 +231,26 @@ class PlaybackReportingTest {
 
         assertEquals(1, reports.size)
     }
+
+    // Review (#108): Media3 moves on to the next episode without isPlaying
+    // changing, so the last one was never closed and the next never reported.
+    @Test
+    fun `moving on by itself closes the last episode at its end, and reports the next`() {
+        val hour = TrackTimeline(listOf(TimelineTrack(index = 1, startOffset = 0.0, duration = 3600.0, contentUrl = "/e")))
+        val e1 = nowPlaying("p1", hour, episodeId = "e1")
+        val e2 = nowPlaying("p1", hour, episodeId = "e2")
+        val queue = PlaybackQueue.of(e1, 3595.0, { "https://abs.test$it" }, next = e2)!!
+        guarded.setMediaItems(queue.items, queue.index, queue.positionMs)
+        guarded.prepare()
+        guarded.play()
+        run(player).untilPositionAtLeast(1, 5_000)
+
+        guarded.pause()
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        val first = sent.filter { it.first.episodeId == "e1" }
+        val second = sent.filter { it.first.episodeId == "e2" }
+        assertEquals("e1 closed at its end: $sent", 3600.0, first.single().second, 1.0)
+        assertTrue("e2 reported: $sent", second.isNotEmpty() && second.last().second >= 5.0)
+    }
 }

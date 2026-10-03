@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.main
 
+import com.paulohenriquesg.fahrenheit.player.PlayerSettings
 import android.app.Activity
 import com.paulohenriquesg.fahrenheit.settings.SettingsView
 import com.paulohenriquesg.fahrenheit.settings.UpdateCheck
@@ -229,6 +230,7 @@ fun MainScreen(
 
     var updateCheck by remember { mutableStateOf<UpdateCheck>(UpdateCheck.Idle) }
     var deviceName by remember { mutableStateOf(PlaybackDevice.name(context)) }
+    var playNextEpisode by remember { mutableStateOf(PlayerSettings(context).playNextEpisode) }
 
     // Back walks up a level: content -> rail -> Home -> out (#125).
     var railHasFocus by remember { mutableStateOf(false) }
@@ -414,6 +416,11 @@ fun MainScreen(
                         onDeviceName = {
                             PlaybackDevice.setName(context, it)
                             deviceName = PlaybackDevice.name(context)
+                        },
+                        playNextEpisode = playNextEpisode,
+                        onPlayNextEpisode = {
+                            PlayerSettings(context).playNextEpisode = it
+                            playNextEpisode = it
                         }
                     )
                     MainView.SWITCH_LIBRARY -> SwitchLibraryView(

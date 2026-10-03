@@ -21,6 +21,13 @@
     <string name="time_left">%1$s left</string>
     <string name="previous_chapter">Previous chapter</string>
     <string name="next_chapter">Next chapter</string>
+    <string name="previous_episode">Previous episode</string>
+    <string name="next_episode">Next episode</string>
+    <string name="up_next">Up next · %1$s · %2$s</string>
+    <string name="up_next_title">Up next · %1$s</string>
+    <string name="settings_playback">Playback</string>
+    <string name="play_next_episode">Play the next episode automatically</string>
+    <string name="play_next_episode_subtitle">When an episode ends, the next newer one plays</string>
     <string name="time_left_of">%1$s left of %2$s</string>
     <string name="time_left_at">%1$s left at %2$s</string>
     <string name="time_left_of_at">%1$s left of %2$s at %3$s</string>

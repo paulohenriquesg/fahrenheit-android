@@ -20,18 +20,44 @@ object PlaybackQueue {
      * @param startAt where to begin, in whole-book seconds.
      * @param resolveUrl a track's server path to a full URL; null when there is
      *   no server to resolve against.
+     * @param next an episode to play after this one (#108), queued as itself.
      * @return null when there is nothing to play.
      */
-    fun of(nowPlaying: NowPlaying, startAt: Double, resolveUrl: (String) -> String?): QueueStart? {
+    fun of(
+        nowPlaying: NowPlaying,
+        startAt: Double,
+        resolveUrl: (String) -> String?,
+        next: NowPlaying?,
+        nextStartAt: Double = 0.0
+    ): QueueStart? {
         val timeline = nowPlaying.timeline ?: return null
-        val items = (0 until timeline.size).map { index ->
+        val items = itemsOf(nowPlaying, resolveUrl) ?: return null
+        val after = next?.let { itemsOf(it, resolveUrl, nextStartAt) }.orEmpty()
+        val at = timeline.locate(startAt)
+        return QueueStart(items + after, at.trackIndex, (at.positionInTrack * 1000).toLong())
+    }
+
+    /** As above, with nothing after it. An overload, not a default: callers pass [resolveUrl] as a trailing lambda. */
+    fun of(nowPlaying: NowPlaying, startAt: Double, resolveUrl: (String) -> String?): QueueStart? =
+        of(nowPlaying, startAt, resolveUrl, next = null)
+
+    /**
+     * One item per file of [nowPlaying], each carrying its own [QueuedFile];
+     * null when there is nothing to play.
+     *
+     * @param startAt where to start when playback moves on to it by itself (see [ResumeOnArrival]).
+     */
+    fun itemsOf(nowPlaying: NowPlaying, resolveUrl: (String) -> String?, startAt: Double = 0.0): List<MediaItem>? {
+        val timeline = nowPlaying.timeline ?: return null
+        return (0 until timeline.size).map { index ->
             val track = timeline.track(index)
             val url = resolveUrl(track.contentUrl) ?: return null
             val file = QueuedFile(
                 itemId = nowPlaying.itemId,
                 episodeId = nowPlaying.episodeId,
                 startOffset = track.startOffset,
-                bookTotal = timeline.totalDuration
+                bookTotal = timeline.totalDuration,
+                startAt = startAt
             )
             MediaItem.Builder()
                 .setMediaId("${nowPlaying.itemId}/${nowPlaying.episodeId.orEmpty()}/$index")
@@ -45,7 +71,5 @@ object PlaybackQueue {
                 .setMediaMetadata(MediaMetadata.Builder().setTitle(nowPlaying.title).build())
                 .build()
         }
-        val at = timeline.locate(startAt)
-        return QueueStart(items, at.trackIndex, (at.positionInTrack * 1000).toLong())
     }
 }

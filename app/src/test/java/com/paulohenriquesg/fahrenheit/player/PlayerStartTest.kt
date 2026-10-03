@@ -176,4 +176,70 @@ class PlayerStartTest {
         assertEquals(0, player.currentMediaItemIndex)
         assertEquals(5_000L, player.currentPosition)
     }
+
+    private fun episodeIn(id: String) =
+        NowPlaying("p1", id, TrackTimeline(listOf(TimelineTrack(1, 0.0, 1800.0, "/$id"))), null, null, id, true, null)
+
+    @Test
+    fun `with a next episode, it is queued after the one asked for`() {
+        runBlocking { PlayerStart(autoPlay = false).begin(player, episodeIn("e1"), { null }, resolve, next = episodeIn("e2")) }
+
+        assertEquals(2, player.mediaItemCount)
+        assertEquals(QueuedFile("p1", "e2", 0.0, 1800.0), QueuedFile.of(player.getMediaItemAt(1)))
+    }
+
+    // The screen followed a move to e2: it reattaches, and queues e3 behind it, once.
+    @Test
+    fun `reattaching queues the next episode behind, once`() {
+        runBlocking { PlayerStart(autoPlay = false).begin(player, episodeIn("e2"), { null }, resolve) }
+        player.seekTo(0, 5_000L)
+
+        val start = PlayerStart(autoPlay = false)
+        runBlocking { start.begin(player, episodeIn("e2"), { null }, resolve, next = episodeIn("e3")) }
+        runBlocking { start.begin(player, episodeIn("e2"), { null }, resolve, next = episodeIn("e3")) }
+
+        assertEquals(2, player.mediaItemCount)
+        assertEquals(5_000L, player.currentPosition)
+        assertEquals(QueuedFile("p1", "e3", 0.0, 1800.0), QueuedFile.of(player.getMediaItemAt(1)))
+    }
+
+    // #108: the screen followed a move from e1 to e2; e1 has played, and e2
+    // should be first again so the screen's timeline maps onto the queue.
+    @Test
+    fun `reattaching after a move drops what has already played`() {
+        val queue = PlaybackQueue.of(episodeIn("e1"), 0.0, next = episodeIn("e2"), resolveUrl = resolve)!!
+        player.setMediaItems(queue.items, 1, 5_000L)
+
+        runBlocking { PlayerStart(autoPlay = false).begin(player, episodeIn("e2"), { null }, resolve) }
+
+        assertEquals(1, player.mediaItemCount)
+        assertEquals(0, player.currentMediaItemIndex)
+        assertEquals(5_000L, player.currentPosition)
+        assertEquals(QueuedFile("p1", "e2", 0.0, 1800.0), QueuedFile.of(player.currentMediaItem))
+    }
+
+    // Review (#108): the screen came back after a move made with it closed,
+    // and put the old episode back over the one playing.
+    @Test
+    fun `a screen coming back after a move follows it rather than replacing it`() {
+        val start = PlayerStart(autoPlay = false)
+        runBlocking { start.begin(player, episodeIn("e1"), { null }, resolve, next = episodeIn("e2")) }
+        player.seekTo(1, 5_000L)
+
+        assertEquals("e2", start.follows(player, episodeIn("e1")))
+        // A fresh open of e1 is the listener asking for e1: it replaces.
+        assertEquals(null, PlayerStart(autoPlay = false).follows(player, episodeIn("e1")))
+        // Recreated (a configuration change) is not a fresh open.
+        assertEquals("e2", PlayerStart(autoPlay = false, resumed = true).follows(player, episodeIn("e1")))
+    }
+
+    // Review (#108): turning the setting off left the next episode queued.
+    @Test
+    fun `with the setting off, a queued next episode is dropped on reattaching`() {
+        runBlocking { PlayerStart(autoPlay = false).begin(player, episodeIn("e1"), { null }, resolve, next = episodeIn("e2")) }
+
+        runBlocking { PlayerStart(autoPlay = false).begin(player, episodeIn("e1"), { null }, resolve, next = null) }
+
+        assertEquals(1, player.mediaItemCount)
+    }
 }

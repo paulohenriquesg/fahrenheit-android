@@ -68,6 +68,7 @@ fun MediaPlayerController(
     totalTime: Double,
     chapters: List<Chapter>? = null,
     onCurrentTimeUpdate: (Double) -> Unit = {},
+    episodes: EpisodeSkip? = null,
     trailing: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {}
 ) {
     var isPlaying by remember(player) { mutableStateOf(player.playWhenReady) }
@@ -189,6 +190,17 @@ fun MediaPlayerController(
                 ) {
                     Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.previous_chapter))
                 }
+            } else if (episodes != null) {
+                // An episode's outer buttons go to the episodes either side (#108).
+                TransportButton(
+                    onClick = { episodes.onPrevious?.invoke() },
+                    size = 48.dp,
+                    container = TvMaterialTheme.colorScheme.secondaryContainer,
+                    content = TvMaterialTheme.colorScheme.onSecondaryContainer,
+                    enabled = episodes.onPrevious != null
+                ) {
+                    Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.previous_episode))
+                }
             }
             TransportButton(
                 onClick = { seekTo(PlaybackPosition.skip(playback.bookPosition(), -SKIP_SECONDS, totalTime)) },
@@ -237,6 +249,16 @@ fun MediaPlayerController(
                 ) {
                     Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.next_chapter))
                 }
+            } else if (episodes != null) {
+                TransportButton(
+                    onClick = { episodes.onNext?.invoke() },
+                    size = 48.dp,
+                    container = TvMaterialTheme.colorScheme.secondaryContainer,
+                    content = TvMaterialTheme.colorScheme.onSecondaryContainer,
+                    enabled = episodes.onNext != null
+                ) {
+                    Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.next_episode))
+                }
             }
             Spacer(Modifier.weight(1f))
             trailing()
@@ -260,6 +282,12 @@ fun rememberPlaybackSpeed(player: Player): Float {
     }
     return speed
 }
+
+/**
+ * An episode's previous and next episode (#108), for the transport's outer
+ * buttons; a null one is the oldest or newest, and its button is off.
+ */
+data class EpisodeSkip(val onPrevious: (() -> Unit)?, val onNext: (() -> Unit)?)
 
 /** A line of times under a bar: what has passed on the left, what is left on the right. */
 @Composable
@@ -292,10 +320,12 @@ private fun TransportButton(
     container: androidx.compose.ui.graphics.Color,
     content: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     icon: @Composable () -> Unit
 ) {
     TvIconButton(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier.size(size),
         scale = TvIconButtonDefaults.scale(focusedScale = 1f),
         colors = TvIconButtonDefaults.colors(
