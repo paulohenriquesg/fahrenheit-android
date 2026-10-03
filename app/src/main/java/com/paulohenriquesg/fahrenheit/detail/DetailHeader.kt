@@ -3,6 +3,10 @@
 package com.paulohenriquesg.fahrenheit.detail
 
 import androidx.compose.foundation.BorderStroke
+import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -57,6 +61,12 @@ import com.paulohenriquesg.fahrenheit.podcast.Fact
 import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
+import com.paulohenriquesg.fahrenheit.player.ActionChip
+import com.paulohenriquesg.fahrenheit.player.ChapterSpan
+import com.paulohenriquesg.fahrenheit.player.ChaptersChip
+import com.paulohenriquesg.fahrenheit.player.ChaptersPanel
+import com.paulohenriquesg.fahrenheit.player.PlayerPanelHost
+import com.paulohenriquesg.fahrenheit.player.rememberPlayerPanels
 import com.paulohenriquesg.fahrenheit.utils.RichText
 
 const val PRIMARY_ACTION_TAG = "detail_primary_action"
@@ -67,17 +77,51 @@ const val DETAIL_SCROLL_TAG = "detail_scroll"
  * A book's screen: the header with the whole description, scrolling when the
  * description is longer than the screen. The room under the button is free on
  * a book, unlike a podcast, where the episodes follow.
+ *
+ * Beside Resume (#105, frame 3): Mark finished, when [finished] is known, and
+ * Chapters, when there are any - the player's own panel, opening on the
+ * chapter at [at]; choosing one calls [onChapter] with its start.
  */
 @Composable
-fun BookDetailView(itemId: String, content: DetailHeaderContent, onPrimary: () -> Unit) {
+fun BookDetailView(
+    itemId: String,
+    content: DetailHeaderContent,
+    onPrimary: () -> Unit,
+    chapters: List<ChapterSpan> = emptyList(),
+    at: Double = 0.0,
+    onChapter: (Double) -> Unit = {},
+    finished: Boolean? = null,
+    onMarkFinished: (Boolean) -> Unit = {}
+) {
     val scroll = rememberScrollState()
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scroll)
-            .testTag(DETAIL_SCROLL_TAG)
-    ) {
-        DetailHeader(itemId = itemId, content = content, onPrimary = onPrimary, fullDescription = scroll)
+    val panels = rememberPlayerPanels()
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scroll)
+                .testTag(DETAIL_SCROLL_TAG)
+        ) {
+            DetailHeader(
+                itemId = itemId,
+                content = content,
+                onPrimary = onPrimary,
+                fullDescription = scroll,
+                actions = {
+                    finished?.let { done ->
+                        ActionChip(
+                            text = stringResource(if (done) R.string.mark_unfinished else R.string.mark_finished),
+                            onClick = { onMarkFinished(!done) },
+                            icon = Icons.Filled.Check
+                        )
+                    }
+                    if (chapters.isNotEmpty()) ChaptersChip(panels)
+                }
+            )
+        }
+        PlayerPanelHost(panels) {
+            ChaptersPanel(chapters, at, onChoose = onChapter, onClose = panels::close)
+        }
     }
 }
 
