@@ -45,6 +45,7 @@ import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.ui.Border
 import com.paulohenriquesg.fahrenheit.ui.Radius
 import com.paulohenriquesg.fahrenheit.ui.Space
+import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 import com.paulohenriquesg.fahrenheit.ui.components.ScreenTitle
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemePreference
 
@@ -174,9 +175,22 @@ private fun updateLine(update: UpdateCheck, version: String): String = when (upd
 @Composable
 private fun DeviceNameRow(name: String, onRename: (String) -> Unit) {
     var editing by remember { mutableStateOf(false) }
+    // The field and Save leave the screen while one of them holds focus, so
+    // focus is handed back to Rename rather than left to land on the rail.
+    var returnFocus by remember { mutableStateOf(false) }
     if (!editing) {
+        val rename = remember { FocusRequester() }
+        LaunchedEffect(returnFocus) {
+            if (returnFocus) {
+                rename.requestFocusWhenAttached()
+                returnFocus = false
+            }
+        }
         SettingRow(title = stringResource(R.string.settings_device_name), subtitle = name) {
-            Button(onClick = { editing = true }, modifier = Modifier.testTag("device_name_rename")) {
+            Button(
+                onClick = { editing = true },
+                modifier = Modifier.focusRequester(rename).testTag("device_name_rename")
+            ) {
                 Text(stringResource(R.string.settings_device_name_rename))
             }
         }
@@ -188,6 +202,7 @@ private fun DeviceNameRow(name: String, onRename: (String) -> Unit) {
     val save = {
         onRename(draft.text)
         editing = false
+        returnFocus = true
     }
     LaunchedEffect(Unit) { field.requestFocus() }
     SettingRow(
@@ -207,7 +222,9 @@ private fun DeviceNameRow(name: String, onRename: (String) -> Unit) {
                     .focusRequester(field)
                     .testTag("device_name_field"),
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { save() })
+                // Done is asked for, but the Fire TV keyboard labels the key "Next";
+                // either one saves.
+                keyboardActions = KeyboardActions(onDone = { save() }, onNext = { save() })
             )
             Button(onClick = save, modifier = Modifier.testTag("device_name_save")) {
                 Text(stringResource(R.string.settings_device_name_save))

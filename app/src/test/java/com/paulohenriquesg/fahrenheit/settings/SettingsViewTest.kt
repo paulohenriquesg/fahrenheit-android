@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -207,5 +208,69 @@ class SettingsViewTest {
         compose.onNodeWithTag("device_name_field").assert(
             androidx.compose.ui.test.hasText("Kitchen")
         )
+    }
+
+    // On the stick, saving dropped focus on the rail's Home item: the field and
+    // Save left the screen while focused, and focus went wherever it could.
+    @Test
+    fun `after the keyboard saves, focus is back on Rename`() {
+        render()
+
+        press("device_name_rename")
+        compose.onNodeWithTag("device_name_field").performTextReplacement("Bedroom TV")
+        compose.onNodeWithTag("device_name_field").performImeAction()
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("device_name_rename").assertIsFocused()
+    }
+
+    @Test
+    fun `after Save, focus is back on Rename`() {
+        render()
+
+        press("device_name_rename")
+        press("device_name_save")
+
+        compose.onNodeWithTag("device_name_rename").assertIsFocused()
+    }
+
+    // What the app asks the keyboard for, read where the keyboard reads it.
+    @Test
+    fun `the name field asks the keyboard for Done`() {
+        render()
+        press("device_name_rename")
+
+        var action = -1
+        compose.runOnUiThread {
+            val view = compose.activity.findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
+            val editorView = generateSequence(view) { (it as? android.view.ViewGroup)?.getChildAt(0) }
+                .first { it.onCheckIsTextEditor() }
+            val info = android.view.inputmethod.EditorInfo()
+            editorView.onCreateInputConnection(info)
+            action = info.imeOptions and android.view.inputmethod.EditorInfo.IME_MASK_ACTION
+        }
+
+        assertEquals(android.view.inputmethod.EditorInfo.IME_ACTION_DONE, action)
+    }
+
+    // The Fire TV keyboard labels its action key "Next" even when Done is asked
+    // for; whatever it sends, the name is saved rather than focus wandering off.
+    @Test
+    fun `the keyboard's Next key saves the name as well`() {
+        var named: String? = null
+        render(onDeviceName = { named = it })
+
+        press("device_name_rename")
+        compose.onNodeWithTag("device_name_field").performTextReplacement("Hall TV")
+        compose.runOnUiThread {
+            val view = compose.activity.findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
+            val editorView = generateSequence(view) { (it as? android.view.ViewGroup)?.getChildAt(0) }
+                .first { it.onCheckIsTextEditor() }
+            editorView.onCreateInputConnection(android.view.inputmethod.EditorInfo())!!
+                .performEditorAction(android.view.inputmethod.EditorInfo.IME_ACTION_NEXT)
+        }
+        compose.waitForIdle()
+
+        assertEquals("Hall TV", named)
     }
 }
