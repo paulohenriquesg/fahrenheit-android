@@ -38,7 +38,15 @@ import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.utils.RichText
-import com.paulohenriquesg.fahrenheit.stats.shortDuration
+import com.paulohenriquesg.fahrenheit.player.PlaybackPosition
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import com.paulohenriquesg.fahrenheit.ui.CardFocus
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -58,7 +66,13 @@ import androidx.compose.foundation.layout.Spacer
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun LatestEpisodesView(libraryId: String) {
+fun LatestEpisodesView(
+    libraryId: String,
+    load: suspend (String) -> Result<List<RecentPodcastEpisode>> = { id ->
+        ApiClient.getBrowseApi()?.let { BrowseRepository(it).recentEpisodes(id) }
+            ?: Result.failure(IllegalStateException("not signed in"))
+    }
+) {
     val context = LocalContext.current
     var episodes by remember { mutableStateOf<List<RecentPodcastEpisode>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -83,14 +97,7 @@ fun LatestEpisodesView(libraryId: String) {
     }
 
     LaunchedEffect(libraryId) {
-        val api = ApiClient.getBrowseApi()
-        if (api == null) {
-            loadFailed = true
-            isLoading = false
-            return@LaunchedEffect
-        }
-
-        BrowseRepository(api).recentEpisodes(libraryId)
+        load(libraryId)
             .onSuccess { episodes = it; loadFailed = false }
             // Without this the screen said "no recent episodes found" whether
             // the library was empty or the response could not be read at all.
@@ -132,14 +139,27 @@ fun LatestEpisodesView(libraryId: String) {
                     )
                 }
             } else if (episodes.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                // The server lists only unfinished episodes, so an empty list is
+                // usually a listener who is up to date (#109): not an error, and
+                // "No recent episodes found" read like one.
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = Space.readingH),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = stringResource(R.string.no_recent_episodes_found),
+                        text = stringResource(R.string.latest_caught_up),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(Space.inset))
+                    Text(
+                        text = stringResource(R.string.latest_caught_up_why),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
                     )
                 }
             } else {
@@ -220,11 +240,22 @@ fun EpisodeCard(
             // The podcast's cover: a list of recent episodes is a list of
             // different podcasts, and the cover is what tells them apart at a
             // glance. Episodes have no art of their own on the server yet.
-            CoverImage(
-                itemId = episode.libraryItemId,
-                contentDescription = EpisodeRowDisplay.coverDescription(episode),
-                size = 88.dp
-            )
+            val inProgress = progress as? EpisodeProgress.InProgress
+            // How far in rides along the bottom of the art, where the eye
+            // already is (#109), as on Home's covers.
+            Box {
+                CoverImage(
+                    itemId = episode.libraryItemId,
+                    contentDescription = EpisodeRowDisplay.coverDescription(episode),
+                    size = 88.dp
+                )
+                if (inProgress != null) {
+                    ArtProgress(
+                        fraction = inProgress.fraction.toFloat(),
+                        modifier = Modifier.align(Alignment.BottomStart).width(88.dp)
+                    )
+                }
+            }
 
             Column(
                 modifier = Modifier
@@ -238,21 +269,34 @@ fun EpisodeCard(
                     isFocused = isFocused,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2
+                    // One line, so the description fits beneath in the fixed
+                    // height; the marquee shows the rest on focus.
+                    maxLines = 1
                 )
 
                 // Podcast name, and when the episode came out: without a date
                 // a new episode looked exactly like one from March.
                 val published = EpisodeRowDisplay.published(episode, serverFormat = serverDateFormat)
-                val inProgress = progress as? EpisodeProgress.InProgress
+                val isNew = EpisodeRowDisplay.isNew(episode, progress, System.currentTimeMillis())
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    when {
+                        inProgress != null -> Chip(
+                            stringResource(R.string.episode_percent_in, EpisodeRowDisplay.percentIn(inProgress)),
+                            filled = false
+                        )
+                        isNew -> Chip(stringResource(R.string.episode_new), filled = true)
+                    }
                     Text(
                         text = listOfNotNull(
                             episode.podcast?.metadata?.title?.takeIf { it.isNotBlank() },
                             published.takeIf { it.isNotBlank() },
-                            episode.duration?.takeIf { it > 0 }?.let { shortDuration(it) },
-                            // The same format as the length beside it.
-                            inProgress?.let { "${shortDuration(it.secondsLeft)} left" }
+                            // Once started, what is left matters more than the
+                            // length; both without seconds from ten minutes on.
+                            if (inProgress != null) {
+                                stringResource(R.string.time_left, EpisodeRowDisplay.length(inProgress.secondsLeft))
+                            } else {
+                                episode.duration?.takeIf { it > 0 }?.let { EpisodeRowDisplay.length(it) }
+                            }
                         ).joinToString("  ·  "),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -278,23 +322,57 @@ fun EpisodeCard(
                     }
                 }
 
-                if (inProgress != null) {
-                    ProgressBar(inProgress.fraction)
-                } else {
-                    // Episode description; the bar takes its place on a
-                    // half-heard episode, as the card's height is fixed.
-                    episode.description?.let { desc ->
-                        Text(
-                            text = RichText.fromHtml(desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                episode.description?.let { desc ->
+                    Text(
+                        text = RichText.fromHtml(desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
+    }
+}
+
+/** A short label ahead of the row's facts: New, filled; how far in, outlined. */
+@Composable
+private fun Chip(text: String, filled: Boolean) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = if (filled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        modifier = Modifier
+            .then(
+                if (filled) {
+                    Modifier.background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50))
+                } else {
+                    Modifier.border(BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant), RoundedCornerShape(50))
+                }
+            )
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    )
+    Spacer(Modifier.width(8.dp))
+}
+
+/** The bar along the bottom of an episode's art: a dark track, filled in primary. */
+@Composable
+private fun ArtProgress(fraction: Float, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .height(4.dp)
+            .background(Color.Black.copy(alpha = 0.55f))
+            .testTag(EpisodeCardTags.PROGRESS)
+            .semantics { progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f) }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                .background(MaterialTheme.colorScheme.primary)
+        )
     }
 }
 
@@ -304,3 +382,7 @@ fun EpisodeCard(
  */
 fun latestEpisodeIntent(context: Context, episode: RecentPodcastEpisode): Intent =
     PlayerActivity.createIntent(context, episode.libraryItemId, episode.id, autoPlay = true)
+
+object EpisodeCardTags {
+    const val PROGRESS = "episode-progress"
+}
