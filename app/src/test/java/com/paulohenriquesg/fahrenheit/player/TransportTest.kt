@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -62,11 +64,20 @@ class TransportTest {
     @After
     fun tearDown() = player.release()
 
-    private fun show(player: ExoPlayer, timeline: TrackTimeline = twoParts, chapters: List<Chapter>? = null) {
+    private fun show(
+        player: ExoPlayer,
+        timeline: TrackTimeline = twoParts,
+        chapters: List<Chapter>? = null,
+        onPlay: () -> Unit = { player.play() },
+        focusPlayAgain: () -> Int = { 0 }
+    ) {
         this.player = player
         compose.setContent {
             FahrenheitTheme {
-                MediaPlayerController(player = player, playback = BookPlayback(player, timeline), totalTime = timeline.totalDuration, chapters = chapters)
+                MediaPlayerController(
+                    player = player, playback = BookPlayback(player, timeline), totalTime = timeline.totalDuration,
+                    chapters = chapters, onPlay = onPlay, focusPlayAgain = focusPlayAgain()
+                )
             }
         }
         compose.waitForIdle()
@@ -91,6 +102,45 @@ class TransportTest {
 
         compose.onNodeWithContentDescription("Pause").performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
+        assertFalse(player.playWhenReady)
+    }
+
+    // #90: Play from a pause asks first whether to continue from elsewhere.
+    @Test
+    fun `play from a pause goes through onPlay`() {
+        var asked = 0
+        show(queuedAt(0.0), onPlay = { asked++ })
+
+        compose.onNodeWithContentDescription("Play").performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+
+        assertEquals(1, asked)
+        assertFalse(player.playWhenReady)
+    }
+
+    // After the question closes, its focused button is gone; Play takes focus.
+    @Test
+    fun `asked to, Play takes focus again`() {
+        var again by androidx.compose.runtime.mutableIntStateOf(0)
+        show(queuedAt(0.0), focusPlayAgain = { again })
+        compose.onNodeWithContentDescription(compose.activity.getString(com.paulohenriquesg.fahrenheit.R.string.skip_forward_seconds, 30))
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+
+        again++
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Play").assertIsFocused()
+    }
+
+    @Test
+    fun `pausing does not go through onPlay`() {
+        var asked = 0
+        show(queuedAt(0.0).apply { play() }, onPlay = { asked++ })
+
+        compose.onNodeWithContentDescription("Pause").performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+
+        assertEquals(0, asked)
         assertFalse(player.playWhenReady)
     }
 
