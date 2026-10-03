@@ -33,6 +33,15 @@ object DetailHeaderModel {
             .replace(Regex("""\s+"""), " ")
             .trim()
 
+    /** How far in: "34% in", "Just started" or "Finished"; null when not started (#134: also a fact on the book screen). */
+    fun progressOf(item: LibraryItemResponse): String? {
+        val progress = item.userMediaProgress
+        if (progress?.isFinished == true) return "Finished"
+        progress?.currentTime?.takeIf { it > 0 } ?: return null
+        val percent = ((progress.progress ?: return null) * 100).roundToInt()
+        return if (percent < 1) "Just started" else "$percent% in"
+    }
+
     fun book(item: LibraryItemResponse): DetailHeaderContent {
         val metadata = item.media.metadata
         val progress = item.userMediaProgress
@@ -53,14 +62,7 @@ object DetailHeaderModel {
                 item.media.duration?.takeIf { it > 0 }?.let { Fact(formatDuration(it)) },
                 metadata.publishedYear?.takeIf { it.isNotBlank() }?.let { Fact(it) },
                 metadata.genres?.firstOrNull()?.let { Fact(it) },
-                when {
-                    finished -> Fact("Finished")
-                    resumeAt != null -> progress.progress?.let {
-                        val percent = (it * 100).roundToInt()
-                        Fact(if (percent < 1) "Just started" else "$percent% in")
-                    }
-                    else -> null
-                }
+                progressOf(item)?.let { Fact(it) }
             ),
             // Says where it resumes, rather than a bare "Play".
             // Under a minute in, a position would read "0m".

@@ -240,17 +240,12 @@ class PlayerActivity : ComponentActivity() {
                                     onChoose = { playback?.seekToBookTime(it) },
                                     onClose = panels::close
                                 )
-                                PlayerPanel.About -> AboutPanel(
-                                    description = playing.description,
-                                    facts = playing.facts,
-                                    series = series,
-                                    finished = finished,
-                                    onPlayInstead = { other ->
+                                PlayerPanel.About -> {
+                                    val playInstead: (SeriesBook) -> Unit = { other ->
                                         handedOver = true
                                         switchTo(this@PlayerActivity, connected, other.itemId)
-                                    },
-                                    marking = marking,
-                                    onMarkFinished = { done ->
+                                    }
+                                    val mark: (Boolean) -> Unit = { done ->
                                         // The service marks it, once the closing report is in (FinishMarker).
                                         marking = true
                                         listening?.markFinished(done) { worked ->
@@ -258,9 +253,21 @@ class PlayerActivity : ComponentActivity() {
                                             if (worked) finished = done
                                             else Toast.makeText(this@PlayerActivity, getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
                                         }
-                                    },
-                                    onClose = panels::close
-                                )
+                                    }
+                                    // A book's About is the one book layout over the wash (#134); an
+                                    // episode keeps the panel until podcast screens are designed.
+                                    if (playing.episodeId == null) {
+                                        AboutScreen(
+                                            nowPlaying = playing, wash = wash, series = series, finished = finished, marking = marking,
+                                            onPlayInstead = playInstead, onMarkFinished = mark, onClose = panels::close
+                                        )
+                                    } else {
+                                        AboutPanel(
+                                            description = playing.description, facts = playing.facts, series = series, finished = finished,
+                                            marking = marking, onPlayInstead = playInstead, onMarkFinished = mark, onClose = panels::close
+                                        )
+                                    }
+                                }
                                 PlayerPanel.Speed -> SpeedPanel(
                                     current = rememberPlaybackSpeed(connected),
                                     onChoose = { listening?.chooseSpeed(it) },
