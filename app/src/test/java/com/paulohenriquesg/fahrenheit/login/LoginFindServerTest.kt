@@ -5,6 +5,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -23,6 +25,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * Frame 1 of the login mock (#101): on first run the screen lists the
@@ -32,6 +35,8 @@ import org.robolectric.annotation.Config
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp")
+// Real text metrics: the keyboard check is about heights.
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LoginFindServerTest {
 
     @get:Rule
@@ -142,5 +147,47 @@ class LoginFindServerTest {
             val bottom = compose.onNodeWithTag(tag).getUnclippedBoundsInRoot().bottom
             assertTrue("$tag ends at $bottom", bottom <= keyboardTop)
         }
+    }
+
+    // Each step change removes what held focus; the new step takes it, or the
+    // remote does nothing visible on a TV.
+    @Test
+    fun `choosing a server puts focus on the username`() {
+        show(FoundServer("http://10.0.0.2:13378", null))
+
+        press("login_server_10.0.0.2:13378")
+
+        compose.onNodeWithTag("login_username_field").assertIsFocused()
+    }
+
+    @Test
+    fun `entering an address instead puts focus on the address`() {
+        show()
+
+        press("login_manual_address")
+
+        compose.onNodeWithTag("login_host_field").assertIsFocused()
+    }
+
+    @Test
+    fun `back on the list after a different server, focus is on the first server`() {
+        show(FoundServer("http://10.0.0.2:13378", null))
+        press("login_server_10.0.0.2:13378")
+
+        press("login_different_server")
+
+        compose.onNodeWithTag("login_server_10.0.0.2:13378").assertIsFocused()
+    }
+
+    @Test
+    fun `with nothing found, focus goes to entering an address`() {
+        show()
+        press("login_manual_address")
+        compose.onNodeWithTag("login_host_field").performTextInput("http://10.0.0.2:13378")
+        press("login_continue")
+
+        press("login_different_server")
+
+        compose.onNodeWithTag("login_manual_address").assertIsFocused()
     }
 }

@@ -165,9 +165,16 @@ fun LoginScreen(
     // So the step that appears takes focus: its first field.
     val hostFocus = remember { FocusRequester() }
     val firstFieldFocus = remember { FocusRequester() }
+    // The server list's first row: the first server found, or typing one.
+    val listFocus = remember { FocusRequester() }
     var stepChanged by remember { mutableStateOf(false) }
-    LaunchedEffect(addressConfirmed) {
-        if (stepChanged) (if (addressConfirmed) firstFieldFocus else hostFocus).requestFocus()
+    val step = when {
+        addressConfirmed -> firstFieldFocus
+        listing -> listFocus
+        else -> hostFocus
+    }
+    LaunchedEffect(step) {
+        if (stepChanged) step.requestFocus()
     }
 
     // Checked here, before asking for anything else: nothing is sent yet.
@@ -232,7 +239,7 @@ fun LoginScreen(
             ErrorAbove(LoginField.Host)
             // In address order: probes answer in any order, and a list that
             // reshuffles under the cursor is worse than a predictable one.
-            found.sortedBy { addressOrder(it.address) }.forEach { server ->
+            found.sortedBy { addressOrder(it.address) }.forEachIndexed { index, server ->
                 ServerRow(
                     title = displayHost(server.address),
                     detail = server.version?.let { stringResource(R.string.login_server_version, it) }
@@ -241,17 +248,26 @@ fun LoginScreen(
                     onClick = {
                         host = server.address
                         addressError = null
+                        onDismissError()
+                        stepChanged = true
                         addressConfirmed = true
                     },
-                    modifier = Modifier.testTag("login_server_${displayHost(server.address)}")
+                    modifier = Modifier
+                        .then(if (index == 0) Modifier.focusRequester(listFocus) else Modifier)
+                        .testTag("login_server_${displayHost(server.address)}")
                 )
             }
             ServerRow(
                 title = stringResource(R.string.login_manual_address),
                 detail = stringResource(R.string.login_manual_address_detail),
                 icon = Icons.Filled.Edit,
-                onClick = { manualAddress = true },
-                modifier = Modifier.testTag("login_manual_address")
+                onClick = {
+                    stepChanged = true
+                    manualAddress = true
+                },
+                modifier = Modifier
+                    .then(if (found.isEmpty()) Modifier.focusRequester(listFocus) else Modifier)
+                    .testTag("login_manual_address")
             )
             return@Column
         }
@@ -308,7 +324,10 @@ fun LoginScreen(
                 if (findServers != null) {
                     LoginButton(
                         text = stringResource(R.string.login_search_again),
-                        onClick = { manualAddress = false },
+                        onClick = {
+                            stepChanged = true
+                            manualAddress = false
+                        },
                         modifier = Modifier.testTag("login_search_again")
                     )
                 }
