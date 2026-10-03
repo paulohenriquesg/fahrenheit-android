@@ -7,6 +7,7 @@ import kotlin.math.abs
  * A question worth asking (#90): this player is at [here], and the server
  * holds [there], heard elsewhere at [listenedAt] (the server's clock, ms).
  */
+/** An item's latest listening session: who wrote it, and when (server clock, ms). */
 data class LatestSession(val deviceId: String, val updatedAt: Long)
 
 data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long) {
@@ -20,6 +21,9 @@ data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long
         /** For the TV's clock against the server's: room for them to disagree. */
         private const val CLOCK_MARGIN_MS = 60_000L
 
+        /** A sync writes its session and the progress together, a moment apart. */
+        private const val SESSION_SLACK_MS = 10_000L
+
         /**
          * Whether to ask, and about what.
          *
@@ -31,8 +35,8 @@ data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long
          *
          * @param known what this player last knew of the server's copy; null
          *   when it never did, which counts the server's as newer.
-         * @param latestDevice the device behind the item's latest listening
-         *   session; null when the sessions could not be read, which asks.
+         * @param latestSession the item's latest listening session; null when
+         *   the sessions could not be read, which asks.
          */
         fun of(
             here: Double,
@@ -47,9 +51,18 @@ data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long
             val listenedAt = server.lastUpdate ?: return null
             if (!writtenSince(known, there, listenedAt)) return null
             if (abs(there - here) <= THRESHOLD_SECONDS) return null
-            if (latestSession?.deviceId == thisDevice) return null
+            if (writtenHere(latestSession, thisDevice, listenedAt)) return null
             return ResumeOffer(here, there, listenedAt)
         }
+
+        /**
+         * Whether this device wrote the server's copy: its session is the
+         * latest, and as recent as the copy. Progress written without a
+         * session - a web-UI edit, an app using the plain PATCH - leaves this
+         * TV's older session the latest, and is someone else's (#144).
+         */
+        private fun writtenHere(latest: LatestSession?, thisDevice: String, listenedAt: Long): Boolean =
+            latest != null && latest.deviceId == thisDevice && latest.updatedAt >= listenedAt - SESSION_SLACK_MS
 
         /**
          * Whether the server's copy was written after what this player knows

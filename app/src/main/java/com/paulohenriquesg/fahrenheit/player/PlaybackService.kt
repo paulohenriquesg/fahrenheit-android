@@ -7,6 +7,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import android.content.Intent
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -100,8 +101,43 @@ class PlaybackService : MediaSessionService() {
             if (episodeId != null) api.markFinished(itemId, episodeId, mark) else api.markFinished(itemId, mark)
         }
         session = MediaSession.Builder(this, guarded)
-            .setCallback(PlaybackSessionCallback(onFinish = { args -> markFinished(marker, args) }, onSleep = ::setSleep))
+            .setCallback(
+                PlaybackSessionCallback(
+                    onFinish = { args -> markFinished(marker, args) },
+                    onSleep = ::setSleep,
+                    ownPackage = packageName,
+                    outsidePlay = { checkOutsidePlay(exo) }
+                )
+            )
             .build()
+    }
+
+    /**
+     * Holds a Play from outside the app and checks it as the player screen
+     * would (#144); false when nothing of ours is queued, so it plays as it is.
+     */
+    private fun checkOutsidePlay(player: Player): Boolean {
+        val file = QueuedFile.of(player.currentMediaItem) ?: return false
+        val check = ResumeCheck(
+            progress = ResumeSources::progress,
+            latestSession = ResumeSources::latestSession,
+            thisDevice = PlaybackDevice.info(this).deviceId.orEmpty()
+        )
+        OutsidePlay(
+            scope = scope,
+            check = { check.offer(file.itemId, file.episodeId, file.bookTime(player.currentPosition / 1000.0), playing = false) },
+            play = { player.play() },
+            openPlayer = {
+                AppVisibility.process.visible.also { visible ->
+                    if (visible) {
+                        startActivity(
+                            PlayerActivity.createIntent(this, file.itemId, file.episodeId).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                }
+            }
+        ).request()
+        return true
     }
 
     /** Mark finished or unfinished; the answer comes once the server has it. */
@@ -186,6 +222,14 @@ internal class PlaybackSessionCallback(
             )
         }
         return Futures.immediateFuture(accepted.build())
+    }
+
+    // Play from anything but this app - the remote on Home, the system - is
+    // held and checked first (#144); the player screen checks its own (#142).
+    override fun onPlayerCommandRequest(session: MediaSession, controller: MediaSession.ControllerInfo, playerCommand: Int): Int {
+        val play = playerCommand == Player.COMMAND_PLAY_PAUSE && !session.player.playWhenReady
+        if (play && controller.packageName != ownPackage && outsidePlay()) return SessionResult.RESULT_INFO_SKIPPED
+        return super.onPlayerCommandRequest(session, controller, playerCommand)
     }
 
     @OptIn(UnstableApi::class) // ControllerInfo.isTrusted

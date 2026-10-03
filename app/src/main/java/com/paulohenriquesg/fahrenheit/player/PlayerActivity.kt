@@ -195,8 +195,8 @@ class PlayerActivity : ComponentActivity() {
         var focusPlayAgain by remember { mutableIntStateOf(0) }
         val resumeCheck = remember {
             ResumeCheck(
-                progress = ::progressQuietly,
-                latestSession = ::latestSession,
+                progress = ResumeSources::progress,
+                latestSession = ResumeSources::latestSession,
                 thisDevice = PlaybackDevice.info(this).deviceId.orEmpty()
             )
         }
@@ -419,23 +419,6 @@ class PlayerActivity : ComponentActivity() {
 
     private fun isPlayKey(keyCode: Int) =
         keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
-
-    /** The server's progress, or null - quietly: the check is a question, not a load (#90). */
-    private suspend fun progressQuietly(itemId: String, episodeId: String?): MediaProgressResponse? {
-        val api = ApiClient.getApiService() ?: return null
-        val saved = SavedProgress.read(episodeId) {
-            val call = if (episodeId != null) api.userGetMediaProgress(itemId, episodeId) else api.userGetMediaProgress(itemId)
-            call.awaitResponse()
-        }
-        return (saved as? SavedProgress.Found)?.progress
-    }
-
-    /** The device behind the item's latest listening session; null when it cannot be read. */
-    private suspend fun latestSession(itemId: String, episodeId: String?): LatestSession? {
-        val api = ApiClient.getApiService() ?: return null
-        val call = if (episodeId != null) api.itemListeningSessions(itemId, episodeId) else api.itemListeningSessions(itemId)
-        return runCatching { call.awaitResponse().body()?.latest() }.getOrNull()
-    }
 
     private fun goToPodcast(podcastId: String) = leaveForPodcast(this, podcastId)
 

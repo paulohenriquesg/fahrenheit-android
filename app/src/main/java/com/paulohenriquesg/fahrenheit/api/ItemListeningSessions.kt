@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.api
 
 import com.google.gson.annotations.SerializedName
+import com.paulohenriquesg.fahrenheit.player.LatestSession
 
 /**
  * One item's listening sessions (`api/me/item/listening-sessions`). Progress
@@ -9,11 +10,12 @@ import com.google.gson.annotations.SerializedName
 data class ItemListeningSessions(
     @SerializedName("sessions") val sessions: List<ItemSession>? = null
 ) {
-    /** The device behind the most recently updated session, if it says. */
-    fun latest(): com.paulohenriquesg.fahrenheit.player.LatestSession? = null
-
-    fun latestDeviceId(): String? =
-        sessions.orEmpty().maxByOrNull { it.updatedAt ?: 0L }?.deviceInfo?.deviceId
+    /** The most recently updated session, when it says which device wrote it, and when. */
+    fun latest(): LatestSession? {
+        val newest = sessions.orEmpty().maxByOrNull { it.updatedAt ?: 0L } ?: return null
+        val device = newest.deviceInfo?.deviceId ?: return null
+        return LatestSession(device, newest.updatedAt ?: return null)
+    }
 }
 
 data class ItemSession(

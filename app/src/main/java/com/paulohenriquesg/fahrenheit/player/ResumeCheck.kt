@@ -7,7 +7,7 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
  * far as needed: the sessions are read only when everything else says ask.
  *
  * @param progress the server's progress for an item; null when unreadable.
- * @param latestDevice the device behind its latest listening session.
+ * @param latestSession its latest listening session.
  * @param thisDevice this install's device id ([PlaybackDevice]).
  */
 class ResumeCheck(
