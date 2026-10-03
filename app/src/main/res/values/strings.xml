@@ -26,6 +26,17 @@
     <string name="time_left_of_at">%1$s left of %2$s at %3$s</string>
     <string name="chapters">Chapters</string>
     <string name="chapter_number">Chapter %1$d</string>
+    <string name="about">About</string>
+    <string name="about_series">The series</string>
+    <string name="play_instead">Play %1$s instead?</string>
+    <string name="play">Play</string>
+    <string name="mark_finished">Mark finished</string>
+    <string name="mark_unfinished">Mark unfinished</string>
+    <string name="fact_read_by">Read by</string>
+    <string name="fact_publisher">Publisher</string>
+    <string name="fact_published">Published</string>
+    <string name="fact_length">Length</string>
+    <string name="fact_genres">Genres</string>
     <string name="speed">Speed</string>
     <string name="speed_chip">Speed %1$s</string>
     <string name="speed_note_book">Remembered for this book. The time left in the book counts at this speed.</string>

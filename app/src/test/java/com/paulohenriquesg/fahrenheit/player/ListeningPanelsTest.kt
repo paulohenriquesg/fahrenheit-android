@@ -59,6 +59,7 @@ class ListeningPanelsTest {
                     PlayerPanelHost(panels) { panel ->
                         when (panel) {
                             PlayerPanel.Chapters -> Unit
+                            PlayerPanel.About -> Unit
                             PlayerPanel.Speed -> SpeedPanel(speed, onChoose = { speed = it }, onClose = panels::close)
                             PlayerPanel.Sleep -> SleepPanel(sleep, chapters, onChoose = { chosen += it }, onClose = panels::close)
                         }

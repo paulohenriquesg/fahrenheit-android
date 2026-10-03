@@ -204,6 +204,7 @@ class PlayerActivity : ComponentActivity() {
                         when (panel) {
                             // No chip opens it yet: wired with About (step 4, Task 5).
                             PlayerPanel.Chapters -> Unit
+                            PlayerPanel.About -> Unit
                             PlayerPanel.Speed -> SpeedPanel(
                                 current = rememberPlaybackSpeed(connected),
                                 onChoose = { listening?.chooseSpeed(it) },
