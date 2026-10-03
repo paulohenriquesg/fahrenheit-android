@@ -10,7 +10,8 @@ import org.junit.Test
 
 /** The colour behind the player, taken from its cover (#107). */
 class CoverWashTest {
-    private val onSurface = Color(0xFFE6E1E5)
+    // The dark theme's text colours, as Theme.kt defines them.
+    private val onSurface = Color(0xFFFFFFFF)
     private val onSurfaceVariant = Color(0xFFCAC4D0)
 
     private fun contrast(a: Color, b: Color): Double {
@@ -45,5 +46,15 @@ class CoverWashTest {
     @Test fun `toning keeps the hue`() {
         val wash = CoverWash.tone(Color(0xFF3060E0).toArgb())
         assertTrue("still blue: $wash", wash.blue > wash.red && wash.blue > wash.green)
+    }
+
+    // Review: HSV saturation is high for dark near-greys, so a warm grey or
+    // sepia passed as "colourful" and gave a muddy brown.
+    @Test fun `a dark warm grey gives no wash`() = assertNull(CoverWash.pick(listOf(Color(0xFF2A2520).toArgb())))
+
+    // Review: in the light theme the text is dark, and the wash only darkens.
+    @Test fun `the wash belongs to the dark theme only`() {
+        assertTrue(CoverWash.appliesOn(Color(0xFF121212)))
+        assertTrue(!CoverWash.appliesOn(Color(0xFFFFFBFE)))
     }
 }

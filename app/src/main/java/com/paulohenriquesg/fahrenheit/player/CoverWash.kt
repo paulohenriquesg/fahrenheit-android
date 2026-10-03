@@ -21,10 +21,15 @@ object CoverWash {
      * the lighter onSurface and primary read too.
      */
     private val TEXT = Color(0xFFCAC4D0)
-    private const val MIN_SATURATION = 0.18f
+    /**
+     * How far apart a colour's strongest and weakest channels must be to count
+     * as a colour. Chroma, not saturation: saturation is high for dark
+     * near-greys, which let a warm grey through as a muddy brown.
+     */
+    private const val MIN_CHROMA = 0.12f
 
     fun pick(candidates: List<Int?>): Color? =
-        candidates.filterNotNull().firstOrNull { saturation(it) >= MIN_SATURATION }?.let(::tone)
+        candidates.filterNotNull().firstOrNull { chroma(it) >= MIN_CHROMA }?.let(::tone)
 
     fun tone(argb: Int): Color {
         var colour = Color(argb).copy(alpha = 1f)
@@ -41,10 +46,15 @@ object CoverWash {
         return (max(la, lb) / min(la, lb)).toDouble()
     }
 
-    private fun saturation(argb: Int): Float {
+    private fun chroma(argb: Int): Float {
         val c = Color(argb)
-        val hi = maxOf(c.red, c.green, c.blue)
-        val lo = minOf(c.red, c.green, c.blue)
-        return if (hi == 0f) 0f else (hi - lo) / hi
+        return maxOf(c.red, c.green, c.blue) - minOf(c.red, c.green, c.blue)
     }
+
+    /**
+     * Whether a wash belongs on this background. It is made for the dark
+     * theme's light text and only ever darkens; under the light theme's dark
+     * text it would be a dark blob, so there it is left out.
+     */
+    fun appliesOn(background: Color): Boolean = background.luminance() < 0.5f
 }

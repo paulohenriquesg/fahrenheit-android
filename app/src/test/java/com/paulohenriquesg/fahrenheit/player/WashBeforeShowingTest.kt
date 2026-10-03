@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -18,7 +20,7 @@ class WashBeforeShowingTest {
     fun `a colour ready in time is there when the screen shows`() = runBlocking {
         val late = mutableListOf<Color?>()
 
-        val early = washBeforeShowing(waitMs = 500, compute = { delay(10); green }, late = { late += it })
+        val early = washBeforeShowing(waitMs = 500, colour = async { delay(10); green }, late = { late += it })
 
         assertEquals(green, early)
         assertEquals(emptyList<Color?>(), late)
@@ -28,7 +30,7 @@ class WashBeforeShowingTest {
     fun `a slow colour does not hold the screen up, and arrives after`() = runBlocking {
         val late = mutableListOf<Color?>()
 
-        val early = washBeforeShowing(waitMs = 50, compute = { delay(300); green }, late = { late += it })
+        val early = washBeforeShowing(waitMs = 50, colour = async { delay(300); green }, late = { late += it })
 
         assertNull(early)
         delay(500)
@@ -39,9 +41,34 @@ class WashBeforeShowingTest {
     fun `a cover without colour shows at once with none`() = runBlocking {
         val late = mutableListOf<Color?>()
 
-        val early = washBeforeShowing(waitMs = 500, compute = { null }, late = { late += it })
+        val early = washBeforeShowing(waitMs = 500, colour = async { null }, late = { late += it })
 
         assertNull(early)
         assertEquals(emptyList<Color?>(), late)
+    }
+
+    // Review: a colour that finished just as the wait ran out was dropped.
+    @Test
+    fun `a colour that is ready when the wait runs out is used`() = runBlocking {
+        val early = washBeforeShowing(waitMs = 0, colour = CompletableDeferred(green), late = {})
+
+        assertEquals(green, early)
+    }
+
+    // Review: started before the item loads, the wait is what is left of the budget.
+    @Test
+    fun `the wait is only what is left of the budget`() = runBlocking {
+        val started = System.currentTimeMillis()
+
+        washBeforeShowing(waitMs = -10, colour = async { delay(1_000); green }, late = {})
+
+        assertEquals(true, System.currentTimeMillis() - started < 500)
+    }
+
+    // Review: an unexpected failure while reading the colour would have
+    // cancelled the player's loading and crashed it.
+    @Test
+    fun `a colour that fails is no colour`() = runBlocking {
+        assertNull(washOrNothing { throw IllegalStateException("bad bitmap") })
     }
 }

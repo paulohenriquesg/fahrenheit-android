@@ -63,7 +63,11 @@ fun PlayerScreen(
 
     val background = MaterialTheme.colorScheme.background
     // A colour that arrives after the screen showed fades in, not jumps in.
-    val shown by animateColorAsState(wash ?: background, animationSpec = tween(700), label = "wash")
+    val shown by animateColorAsState(
+        wash?.takeIf { CoverWash.appliesOn(background) } ?: background,
+        animationSpec = tween(700),
+        label = "wash"
+    )
     // The cover's colour behind it, fading into the background (frame C).
     val washed = Modifier.drawWithCache {
         val glow = Brush.radialGradient(

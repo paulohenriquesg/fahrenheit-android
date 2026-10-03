@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.player
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,6 +33,7 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import kotlinx.coroutines.async
 import retrofit2.awaitResponse
 
 /**
@@ -111,19 +113,26 @@ class PlayerActivity : ComponentActivity() {
         var wash by remember { mutableStateOf<Color?>(null) }
 
         LaunchedEffect(itemId, episodeId) {
+            // The cover's colour, worked out alongside the item: the screen
+            // waits for it so it does not open black and then change, but
+            // only for what is left of WASH_WAIT_MS once the item is here, so
+            // it does not delay playing either. A slow one fades in later.
+            val started = SystemClock.elapsedRealtime()
+            val colour = async { washOrNothing { coverWashOf(coverBitmap(this@PlayerActivity, itemId)) } }
             val api = ApiClient.getLibraryApi()
             val item = api?.let { LibraryRepository(it).item(itemId).getOrNull() }
             val serverFormat = SharedPreferencesHandler(this@PlayerActivity).getUserPreferences().dateFormat
-            // The cover's colour before the screen shows, so it does not open
-            // black and then change; a slow cover is faded in afterwards.
-            if (item != null) {
+            val playing = item?.let { NowPlaying.of(it, episodeId, System.currentTimeMillis(), serverFormat) }
+            if (playing != null) {
                 wash = washBeforeShowing(
-                    waitMs = WASH_WAIT_MS,
-                    compute = { coverWashOf(coverBitmap(this@PlayerActivity, itemId)) },
+                    waitMs = WASH_WAIT_MS - (SystemClock.elapsedRealtime() - started),
+                    colour = colour,
                     late = { wash = it }
                 )
+            } else {
+                colour.cancel()
             }
-            nowPlaying = item?.let { NowPlaying.of(it, episodeId, System.currentTimeMillis(), serverFormat) }
+            nowPlaying = playing
             failed = nowPlaying == null
         }
 

@@ -2,7 +2,8 @@ package com.paulohenriquesg.fahrenheit.player
 
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -17,12 +18,25 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 suspend fun CoroutineScope.washBeforeShowing(
     waitMs: Long,
-    compute: suspend () -> Color?,
+    colour: Deferred<Color?>,
     late: (Color?) -> Unit
 ): Color? {
-    val colour = async { compute() }
     val early = withTimeoutOrNull(waitMs) { colour.await() }
-    if (early != null || colour.isCompleted) return early
+    // Finished just as the wait ran out: still in time.
+    if (early != null || colour.isCompleted) return early ?: colour.await()
     launch { late(colour.await()) }
     return null
+}
+
+/**
+ * The colour, or none if working it out failed: a cover is decoration, and a
+ * bad one must not take the player down with it. Leaving the screen still
+ * cancels it.
+ */
+suspend fun washOrNothing(compute: suspend () -> Color?): Color? = try {
+    compute()
+} catch (e: CancellationException) {
+    throw e
+} catch (e: Exception) {
+    null
 }
