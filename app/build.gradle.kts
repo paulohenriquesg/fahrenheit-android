@@ -165,6 +165,7 @@ dependencies {
 
     // handle cards
     implementation(libs.coil.compose)
+    implementation(libs.androidx.palette)
 
     // handle markdown rendering
     implementation(libs.commonmark)

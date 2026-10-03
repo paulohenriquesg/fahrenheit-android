@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.player
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -31,6 +33,7 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import kotlinx.coroutines.async
 import retrofit2.awaitResponse
 
 /**
@@ -107,12 +110,29 @@ class PlayerActivity : ComponentActivity() {
         var nowPlaying by remember { mutableStateOf<NowPlaying?>(null) }
         var failed by remember { mutableStateOf(false) }
         var currentTime by remember { mutableDoubleStateOf(0.0) }
+        var wash by remember { mutableStateOf<Color?>(null) }
 
         LaunchedEffect(itemId, episodeId) {
+            // The cover's colour, worked out alongside the item: the screen
+            // waits for it so it does not open black and then change, but
+            // only for what is left of WASH_WAIT_MS once the item is here, so
+            // it does not delay playing either. A slow one fades in later.
+            val started = SystemClock.elapsedRealtime()
+            val colour = async { washOrNothing { coverWashOf(coverBitmap(this@PlayerActivity, itemId)) } }
             val api = ApiClient.getLibraryApi()
             val item = api?.let { LibraryRepository(it).item(itemId).getOrNull() }
             val serverFormat = SharedPreferencesHandler(this@PlayerActivity).getUserPreferences().dateFormat
-            nowPlaying = item?.let { NowPlaying.of(it, episodeId, System.currentTimeMillis(), serverFormat) }
+            val playing = item?.let { NowPlaying.of(it, episodeId, System.currentTimeMillis(), serverFormat) }
+            if (playing != null) {
+                wash = washBeforeShowing(
+                    waitMs = WASH_WAIT_MS - (SystemClock.elapsedRealtime() - started),
+                    colour = colour,
+                    late = { wash = it }
+                )
+            } else {
+                colour.cancel()
+            }
+            nowPlaying = playing
             failed = nowPlaying == null
         }
 
@@ -140,6 +160,7 @@ class PlayerActivity : ComponentActivity() {
             else -> PlayerScreen(
                 nowPlaying = playing,
                 currentTime = currentTime,
+                wash = wash,
                 transport = {
                     // ready implies a timeline: PlayerStart refuses a NowPlaying without one.
                     val timeline = playing.timeline
@@ -180,6 +201,9 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val EXTRA_ITEM_ID = "item_id"
+
+        /** How long the player waits for its cover's colour before it shows anyway. */
+        private const val WASH_WAIT_MS = 1_500L
         private const val EXTRA_EPISODE_ID = "episode_id"
         private const val EXTRA_AUTO_PLAY = "auto_play"
 

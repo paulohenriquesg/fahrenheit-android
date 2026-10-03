@@ -1,5 +1,6 @@
 [versions]
 media3 = "1.11.1"
+palette = "1.0.0"
 agp = "9.4.1"
 coilCompose = "2.7.0"
 commonmark = "0.30.0"
@@ -45,6 +46,7 @@ androidx-tv-foundation = { group = "androidx.tv", name = "tv-foundation", versio
 androidx-tv-material = { group = "androidx.tv", name = "tv-material", version.ref = "tvMaterial" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-palette = { module = "androidx.palette:palette-ktx", version.ref = "palette" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
