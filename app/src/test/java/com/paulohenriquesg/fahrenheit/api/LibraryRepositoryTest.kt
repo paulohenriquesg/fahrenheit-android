@@ -56,6 +56,10 @@ class LibraryRepositoryTest {
             lastLibraryId = libraryId
             return stats?.invoke() ?: error("no stats configured")
         }
+
+        override suspend fun markFinished(itemId: String, body: FinishedRequest) = error("not used")
+
+        override suspend fun markFinished(itemId: String, episodeId: String, body: FinishedRequest) = error("not used")
     }
 
     @Test
