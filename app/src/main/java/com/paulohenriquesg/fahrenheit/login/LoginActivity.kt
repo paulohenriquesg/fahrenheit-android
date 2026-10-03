@@ -50,7 +50,8 @@ class LoginActivity : ComponentActivity() {
                     LoginScreen(
                         loginHandler::handleLogin,
                         loginHandler::handleApiKeyLogin,
-                        error = loginHandler.error.value
+                        error = loginHandler.error.value,
+                        onDismissError = loginHandler::clearError
                     )
                 }
             }

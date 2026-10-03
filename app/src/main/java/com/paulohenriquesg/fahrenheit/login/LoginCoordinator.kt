@@ -82,12 +82,6 @@ class LoginCoordinator(
         return complete(host, LoginError.ApiKeyRejected) { performApiKeyLogin(host, key) }
     }
 
-    private fun hostProblem(host: String): LoginError? = when {
-        host.isBlank() -> LoginError.HostMissing
-        !host.startsWith("http://") && !host.startsWith("https://") -> LoginError.HostScheme
-        else -> null
-    }
-
     /** @param rejected what a 401/403 means for the credential just sent. */
     private suspend fun complete(
         host: String,
@@ -114,5 +108,14 @@ class LoginCoordinator(
         }
 
         return LoginOutcome.Success
+    }
+
+    companion object {
+        /** What is wrong with an address before anything is sent to it, if anything. */
+        fun hostProblem(host: String): LoginError? = when {
+            host.isBlank() -> LoginError.HostMissing
+            !host.startsWith("http://") && !host.startsWith("https://") -> LoginError.HostScheme
+            else -> null
+        }
     }
 }

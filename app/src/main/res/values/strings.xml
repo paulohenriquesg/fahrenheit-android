@@ -46,14 +46,15 @@
     <string name="loading_episodes">Loading episodes…</string>
     <string name="loading_series">Loading series…</string>
     <string name="loading_stats">Loading stats…</string>
-    <string name="login">Login</string>
     <string name="login_welcome_back">Welcome back</string>
+    <string name="login_where_is_library">Where is your library?</string>
+    <string name="login_address_hint">The address of your Audiobookshelf server, starting with http:// or https://</string>
+    <string name="login_continue">Continue</string>
+    <string name="login_sign_in_to">Sign in to %1$s</string>
     <string name="login_sign_in">Sign in</string>
     <string name="login_signing_in">Signing in…</string>
     <string name="login_use_api_key">Use an API key</string>
     <string name="login_use_password">Use a password</string>
-    <string name="login_use_api_key_instead">Sign in with an API key instead</string>
-    <string name="login_use_username_instead">Use username and password instead</string>
     <string name="login_different_server">Different server</string>
     <string name="login_error_host_missing">Enter the server address first.</string>
     <string name="login_error_host_scheme">Start the address with http:// or https://.</string>
@@ -61,6 +62,8 @@
     <string name="login_error_api_key_missing">Enter an API key first.</string>
     <string name="login_error_password_rejected">That username and password were not accepted. Check the password and try again.</string>
     <string name="login_error_api_key_rejected">That API key was not accepted. Check it, or create a new one in the web UI.</string>
+    <string name="login_error_unreachable_change">The server did not answer. Check that it is running, or choose Different server to change the address.</string>
+    <string name="login_error_unusable_session_change">Signed in, but the server address could not be used. Choose Different server to change it.</string>
     <string name="login_error_unreachable">The server did not answer. Check the address, and that the server is running.</string>
     <string name="login_error_server">The server could not sign you in (error %1$d). Try again in a moment.</string>
     <string name="login_error_unexpected">Signing in did not work. Try again.</string>
