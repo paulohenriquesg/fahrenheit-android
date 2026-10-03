@@ -3,8 +3,11 @@ package com.paulohenriquesg.fahrenheit.player
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.junit.runner.RunWith
+import androidx.test.ext.junit.runners.AndroidJUnit4
 
 /** What an episode says about itself under its title (#108; frame "C, playing an episode"). */
+@RunWith(AndroidJUnit4::class)
 class EpisodeDetailsTest {
 
     @Test fun `a bonus or a trailer is badged, a regular episode is not`() {
@@ -34,4 +37,11 @@ class EpisodeDetailsTest {
 
     @Test fun `no subtitle and no description, no notes`() =
         assertNull(EpisodeDetails.notes(subtitle = null, description = "<p> </p>"))
+
+    // Review (#108): feeds are full of numeric entities and list markup.
+    @Test fun `entities and list items read as text`() =
+        assertEquals(
+            "It’s here — part one. Part two.",
+            EpisodeDetails.notes(subtitle = null, description = "<ul><li>It&#8217;s here &mdash; part one.</li><li>Part two.</li></ul>")
+        )
 }

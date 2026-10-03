@@ -96,4 +96,12 @@ class PlaybackQueueTest {
         assertEquals(QueuedFile("p1", "e2", 0.0, 1500.0), QueuedFile.of(queue.items[1]))
         assertEquals("https://abs.test/e2", queue.items[1].localConfiguration?.uri.toString())
     }
+
+    // Review (#108), Ruling 4: an episode moved on to starts where it was left.
+    @Test
+    fun `the next episode carries where to start it`() {
+        val e2 = NowPlaying("p1", "e2", TrackTimeline(listOf(TimelineTrack(1, 0.0, 1500.0, "/e2"))), null, null, "e2", true, null)
+        val items = PlaybackQueue.itemsOf(e2, resolve, startAt = 600.0)!!
+        assertEquals(600.0, QueuedFile.of(items.single())!!.startAt, 0.0)
+    }
 }
