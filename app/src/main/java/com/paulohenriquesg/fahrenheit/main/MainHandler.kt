@@ -5,6 +5,7 @@ import android.widget.Toast
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
+import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.api.Shelf
 
 /**
@@ -28,6 +29,13 @@ class MainHandler(private val context: Context) {
 
     suspend fun fetchPersonalizedView(libraryId: String): List<Shelf> =
         fetch("Failed to load personalized view") { it.personalizedShelves(libraryId) }
+
+    /**
+     * Everything the user has started, for the covers on Home (#104). Throws
+     * when unreadable; the covers then go without, so there is no toast.
+     */
+    suspend fun fetchProgress(): List<MediaProgressResponse> =
+        ApiClient.getPodcastApi()?.me()?.mediaProgress.orEmpty()
 
     private suspend fun <T> fetch(
         failureMessage: String,

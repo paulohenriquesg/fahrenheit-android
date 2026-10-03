@@ -4,7 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,6 +24,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
@@ -29,12 +37,14 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
+import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
+import com.paulohenriquesg.fahrenheit.player.PlaybackPosition
 import com.paulohenriquesg.fahrenheit.ui.CardFocus
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
+fun LibraryItemCard(item: LibraryItem, progress: CoverProgress.Started? = null, onClick: (LibraryItem) -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
 
     Box(
@@ -71,6 +81,12 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
                         itemId = item.id,
                         contentDescription = item.media.metadata.title
                     )
+                    if (progress != null) {
+                        CoverProgressBar(
+                            fraction = progress.fraction,
+                            modifier = Modifier.align(Alignment.BottomStart)
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -81,13 +97,23 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
                 )
-                LibraryItemDisplay.episodeCount(item)?.let { count ->
+                // One line under the title, so every card keeps its height: how
+                // long is left once started (#104), else the podcast's count
+                // (#75), else the author.
+                val episodeCount = LibraryItemDisplay.episodeCount(item)
+                val secondLine = when {
+                    progress != null -> stringResource(R.string.time_left, PlaybackPosition.spoken(progress.secondsLeft))
+                    episodeCount != null -> episodeCount
+                    else -> LibraryItemDisplay.author(item)
+                }
+                if (secondLine != null) {
                     Text(
-                        text = count,
+                        text = secondLine,
                         style = MaterialTheme.typography.bodyMedium,
                         // The warning colour of the feed facts on the podcast's screen.
-                        color = if (dimmed) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
+                        color = if (dimmed && progress == null) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -115,5 +141,29 @@ fun LibraryItemCard(item: LibraryItem, onClick: (LibraryItem) -> Unit) {
     }
 }
 
+/** The mock's bar along the bottom of the art: a dark track, filled in primary. */
+@Composable
+private fun CoverProgressBar(fraction: Float, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(5.dp)
+            .background(Color.Black.copy(alpha = 0.55f))
+            .testTag(LibraryItemCardTags.PROGRESS)
+            .semantics { progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f) }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(fraction)
+                .background(MaterialTheme.colorScheme.primary)
+        )
+    }
+}
+
 /** How far an empty podcast's cover fades on the grid (#75). */
 private const val DIMMED_ALPHA = 0.45f
+
+object LibraryItemCardTags {
+    const val PROGRESS = "cover-progress"
+}

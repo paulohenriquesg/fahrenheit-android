@@ -71,7 +71,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     MainScreen(
                         mainHandler::fetchLibraryItems,
-                        mainHandler::fetchPersonalizedView
+                        mainHandler::fetchPersonalizedView,
+                        mainHandler::fetchProgress
                     )
                 }
             }

@@ -55,4 +55,18 @@ object LibraryItemDisplay {
      */
     fun dimmed(item: LibraryItem): Boolean =
         item.mediaType == "podcast" && item.recentEpisode == null && item.media.numEpisodes == 0
+
+    /**
+     * Who wrote it, or who makes the podcast: the line under the title when
+     * there is no time left to show (#104). Shelves send the server's own
+     * summary in authorName; a full record sends the list.
+     */
+    fun author(item: LibraryItem): String? {
+        val metadata = item.media.metadata
+        return listOf(
+            metadata.authorName,
+            metadata.authors?.joinToString(", ") { it.name },
+            metadata.author
+        ).firstOrNull { !it.isNullOrBlank() }
+    }
 }
