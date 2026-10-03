@@ -454,4 +454,19 @@ class ShelfDeserializerTest {
 
         assertNull(shelf.total)
     }
+
+    // Review (#130): the Continue Series shelf names each book's series as one
+    // object, as the series filter does; the whole home screen failed on it.
+    @Test
+    fun `a continue-series shelf whose books name their series as one object still reads`() {
+        val json = """
+            {"id":"continue-series","label":"Continue Series","labelStringKey":"LabelContinueSeries","type":"book","total":1,
+             "entities":[{"id":"book-1","mediaType":"book","media":{"numTracks":1,
+               "metadata":{"title":"The Second","explicit":false,"series":{"id":"s1","name":"A Long Saga","sequence":"2"}}}}]}
+        """.trimIndent()
+
+        val shelf = gson.fromJson(json, Shelf::class.java)
+
+        assertEquals("A Long Saga", shelf.bookEntities!!.single().media.metadata.series!!.single().name)
+    }
 }
