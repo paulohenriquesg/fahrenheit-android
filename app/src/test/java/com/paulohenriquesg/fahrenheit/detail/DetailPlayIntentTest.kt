@@ -14,8 +14,9 @@ import org.robolectric.RobolectricTestRunner
  * to open the player paused - a second press of Play to hear anything (#122).
  * Home's podcast shelves already asked the player to start; these now do too.
  *
- * Only the intent is checked: building the real PlayerActivity here would
- * leave state behind that breaks later Compose tests.
+ * Only the intents are checked, not the screen's calls to them: building the
+ * real PlayerActivity here would leave state behind that breaks later Compose
+ * tests. The screen must keep calling these rather than createIntent.
  */
 @RunWith(RobolectricTestRunner::class)
 class DetailPlayIntentTest {
@@ -24,7 +25,7 @@ class DetailPlayIntentTest {
 
     @Test
     fun `a book's Play starts playing`() {
-        val intent = DetailActivity.playBook(context, "b1")
+        val intent = DetailActivity.playBookIntent(context, "b1")
 
         assertEquals(PlayerActivity::class.java.name, intent.component?.className)
         assertEquals("b1", intent.getStringExtra("item_id"))
@@ -33,7 +34,7 @@ class DetailPlayIntentTest {
 
     @Test
     fun `an episode chosen on a podcast's screen starts playing`() {
-        val intent = DetailActivity.playEpisode(context, "p1", "e1")
+        val intent = DetailActivity.playEpisodeIntent(context, "p1", "e1")
 
         assertEquals(PlayerActivity::class.java.name, intent.component?.className)
         assertEquals("p1", intent.getStringExtra("item_id"))
