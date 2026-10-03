@@ -1,6 +1,15 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.tv.material3.Text
+import com.paulohenriquesg.fahrenheit.R
+import com.paulohenriquesg.fahrenheit.api.Chapter
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -51,11 +60,11 @@ class TransportTest {
     @After
     fun tearDown() = player.release()
 
-    private fun show(player: ExoPlayer, timeline: TrackTimeline = twoParts) {
+    private fun show(player: ExoPlayer, timeline: TrackTimeline = twoParts, chapters: List<Chapter>? = null) {
         this.player = player
         compose.setContent {
             FahrenheitTheme {
-                MediaPlayerController(player = player, playback = BookPlayback(player, timeline), totalTime = timeline.totalDuration)
+                MediaPlayerController(player = player, playback = BookPlayback(player, timeline), totalTime = timeline.totalDuration, chapters = chapters)
             }
         }
         compose.waitForIdle()
@@ -64,7 +73,7 @@ class TransportTest {
     /** Queued but not prepared: an unprepared player keeps the position it is given, exactly. */
     private fun queuedAt(startAt: Double): ExoPlayer {
         val p = TestExoPlayerBuilder(compose.activity).setMediaSourceFactory(hourLongFiles()).build()
-        val nowPlaying = NowPlaying("b1", "t", twoParts, null, null, null, false, null) { "" }
+        val nowPlaying = NowPlaying("b1", "t", twoParts, null, null, null, false, null)
         val queue = PlaybackQueue.of(nowPlaying, startAt) { "https://abs.test$it" }!!
         p.setMediaItems(queue.items, queue.index, queue.positionMs)
         return p
@@ -132,5 +141,123 @@ class TransportTest {
         assertEquals(1, player.currentMediaItemIndex)
         assertEquals(300_000L, player.currentPosition)
         assertTrue(player.playbackState != Player.STATE_IDLE)
+    }
+
+    private val chapters = listOf(
+        Chapter(start = 0.0, end = 1800.0, title = "One"),
+        Chapter(start = 1800.0, end = 3600.0, title = "Two"),
+        Chapter(start = 3600.0, end = 5400.0, title = "Three")
+    )
+
+    private fun press(description: String) =
+        compose.onNodeWithContentDescription(description).performSemanticsAction(SemanticsActions.OnClick)
+
+    @Test
+    fun `with chapters, the first bar is the chapter and the second the book`() {
+        show(queuedAt(3900.0), chapters = chapters)
+
+        compose.onNodeWithText("5 min 0 s").assertIsDisplayed()
+        compose.onNodeWithText("25 min 0 s left in chapter").assertIsDisplayed()
+        compose.onNodeWithText("1 h 5 min of 1 h 30 min").assertIsDisplayed()
+        compose.onNodeWithText("25 min 0 s left").assertIsDisplayed()
+    }
+
+    @Test
+    fun `next chapter goes to the next chapter's start`() {
+        show(queuedAt(1900.0), chapters = chapters)
+
+        press(compose.activity.getString(R.string.next_chapter))
+        compose.waitForIdle()
+
+        assertEquals(1, player.currentMediaItemIndex)
+        assertEquals(0L, player.currentPosition)
+    }
+
+    @Test
+    fun `previous chapter restarts the chapter that is playing`() {
+        show(queuedAt(1810.0), chapters = chapters)
+
+        press(compose.activity.getString(R.string.previous_chapter))
+        compose.waitForIdle()
+
+        assertEquals(1_800_000L, player.currentPosition)
+    }
+
+    @Test
+    fun `previous chapter right after a start goes to the one before`() {
+        show(queuedAt(1801.0), chapters = chapters)
+
+        press(compose.activity.getString(R.string.previous_chapter))
+        compose.waitForIdle()
+
+        assertEquals(0L, player.currentPosition)
+    }
+
+    // Review Focus 1.
+    @Test
+    fun `without chapters there is one bar and no chapter buttons`() {
+        show(queuedAt(0.0))
+
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.next_chapter)).assertDoesNotExist()
+        compose.onNodeWithTag(BOOK_BAR_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(CHAPTER_BAR_TAG).assertExists()
+    }
+
+    // Review Focus 4.
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun `up from play reaches the chapter bar, which seeks`() {
+        show(queuedAt(1900.0), chapters = chapters)
+
+        compose.onNodeWithContentDescription("Play").performKeyInput { pressKey(Key.DirectionUp) }
+        compose.onNodeWithTag(CHAPTER_BAR_TAG).assertIsFocused()
+        compose.onNodeWithTag(CHAPTER_BAR_TAG).performKeyInput { pressKey(Key.DirectionRight) }
+        compose.waitForIdle()
+
+        assertEquals(1_910_000L, player.currentPosition)
+    }
+
+    @Test
+    fun `actions sit beside the transport`() {
+        player = queuedAt(0.0)
+        compose.setContent {
+            FahrenheitTheme {
+                MediaPlayerController(player, BookPlayback(player, twoParts), twoParts.totalDuration, trailing = { Text("ACTIONS") })
+            }
+        }
+
+        compose.onNodeWithText("ACTIONS").assertIsDisplayed()
+    }
+
+    // Review: chapter skip read the position the screen last polled, up to a
+    // second old while playing, so the 3 s restart rule misfired.
+    @Test
+    fun `chapter skip reads where the player is now, not the last poll`() {
+        show(queuedAt(1801.0), chapters = chapters)
+        // The player moves on without the screen polling (as between polls).
+        player.seekTo(0, 1_810_000L)
+
+        press(compose.activity.getString(R.string.previous_chapter))
+        compose.waitForIdle()
+
+        assertEquals(1_800_000L, player.currentPosition)
+    }
+
+    // Review: Go to podcast moved beside the transport; it must be reachable by key.
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun `right from the transport reaches the actions`() {
+        player = queuedAt(0.0)
+        compose.setContent {
+            FahrenheitTheme {
+                MediaPlayerController(player, BookPlayback(player, twoParts), twoParts.totalDuration, trailing = { GoToPodcastButton {} })
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Play").performKeyInput { pressKey(Key.DirectionRight) }
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.skip_forward_30_seconds)).performKeyInput { pressKey(Key.DirectionRight) }
+
+        compose.onNodeWithTag(GO_TO_PODCAST_TAG).assertIsFocused()
     }
 }

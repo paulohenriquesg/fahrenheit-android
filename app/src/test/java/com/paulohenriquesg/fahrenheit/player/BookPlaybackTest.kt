@@ -43,7 +43,7 @@ class BookPlaybackTest {
     private fun loaded(startAt: Double, timeline: TrackTimeline = twoParts): BookPlayback {
         val nowPlaying = NowPlaying(
             itemId = "b1", title = "t", timeline = timeline, mediaDuration = null, chapters = null,
-            episodeId = null, goToPodcast = false, description = null, line = { "" }
+            episodeId = null, goToPodcast = false, description = null
         )
         val queue = PlaybackQueue.of(nowPlaying, startAt) { "https://abs.test$it" }!!
         player.setMediaItems(queue.items, queue.index, queue.positionMs)

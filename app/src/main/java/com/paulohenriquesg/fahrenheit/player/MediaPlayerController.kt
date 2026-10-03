@@ -17,9 +17,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableDoubleStateOf
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,7 +29,6 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
 import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,11 +38,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.Chapter
@@ -60,18 +56,21 @@ import kotlinx.coroutines.delay
  * so this draws what the service is doing and sends it commands; positions
  * cross file boundaries through [playback].
  */
+const val CHAPTER_BAR_TAG = "player_chapter_bar"
+const val BOOK_BAR_TAG = "player_book_bar"
+
 @Composable
 fun MediaPlayerController(
     player: Player,
     playback: BookPlayback,
     totalTime: Double,
     chapters: List<Chapter>? = null,
-    onCurrentTimeUpdate: (Double) -> Unit = {}
+    onCurrentTimeUpdate: (Double) -> Unit = {},
+    trailing: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {}
 ) {
     var isPlaying by remember(player) { mutableStateOf(player.playWhenReady) }
     var failed by remember(player) { mutableStateOf(player.playerError != null) }
     var currentTime by remember(player) { mutableDoubleStateOf(playback.bookPosition()) }
-    var sliderSize by remember { mutableStateOf(IntSize.Zero) }
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -102,24 +101,75 @@ fun MediaPlayerController(
         onCurrentTimeUpdate(seconds)
     }
 
+    // Presses read the player's position at that moment: the polled one can
+    // be a second old while playing, enough to break the 3 s restart rule.
+    val spans = remember(chapters, totalTime) { ChapterClock.spans(chapters, totalTime) }
+    val chapter = ChapterClock.at(spans, currentTime)
+
     // Something must hold focus or no D-pad key reaches this screen at all;
-    // play, so the remote's centre button does the obvious thing (frame 4).
+    // play, so the remote's centre button does the obvious thing (frame C).
     val playFocus = rememberInitialFocus(enabled = true, player)
 
-    Column(modifier = Modifier.padding(8.dp)) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // The bar you seek with is the chapter's; the book's sits under it
+        // (#107). A book without chapters, or an episode, has the one bar.
+        PlaybackBar(
+            fraction = chapter?.fraction(currentTime) ?: PlaybackPosition.fraction(currentTime, totalTime),
+            modifier = Modifier.fillMaxWidth().testTag(CHAPTER_BAR_TAG),
+            onSeekBy = { by -> seekTo(PlaybackPosition.skip(playback.bookPosition(), by, totalTime)) }
+        )
+        when {
+            failed -> TimesRow(stringResource(R.string.playback_failed), null, error = true)
+            chapter != null -> TimesRow(
+                PlaybackPosition.spoken(chapter.elapsed(currentTime)),
+                stringResource(R.string.time_left_in_chapter, PlaybackPosition.spoken(chapter.left(currentTime)))
+            )
+            else -> TimesRow(
+                PlaybackPosition.spoken(currentTime),
+                stringResource(
+                    R.string.time_left_of,
+                    PlaybackPosition.spoken(PlaybackPosition.left(currentTime, totalTime)),
+                    PlaybackPosition.spoken(totalTime)
+                )
+            )
+        }
+        if (chapter != null) {
+            PlaybackBar(
+                fraction = PlaybackPosition.fraction(currentTime, totalTime),
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp).testTag(BOOK_BAR_TAG),
+                ticks = ChapterClock.ticks(spans, totalTime),
+                thick = false
+            )
+            TimesRow(
+                stringResource(R.string.time_of, PlaybackPosition.spoken(currentTime), PlaybackPosition.spoken(totalTime)),
+                stringResource(R.string.time_left, PlaybackPosition.spoken(PlaybackPosition.left(currentTime, totalTime))),
+                small = true
+            )
+        }
+
         Row(
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            if (chapter != null) {
+                TransportButton(
+                    onClick = { ChapterClock.previousTarget(spans, playback.bookPosition())?.let(::seekTo) },
+                    size = 48.dp,
+                    container = TvMaterialTheme.colorScheme.secondaryContainer,
+                    content = TvMaterialTheme.colorScheme.onSecondaryContainer
+                ) {
+                    Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.previous_chapter))
+                }
+            }
             TransportButton(
-                onClick = { seekTo(PlaybackPosition.skip(currentTime, -SKIP_SECONDS, totalTime)) },
+                onClick = { seekTo(PlaybackPosition.skip(playback.bookPosition(), -SKIP_SECONDS, totalTime)) },
                 size = 48.dp,
                 container = TvMaterialTheme.colorScheme.secondaryContainer,
                 content = TvMaterialTheme.colorScheme.onSecondaryContainer
             ) {
                 Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.skip_back_30_seconds))
             }
-
             TransportButton(
                 onClick = {
                     when {
@@ -130,7 +180,7 @@ fun MediaPlayerController(
                         else -> player.play()
                     }
                 },
-                size = 56.dp,
+                size = 60.dp,
                 container = TvMaterialTheme.colorScheme.primary,
                 content = TvMaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.focusRequester(playFocus)
@@ -140,68 +190,45 @@ fun MediaPlayerController(
                     contentDescription = if (isPlaying) "Pause" else "Play"
                 )
             }
-
             TransportButton(
-                onClick = { seekTo(PlaybackPosition.skip(currentTime, SKIP_SECONDS, totalTime)) },
+                onClick = { seekTo(PlaybackPosition.skip(playback.bookPosition(), SKIP_SECONDS, totalTime)) },
                 size = 48.dp,
                 container = TvMaterialTheme.colorScheme.secondaryContainer,
                 content = TvMaterialTheme.colorScheme.onSecondaryContainer
             ) {
                 Icon(Icons.Filled.FastForward, contentDescription = stringResource(R.string.skip_forward_30_seconds))
             }
-        }
-
-        Box(modifier = Modifier.padding(top = 16.dp)) {
-            Slider(
-                value = PlaybackPosition.fraction(currentTime, totalTime),
-                onValueChange = { seekTo(it * totalTime) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onGloballyPositioned { sliderSize = it.size }
-            )
-            val chapterColor = MaterialTheme.colorScheme.onSurfaceVariant
-            Canvas(modifier = Modifier.matchParentSize()) {
-                PlaybackPosition.chapterMarks(chapters, totalTime).forEach { percentage ->
-                    drawLineAtPercentage(percentage, sliderSize.width, 4.dp.toPx(), chapterColor)
+            if (chapter != null) {
+                TransportButton(
+                    // Nothing after the last chapter: the press does nothing
+                    // rather than leaving a button that cannot take focus.
+                    onClick = { ChapterClock.nextTarget(spans, playback.bookPosition())?.let(::seekTo) },
+                    size = 48.dp,
+                    container = TvMaterialTheme.colorScheme.secondaryContainer,
+                    content = TvMaterialTheme.colorScheme.onSecondaryContainer
+                ) {
+                    Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.next_chapter))
                 }
             }
-        }
-
-        Row(modifier = Modifier.padding(top = 8.dp)) {
-            if (failed) {
-                Text(
-                    text = stringResource(R.string.playback_failed),
-                    color = MaterialTheme.colorScheme.error
-                )
-            } else {
-                // Frame 4: what is left matters more than what has passed on a
-                // long book, so it reads in full, against the total.
-                Text(
-                    text = PlaybackPosition.spoken(currentTime),
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = stringResource(
-                        R.string.time_left_of,
-                        PlaybackPosition.spoken(PlaybackPosition.left(currentTime, totalTime)),
-                        PlaybackPosition.spoken(totalTime)
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+            Spacer(Modifier.weight(1f))
+            trailing()
         }
     }
 }
 
-fun DrawScope.drawLineAtPercentage(percentage: Float, sliderWidth: Int, trackHeight: Float, color: androidx.compose.ui.graphics.Color) {
-    val position = (percentage / 100) * sliderWidth
-    drawLine(
-        color = color,
-        start = Offset(x = position, y = (size.height - trackHeight) / 2),
-        end = Offset(x = position, y = (size.height + trackHeight) / 2),
-        strokeWidth = 2f
-    )
+/** A line of times under a bar: what has passed on the left, what is left on the right. */
+@Composable
+private fun TimesRow(left: String, right: String?, small: Boolean = false, error: Boolean = false) {
+    val style = if (small) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyLarge
+    val color = when {
+        error -> MaterialTheme.colorScheme.error
+        small -> MaterialTheme.colorScheme.onSurfaceVariant
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+        Text(text = left, style = style, color = color, modifier = Modifier.weight(1f))
+        right?.let { Text(text = it, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    }
 }
 
 /** How far the skip buttons jump. */

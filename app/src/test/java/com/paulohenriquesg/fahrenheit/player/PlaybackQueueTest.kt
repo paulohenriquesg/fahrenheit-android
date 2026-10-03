@@ -12,7 +12,7 @@ class PlaybackQueueTest {
 
     private fun nowPlaying(timeline: TrackTimeline?, episodeId: String? = null) = NowPlaying(
         itemId = "b1", title = "A Book in Parts", timeline = timeline, mediaDuration = null,
-        chapters = null, episodeId = episodeId, goToPodcast = episodeId != null, description = null, line = { "" }
+        chapters = null, episodeId = episodeId, goToPodcast = episodeId != null, description = null
     )
 
     private val threeParts = TrackTimeline(

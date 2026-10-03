@@ -38,6 +38,14 @@ class NowPlayingTest {
         LibraryItemResponse::class.java
     )
 
+    private fun bookWithMetadata(extra: String): LibraryItemResponse = Gson().fromJson(
+        """{"id":"b3","mediaType":"book","media":{"duration":600.0,
+            "metadata":{"title":"A Book","authorName":"Andy Weir","explicit":false$extra}}}""",
+        LibraryItemResponse::class.java
+    )
+    private val seriesBook = bookWithMetadata(""","narratorName":"A Reader","genres":["Science fiction"],"series":[{"id":"s1","name":"The Long Way","sequence":"2"}]""")
+    private val standalone = bookWithMetadata(""","genres":["Science fiction","Thriller"]""")
+
     private val podcast: LibraryItemResponse = Gson().fromJson(
         """{"id":"p1","mediaType":"podcast","media":{"metadata":{"title":"Welcome to Night Vale","explicit":false},
             "episodes":[{"libraryItemId":"p1","id":"e295","index":1,"title":"295 - The Book of Dale","publishedAt":${now - day - 1000},
@@ -46,15 +54,6 @@ class NowPlayingTest {
                             "metadata":{"filename":"a","ext":"mp3","path":"/a","relPath":"a","size":1,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0}}}]}}""",
         LibraryItemResponse::class.java
     )
-
-    @Test
-    fun `a book says which chapter is playing, and who wrote it`() {
-        val playing = NowPlaying.of(book, episodeId = null, now = now)!!
-
-        assertEquals("Project Hail Mary", playing.title)
-        assertEquals("Chapter 2 · Andy Weir", playing.subtitle(currentTime = 700.0))
-        assertEquals("Chapter 1 · Andy Weir", playing.subtitle(currentTime = 0.0))
-    }
 
     @Test
     fun `a book plays its tracks, with chapter marks, and trusts the tracks' length`() {
@@ -87,7 +86,6 @@ class NowPlayingTest {
         val playing = NowPlaying.of(podcast, episodeId = "e295", now = now)!!
 
         assertEquals("295 - The Book of Dale", playing.title)
-        assertEquals("Welcome to Night Vale · Yesterday", playing.subtitle(currentTime = 100.0))
     }
 
     @Test
@@ -107,5 +105,42 @@ class NowPlayingTest {
     @Test
     fun `an episode the podcast does not have is nothing to play`() {
         assertNull(NowPlaying.of(podcast, episodeId = "missing", now = now))
+    }
+
+    @Test
+    fun `a book in a series names the series and its number`() =
+        assertEquals("The Long Way · Book 2", NowPlaying.of(seriesBook, episodeId = null, now = now)!!.kicker)
+
+    @Test
+    fun `a standalone book names its first genre`() =
+        assertEquals("Science fiction", NowPlaying.of(standalone, episodeId = null, now = now)!!.kicker)
+
+    @Test
+    fun `a book with neither has no line above the title`() =
+        assertNull(NowPlaying.of(book, episodeId = null, now = now)!!.kicker)
+
+    @Test
+    fun `the byline says who wrote it and who reads it`() =
+        assertEquals("Andy Weir · read by A Reader", NowPlaying.of(seriesBook, episodeId = null, now = now)!!.byline)
+
+    @Test
+    fun `without a narrator the byline is the author`() =
+        assertEquals("Andy Weir", NowPlaying.of(book, episodeId = null, now = now)!!.byline)
+
+    @Test
+    fun `an episode's line above the title is its show and when it came out`() {
+        val playing = NowPlaying.of(podcast, episodeId = "e295", now = now)!!
+        assertEquals("Welcome to Night Vale · Yesterday", playing.kicker)
+        assertNull(playing.byline)
+    }
+
+    @Test
+    fun `an episode of a show without a title still reads cleanly`() {
+        val untitled = Gson().fromJson(
+            """{"id":"p2","mediaType":"podcast","media":{"metadata":{"title":"","explicit":false},
+                "episodes":[{"libraryItemId":"p2","id":"e1","index":1,"title":"Pilot","publishedAt":${now - day - 1000},"addedAt":0,"updatedAt":0}]}}""",
+            LibraryItemResponse::class.java
+        )
+        assertEquals("Yesterday", NowPlaying.of(untitled, episodeId = "e1", now = now)!!.kicker)
     }
 }

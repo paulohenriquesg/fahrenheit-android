@@ -140,7 +140,6 @@ class PlayerActivity : ComponentActivity() {
             else -> PlayerScreen(
                 nowPlaying = playing,
                 currentTime = currentTime,
-                onGoToPodcast = { goToPodcast(itemId) },
                 transport = {
                     // ready implies a timeline: PlayerStart refuses a NowPlaying without one.
                     val timeline = playing.timeline
@@ -151,7 +150,10 @@ class PlayerActivity : ComponentActivity() {
                             playback = playback,
                             totalTime = timeline.totalDuration,
                             chapters = playing.chapters,
-                            onCurrentTimeUpdate = { currentTime = it }
+                            onCurrentTimeUpdate = { currentTime = it },
+                            trailing = {
+                                if (playing.goToPodcast) GoToPodcastButton { goToPodcast(itemId) }
+                            }
                         )
                     }
                 }

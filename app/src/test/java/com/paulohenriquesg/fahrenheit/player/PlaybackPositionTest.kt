@@ -46,35 +46,8 @@ class PlaybackPositionTest {
     fun `skipping in the middle moves by the step`() =
         assertEquals(930.0, PlaybackPosition.skip(current = 900.0, by = 30.0, total = 3600.0), 1e-9)
 
-    @Test
-    fun `chapter marks sit where each chapter ends`() {
-        val chapters = listOf(
-            Chapter(start = 0.0, end = 900.0),
-            Chapter(start = 900.0, end = 1800.0),
-            Chapter(start = 1800.0, end = 3600.0)
-        )
-
-        // The last chapter ends at the end of the book: no mark to draw there.
-        assertEquals(listOf(25f, 50f), PlaybackPosition.chapterMarks(chapters, total = 3600.0))
-    }
-
-    @Test
-    fun `chapter marks need a duration to be placed against`() =
-        assertEquals(emptyList<Float>(), PlaybackPosition.chapterMarks(listOf(Chapter(end = 10.0)), total = 0.0))
-
     // 20 books on the test server report a duration longer than their audio,
     // which put marks off the end of the track.
-    @Test
-    fun `a chapter ending past the duration is not drawn`() {
-        val chapters = listOf(Chapter(end = 900.0), Chapter(end = 9000.0), Chapter(end = 3600.0))
-
-        assertEquals(listOf(25f), PlaybackPosition.chapterMarks(chapters, total = 3600.0))
-    }
-
-    @Test
-    fun `chapters without an end are skipped`() =
-        assertEquals(emptyList<Float>(), PlaybackPosition.chapterMarks(listOf(Chapter(end = null), Chapter(end = null)), total = 3600.0))
-
     // Frame 4: lengths read as words, not a clock, and what is left matters
     // more than what has passed on a 16-hour book (#93).
     @Test

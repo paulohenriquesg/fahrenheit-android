@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fahrenheit TV — player mocks</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+  /* The app's Material 3 dark roles, as in screens.html, so these frames
+     look like what the stick renders. px = dp x 2. */
+  :root {
+    --bg: #0F0D13; --surface: #1C1B1F; --surface-2: #211F26; --variant: #49454F;
+    --on-surface: #E6E1E5; --on-variant: #CAC4D0; --primary: #D0BCFF; --on-primary: #2A1E3F;
+    --font: Manrope, "Avenir Next", system-ui, sans-serif;
+    --gap: 32px; --rest: 2px; --focus: 6px;
+    /* stands in for colours taken from the cover */
+    --tint-a: #2E3A2A; --tint-b: #15190F;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #07070A; color: var(--on-surface); font-family: var(--font); }
+  .page { padding: 40px 40px 100px; max-width: 1180px; }
+  h1 { font-size: 30px; font-weight: 800; margin: 0 0 8px; }
+  .lede, .why { color: var(--on-variant); font-size: 15px; line-height: 1.6; margin: 0 0 14px; }
+  .why b, .lede b { color: var(--on-surface); }
+  .scale-note { color: #8A8694; font-size: 13px; margin: 0 0 36px; }
+  section { margin-bottom: 56px; }
+  h2 { font-size: 19px; font-weight: 700; margin: 0 0 6px; }
+  .shell { width: 960px; height: 540px; overflow: hidden; border-radius: 10px; border: 1px solid #2A2831; }
+  .tv { width: 1920px; height: 1080px; transform: scale(0.5); transform-origin: top left; background: var(--bg); position: relative; overflow: hidden; }
+  .ic { width: 40px; height: 40px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .ic-s { width: 30px; height: 30px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* background taken from the cover */
+  .wash { position: absolute; inset: 0; background: radial-gradient(1200px 900px at 18% 30%, var(--tint-a), transparent 70%), linear-gradient(180deg, var(--tint-b), var(--bg) 75%); }
+  .wash.episode { --tint-a: #3A2A40; --tint-b: #1A1220; }
+
+  .art { border-radius: 18px; background: linear-gradient(150deg, #5B6B3A, #24301A); box-shadow: 0 30px 80px rgba(0,0,0,.45); position: relative; overflow: hidden; }
+  .art.episode { background: linear-gradient(150deg, #6B3A64, #2A1A30); }
+  .art span { position: absolute; left: 28px; bottom: 26px; font-size: 30px; font-weight: 800; color: rgba(255,255,255,.75); letter-spacing: .02em; }
+
+  .series { font-size: 26px; font-weight: 700; color: var(--primary); letter-spacing: .02em; text-transform: uppercase; margin-bottom: 14px; }
+  .title { font-size: 64px; font-weight: 800; line-height: 1.05; margin: 0 0 14px; letter-spacing: -0.02em; }
+  .by { font-size: 30px; color: var(--on-variant); margin-bottom: 30px; }
+  .chap { font-size: 34px; font-weight: 700; margin-bottom: 18px; }
+
+  .bar { position: relative; border-radius: 99px; background: rgba(255,255,255,.16); }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; background: var(--primary); }
+  .bar.chapter { height: 14px; }
+  .bar.chapter .knob { position: absolute; top: -9px; width: 32px; height: 32px; border-radius: 50%; background: var(--primary); transform: translateX(-50%); }
+  .bar.chapter.foc .knob { outline: var(--focus) solid rgba(208,188,255,.45); outline-offset: 3px; }
+  .bar.book { height: 6px; background: rgba(255,255,255,.10); }
+  .bar.book i { background: rgba(208,188,255,.55); }
+  .bar.book .mk { position: absolute; top: -4px; width: 2px; height: 14px; background: rgba(230,225,229,.45); }
+  .times { display: flex; justify-content: space-between; font-size: 26px; color: var(--on-variant); font-variant-numeric: tabular-nums; margin: 14px 0 30px; }
+  .times b { color: var(--on-surface); font-weight: 700; }
+  .times.small { font-size: 22px; margin: 10px 0 36px; }
+
+  .transport { display: flex; gap: 28px; align-items: center; }
+  .tbtn { width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; background: rgba(28,27,31,.75); border: var(--rest) solid var(--variant); color: var(--on-surface); flex: none; }
+  .tbtn.pri { width: 120px; height: 120px; background: var(--primary); color: var(--on-primary); border-color: transparent; }
+  .tbtn.foc { outline: var(--focus) solid var(--primary); outline-offset: 5px; }
+  .tbtn small { position: absolute; font-size: 15px; font-weight: 800; margin-top: 4px; }
+
+  .actions { display: flex; gap: 20px; margin-top: 40px; }
+  .chip { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 700; padding: 16px 26px; border-radius: 14px; background: rgba(28,27,31,.75); border: var(--rest) solid var(--variant); color: var(--on-surface); }
+  .chip em { font-style: normal; color: var(--primary); }
+  .chip.foc { outline: var(--focus) solid var(--primary); outline-offset: 4px; }
+  .chip.on { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+  .chip.on em { color: var(--on-primary); }
+
+  /* layout A: side by side */
+  .a { position: absolute; inset: 0; display: flex; gap: 96px; align-items: center; padding: 0 120px; }
+  .a .art { width: 600px; height: 600px; flex: none; }
+  .a .col { flex: 1; min-width: 0; }
+
+  /* layout B: frame 4 grown */
+  .b { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 72px 120px 72px; }
+  .b .top { display: flex; gap: 56px; align-items: flex-end; margin-bottom: 52px; }
+  .b .art { width: 380px; height: 380px; flex: none; }
+  .b .row { display: flex; align-items: center; justify-content: space-between; }
+
+  /* a panel over the player */
+  .scrim { position: absolute; inset: 0; background: rgba(7,7,10,.55); }
+  .panel { position: absolute; right: 0; top: 0; bottom: 0; width: 640px; background: var(--surface); border-left: var(--rest) solid var(--variant); padding: 64px 56px; }
+  .panel h4 { font-size: 40px; font-weight: 800; margin: 0 0 36px; }
+  .opt { display: flex; justify-content: space-between; align-items: center; font-size: 32px; font-weight: 600; padding: 22px 28px; border-radius: 14px; margin-bottom: 10px; color: var(--on-variant); }
+  .opt.sel { color: var(--on-surface); }
+  .opt.sel::after { content: "✓"; color: var(--primary); font-weight: 800; }
+  .opt.foc { outline: var(--focus) solid var(--primary); background: var(--surface-2); color: var(--on-surface); }
+  .panel .note { font-size: 24px; color: var(--on-variant); margin-top: 28px; line-height: 1.5; }
+  /* layout C: A's top, B's bottom */
+  .c { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 64px 120px; }
+  .c .top { display: flex; gap: 72px; align-items: center; margin-bottom: 48px; }
+  .c .art { width: 500px; height: 500px; flex: none; }
+  .c .row { display: flex; align-items: center; justify-content: space-between; }
+  .meta { font-size: 28px; color: var(--on-variant); margin-bottom: 22px; }
+  .meta .kind { display: inline-block; font-size: 22px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--on-primary); background: var(--primary); border-radius: 8px; padding: 4px 12px; margin-right: 14px; vertical-align: 3px; }
+  .notes { font-size: 28px; line-height: 1.5; color: var(--on-surface); opacity: .85; max-width: 1060px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .upnext { font-size: 24px; color: var(--on-variant); margin-top: 26px; }
+  .upnext b { color: var(--on-surface); font-weight: 700; }
+  /* the rail, as screens.html draws it (#58) */
+  .rail { position: absolute; left: 0; top: 0; bottom: 0; width: 112px; background: var(--surface); border-right: var(--rest) solid var(--variant); display: flex; flex-direction: column; align-items: center; padding: 36px 0; gap: 30px; z-index: 3; }
+  .rail.wide { width: 460px; align-items: stretch; padding: 36px 24px; }
+  .rail .row { display: flex; align-items: center; gap: 22px; height: 72px; padding: 0 16px; border-radius: 14px; color: var(--on-variant); }
+  .rail .row .lab { font-size: 30px; font-weight: 600; white-space: nowrap; }
+  .rail .row.on { background: var(--primary); color: var(--on-primary); }
+  .rail .slot { width: 64px; height: 64px; border-radius: 14px; display: grid; place-items: center; color: var(--on-variant); flex: none; }
+  .rail .slot.on { background: var(--primary); color: var(--on-primary); }
+  .rail .sep { width: 56px; height: 2px; background: var(--variant); align-self: center; }
+  .rail.wide .sep { width: auto; align-self: stretch; margin: 0 16px; }
+  /* "Now playing": the cover, a progress ring, the play state */
+  .np { position: relative; width: 72px; height: 72px; flex: none; }
+  .np .thumb { position: absolute; inset: 8px; border-radius: 10px; background: linear-gradient(150deg, #5B6B3A, #24301A); }
+  .np svg.ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .np .state { position: absolute; right: -4px; bottom: -4px; width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; }
+  .np .state svg { width: 16px; height: 16px; }
+  .rail .nprow { display: flex; align-items: center; gap: 20px; padding: 12px 16px; border-radius: 16px; }
+  .rail .nprow.foc, .rail .np.foc { outline: var(--focus) solid var(--primary); outline-offset: 4px; border-radius: 16px; }
+  .rail .nprow .t { font-size: 28px; font-weight: 700; color: var(--on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rail .nprow .s { font-size: 22px; color: var(--on-variant); margin-top: 4px; white-space: nowrap; }
+  .stage { position: absolute; left: 112px; right: 0; top: 0; bottom: 0; padding: 48px 64px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; }
+  .topbar h3 { font-size: 56px; font-weight: 800; margin: 0; letter-spacing: -0.02em; }
+  .shelf h4 { font-size: 32px; font-weight: 700; margin: 0 0 20px; }
+  .covers { display: flex; gap: var(--gap); margin-bottom: 40px; }
+  .cover { width: 236px; flex: none; }
+  .cover .ca { width: 236px; height: 236px; border-radius: 12px; background: linear-gradient(150deg, #332C44, #1A1721); }
+  .cover .t { font-size: 26px; font-weight: 600; margin-top: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cover .left { font-size: 23px; color: var(--on-variant); margin-top: 4px; }
+  .panel.wide { width: 860px; display: flex; flex-direction: column; }
+  .panel .desc { font-size: 28px; line-height: 1.55; color: var(--on-surface); border-radius: 14px; padding: 18px 22px; margin: 0 -22px 30px; max-height: 300px; overflow: hidden; position: relative; }
+  .panel .desc.foc { outline: var(--focus) solid var(--primary); }
+  .panel .desc::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background: linear-gradient(transparent, var(--surface)); }
+  .panel .label { font-size: 22px; font-weight: 700; color: var(--on-variant); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 14px; }
+  .panel .books { display: flex; gap: 18px; margin-bottom: 30px; }
+  .panel .books div { width: 104px; height: 104px; border-radius: 10px; background: linear-gradient(150deg, #3D4A6B, #1A1F30); opacity: .55; }
+  .panel .books div.now { opacity: 1; outline: 3px solid var(--primary); outline-offset: 3px; }
+  .panel .facts { font-size: 24px; color: var(--on-variant); line-height: 1.8; margin-bottom: 26px; }
+  .panel .facts b { color: var(--on-surface); font-weight: 600; }
+  .panel .chip { align-self: flex-start; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>The player, grown up (#107)</h1>
+  <p class="lede">The details screen answers <b>"should I play this, and from where?"</b>. The player answers <b>"where am I, and how do I steer it?"</b>. So the player takes the facts you want <i>while</i> listening, and keeps what you use to decide behind panels.</p>
+  <p class="lede">Decided so far: <b>two bars, stacked</b>, one for the chapter (the one you seek with) and a slim one for the whole book. Listening controls (speed, sleep timer). More of what it tells you: the series, the narrator, time left in the chapter and in the book at the current speed.</p>
+  <p class="scale-note">Frames are 1920×1080 drawn at half size. The cover's colours stand in as a green or plum wash.</p>
+
+  <section>
+    <h2>A. Side by side</h2>
+    <p class="why">A <b>big cover on the left</b>, and everything you read or press in one column on the right, top to bottom in the order you need it: what this is, where you are, how long is left, then the controls. <b>Focus lands on play.</b> Up reaches the chapter bar, which seeks in 10-second steps (a held key speeds up). Down reaches the action row. The transport keeps <b>five stops</b>, with chapter skip on the outside as frame 4 draws it. The description is behind <b>About</b> rather than always on screen.</p>
+    <div class="shell"><div class="tv">
+      <div class="wash"></div>
+      <div class="a">
+        <div class="art"><span>PROJECT<br>HAIL MARY</span></div>
+        <div class="col">
+          <div class="series">Standalone · Science fiction</div>
+          <h3 class="title">Project Hail Mary</h3>
+          <div class="by">Andy Weir · read by Ray Porter</div>
+          <div class="chap">Chapter 12</div>
+          <div class="bar chapter"><i style="width:38%"></i><span class="knob" style="left:38%"></span></div>
+          <div class="times"><span><b>12 min 40 s</b></span><span>20 min 10 s left in chapter</span></div>
+          <div class="bar book"><i style="width:34%"></i><span class="mk" style="left:9%"></span><span class="mk" style="left:21%"></span><span class="mk" style="left:33%"></span><span class="mk" style="left:52%"></span><span class="mk" style="left:64%"></span><span class="mk" style="left:78%"></span><span class="mk" style="left:90%"></span></div>
+          <div class="times small"><span>5 h 28 min of 16 h 10 min</span><span>8 h 34 min left at 1.25×</span></div>
+          <div class="transport">
+            <div class="tbtn" title="Previous chapter"><svg class="ic" viewBox="0 0 24 24"><path d="M6 5v14"/><path d="M18 5 9 12l9 7z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn" title="Back 30 s"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 0 7 7"/><path d="M12 5V1l-4 4 4 4z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn pri foc" title="Pause"><svg class="ic" viewBox="0 0 24 24"><path d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn" title="Forward 30 s"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 1-7 7"/><path d="M12 5V1l4 4-4 4z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn" title="Next chapter"><svg class="ic" viewBox="0 0 24 24"><path d="M18 5v14"/><path d="M6 5l9 7-9 7z" fill="currentColor" stroke="none"/></svg></div>
+          </div>
+          <div class="actions">
+            <div class="chip"><svg class="ic-s" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Chapters</div>
+            <div class="chip">Speed <em>1.25×</em></div>
+            <div class="chip"><svg class="ic-s" viewBox="0 0 24 24"><path d="M20 14A8 8 0 1 1 10 4a6 6 0 0 0 10 10z"/></svg>Sleep</div>
+            <div class="chip">About</div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>A, with a panel open: Speed</h2>
+    <p class="why">Every action opens the <b>same kind of panel from the right</b>, so the player stays visible behind it and Back closes it. <b>Speed</b> lists the steps and remembers the choice per book. <b>Sleep</b> uses the same panel (Off, End of chapter, 15, 30, 60 min), and while it runs the chip shows the minutes left. <b>Chapters</b> is the list from the details screen (#105), built once and used in both places. <b>About</b> is the description and the series.</p>
+    <div class="shell"><div class="tv">
+      <div class="wash"></div>
+      <div class="a">
+        <div class="art"><span>PROJECT<br>HAIL MARY</span></div>
+        <div class="col">
+          <div class="series">Standalone · Science fiction</div>
+          <h3 class="title">Project Hail Mary</h3>
+          <div class="by">Andy Weir · read by Ray Porter</div>
+          <div class="chap">Chapter 12</div>
+          <div class="bar chapter"><i style="width:38%"></i><span class="knob" style="left:38%"></span></div>
+          <div class="times"><span><b>12 min 40 s</b></span><span>20 min 10 s left in chapter</span></div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="panel">
+        <h4>Speed</h4>
+        <div class="opt">0.75×</div>
+        <div class="opt">1×</div>
+        <div class="opt">1.1×</div>
+        <div class="opt sel foc">1.25×</div>
+        <div class="opt">1.5×</div>
+        <div class="opt">1.75×</div>
+        <div class="opt">2×</div>
+        <div class="note">Remembered for this book. Times left on the player count at this speed.</div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>A, with About open</h2>
+    <p class="why">About is the decide-what-to-play material, on demand: <b>the description</b> first (focus lands on it, and Down scrolls it a few lines at a time), then <b>the series</b> with the current book marked (choosing another asks before switching), then <b>the facts</b>, one quiet line each, and <b>Mark finished</b> last, kept off the main screen where an accidental press would cost a listener their place. For an episode, About is the show notes and the publish date: no series, no Mark finished.</p>
+    <div class="shell"><div class="tv">
+      <div class="wash" style="--tint-a:#2A3350; --tint-b:#11141F"></div>
+      <div class="a">
+        <div class="art" style="background:linear-gradient(150deg,#3D4A6B,#1A1F30)"><span>THE DARK<br>FOREST</span></div>
+        <div class="col">
+          <div class="series">Remembrance of Earth's Past · Book 2 of 3</div>
+          <h3 class="title">The Dark Forest</h3>
+          <div class="by">Cixin Liu · read by P. J. Ochlan</div>
+          <div class="chap">Part I · Year 3</div>
+          <div class="bar chapter"><i style="width:61%"></i><span class="knob" style="left:61%"></span></div>
+          <div class="times"><span><b>21 min 05 s</b></span><span>13 min 30 s left in chapter</span></div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="panel wide">
+        <h4>About</h4>
+        <div class="desc foc">Imagine the universe as a forest, patrolled by numberless and nearly invisible hunters. In this forest, stealth is survival. The Trisolarans have learned of Earth, and their fleet is four centuries away; in the meantime they can watch everything humanity does. The only secret left is the human mind, and four men are given the power to keep theirs. </div>
+        <div class="label">The series</div>
+        <div class="books"><div></div><div class="now"></div><div></div></div>
+        <div class="facts"><b>Read by</b> P. J. Ochlan · <b>Published</b> 2015 · <b>Length</b> 22 h 49 min<br><b>Genres</b> Science fiction, Hard SF</div>
+        <div class="chip">Mark finished</div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>A, playing an episode</h2>
+    <p class="why">The same frame with an episode's facts: <b>the show where the series was</b>, the episode's own title, and when it came out. Without chapters there is <b>one bar</b>, the episode. The outer transport buttons become <b>previous and next episode</b> (#108). <b>Go to podcast</b> takes the Chapters slot, since an episode rarely has chapters.</p>
+    <div class="shell"><div class="tv">
+      <div class="wash episode"></div>
+      <div class="a">
+        <div class="art episode"><span>WELCOME TO<br>NIGHT VALE</span></div>
+        <div class="col">
+          <div class="series">Welcome to Night Vale · Yesterday</div>
+          <h3 class="title">295 - The Book of Dale</h3>
+          <div class="by">Episode 295</div>
+          <div class="bar chapter"><i style="width:22%"></i><span class="knob" style="left:22%"></span></div>
+          <div class="times"><span><b>6 min 40 s</b></span><span>23 min left of 30 min</span></div>
+          <div class="transport">
+            <div class="tbtn" title="Previous episode"><svg class="ic" viewBox="0 0 24 24"><path d="M6 5v14"/><path d="M18 5 9 12l9 7z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn" title="Back 30 s"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 0 7 7"/><path d="M12 5V1l-4 4 4 4z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn pri foc" title="Pause"><svg class="ic" viewBox="0 0 24 24"><path d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn" title="Forward 30 s"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 1-7 7"/><path d="M12 5V1l4 4-4 4z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn" title="Next episode"><svg class="ic" viewBox="0 0 24 24"><path d="M18 5v14"/><path d="M6 5l9 7-9 7z" fill="currentColor" stroke="none"/></svg></div>
+          </div>
+          <div class="actions">
+            <div class="chip"><svg class="ic-s" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Go to podcast</div>
+            <div class="chip">Speed <em>1×</em></div>
+            <div class="chip"><svg class="ic-s" viewBox="0 0 24 24"><path d="M20 14A8 8 0 1 1 10 4a6 6 0 0 0 10 10z"/></svg>Sleep <em>12 min</em></div>
+            <div class="chip">About</div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>B. Frame 4, grown</h2>
+    <p class="why">The same content in frame 4's arrangement: cover and words on top, then <b>both bars across the full width</b>, then the transport and actions on one line. The bars are longer, so seeking reads better, but the cover is smaller and the eye travels further. In A everything sits in one column next to the cover.</p>
+    <div class="shell"><div class="tv">
+      <div class="wash"></div>
+      <div class="b">
+        <div class="top">
+          <div class="art"><span>PROJECT<br>HAIL MARY</span></div>
+          <div>
+            <div class="series">Standalone · Science fiction</div>
+            <h3 class="title">Project Hail Mary</h3>
+            <div class="by" style="margin-bottom:0">Andy Weir · read by Ray Porter · <b style="color:var(--on-surface)">Chapter 12</b></div>
+          </div>
+        </div>
+        <div class="bar chapter"><i style="width:38%"></i><span class="knob" style="left:38%"></span></div>
+        <div class="times"><span><b>12 min 40 s</b></span><span>20 min 10 s left in chapter</span></div>
+        <div class="bar book"><i style="width:34%"></i><span class="mk" style="left:9%"></span><span class="mk" style="left:21%"></span><span class="mk" style="left:33%"></span><span class="mk" style="left:52%"></span><span class="mk" style="left:64%"></span><span class="mk" style="left:78%"></span><span class="mk" style="left:90%"></span></div>
+        <div class="times small"><span>5 h 28 min of 16 h 10 min</span><span>8 h 34 min left at 1.25×</span></div>
+        <div class="row">
+          <div class="transport">
+            <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M6 5v14"/><path d="M18 5 9 12l9 7z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 0 7 7"/><path d="M12 5V1l-4 4 4 4z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn pri foc"><svg class="ic" viewBox="0 0 24 24"><path d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 1-7 7"/><path d="M12 5V1l4 4-4 4z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M18 5v14"/><path d="M6 5l9 7-9 7z" fill="currentColor" stroke="none"/></svg></div>
+          </div>
+          <div class="actions" style="margin-top:0">
+            <div class="chip">Chapters</div>
+            <div class="chip">Speed <em>1.25×</em></div>
+            <div class="chip">Sleep</div>
+            <div class="chip">About</div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+  <section>
+    <h2>C. A on top, B underneath</h2>
+    <p class="why">A's <b>large cover</b> with everything you read beside it, then B's <b>bars across the full width</b> and the transport and actions on <b>one line</b>. The cover is 500 px instead of A's 600, the price of the full-width bars. Focus still lands on play; Up reaches the chapter bar, and Right from the transport moves into the actions on the same line.</p>
+    <div class="shell"><div class="tv">
+      <div class="wash"></div>
+      <div class="c">
+        <div class="top">
+          <div class="art"><span>PROJECT<br>HAIL MARY</span></div>
+          <div>
+            <div class="series">Standalone · Science fiction</div>
+            <h3 class="title">Project Hail Mary</h3>
+            <div class="by">Andy Weir · read by Ray Porter</div>
+            <div class="chap" style="margin-bottom:0">Chapter 12</div>
+          </div>
+        </div>
+        <div class="bar chapter"><i style="width:38%"></i><span class="knob" style="left:38%"></span></div>
+        <div class="times"><span><b>12 min 40 s</b></span><span>20 min 10 s left in chapter</span></div>
+        <div class="bar book"><i style="width:34%"></i><span class="mk" style="left:9%"></span><span class="mk" style="left:21%"></span><span class="mk" style="left:33%"></span><span class="mk" style="left:52%"></span><span class="mk" style="left:64%"></span><span class="mk" style="left:78%"></span><span class="mk" style="left:90%"></span></div>
+        <div class="times small"><span>5 h 28 min of 16 h 10 min</span><span>8 h 34 min left at 1.25×</span></div>
+        <div class="row">
+          <div class="transport">
+            <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M6 5v14"/><path d="M18 5 9 12l9 7z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 0 7 7"/><path d="M12 5V1l-4 4 4 4z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn pri foc"><svg class="ic" viewBox="0 0 24 24"><path d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 1-7 7"/><path d="M12 5V1l4 4-4 4z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M18 5v14"/><path d="M6 5l9 7-9 7z" fill="currentColor" stroke="none"/></svg></div>
+          </div>
+          <div class="actions" style="margin-top:0">
+            <div class="chip"><svg class="ic-s" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Chapters</div>
+            <div class="chip">Speed <em>1.25×</em></div>
+            <div class="chip"><svg class="ic-s" viewBox="0 0 24 24"><path d="M20 14A8 8 0 1 1 10 4a6 6 0 0 0 10 10z"/></svg>Sleep</div>
+            <div class="chip">About</div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+  <section>
+    <h2>C, playing an episode</h2>
+    <p class="why">The same frame with what an episode has to say. The series slot is <b>the show and when the episode came out</b>. Under the title, a <b>details line</b>: season and number, the episode type when it is not a regular one, and the length. Then <b>the first lines of the show notes</b> (the feed's subtitle where there is one), three lines at most, so you know what this one is about without opening About. One bar, the episode. The outer buttons go to the previous and next episode, and <b>Up next</b> names what Next would play, so the button is not a guess. What "next" means is #108; drawn here as the next newer episode.</p>
+    <div class="shell"><div class="tv">
+      <div class="wash episode"></div>
+      <div class="c">
+        <div class="top">
+          <div class="art episode"><span>WELCOME TO<br>NIGHT VALE</span></div>
+          <div>
+            <div class="series">Welcome to Night Vale · Yesterday</div>
+            <h3 class="title">295 - The Book of Dale</h3>
+            <div class="meta"><span class="kind">Bonus</span>Season 2 · Episode 295 · 30 min</div>
+            <div class="notes">Dale has written a book, and the whole town is reading it. Nobody remembers reading it, though, and the library has started returning copies on its own. Plus the weather, a word from our sponsors, and an update on the dog park, which you should not think about.</div>
+          </div>
+        </div>
+        <div class="bar chapter"><i style="width:22%"></i><span class="knob" style="left:22%"></span></div>
+        <div class="times"><span><b>6 min 40 s</b></span><span>23 min left of 30 min</span></div>
+        <div class="row">
+          <div class="transport">
+            <div class="tbtn" title="Previous episode"><svg class="ic" viewBox="0 0 24 24"><path d="M6 5v14"/><path d="M18 5 9 12l9 7z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 0 7 7"/><path d="M12 5V1l-4 4 4 4z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn pri foc"><svg class="ic" viewBox="0 0 24 24"><path d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 1-7 7"/><path d="M12 5V1l4 4-4 4z" fill="currentColor" stroke="none"/></svg></div>
+            <div class="tbtn" title="Next episode"><svg class="ic" viewBox="0 0 24 24"><path d="M18 5v14"/><path d="M6 5l9 7-9 7z" fill="currentColor" stroke="none"/></svg></div>
+          </div>
+          <div class="actions" style="margin-top:0">
+            <div class="chip"><svg class="ic-s" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Go to podcast</div>
+            <div class="chip">Speed <em>1×</em></div>
+            <div class="chip"><svg class="ic-s" viewBox="0 0 24 24"><path d="M20 14A8 8 0 1 1 10 4a6 6 0 0 0 10 10z"/></svg>Sleep <em>12 min</em></div>
+            <div class="chip">About</div>
+          </div>
+        </div>
+        <div class="upnext">Up next · <b>296 - The Sad Song</b> · 28 min</div>
+      </div>
+    </div></div>
+  </section>
+  <section>
+    <h2>Getting back to the player: the rail, closed</h2>
+    <p class="why">The player stays <b>full-screen</b>: with the rail beside it, Left from the transport would land in the menu, and the full-width bars of C would lose a fifth of their width. What was missing is the way <b>back</b>. Since #91 playback carries on when you leave the player. So while something plays, the rail carries a <b>Now playing</b> entry above the menu: the cover, a ring for how far through the book you are, and the play state. It is there from every screen, and gone when nothing is queued.</p>
+    <div class="shell"><div class="tv">
+      <nav class="rail">
+        <div class="np"><div class="thumb"></div><svg class="ring" viewBox="0 0 72 72"><circle cx="36" cy="36" r="33" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="4"/><circle cx="36" cy="36" r="33" fill="none" stroke="#D0BCFF" stroke-width="4" stroke-linecap="round" stroke-dasharray="207" stroke-dashoffset="137"/></svg><span class="state"><svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg></span></div>
+        <div class="sep"></div>
+        <div class="slot on"><svg class="ic" viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg></div><div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h4v16H5zM11 4h4v16h-4zM17.5 5l3 15"/></svg></div><div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h7v5H4zM13 6h7v5h-7zM4 13h7v5H4zM13 13h7v5h-7z"/></svg></div><div class="slot"><svg class="ic" viewBox="0 0 24 24"><path d="M5 20V11M10 20V5M15 20v-6M20 20V8"/></svg></div>
+      </nav>
+      <div class="stage">
+        <div class="topbar"><h3>Hello, admin</h3></div>
+        <div class="shelf"><h4>Continue listening</h4><div class="covers">
+          <div class="cover"><div class="ca"></div><div class="t">Project Hail Mary</div><div class="left">10 h 42 min left</div></div>
+          <div class="cover"><div class="ca"></div><div class="t">The Dark Forest</div><div class="left">14 h left</div></div>
+          <div class="cover"><div class="ca"></div><div class="t">Snow Crash</div><div class="left">2 h 5 min left</div></div>
+          <div class="cover"><div class="ca"></div><div class="t">Dungeon Crawler Carl</div><div class="left">9 h 20 min left</div></div>
+        </div></div>
+        <div class="shelf"><h4>Recently added</h4><div class="covers">
+          <div class="cover"><div class="ca"></div></div><div class="cover"><div class="ca"></div></div><div class="cover"><div class="ca"></div></div><div class="cover"><div class="ca"></div></div><div class="cover"><div class="ca"></div></div>
+        </div></div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>The rail, open, with focus on Now playing</h2>
+    <p class="why">Opened, the entry says <b>what</b> is playing and <b>where</b>: the title, and the time left in the chapter (or the episode). <b>Centre opens the player</b>, and Back from the player returns to the screen you came from. <b>Play/pause on the remote</b> works anywhere, as it does now. The entry is not a second set of controls: the player is one press away.</p>
+    <div class="shell"><div class="tv">
+      <nav class="rail wide">
+        <div class="nprow foc"><div class="np"><div class="thumb"></div><svg class="ring" viewBox="0 0 72 72"><circle cx="36" cy="36" r="33" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="4"/><circle cx="36" cy="36" r="33" fill="none" stroke="#D0BCFF" stroke-width="4" stroke-linecap="round" stroke-dasharray="207" stroke-dashoffset="137"/></svg><span class="state"><svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg></span></div><div style="min-width:0"><div class="t">Project Hail Mary</div><div class="s">Chapter 12 · 20 min left</div></div></div>
+        <div class="sep"></div>
+        <div class="row on"><svg class="ic" viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg><span class="lab">Home</span></div><div class="row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h4v16H5zM11 4h4v16h-4zM17.5 5l3 15"/></svg><span class="lab">Library</span></div><div class="row"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span class="lab">Series</span></div><div class="row"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h7v5H4zM13 6h7v5h-7zM4 13h7v5H4zM13 13h7v5h-7z"/></svg><span class="lab">Collections</span></div><div class="row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 20V11M10 20V5M15 20v-6M20 20V8"/></svg><span class="lab">Stats</span></div>
+      </nav>
+      <div class="stage" style="left:460px">
+        <div class="topbar"><h3>Hello, admin</h3></div>
+        <div class="shelf"><h4>Continue listening</h4><div class="covers">
+          <div class="cover"><div class="ca"></div><div class="t">Project Hail Mary</div><div class="left">10 h 42 min left</div></div>
+          <div class="cover"><div class="ca"></div><div class="t">The Dark Forest</div><div class="left">14 h left</div></div>
+          <div class="cover"><div class="ca"></div><div class="t">Snow Crash</div><div class="left">2 h 5 min left</div></div>
+          <div class="cover"><div class="ca"></div><div class="t">Dungeon Crawler Carl</div><div class="left">9 h 20 min left</div></div>
+        </div></div>
+        <div class="shelf"><h4>Recently added</h4><div class="covers">
+          <div class="cover"><div class="ca"></div></div><div class="cover"><div class="ca"></div></div><div class="cover"><div class="ca"></div></div><div class="cover"><div class="ca"></div></div><div class="cover"><div class="ca"></div></div>
+        </div></div>
+      </div>
+    </div></div>
+  </section>
+</div>
+</body>
+</html>
