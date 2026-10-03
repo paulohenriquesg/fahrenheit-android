@@ -82,7 +82,6 @@ class LoginCoordinator(
         return complete(host, LoginError.ApiKeyRejected) { performApiKeyLogin(host, key) }
     }
 
-
     /** @param rejected what a 401/403 means for the credential just sent. */
     private suspend fun complete(
         host: String,

@@ -54,6 +54,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.tv.material3.Text
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,7 +78,8 @@ import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 fun LoginScreen(
     handleLogin: (String, String, String, MutableState<Boolean>) -> Unit,
     handleApiKeyLogin: (String, String, MutableState<Boolean>) -> Unit,
-    error: LoginError? = null
+    error: LoginError? = null,
+    onDismissError: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sharedPreferencesHandler = SharedPreferencesHandler(context)
@@ -129,14 +131,29 @@ fun LoginScreen(
     val errorField = shownError?.field?.takeIf { it in shownFields } ?: shownFields.first()
     @Composable
     fun ErrorAbove(field: LoginField) {
-        if (shownError != null && errorField == field) LoginErrorBand(shownError)
+        if (shownError != null && errorField == field) LoginErrorBand(shownError, addressShown = !addressConfirmed)
+    }
+
+    // A step change removes whatever held focus - Continue, or the button row
+    // - and a TV with nothing focused ignores the remote until a blind press.
+    // So the step that appears takes focus: its first field.
+    val hostFocus = remember { FocusRequester() }
+    val firstFieldFocus = remember { FocusRequester() }
+    var stepChanged by remember { mutableStateOf(false) }
+    LaunchedEffect(addressConfirmed) {
+        if (stepChanged) (if (addressConfirmed) firstFieldFocus else hostFocus).requestFocus()
     }
 
     // Checked here, before asking for anything else: nothing is sent yet.
     val confirmAddress: () -> Unit = {
         host = host.trim()
         addressError = LoginCoordinator.hostProblem(host)
-        if (addressError == null) addressConfirmed = true
+        if (addressError == null) {
+            // The last attempt's error belongs to the last address.
+            onDismissError()
+            stepChanged = true
+            addressConfirmed = true
+        }
     }
     // One way in, whatever pressed it: the keyboard's Done, the remote's Play
     // or the button. Ignored while a request is out, so a second press does
@@ -155,7 +172,7 @@ fun LoginScreen(
             .testTag("login_screen")
             // The Fire TV keyboard owns the bottom 45% while typing, so the
             // form starts at the top rather than centring its buttons under it.
-            .padding(start = 60.dp, end = 16.dp, top = 32.dp, bottom = 16.dp),
+            .padding(start = 60.dp, end = 16.dp, top = 24.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.Top,
         // The login mock reads from the left, like a page.
         horizontalAlignment = Alignment.Start
@@ -169,7 +186,7 @@ fun LoginScreen(
             style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold),
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
-                .padding(bottom = 16.dp)
+                .padding(bottom = 8.dp)
                 .testTag("login_title")
         )
 
@@ -201,6 +218,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_host_field")
+                    .focusRequester(hostFocus)
                     .remoteKeys(focusManager, onPlay = confirmAddress)
                     .onFocusChanged {
                         isHostFocused = it.isFocused
@@ -253,6 +271,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_api_key_field")
+                    .focusRequester(firstFieldFocus)
                     .focusProperties { down = submitFocus }
                     .remoteKeys(focusManager, onPlay = submit)
                     .onFocusChanged { isApiKeyFocused = it.isFocused },
@@ -285,6 +304,7 @@ fun LoginScreen(
                     modifier = Modifier
                         .formWidth()
                         .testTag("login_username_field")
+                        .focusRequester(firstFieldFocus)
                         .remoteKeys(focusManager)
                         .onFocusChanged {
                             isUsernameFocused = it.isFocused
@@ -297,7 +317,7 @@ fun LoginScreen(
                     ),
                     colors = fieldColors()
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
             }
             ErrorAbove(LoginField.Password)
             OutlinedTextField(
@@ -321,6 +341,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_password_field")
+                    .then(if (returning) Modifier.focusRequester(firstFieldFocus) else Modifier)
                     .focusProperties { down = submitFocus }
                     .remoteKeys(focusManager, onPlay = submit)
                     .onFocusChanged {
@@ -335,7 +356,7 @@ fun LoginScreen(
                 colors = fieldColors()
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         // The buttons stay while signing in: the spinner used to replace them,
         // taking focus along, and on the stick that looked like nothing at all.
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -356,8 +377,16 @@ fun LoginScreen(
             LoginButton(
                 text = stringResource(R.string.login_different_server),
                 onClick = {
-                    differentServer = true
-                    addressConfirmed = false
+                    // Mid-request the answer would land on the wrong step.
+                    if (!isLoading.value) {
+                        onDismissError()
+                        // Typed for this server; not to be sent to the next.
+                        password = ""
+                        apiKey = ""
+                        differentServer = true
+                        stepChanged = true
+                        addressConfirmed = false
+                    }
                 },
                 modifier = Modifier.testTag("login_different_server")
             )
@@ -495,24 +524,24 @@ private fun displayHost(host: String): String =
     host.substringAfter("://").trimEnd('/')
 
 @Composable
-private fun LoginErrorBand(error: LoginError) {
+private fun LoginErrorBand(error: LoginError, addressShown: Boolean) {
     val danger = MaterialTheme.colorScheme.error
     val text = if (error is LoginError.ServerError) stringResource(error.message, error.code)
-    else stringResource(error.message)
+    else stringResource(error.messageWhere(addressShown))
     Row(
         modifier = Modifier
             .formWidth()
-            .padding(bottom = 8.dp)
+            .padding(bottom = 4.dp)
             .background(danger.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
             .border(1.dp, danger, RoundedCornerShape(12.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .testTag("login_error")
             .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Icon(Icons.Filled.ErrorOutline, contentDescription = null, tint = danger)
-        Text(text, color = danger, style = MaterialTheme.typography.bodyLarge)
+        Text(text, color = danger, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -534,6 +563,18 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = MaterialTheme.colorScheme.primary,
     unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant
 )
+
+/**
+ * Where the address is a fact rather than a field, "check the address" has
+ * nothing to point at; these say how to change it instead.
+ */
+@StringRes
+private fun LoginError.messageWhere(addressShown: Boolean): Int = when {
+    addressShown -> message
+    this == LoginError.Unreachable -> R.string.login_error_unreachable_change
+    this == LoginError.UnusableSession -> R.string.login_error_unusable_session_change
+    else -> message
+}
 
 /** What the screen says for each [LoginError]: what to do, not what broke. */
 @get:StringRes

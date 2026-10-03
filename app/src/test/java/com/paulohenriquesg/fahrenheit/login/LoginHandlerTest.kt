@@ -115,4 +115,15 @@ class LoginHandlerTest {
         assertEquals(LoginError.HostMissing, h.error.value)
         assertNull(ShadowToast.getLatestToast())
     }
+
+    @Test
+    fun `an error can be put away, for a new server`() {
+        val h = handler { _, _, _ -> throw IOException("down") }
+        h.handleLogin("http://abs.local", "someone", "hunter2", mutableStateOf(false))
+        settle()
+
+        h.clearError()
+
+        assertNull(h.error.value)
+    }
 }

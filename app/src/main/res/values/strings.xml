@@ -62,6 +62,8 @@
     <string name="login_error_api_key_missing">Enter an API key first.</string>
     <string name="login_error_password_rejected">That username and password were not accepted. Check the password and try again.</string>
     <string name="login_error_api_key_rejected">That API key was not accepted. Check it, or create a new one in the web UI.</string>
+    <string name="login_error_unreachable_change">The server did not answer. Check that it is running, or choose Different server to change the address.</string>
+    <string name="login_error_unusable_session_change">Signed in, but the server address could not be used. Choose Different server to change it.</string>
     <string name="login_error_unreachable">The server did not answer. Check the address, and that the server is running.</string>
     <string name="login_error_server">The server could not sign you in (error %1$d). Try again in a moment.</string>
     <string name="login_error_unexpected">Signing in did not work. Try again.</string>

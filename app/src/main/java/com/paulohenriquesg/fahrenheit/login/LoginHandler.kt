@@ -45,6 +45,11 @@ class LoginHandler(
      */
     val error: State<LoginError?> get() = _error
 
+    /** The last error belongs to the last address; a new one starts clean. */
+    fun clearError() {
+        _error.value = null
+    }
+
     fun handleLogin(
         host: String,
         username: String,

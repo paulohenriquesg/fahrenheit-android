@@ -1,10 +1,12 @@
 package com.paulohenriquesg.fahrenheit.login
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -19,6 +21,7 @@ import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,14 +47,30 @@ class LoginFirstRunTest {
 
     private var login: Triple<String, String, String>? = null
     private var apiKey: Pair<String, String>? = null
+    private var dismissed = 0
+    private var loadingOnSubmit = false
+    private var loadingState: MutableState<Boolean>? = null
+
+    // A sign-in left loading keeps its spinner animating after the test, and
+    // that endless animation left later Compose test classes never idle.
+    @After
+    fun stopLoading() {
+        compose.runOnUiThread { loadingState?.value = false }
+        compose.waitForIdle()
+    }
 
     private fun show(error: LoginError? = null) {
         compose.setContent {
             FahrenheitTheme {
                 LoginScreen(
-                    { h, u, p, _ -> login = Triple(h, u, p) },
+                    { h, u, p, loading ->
+                        login = Triple(h, u, p)
+                        if (loadingOnSubmit) loading.value = true
+                        loadingState = loading
+                    },
                     { h, k, _ -> apiKey = h to k },
-                    error = error
+                    error = error,
+                    onDismissError = { dismissed++ }
                 )
             }
         }
@@ -225,5 +244,100 @@ class LoginFirstRunTest {
         compose.onNodeWithTag("login_host_field").assertDoesNotExist()
         compose.onNodeWithTag("login_username_field").assertExists()
         assertTrue(text("login_title").contains("abs.local:13378"))
+    }
+
+    private fun rememberHost() {
+        val prefs = SharedPreferencesHandler(compose.activity)
+        prefs.saveUserPreferences(prefs.getUserPreferences().copy(host = "http://abs.local:13378", username = ""))
+    }
+
+    // On a TV, focus that vanishes with the button that held it leaves the
+    // remote doing nothing visible until a blind press.
+    @Test
+    fun `after the address, focus is on the username`() {
+        show()
+
+        enterAddress("http://abs.local:13378")
+
+        compose.onNodeWithTag("login_username_field").assertIsFocused()
+    }
+
+    @Test
+    fun `after the keyboard's Done in the address, focus is on the username`() {
+        show()
+
+        compose.onNodeWithTag("login_host_field").performTextInput("http://abs.local:13378")
+        compose.onNodeWithTag("login_host_field").performImeAction()
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("login_username_field").assertIsFocused()
+    }
+
+    @Test
+    fun `after a different server, focus is on the address`() {
+        show()
+        enterAddress("http://abs.local:13378")
+
+        press("login_different_server")
+
+        compose.onNodeWithTag("login_host_field").assertIsFocused()
+    }
+
+    // The handler keeps its error until the next attempt; the last server's
+    // "did not answer" must not greet the next one.
+    @Test
+    fun `moving between the address and signing in clears the last error`() {
+        show()
+
+        enterAddress("http://abs.local:13378")
+        press("login_different_server")
+
+        assertEquals(2, dismissed)
+    }
+
+    @Test
+    fun `a password typed for one server is not sent to the next`() {
+        show()
+        enterAddress("http://abs.local:13378")
+        compose.onNodeWithTag("login_password_field").performTextInput("hunter2")
+
+        press("login_different_server")
+        press("login_continue")
+
+        assertEquals("", compose.onNodeWithTag("login_password_field").fetchSemanticsNode()
+            .config[SemanticsProperties.EditableText].text)
+    }
+
+    @Test
+    fun `the server cannot be changed while signing in`() {
+        loadingOnSubmit = true
+        show()
+        enterAddress("http://abs.local:13378")
+        compose.onNodeWithTag("login_password_field").performImeAction()
+
+        press("login_different_server")
+
+        compose.onNodeWithTag("login_username_field").assertExists()
+    }
+
+    // The address is not a field on this step; the way to change it is.
+    @Test
+    fun `a server that did not answer says how to change the address`() {
+        rememberHost()
+        show(LoginError.Unreachable)
+
+        assertEquals(compose.activity.getString(R.string.login_error_unreachable_change), text("login_error"))
+    }
+
+    @Test
+    fun `with an error showing, the sign-in step still fits above the keyboard`() {
+        rememberHost()
+        show(LoginError.UsernameMissing)
+
+        val keyboardTop = 540.dp * 0.55f
+        for (tag in listOf("login_password_field", "login_submit_button")) {
+            val bottom = compose.onNodeWithTag(tag).getUnclippedBoundsInRoot().bottom
+            assertTrue("$tag ends at $bottom, under the keyboard ($keyboardTop)", bottom <= keyboardTop)
+        }
     }
 }

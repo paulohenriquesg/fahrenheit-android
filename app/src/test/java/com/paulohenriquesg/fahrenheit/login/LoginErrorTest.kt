@@ -85,7 +85,7 @@ class LoginErrorTest {
         show(LoginError.Unreachable)
 
         compose.onNodeWithTag("login_error")
-            .assertTextContains(string(R.string.login_error_unreachable))
+            .assertTextContains(string(R.string.login_error_unreachable_change))
         assertDirectlyAbove("login_title", "login_error")
         assertDirectlyAbove("login_error", "login_username_field")
     }
