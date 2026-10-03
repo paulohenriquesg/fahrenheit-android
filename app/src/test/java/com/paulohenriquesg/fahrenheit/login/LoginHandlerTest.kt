@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.login
 
 import android.os.Looper
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.test.core.app.ApplicationProvider
 import com.paulohenriquesg.fahrenheit.api.FakeTokenStore
 import com.paulohenriquesg.fahrenheit.auth.AuthSession
@@ -9,6 +10,7 @@ import com.paulohenriquesg.fahrenheit.auth.SessionManager
 import com.paulohenriquesg.fahrenheit.auth.SessionState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -42,6 +44,15 @@ class LoginHandlerTest {
     )
 
     private fun settle() = shadowOf(Looper.getMainLooper()).idle()
+
+    // The handler writes Compose state outside any composition. Left pending,
+    // such a write kept later Compose test classes in this JVM from ever
+    // going idle; applying it here ends that with the test.
+    @After
+    fun applyStateWrites() {
+        settle()
+        Snapshot.sendApplyNotifications()
+    }
 
     @Test
     fun `a failure becomes the screen's error, and no Toast is shown`() {
