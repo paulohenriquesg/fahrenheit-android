@@ -4,6 +4,7 @@ import android.app.Activity
 import com.paulohenriquesg.fahrenheit.settings.SettingsView
 import com.paulohenriquesg.fahrenheit.settings.UpdateCheck
 import com.paulohenriquesg.fahrenheit.player.PlaybackDevice
+import com.paulohenriquesg.fahrenheit.update.UpdateActivity
 import com.paulohenriquesg.fahrenheit.library.SwitchLibraryView
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemeManager
 import com.paulohenriquesg.fahrenheit.BuildConfig
@@ -397,14 +398,13 @@ fun MainScreen(
                         onCheckUpdates = {
                             updateCheck = UpdateCheck.Checking
                             scope.launch {
-                                // Asked for, so it answers even while snoozed.
-                                val available = AppUpdates.checker(context).check(force = true)
-                                updateCheck = if (available != null) {
-                                    UpdateCheck.Available(available.versionName)
-                                } else {
-                                    UpdateCheck.UpToDate
-                                }
+                                // Asked for, so it answers even while snoozed,
+                                // and a failure says so.
+                                updateCheck = UpdateCheck.from(AppUpdates.checker(context).checkNow())
                             }
+                        },
+                        onInstall = { update ->
+                            context.startActivity(UpdateActivity.createIntent(context, update))
                         },
                         username = username,
                         server = sharedPreferencesHandler.getUserPreferences().host,

@@ -111,7 +111,10 @@
     <string name="settings_device_name_save">Save</string>
     <string name="settings_update_checking">Checking with the server\u2026</string>
     <string name="settings_update_up_to_date">Up to date on %1$s</string>
-    <string name="settings_update_available">%1$s is ready to install</string>
+    <string name="settings_update_failed">Couldn\'t reach the update server. Check the connection and try again.</string>
+    <string name="settings_update_ready">%1$s is ready</string>
+    <string name="settings_update_size">%1$d MB</string>
+    <string name="settings_install">Install</string>
     <string name="settings_sign_out">Sign out</string>
     <string name="switch_library">Switch library</string>
     <string name="switch_library_none">No libraries on this server</string>

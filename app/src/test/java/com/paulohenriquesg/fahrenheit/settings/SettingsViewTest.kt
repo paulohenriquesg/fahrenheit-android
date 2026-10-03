@@ -18,7 +18,10 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.input.key.Key
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemePreference
+import com.paulohenriquesg.fahrenheit.update.AvailableUpdate
+import com.paulohenriquesg.fahrenheit.update.CheckResult
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,6 +45,7 @@ class SettingsViewTest {
         onTheme: (ThemePreference) -> Unit = {},
         onLayout: (Boolean) -> Unit = {},
         onCheck: () -> Unit = {},
+        onInstall: (AvailableUpdate) -> Unit = {},
         onSignOut: () -> Unit = {},
         deviceName: String = "AFTMODEL",
         onDeviceName: (String) -> Unit = {}
@@ -57,6 +61,7 @@ class SettingsViewTest {
                     version = "v0.0.10",
                     update = update,
                     onCheckUpdates = onCheck,
+                    onInstall = onInstall,
                     username = "admin",
                     server = "http://books.example:13378",
                     onSignOut = onSignOut,
@@ -133,11 +138,69 @@ class SettingsViewTest {
         compose.onNodeWithText("Checking", substring = true).assertIsDisplayed()
     }
 
+    private val waiting = AvailableUpdate(
+        versionCode = 11,
+        versionName = "v0.0.11",
+        changelog = listOf("Adds a shelf of recent episodes", "Fixes a crash"),
+        apkUrl = "https://example.invalid/app.apk",
+        sha256 = "abc",
+        sizeBytes = 18L * 1024 * 1024
+    )
+
     @Test
     fun `a waiting update says what it is`() {
-        render(update = UpdateCheck.Available("v0.0.11"))
+        render(update = UpdateCheck.Available(waiting))
 
-        compose.onNodeWithText("v0.0.11", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("v0.0.11 is ready").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a waiting update says how big it is and what it brings`() {
+        render(update = UpdateCheck.Available(waiting))
+
+        compose.onNodeWithText("18 MB \u00b7 Adds a shelf of recent episodes").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a waiting update with no notes still says how big it is`() {
+        render(update = UpdateCheck.Available(waiting.copy(changelog = emptyList())))
+
+        compose.onNodeWithText("18 MB").assertIsDisplayed()
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun `a waiting update can be installed from the row`() {
+        var installed: AvailableUpdate? = null
+        render(update = UpdateCheck.Available(waiting), onInstall = { installed = it })
+
+        compose.onNodeWithTag("install_update").performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.onNodeWithTag("install_update").performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+
+        assertSame(waiting, installed)
+    }
+
+    @Test
+    fun `there is nothing to install when nothing is waiting`() {
+        render(update = UpdateCheck.UpToDate)
+
+        compose.onNodeWithTag("install_update").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a failed check says it failed, not that all is well`() {
+        render(update = UpdateCheck.Failed)
+
+        compose.onNodeWithText("Couldn't reach the update server", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Up to date", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the row reads each answer of a check the user asked for`() {
+        assertEquals(UpdateCheck.UpToDate, UpdateCheck.from(CheckResult.UpToDate))
+        assertEquals(UpdateCheck.Failed, UpdateCheck.from(CheckResult.Failed))
+        assertEquals(UpdateCheck.Available(waiting), UpdateCheck.from(CheckResult.Available(waiting)))
     }
 
     @Test

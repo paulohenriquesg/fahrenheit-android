@@ -48,14 +48,24 @@ import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 import com.paulohenriquesg.fahrenheit.ui.components.ScreenTitle
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemePreference
+import com.paulohenriquesg.fahrenheit.update.AvailableUpdate
+import com.paulohenriquesg.fahrenheit.update.CheckResult
 
 /** Where an update check has got to, said in the row that asked rather than in a Toast. */
 sealed interface UpdateCheck {
     data object Idle : UpdateCheck
     data object Checking : UpdateCheck
     data object UpToDate : UpdateCheck
-    data class Available(val version: String) : UpdateCheck
-    data class Failed(val reason: String) : UpdateCheck
+    data class Available(val update: AvailableUpdate) : UpdateCheck
+    data object Failed : UpdateCheck
+
+    companion object {
+        fun from(result: CheckResult): UpdateCheck = when (result) {
+            CheckResult.UpToDate -> UpToDate
+            is CheckResult.Available -> Available(result.update)
+            CheckResult.Failed -> Failed
+        }
+    }
 }
 
 @Composable
@@ -67,6 +77,7 @@ fun SettingsView(
     version: String,
     update: UpdateCheck,
     onCheckUpdates: () -> Unit,
+    onInstall: (AvailableUpdate) -> Unit,
     username: String,
     server: String,
     onSignOut: () -> Unit,
@@ -144,6 +155,19 @@ fun SettingsView(
                         Text(stringResource(R.string.settings_check_now))
                     }
                 }
+                if (update is UpdateCheck.Available) {
+                    SettingRow(
+                        title = stringResource(R.string.settings_update_ready, update.update.versionName),
+                        subtitle = updateSummary(update.update)
+                    ) {
+                        Button(
+                            onClick = { onInstall(update.update) },
+                            modifier = Modifier.testTag("install_update")
+                        ) {
+                            Text(stringResource(R.string.settings_install))
+                        }
+                    }
+                }
             }
 
             Group(stringResource(R.string.settings_account)) {
@@ -163,8 +187,9 @@ private fun updateLine(update: UpdateCheck, version: String): String = when (upd
     UpdateCheck.Idle -> version
     UpdateCheck.Checking -> stringResource(R.string.settings_update_checking)
     UpdateCheck.UpToDate -> stringResource(R.string.settings_update_up_to_date, version)
-    is UpdateCheck.Available -> stringResource(R.string.settings_update_available, update.version)
-    is UpdateCheck.Failed -> update.reason
+    // The row below carries the news; this one keeps saying what is installed.
+    is UpdateCheck.Available -> version
+    UpdateCheck.Failed -> stringResource(R.string.settings_update_failed)
 }
 
 /**
@@ -232,6 +257,20 @@ private fun DeviceNameRow(name: String, onRename: (String) -> Unit) {
         }
     }
 }
+
+/** How big the download is, and the first thing it brings. */
+@Composable
+private fun updateSummary(update: AvailableUpdate): String {
+    val megabytes = (update.sizeBytes + BYTES_PER_MB / 2) / BYTES_PER_MB
+    val size = if (update.sizeBytes > 0) {
+        stringResource(R.string.settings_update_size, megabytes.coerceAtLeast(1))
+    } else {
+        null
+    }
+    return listOfNotNull(size, update.changelog.firstOrNull()).joinToString(" \u00b7 ")
+}
+
+private const val BYTES_PER_MB = 1024L * 1024L
 
 @Composable
 private fun Group(title: String, content: @Composable () -> Unit) {
