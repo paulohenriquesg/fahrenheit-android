@@ -29,7 +29,7 @@ class LibraryRepository(private val api: LibraryApi) {
         api.getLibraryItem(itemId)
     }
 
-    suspend fun items(libraryId: String): Result<List<LibraryItem>> = runCatching {
+    suspend fun items(libraryId: String, query: LibraryQuery = LibraryQuery.Everything): Result<List<LibraryItem>> = runCatching {
         api.getLibraryItems(libraryId).results
     }
 

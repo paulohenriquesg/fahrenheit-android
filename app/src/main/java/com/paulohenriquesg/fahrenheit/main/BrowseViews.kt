@@ -342,7 +342,8 @@ fun LibraryBrowseView(
     itemLabel: String,
     items: List<LibraryItem>,
     rowLayout: Boolean,
-    listState: androidx.compose.foundation.lazy.LazyListState
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    query: com.paulohenriquesg.fahrenheit.api.LibraryQuery = com.paulohenriquesg.fahrenheit.api.LibraryQuery.Everything
 ) {
     Column(
         modifier = Modifier

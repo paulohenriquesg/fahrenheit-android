@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
+import com.paulohenriquesg.fahrenheit.api.LibraryQuery
 import com.paulohenriquesg.fahrenheit.api.Series
 import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.navigation.MenuAction
@@ -39,7 +40,7 @@ class HomeSeeAllTest {
 
     @Test
     fun `the series shelf's tile opens the Series tab, and discover has none`() {
-        var opened: MenuAction? = null
+        var opened: ShelfSeeAll.Tile? = null
         val series = Shelf(
             id = "recent-series", label = "Recent Series", labelStringKey = "", type = "series",
             seriesEntities = listOf(Series(id = "s1", name = "A Series")), total = 12
@@ -56,12 +57,12 @@ class HomeSeeAllTest {
 
         compose.onNodeWithText("See all 165").assertDoesNotExist()
         compose.onNodeWithText("See all 12").performSemanticsAction(SemanticsActions.OnClick)
-        assertEquals(MenuAction.SERIES, opened)
+        assertEquals(MenuAction.SERIES, opened?.opens)
     }
 
     @Test
     fun `a podcast library's recently added opens its podcasts, and newest episodes has none`() {
-        var opened: MenuAction? = null
+        var opened: ShelfSeeAll.Tile? = null
         val recentlyAdded = Shelf(
             id = "recently-added", label = "Recently Added", labelStringKey = "", type = "podcast",
             bookEntities = listOf(book), total = 30
@@ -78,6 +79,23 @@ class HomeSeeAllTest {
 
         compose.onNodeWithText("See all 800").assertDoesNotExist()
         compose.onNodeWithText("See all 30").performSemanticsAction(SemanticsActions.OnClick)
-        assertEquals(MenuAction.LIBRARY, opened)
+        assertEquals(MenuAction.LIBRARY, opened?.opens)
+        assertEquals(LibraryQuery.RecentlyAdded, opened?.query)
+    }
+
+    @Test
+    fun `continue listening's tile opens the library filtered to in progress`() {
+        var opened: ShelfSeeAll.Tile? = null
+        val shelf = Shelf(
+            id = "continue-listening", label = "Continue Listening", labelStringKey = "", type = "book",
+            bookEntities = listOf(book), total = 35
+        )
+
+        compose.setContent { FahrenheitTheme { PersonalizedHomeView(listOf(shelf), "lib", onSeeAll = { opened = it }) } }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("See all 35").performSemanticsAction(SemanticsActions.OnClick)
+        assertEquals(MenuAction.LIBRARY, opened?.opens)
+        assertEquals(LibraryQuery.InProgress, opened?.query)
     }
 }

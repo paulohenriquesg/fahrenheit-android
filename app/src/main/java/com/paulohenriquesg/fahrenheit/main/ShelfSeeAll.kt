@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.main
 
+import com.paulohenriquesg.fahrenheit.api.LibraryQuery
 import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.navigation.MenuAction
 
@@ -17,7 +18,7 @@ import com.paulohenriquesg.fahrenheit.navigation.MenuAction
  */
 object ShelfSeeAll {
 
-    data class Tile(val total: Int, val opens: MenuAction)
+    data class Tile(val total: Int, val opens: MenuAction, val query: LibraryQuery = LibraryQuery.Everything)
 
     fun of(shelf: Shelf): Tile? {
         val opens = destination(shelf) ?: return null

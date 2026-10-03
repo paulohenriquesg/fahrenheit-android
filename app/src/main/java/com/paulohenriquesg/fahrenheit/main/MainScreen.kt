@@ -390,11 +390,11 @@ fun MainScreen(
                     )
                 }
                 when (view) {
-                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, isLoadingHome, fetchProgress, onSeeAll = { action ->
+                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, isLoadingHome, fetchProgress, onSeeAll = { tile ->
                         // As though the rail's row had been chosen, so the rail
                         // highlights the screen the tile opened.
-                        MainView.forMenuAction(action)?.let { highlightedMenuItemId = it.menuItemId }
-                        handleMenuAction(action, currentLibrary?.id)
+                        MainView.forMenuAction(tile.opens)?.let { highlightedMenuItemId = it.menuItemId }
+                        handleMenuAction(tile.opens, currentLibrary?.id)
                     })
                     MainView.LIBRARY -> LibraryBrowseView(
                         name = currentLibrary?.name,
@@ -497,7 +497,7 @@ fun PersonalizedHomeView(
     libraryId: String?,
     isLoading: Boolean = false,
     fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() },
-    onSeeAll: (com.paulohenriquesg.fahrenheit.navigation.MenuAction) -> Unit = {}
+    onSeeAll: (ShelfSeeAll.Tile) -> Unit = {}
 ) {
     val context = LocalContext.current
     // The shelves carry no progress, so it comes from GET /api/me: read again
@@ -552,7 +552,7 @@ fun PersonalizedHomeView(
                 when (shelf.type) {
                     "episode" -> {
                         shelf.bookEntities?.let { books ->
-                            ShelfRow(shelf = shelf, progress = progress, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it.opens) } }) { item ->
+                            ShelfRow(shelf = shelf, progress = progress, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { item ->
                                 val episodeId = item.recentEpisode?.id
                                 val podcastId = item.recentEpisode?.libraryItemId ?: item.id
 
@@ -583,7 +583,7 @@ fun PersonalizedHomeView(
                                 shelf = shelf,
                                 progress = progress,
                                 seeAllTotal = seeAll?.total,
-                                onSeeAll = { seeAll?.let { onSeeAll(it.opens) } },
+                                onSeeAll = { seeAll?.let { onSeeAll(it) } },
                                 onItemLongClick = if (playsOnPress) ::openDetails else null
                             ) { item ->
                                 // A book whose audio has gone would only reach a
@@ -598,7 +598,7 @@ fun PersonalizedHomeView(
                     }
                     "authors" -> {
                         shelf.authorEntities?.let { authors ->
-                            AuthorShelfRow(shelf = shelf, authors = authors, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it.opens) } }) { author ->
+                            AuthorShelfRow(shelf = shelf, authors = authors, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { author ->
                                 val intent = com.paulohenriquesg.fahrenheit.author.AuthorDetailActivity.createIntent(context, author.id)
                                 context.startActivity(intent)
                             }
@@ -606,7 +606,7 @@ fun PersonalizedHomeView(
                     }
                     "series" -> {
                         shelf.seriesEntities?.let { series ->
-                            SeriesShelfRow(shelf = shelf, series = series, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it.opens) } }) { seriesItem ->
+                            SeriesShelfRow(shelf = shelf, series = series, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { seriesItem ->
                                 val intent = com.paulohenriquesg.fahrenheit.group.BookGroupActivity.forSeries(context, seriesItem)
                                 context.startActivity(intent)
                             }
