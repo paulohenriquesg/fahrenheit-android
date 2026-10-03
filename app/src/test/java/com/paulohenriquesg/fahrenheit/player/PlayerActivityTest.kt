@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.media3.test.utils.TestExoPlayerBuilder
 import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
@@ -37,5 +38,25 @@ class PlayerActivityTest {
         assertEquals(DetailActivity::class.java.name, started.component?.className)
         assertEquals("p1", started.getStringExtra("item_id"))
         assertTrue(player.isFinishing)
+    }
+
+    // About's "Play <title> instead?": this book stops before the other opens.
+    @Test
+    fun `switching books stops this one and opens the other, playing`() {
+        val player = screen.create().get()
+        val playing = TestExoPlayerBuilder(player).setMediaSourceFactory(hourLongFiles()).build()
+        val book = NowPlaying("b2", "b2", TrackTimeline(listOf(TimelineTrack(1, 0.0, 600.0, "/f"))), null, null, null, false, null)
+        val queue = PlaybackQueue.of(book, 0.0) { "https://abs.test$it" }!!
+        playing.setMediaItems(queue.items, queue.index, queue.positionMs)
+
+        PlayerActivity.switchTo(player, playing, "b3")
+
+        assertEquals(0, playing.mediaItemCount)
+        val started = shadowOf(player).nextStartedActivity
+        assertEquals(PlayerActivity::class.java.name, started.component?.className)
+        assertEquals("b3", started.getStringExtra("item_id"))
+        assertTrue(started.getBooleanExtra("auto_play", false))
+        assertTrue(player.isFinishing)
+        playing.release()
     }
 }

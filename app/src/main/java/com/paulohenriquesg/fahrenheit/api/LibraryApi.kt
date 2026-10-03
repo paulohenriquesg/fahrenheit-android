@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.api
 
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -36,8 +38,18 @@ interface LibraryApi {
         @Query("page") page: Int? = null,
         @Query("desc") desc: Boolean? = null,
         @Query("include", encoded = true) include: String = "rssfeed,numEpisodesIncomplete",
-        @Query("minified") minified: Int = 0
+        @Query("minified") minified: Int = 0,
+        /** "group.value", the value base64- then URL-encoded, as the server decodes it. */
+        @Query("filter", encoded = true) filter: String? = null
     ): LibraryItemsResponse
+
+    /** Marks a book finished or not (#107). */
+    @PATCH("api/me/progress/{itemId}")
+    suspend fun markFinished(@Path("itemId") itemId: String, @Body body: ProgressMark)
+
+    /** Marks an episode finished or not. */
+    @PATCH("api/me/progress/{itemId}/{episodeId}")
+    suspend fun markFinished(@Path("itemId") itemId: String, @Path("episodeId") episodeId: String, @Body body: ProgressMark)
 
     @GET("api/libraries/{libraryId}/personalized")
     suspend fun getPersonalizedView(
@@ -46,3 +58,10 @@ interface LibraryApi {
         @Query("include") include: String = "rssfeed"
     ): List<Shelf>
 }
+
+/**
+ * Finished or not, and where: nothing else, so nothing else is overwritten.
+ * [currentTime] is the position the closing report will carry, so that report
+ * does not un-finish the item (the server does that when currentTime moves).
+ */
+data class ProgressMark(val isFinished: Boolean? = null, val currentTime: Double? = null)

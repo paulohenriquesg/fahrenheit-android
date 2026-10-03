@@ -33,7 +33,7 @@ class LibraryRepositoryTest {
 
         override suspend fun getLibraryItems(
             libraryId: String, sort: String, limit: Int?, page: Int?,
-            desc: Boolean?, include: String, minified: Int
+            desc: Boolean?, include: String, minified: Int, filter: String?
         ): LibraryItemsResponse {
             lastLibraryId = libraryId
             return items?.invoke() ?: error("no items response configured")
@@ -56,6 +56,10 @@ class LibraryRepositoryTest {
             lastLibraryId = libraryId
             return stats?.invoke() ?: error("no stats configured")
         }
+
+        override suspend fun markFinished(itemId: String, body: ProgressMark) = error("not used")
+
+        override suspend fun markFinished(itemId: String, episodeId: String, body: ProgressMark) = error("not used")
     }
 
     @Test

@@ -179,9 +179,17 @@ fun DetailHeader(
  * The whole description. Text cannot hold focus, so a description longer than
  * the screen would be unreachable past its first page: when it overflows it
  * becomes focusable, Down scrolls it, and Up at its top goes back to the button.
+ *
+ * Shared with the player's About panel (#107), which wants focus on it even
+ * when it fits: [alwaysFocusable].
  */
 @Composable
-private fun FullDescription(description: String, scroll: ScrollState) {
+internal fun FullDescription(
+    description: String,
+    scroll: ScrollState,
+    modifier: Modifier = Modifier,
+    alwaysFocusable: Boolean = false
+) {
     val text = remember(description) { RichText.fromHtml(description) }
     val scope = rememberCoroutineScope()
     val step = with(LocalDensity.current) { 160.dp.toPx() }
@@ -199,7 +207,7 @@ private fun FullDescription(description: String, scroll: ScrollState) {
         text = text,
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
+        modifier = modifier
             .testTag(DESCRIPTION_TAG)
             .onGloballyPositioned { coordinates = it }
             .border(
@@ -227,7 +235,7 @@ private fun FullDescription(description: String, scroll: ScrollState) {
                     else -> false
                 }
             }
-            .then(if (overflows) Modifier.focusable() else Modifier)
+            .then(if (overflows || alwaysFocusable) Modifier.focusable() else Modifier)
     )
 }
 

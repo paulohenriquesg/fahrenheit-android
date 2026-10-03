@@ -35,6 +35,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ListItem
@@ -44,7 +45,7 @@ import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 
 /** The panels the player's action chips open (#107). */
-enum class PlayerPanel { Speed, Sleep }
+enum class PlayerPanel { Chapters, Speed, Sleep, About }
 
 /**
  * Which panel is open, and the chip each was opened from, so focus can go
@@ -95,7 +96,7 @@ fun PlayerPanelHost(panels: PlayerPanels, panel: @Composable (PlayerPanel) -> Un
  */
 @OptIn(ExperimentalComposeUiApi::class) // focusProperties.exit
 @Composable
-fun SidePanel(title: String, onClose: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+fun SidePanel(title: String, onClose: () -> Unit, width: Dp = 320.dp, content: @Composable ColumnScope.() -> Unit) {
     BackHandler(onBack = onClose)
     val shown = remember { MutableTransitionState(false) }.apply { targetState = true }
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f))) {
@@ -107,7 +108,7 @@ fun SidePanel(title: String, onClose: () -> Unit, content: @Composable ColumnSco
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(320.dp)
+                    .width(width)
                     .background(MaterialTheme.colorScheme.surface)
                     .focusProperties { exit = { FocusRequester.Cancel } }
                     .focusGroup()
@@ -122,14 +123,15 @@ fun SidePanel(title: String, onClose: () -> Unit, content: @Composable ColumnSco
     }
 }
 
-/** One choice in a panel, ticked when it is the current one. */
+/** One choice in a panel, ticked when it is the current one; [detail] under it, quieter. */
 @Composable
-fun PanelOption(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun PanelOption(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, detail: String? = null) {
     ListItem(
         selected = selected,
         onClick = onClick,
         modifier = modifier,
         headlineContent = { Text(label) },
+        supportingContent = detail?.let { { Text(it) } },
         trailingContent = if (selected) {
             { Icon(Icons.Filled.Check, contentDescription = null, tint = LocalContentColor.current) }
         } else null

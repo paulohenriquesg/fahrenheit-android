@@ -114,7 +114,7 @@ Everything comes from what the app already reads, except where marked new.
 | fact | source |
 |---|---|
 | series name, sequence | `media.metadata.series[].name / .sequence` |
-| other books in the series | **new:** `GET /api/libraries/:id/series/:seriesId` |
+| other books in the series, and how many | **new:** `GET /api/libraries/:id/items?filter=series.<base64 id>&sort=sequence`. The series endpoint lists only item ids, and choosing another book needs titles (decided on step 4). |
 | narrator, publisher, year, genres, description | `media.metadata.narrators / publisher / publishedYear / genres / description` |
 | chapters | `media.chapters` |
 | episode season, number, type, subtitle, notes, date, length | `episode.season / episode / episodeType / subtitle / description / publishedAt / audioTrack.duration` |

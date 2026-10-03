@@ -76,12 +76,18 @@ fun MediaPlayerController(
     // The book's time left counts at the speed; the service's player holds it.
     val speed = rememberPlaybackSpeed(player)
 
-    DisposableEffect(player) {
+    DisposableEffect(player, playback) {
         val listener = object : Player.Listener {
             // Play/pause follows what was asked for, so it answers a press at
             // once rather than after buffering.
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { isPlaying = playWhenReady }
             override fun onPlayerErrorChanged(error: PlaybackException?) { failed = error != null }
+            // A seek from elsewhere - the Chapters panel, often while paused,
+            // when nothing polls - shows at once.
+            override fun onPositionDiscontinuity(old: Player.PositionInfo, new: Player.PositionInfo, reason: Int) {
+                currentTime = playback.bookPosition()
+                onCurrentTimeUpdate(currentTime)
+            }
         }
         player.addListener(listener)
         onDispose { player.removeListener(listener) }

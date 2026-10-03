@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -108,8 +109,11 @@ class PlayerActivity : ComponentActivity() {
         connection.open()
     }
 
+    /** Set when About switched to another book: that one may already be queued, so this one must not stop it. */
+    private var handedOver = false
+
     override fun onStop() {
-        connection.close { Playback.leave(it, finishing = isFinishing) }
+        connection.close { Playback.leave(it, finishing = isFinishing && !handedOver) }
         controller = null
         super.onStop()
     }
@@ -150,9 +154,7 @@ class PlayerActivity : ComponentActivity() {
         var ready by remember(connected, playing) { mutableStateOf(false) }
         val listening = remember(connected, playing) {
             if (connected == null || playing == null) null
-            else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds) { command, args ->
-                connected.sendCustomCommand(command, args)
-            }
+            else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds, connected::sendCustomCommand)
         }
         LaunchedEffect(connected, playing) {
             if (connected == null || playing == null) return@LaunchedEffect
@@ -163,8 +165,32 @@ class PlayerActivity : ComponentActivity() {
             ready = start.begin(connected, playing, { savedProgress(itemId, episodeId) }) { ApiClient.generateFullUrl(it) }
             if (!ready) failed = true
         }
+        // Above the screen's states, so a mark made in this visit survives Home and back.
+        var finished by rememberFinished(connected, playing?.finished)
+        var marking by remember(playing) { mutableStateOf(false) }
         // A panel left open when the screen went away does not come back over it.
         val panels = rememberPlayerPanels(connected)
+        val playback = remember(connected, playing) {
+            val timeline = playing?.timeline
+            if (connected == null || timeline == null) null else BookPlayback(connected, timeline)
+        }
+        val spans = remember(playing) { ChapterClock.spans(playing?.chapters, playing?.trackTotal ?: 0.0) }
+        // The rest of the series, for About and "Book N of M"; kept apart
+        // from nowPlaying, whose change would start playback over.
+        var series by remember(playing) { mutableStateOf<SeriesBooks?>(null) }
+        LaunchedEffect(playing?.series, playing?.libraryId) {
+            val ref = playing?.series ?: return@LaunchedEffect
+            val libraryId = playing.libraryId ?: return@LaunchedEffect
+            val api = ApiClient.getLibraryApi() ?: return@LaunchedEffect
+            // Said in the log when it fails: the row simply not being there hid
+            // a reply the app could not read (device check, #130).
+            series = LibraryRepository(api).seriesBooks(libraryId, ref.id)
+                .onFailure { Log.w(TAG, "Couldn't read the series ${ref.id}", it) }
+                .getOrNull()
+                ?.let { SeriesBooks.of(it, currentId = itemId) }
+                ?.also { if (it.current == null) Log.w(TAG, "The series ${ref.id} does not list $itemId") }
+                ?.takeIf { it.current != null }
+        }
         when {
             failed || connectFailed -> Text(
                 text = stringResource(R.string.item_load_failed),
@@ -176,48 +202,79 @@ class PlayerActivity : ComponentActivity() {
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(16.dp)
             )
-            else -> PlayerScreen(
-                nowPlaying = playing,
-                currentTime = currentTime,
-                wash = wash,
-                transport = {
-                    // ready implies a timeline: PlayerStart refuses a NowPlaying without one.
-                    val timeline = playing.timeline
-                    if (timeline != null) {
-                        val playback = remember(connected, timeline) { BookPlayback(connected, timeline) }
-                        MediaPlayerController(
-                            player = connected,
-                            playback = playback,
-                            totalTime = timeline.totalDuration,
-                            chapters = playing.chapters,
-                            onCurrentTimeUpdate = { currentTime = it },
-                            trailing = {
-                                if (playing.goToPodcast) GoToPodcastButton { goToPodcast(itemId) }
-                                SpeedChip(rememberPlaybackSpeed(connected), panels)
-                                SleepChip(sleep, panels)
-                            }
-                        )
-                    }
-                },
-                overlay = {
-                    PlayerPanelHost(panels) { panel ->
-                        when (panel) {
-                            PlayerPanel.Speed -> SpeedPanel(
-                                current = rememberPlaybackSpeed(connected),
-                                onChoose = { listening?.chooseSpeed(it) },
-                                onClose = panels::close,
-                                forShow = playing.goToPodcast
-                            )
-                            PlayerPanel.Sleep -> SleepPanel(
-                                sleep = sleep,
-                                chapters = listening?.hasChapters == true,
-                                onChoose = { listening?.chooseSleep(it) },
-                                onClose = panels::close
+            else -> {
+                PlayerScreen(
+                    nowPlaying = series?.let { playing.withSeriesTotal(it.total) } ?: playing,
+                    currentTime = currentTime,
+                    wash = wash,
+                    transport = {
+                        // ready implies a timeline: PlayerStart refuses a NowPlaying without one.
+                        val timeline = playing.timeline
+                        if (timeline != null && playback != null) {
+                            MediaPlayerController(
+                                player = connected,
+                                playback = playback,
+                                totalTime = timeline.totalDuration,
+                                chapters = playing.chapters,
+                                onCurrentTimeUpdate = { currentTime = it },
+                                trailing = {
+                                    // Frame C's actions; an episode has Go to podcast where a book has Chapters.
+                                    if (playing.goToPodcast) GoToPodcastButton { goToPodcast(itemId) }
+                                    if (spans.isNotEmpty()) ChaptersChip(panels)
+                                    SpeedChip(rememberPlaybackSpeed(connected), panels)
+                                    SleepChip(sleep, panels)
+                                    AboutChip(panels)
+                                }
                             )
                         }
+                    },
+                    overlay = {
+                        PlayerPanelHost(panels) { panel ->
+                            when (panel) {
+                                PlayerPanel.Chapters -> ChaptersPanel(
+                                    spans = spans,
+                                    at = playback?.bookPosition() ?: currentTime,
+                                    onChoose = { playback?.seekToBookTime(it) },
+                                    onClose = panels::close
+                                )
+                                PlayerPanel.About -> AboutPanel(
+                                    description = playing.description,
+                                    facts = playing.facts,
+                                    series = series,
+                                    finished = finished,
+                                    onPlayInstead = { other ->
+                                        handedOver = true
+                                        switchTo(this@PlayerActivity, connected, other.itemId)
+                                    },
+                                    marking = marking,
+                                    onMarkFinished = { done ->
+                                        // The service marks it, once the closing report is in (FinishMarker).
+                                        marking = true
+                                        listening?.markFinished(done) { worked ->
+                                            marking = false
+                                            if (worked) finished = done
+                                            else Toast.makeText(this@PlayerActivity, getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
+                                        }
+                                    },
+                                    onClose = panels::close
+                                )
+                                PlayerPanel.Speed -> SpeedPanel(
+                                    current = rememberPlaybackSpeed(connected),
+                                    onChoose = { listening?.chooseSpeed(it) },
+                                    onClose = panels::close,
+                                    forShow = playing.goToPodcast
+                                )
+                                PlayerPanel.Sleep -> SleepPanel(
+                                    sleep = sleep,
+                                    chapters = listening?.hasChapters == true,
+                                    onChoose = { listening?.chooseSleep(it) },
+                                    onClose = panels::close
+                                )
+                            }
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     }
 
@@ -239,6 +296,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val TAG = "PlayerActivity"
         private const val EXTRA_ITEM_ID = "item_id"
 
         /** How long the player waits for its cover's colour before it shows anyway. */
@@ -262,6 +320,18 @@ class PlayerActivity : ComponentActivity() {
          */
         fun podcastIntent(context: Context, podcastId: String): Intent =
             DetailActivity.createIntent(context, podcastId).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+        /**
+         * About's "Play <title> instead?": this book stops - its closing
+         * report going to it - before the other opens and plays. The caller
+         * must not stop playback again when it closes: by then the other book
+         * may already be queued.
+         */
+        internal fun switchTo(player: android.app.Activity, controller: androidx.media3.common.Player, itemId: String) {
+            Playback.leave(controller, finishing = true)
+            player.startActivity(createIntent(player, itemId, autoPlay = true))
+            player.finish()
+        }
 
         /**
          * "Go to podcast" leaves the episode: closing the player stops it, as

@@ -18,6 +18,7 @@ import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -80,9 +81,23 @@ class PlaybackService : MediaSessionService() {
             reporting.beforeLeaving()
             watch.beforeLeaving()
         }
+        val marker = FinishMarker(exo, reporting::closeAndWait) { itemId, episodeId, mark ->
+            val api = ApiClient.getLibraryApi() ?: error("signed out")
+            if (episodeId != null) api.markFinished(itemId, episodeId, mark) else api.markFinished(itemId, mark)
+        }
         session = MediaSession.Builder(this, guarded)
-            .setCallback(PlaybackSessionCallback(::setSleep))
+            .setCallback(PlaybackSessionCallback(onFinish = { finished -> markFinished(marker, finished) }, onSleep = ::setSleep))
             .build()
+    }
+
+    /** Mark finished or unfinished; the answer comes once the server has it. */
+    private fun markFinished(marker: FinishMarker, finished: Boolean): ListenableFuture<SessionResult> {
+        val answer = SettableFuture.create<SessionResult>()
+        scope.launch {
+            val result = marker.mark(finished)
+            answer.set(SessionResult(if (result.isSuccess) SessionResult.RESULT_SUCCESS else SessionError.ERROR_UNKNOWN))
+        }
+        return answer
     }
 
     /** Sets or clears the sleep timer, and ticks it while it runs. */
@@ -123,21 +138,35 @@ class PlaybackService : MediaSessionService() {
  * [PlayableItems] rebuilds it.
  *
  * Trusted controllers - the app's own screen - may also set the sleep
- * timer ([SleepCommand]), which is handed to [onSleep].
+ * timer ([SleepCommand]), handed to [onSleep], and mark what is queued
+ * finished ([FinishCommand]), handed to [onFinish].
  */
-internal class PlaybackSessionCallback(private val onSleep: (Bundle) -> Unit) : MediaSession.Callback {
-    // Media3's own default, trusted or not, plus the sleep timer for the
-    // trusted. Its default onConnect answers with a placeholder that only
-    // onConnectAsync turns into this, so it cannot be built upon.
+internal class PlaybackSessionCallback(
+    private val onFinish: (Boolean) -> ListenableFuture<SessionResult> = {
+        Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
+    },
+    private val onSleep: (Bundle) -> Unit
+) : MediaSession.Callback {
+    // Media3's own default, trusted or not, plus the sleep timer and Mark
+    // finished for the trusted. onConnectAsync, not onConnect: Media3's
+    // default onConnectAsync never calls onConnect, so an override there is
+    // reached only by the session's internal fallback and not by callers of
+    // onConnectAsync.
     @OptIn(UnstableApi::class) // the trust-aware default builder and its commands
-    override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+    override fun onConnectAsync(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo
+    ): ListenableFuture<MediaSession.ConnectionResult> {
         val accepted = MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
         if (controller.isTrusted) {
             accepted.setAvailableSessionCommands(
-                MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon().add(SleepCommand.COMMAND).build()
+                MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+                    .add(SleepCommand.COMMAND)
+                    .add(FinishCommand.COMMAND)
+                    .build()
             )
         }
-        return accepted.build()
+        return Futures.immediateFuture(accepted.build())
     }
 
     @OptIn(UnstableApi::class) // ControllerInfo.isTrusted
@@ -147,11 +176,12 @@ internal class PlaybackSessionCallback(private val onSleep: (Bundle) -> Unit) : 
         customCommand: SessionCommand,
         args: Bundle
     ): ListenableFuture<SessionResult> {
-        if (customCommand.customAction != SleepCommand.COMMAND.customAction) {
-            return super.onCustomCommand(session, controller, customCommand, args)
-        }
+        val ours = customCommand.customAction == SleepCommand.COMMAND.customAction ||
+            customCommand.customAction == FinishCommand.COMMAND.customAction
+        if (!ours) return super.onCustomCommand(session, controller, customCommand, args)
         // Media3 already refuses a command it did not offer; this says so here too.
         if (!controller.isTrusted) return Futures.immediateFuture(SessionResult(SessionError.ERROR_PERMISSION_DENIED))
+        if (customCommand.customAction == FinishCommand.COMMAND.customAction) return onFinish(FinishCommand.finishedOf(args))
         onSleep(args)
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }

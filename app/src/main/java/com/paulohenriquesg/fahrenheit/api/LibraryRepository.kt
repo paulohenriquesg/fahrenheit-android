@@ -33,7 +33,21 @@ class LibraryRepository(private val api: LibraryApi) {
         api.getLibraryItems(libraryId).results
     }
 
+    /**
+     * A series' books that can be played, in series order (#107). Minified:
+     * only ids, titles and track counts are wanted. An ebook-only book is left
+     * out - choosing it would stop the book playing for an error screen.
+     */
+    suspend fun seriesBooks(libraryId: String, seriesId: String): Result<List<LibraryItem>> = runCatching {
+        api.getLibraryItems(libraryId, sort = "sequence", minified = 1, filter = seriesFilter(seriesId))
+            .results.filter { it.media.numTracks > 0 }
+    }
+
     suspend fun personalizedShelves(libraryId: String): Result<List<Shelf>> = runCatching {
         api.getPersonalizedView(libraryId)
     }
 }
+
+/** The items filter for one series: its id base64-encoded, then URL-encoded, as the web client sends it. */
+internal fun seriesFilter(seriesId: String): String =
+    "series." + java.net.URLEncoder.encode(android.util.Base64.encodeToString(seriesId.toByteArray(), android.util.Base64.NO_WRAP), "UTF-8")

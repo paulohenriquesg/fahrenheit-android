@@ -29,8 +29,27 @@ data class NowPlaying(
     /** Above the title: the series and number, a standalone book's genre, or an episode's show and date. */
     val kicker: String? = null,
     /** Who wrote it and who reads it; null for an episode. */
-    val byline: String? = null
+    val byline: String? = null,
+    /** The book's (first) series, for About and "Book N of M"; null for an episode or a standalone book. */
+    val series: SeriesRef? = null,
+    val libraryId: String? = null,
+    /** About's facts, one line each. */
+    val facts: List<AboutFact> = emptyList(),
+    /** Whether the server has the book finished; null for an episode, which has no Mark finished. */
+    val finished: Boolean? = null
 ) {
+    /**
+     * "Series · Book N of M", once the series' size is known. Unchanged for a
+     * book with no number, for a series of one, and where the number is beyond
+     * the books held - a library with books 1, 2 and 7 would read "7 of 3".
+     */
+    fun withSeriesTotal(total: Int): NowPlaying {
+        val number = series?.sequence?.takeIf { it.isNotBlank() } ?: return this
+        val n = number.toDoubleOrNull() ?: return this
+        if (total < 2 || n > total) return this
+        return copy(kicker = "${series.name} · Book $number of $total")
+    }
+
     /** The length of what will actually play; trusted over [mediaDuration] (see [ResumePoint]). */
     val trackTotal: Double? get() = timeline?.totalDuration
 
@@ -54,10 +73,11 @@ data class NowPlaying(
             if (episodeId == null) {
                 val tracks = item.media.tracks.orEmpty()
                 val chapters = item.media.chapters
+                val timeline = timelineOf(tracks)
                 return NowPlaying(
                     itemId = item.id,
                     title = metadata.title,
-                    timeline = timelineOf(tracks),
+                    timeline = timeline,
                     mediaDuration = item.media.duration,
                     chapters = chapters,
                     episodeId = null,
@@ -67,7 +87,12 @@ data class NowPlaying(
                     byline = listOfNotNull(
                         metadata.authorName?.takeIf { it.isNotBlank() },
                         metadata.narratorName?.takeIf { it.isNotBlank() }?.let { "read by $it" }
-                    ).joinToString(" · ").takeIf { it.isNotEmpty() }
+                    ).joinToString(" · ").takeIf { it.isNotEmpty() },
+                    series = metadata.series?.firstOrNull()?.takeIf { it.name.isNotBlank() }?.let { SeriesRef(it.id, it.name, it.sequence) },
+                    libraryId = item.libraryId,
+                    // The length of what will play, as everywhere else on the screen.
+                    facts = AboutFacts.book(metadata, timeline?.totalDuration ?: item.media.duration),
+                    finished = item.userMediaProgress?.isFinished == true
                 )
             }
             val episode = item.media.episodes?.firstOrNull { it.id == episodeId } ?: return null
@@ -87,8 +112,12 @@ data class NowPlaying(
                 description = episode.description,
                 kicker = listOfNotNull(metadata.title.takeIf { it.isNotBlank() }, published.takeIf { it.isNotEmpty() })
                     .joinToString(" · ").takeIf { it.isNotEmpty() },
-                byline = null
+                byline = null,
+                facts = AboutFacts.episode(published, episode.audioTrack?.duration)
             )
         }
     }
 }
+
+/** Which series a book is in, and its number there (which may be "1.5", or missing). */
+data class SeriesRef(val id: String, val name: String, val sequence: String?)
