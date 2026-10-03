@@ -3,11 +3,16 @@ package com.paulohenriquesg.fahrenheit.settings
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.input.key.Key
@@ -37,7 +42,9 @@ class SettingsViewTest {
         onTheme: (ThemePreference) -> Unit = {},
         onLayout: (Boolean) -> Unit = {},
         onCheck: () -> Unit = {},
-        onSignOut: () -> Unit = {}
+        onSignOut: () -> Unit = {},
+        deviceName: String = "AFTMODEL",
+        onDeviceName: (String) -> Unit = {}
     ) {
         compose.setContent {
             FahrenheitTheme {
@@ -52,7 +59,9 @@ class SettingsViewTest {
                     onCheckUpdates = onCheck,
                     username = "admin",
                     server = "http://books.example:13378",
-                    onSignOut = onSignOut
+                    onSignOut = onSignOut,
+                    deviceName = deviceName,
+                    onDeviceName = onDeviceName
                 )
             }
         }
@@ -137,5 +146,131 @@ class SettingsViewTest {
 
         compose.onNodeWithText("admin").assertIsDisplayed()
         compose.onNodeWithText("http://books.example:13378").assertIsDisplayed()
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    private fun press(tag: String) {
+        compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.onNodeWithTag(tag).performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `the device name says what this TV is called`() {
+        render(deviceName = "Living room TV")
+
+        // Below the fold at 540dp; the D-pad scrolls it in the same way.
+        compose.onNodeWithText("Device name").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Living room TV").performScrollTo().assertIsDisplayed()
+    }
+
+    // A text field passed on the way down the page would pop the keyboard; the
+    // field only appears when asked for.
+    @Test
+    fun `there is no text field until renaming is asked for`() {
+        render()
+
+        compose.onNodeWithTag("device_name_field").assertDoesNotExist()
+    }
+
+    @Test
+    fun `renaming hands over the new name`() {
+        var named: String? = null
+        render(onDeviceName = { named = it })
+
+        press("device_name_rename")
+        compose.onNodeWithTag("device_name_field").performTextReplacement("Living room TV")
+        press("device_name_save")
+
+        assertEquals("Living room TV", named)
+        compose.onNodeWithTag("device_name_field").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the keyboard's done key saves the name too`() {
+        var named: String? = null
+        render(onDeviceName = { named = it })
+
+        press("device_name_rename")
+        compose.onNodeWithTag("device_name_field").performTextReplacement("Bedroom TV")
+        compose.onNodeWithTag("device_name_field").performImeAction()
+        compose.waitForIdle()
+
+        assertEquals("Bedroom TV", named)
+    }
+
+    @Test
+    fun `renaming starts from the current name`() {
+        render(deviceName = "Kitchen")
+
+        press("device_name_rename")
+
+        compose.onNodeWithTag("device_name_field").assert(
+            androidx.compose.ui.test.hasText("Kitchen")
+        )
+    }
+
+    // On the stick, saving dropped focus on the rail's Home item: the field and
+    // Save left the screen while focused, and focus went wherever it could.
+    @Test
+    fun `after the keyboard saves, focus is back on Rename`() {
+        render()
+
+        press("device_name_rename")
+        compose.onNodeWithTag("device_name_field").performTextReplacement("Bedroom TV")
+        compose.onNodeWithTag("device_name_field").performImeAction()
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("device_name_rename").assertIsFocused()
+    }
+
+    @Test
+    fun `after Save, focus is back on Rename`() {
+        render()
+
+        press("device_name_rename")
+        press("device_name_save")
+
+        compose.onNodeWithTag("device_name_rename").assertIsFocused()
+    }
+
+    // What the app asks the keyboard for, read where the keyboard reads it.
+    @Test
+    fun `the name field asks the keyboard for Done`() {
+        render()
+        press("device_name_rename")
+
+        var action = -1
+        compose.runOnUiThread {
+            val view = compose.activity.findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
+            val editorView = generateSequence(view) { (it as? android.view.ViewGroup)?.getChildAt(0) }
+                .first { it.onCheckIsTextEditor() }
+            val info = android.view.inputmethod.EditorInfo()
+            editorView.onCreateInputConnection(info)
+            action = info.imeOptions and android.view.inputmethod.EditorInfo.IME_MASK_ACTION
+        }
+
+        assertEquals(android.view.inputmethod.EditorInfo.IME_ACTION_DONE, action)
+    }
+
+    // The Fire TV keyboard labels its action key "Next" even when Done is asked
+    // for; whatever it sends, the name is saved rather than focus wandering off.
+    @Test
+    fun `the keyboard's Next key saves the name as well`() {
+        var named: String? = null
+        render(onDeviceName = { named = it })
+
+        press("device_name_rename")
+        compose.onNodeWithTag("device_name_field").performTextReplacement("Hall TV")
+        compose.runOnUiThread {
+            val view = compose.activity.findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
+            val editorView = generateSequence(view) { (it as? android.view.ViewGroup)?.getChildAt(0) }
+                .first { it.onCheckIsTextEditor() }
+            editorView.onCreateInputConnection(android.view.inputmethod.EditorInfo())!!
+                .performEditorAction(android.view.inputmethod.EditorInfo.IME_ACTION_NEXT)
+        }
+        compose.waitForIdle()
+
+        assertEquals("Hall TV", named)
     }
 }

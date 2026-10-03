@@ -49,8 +49,11 @@ class PlaybackService : MediaSessionService() {
             // Keeps streaming when a TV's screensaver starts.
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
-        val device = PlaybackDevice.info(this)
-        val reporting = PlaybackReporting(exo, scope, open = { ListeningSession(it, ApiClient::getApiService, device) })
+        // Read for each file rather than once, so a rename in Settings names
+        // the next session without restarting the service.
+        val reporting = PlaybackReporting(exo, scope, open = {
+            ListeningSession(it, ApiClient::getApiService, PlaybackDevice.info(this))
+        })
         exo.addListener(reporting)
         exo.addListener(object : Player.Listener {
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
