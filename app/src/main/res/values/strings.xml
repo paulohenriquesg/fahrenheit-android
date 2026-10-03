@@ -50,6 +50,14 @@
     <string name="login_where_is_library">Where is your library?</string>
     <string name="login_address_hint">The address of your Audiobookshelf server, starting with http:// or https://</string>
     <string name="login_continue">Continue</string>
+    <string name="login_looking_for_servers">Looking for Audiobookshelf servers on this network…</string>
+    <string name="login_no_servers_found">No Audiobookshelf server answered on this network.</string>
+    <string name="login_choose_server">Choose your server, or enter its address.</string>
+    <string name="login_server_version">Audiobookshelf %1$s</string>
+    <string name="login_server_unknown_version">Audiobookshelf</string>
+    <string name="login_manual_address">Enter an address instead</string>
+    <string name="login_manual_address_detail">For a server outside this network</string>
+    <string name="login_search_again">Look on this network again</string>
     <string name="login_sign_in_to">Sign in to %1$s</string>
     <string name="login_sign_in">Sign in</string>
     <string name="login_signing_in">Signing in…</string>

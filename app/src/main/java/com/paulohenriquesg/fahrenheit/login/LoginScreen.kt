@@ -79,7 +79,8 @@ fun LoginScreen(
     handleLogin: (String, String, String, MutableState<Boolean>) -> Unit,
     handleApiKeyLogin: (String, String, MutableState<Boolean>) -> Unit,
     error: LoginError? = null,
-    onDismissError: () -> Unit = {}
+    onDismissError: () -> Unit = {},
+    findServers: (suspend ((FoundServer) -> Unit) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val sharedPreferencesHandler = SharedPreferencesHandler(context)
