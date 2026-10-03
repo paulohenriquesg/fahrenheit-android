@@ -29,6 +29,20 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Border
+import androidx.tv.material3.LocalContentColor
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -99,6 +113,15 @@ fun LoginScreen(
         else -> listOf(LoginField.Host, LoginField.Username, LoginField.Password)
     }
     val errorField = error?.field?.takeIf { it in shownFields } ?: shownFields.first()
+    // One way in, whatever pressed it: the keyboard's Done, the remote's Play
+    // or the button. Ignored while a request is out, so a second press does
+    // not send a second one.
+    val submit: () -> Unit = {
+        if (!isLoading.value) {
+            if (useApiKey) handleApiKeyLogin(host, apiKey, isLoading)
+            else handleLogin(host, username, password, isLoading)
+        }
+    }
     @Composable
     fun ErrorAbove(field: LoginField) {
         if (error != null && errorField == field) LoginErrorBand(error)
@@ -111,17 +134,23 @@ fun LoginScreen(
             .testTag("login_screen")
             // The Fire TV keyboard owns the bottom 45% while typing; a centred
             // form puts its own buttons under it.
-            .padding(start = 16.dp, end = 16.dp, top = 32.dp, bottom = 16.dp),
+            .padding(start = if (returning) 60.dp else 16.dp, end = 16.dp, top = 32.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
+        // Frame 3 of the login mock reads from the left, like a page.
+        horizontalAlignment = if (returning) Alignment.Start else Alignment.CenterHorizontally
     ) {
         Text(
             text = if (returning) stringResource(R.string.login_welcome_back)
             else context.getString(R.string.app_name),
-            style = MaterialTheme.typography.headlineMedium,
+            style = if (returning) {
+                MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold)
+            } else {
+                MaterialTheme.typography.headlineMedium
+            },
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
                 .padding(bottom = 16.dp)
+                .testTag("login_title")
         )
 
         if (returning) {
@@ -148,6 +177,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_host_field")
+                .remoteKeys(focusManager)
                     .onFocusChanged {
                         isHostFocused = it.isFocused
                     },
@@ -190,10 +220,11 @@ fun LoginScreen(
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_api_key_field")
+                    .remoteKeys(focusManager, onPlay = submit)
                     .onFocusChanged { isApiKeyFocused = it.isFocused },
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
-                    onDone = { handleApiKeyLogin(host, apiKey, isLoading) }
+                    onDone = { submit() }
                 ),
                 colors = fieldColors()
             )
@@ -220,6 +251,7 @@ fun LoginScreen(
                     modifier = Modifier
                         .formWidth()
                         .testTag("login_username_field")
+                        .remoteKeys(focusManager)
                         .onFocusChanged {
                             isUsernameFocused = it.isFocused
                         },
@@ -255,6 +287,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_password_field")
+                    .remoteKeys(focusManager, onPlay = submit)
                     .onFocusChanged {
                         isPasswordFocused = it.isFocused
                     },
@@ -262,98 +295,173 @@ fun LoginScreen(
                     imeAction = ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(
-                    onDone = { handleLogin(host, username, password, isLoading) }
+                    onDone = { submit() }
                 ),
                 colors = fieldColors()
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
-        if (isLoading.value) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-        } else if (returning) {
-            Row(
-                modifier = Modifier.formWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Button(
-                    onClick = {
-                        if (useApiKey) handleApiKeyLogin(host, apiKey, isLoading)
-                        else handleLogin(host, username, password, isLoading)
-                    },
+        // The buttons stay while signing in: the spinner used to replace them,
+        // taking focus along, and on the stick that looked like nothing at all.
+        val loading = isLoading.value
+        if (returning) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                LoginButton(
+                    text = stringResource(R.string.login_sign_in),
+                    onClick = submit,
+                    primary = true,
+                    loading = loading,
                     modifier = Modifier.testTag("login_submit_button")
-                ) {
-                    Text(stringResource(R.string.login_sign_in))
-                }
-                Button(
+                )
+                LoginButton(
+                    text = stringResource(if (useApiKey) R.string.login_use_password else R.string.login_use_api_key),
                     onClick = { useApiKey = !useApiKey },
                     modifier = Modifier.testTag("login_mode_toggle")
-                ) {
-                    Text(
-                        stringResource(
-                            if (useApiKey) R.string.login_use_password else R.string.login_use_api_key
-                        )
-                    )
-                }
-                Button(
+                )
+                LoginButton(
+                    text = stringResource(R.string.login_different_server),
                     onClick = { differentServer = true },
                     modifier = Modifier.testTag("login_different_server")
-                ) {
-                    Text(stringResource(R.string.login_different_server))
-                }
+                )
             }
         } else {
-            Button(
-                onClick = {
-                    if (useApiKey) handleApiKeyLogin(host, apiKey, isLoading)
-                    else handleLogin(host, username, password, isLoading)
-                },
+            LoginButton(
+                text = stringResource(R.string.login),
+                onClick = submit,
+                primary = true,
+                loading = loading,
+                fillWidth = true,
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_submit_button")
-            ) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.login))
-                }
-            }
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            Button(
+            LoginButton(
+                text = if (useApiKey) "Use username and password instead" else "Sign in with an API key instead",
                 onClick = { useApiKey = !useApiKey },
+                fillWidth = true,
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_mode_toggle")
-            ) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text(
-                        if (useApiKey) "Use username and password instead"
-                        else "Sign in with an API key instead"
-                    )
-                }
+            )
+        }
+    }
+}
+
+/**
+ * Frame 3's buttons: the one that signs in filled with the primary colour,
+ * the rest outlined. Focus is the TV button's own white fill and lift.
+ *
+ * @param loading shows progress in place of the label; the button keeps its
+ *   place and its focus.
+ * @param fillWidth centres the label across a button given a width; in a row
+ *   it would take the whole row from its neighbours.
+ */
+@Composable
+private fun LoginButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    primary: Boolean = false,
+    loading: Boolean = false,
+    fillWidth: Boolean = false
+) {
+    val scheme = MaterialTheme.colorScheme
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        colors = if (primary) {
+            ButtonDefaults.colors(containerColor = scheme.primary, contentColor = scheme.onPrimary)
+        } else {
+            ButtonDefaults.colors(containerColor = Color.Transparent, contentColor = scheme.onSurface)
+        },
+        border = if (primary) ButtonDefaults.border() else ButtonDefaults.border(
+            border = Border(BorderStroke(1.dp, scheme.onSurfaceVariant))
+        )
+    ) {
+        Row(
+            modifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier,
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (loading) {
+                CircularProgressIndicator(
+                    color = LocalContentColor.current,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier
+                        .size(18.dp)
+                        .testTag("login_progress")
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.login_signing_in))
+            } else {
+                Text(text)
             }
         }
     }
 }
 
-/** Who and where, as a fact rather than two fields to fill in. */
+/**
+ * The remote on a text field. The field keeps the D-pad for its cursor, so
+ * on the stick Down from the password reached no button: Up and Down leave
+ * the field instead. Play on a Fire TV remote is the field's Enter; [onPlay]
+ * makes it sign in from the last field, where it used to do nothing.
+ */
+private fun Modifier.remoteKeys(focusManager: FocusManager, onPlay: (() -> Unit)? = null) =
+    onPreviewKeyEvent { event ->
+        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+        when (event.key) {
+            Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
+            Key.DirectionUp -> focusManager.moveFocus(FocusDirection.Up)
+            Key.MediaPlayPause, Key.MediaPlay -> onPlay?.let { it(); true } ?: false
+            else -> false
+        }
+    }
+
+/** Who and where, as a fact rather than two fields to fill in: frame 3's card. */
 @Composable
 private fun RememberedAccount(username: String, host: String) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(10.dp)
     Row(
         modifier = Modifier
+            .formWidth()
             .padding(bottom = 16.dp)
+            .background(scheme.surface, shape)
+            .border(1.dp, scheme.onSurfaceVariant, shape)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
             .testTag("login_account")
             .semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Icon(
-            Icons.Filled.Person,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            stringResource(R.string.login_account, username, displayHost(host)),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(scheme.surfaceVariant, RoundedCornerShape(6.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Person,
+                contentDescription = null,
+                tint = scheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Column {
+            Text(
+                username,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = scheme.onSurface,
+                modifier = Modifier.testTag("login_account_name")
+            )
+            Text(
+                displayHost(host),
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.testTag("login_account_server")
+            )
+        }
     }
 }
 

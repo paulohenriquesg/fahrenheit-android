@@ -14,6 +14,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowToast
+import android.app.Application
+import com.paulohenriquesg.fahrenheit.main.MainActivity
 import java.io.IOException
 
 /**
@@ -71,5 +73,30 @@ class LoginHandlerTest {
         settle()
 
         assertEquals(false, loading.value)
+    }
+
+    // Home is the confirmation; a Toast on top of it said the same thing late.
+    @Test
+    fun `a successful sign-in goes straight to Home, with no Toast`() {
+        val h = handler { _, _, _ -> AuthSession("a", "r", "someone") }
+
+        h.handleLogin("http://abs.local", "someone", "hunter2", mutableStateOf(false))
+        settle()
+
+        assertNull(ShadowToast.getLatestToast())
+        val started = shadowOf(ApplicationProvider.getApplicationContext<Application>()).nextStartedActivity
+        assertEquals(MainActivity::class.java.name, started?.component?.className)
+    }
+
+    // Seen on the stick as a Toast; empty fields belong in the band too.
+    @Test
+    fun `empty fields are the screen's error, not a Toast`() {
+        val h = handler { _, _, _ -> error("must not be called") }
+
+        h.handleLogin("", "", "", mutableStateOf(false))
+        settle()
+
+        assertEquals(LoginError.HostMissing, h.error.value)
+        assertNull(ShadowToast.getLatestToast())
     }
 }

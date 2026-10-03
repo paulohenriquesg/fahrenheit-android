@@ -66,8 +66,8 @@ class LoginHandler(
 
     private fun present(outcome: LoginOutcome) {
         when (outcome) {
+            // Home is the confirmation; a Toast on top of it said so late.
             is LoginOutcome.Success -> {
-                Toast.makeText(context, context.getString(R.string.login_successful), Toast.LENGTH_SHORT).show()
                 context.startActivity(Intent(context, MainActivity::class.java))
                 if (context is LoginActivity) context.finish()
             }

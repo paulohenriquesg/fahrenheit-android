@@ -47,10 +47,9 @@
     <string name="loading_series">Loading series…</string>
     <string name="loading_stats">Loading stats…</string>
     <string name="login">Login</string>
-    <string name="login_successful">Login successful</string>
     <string name="login_welcome_back">Welcome back</string>
-    <string name="login_account">%1$s · %2$s</string>
     <string name="login_sign_in">Sign in</string>
+    <string name="login_signing_in">Signing in…</string>
     <string name="login_use_api_key">Use an API key</string>
     <string name="login_use_password">Use a password</string>
     <string name="login_different_server">Different server</string>
