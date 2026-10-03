@@ -86,15 +86,15 @@ class PlaybackService : MediaSessionService() {
             if (episodeId != null) api.markFinished(itemId, episodeId, mark) else api.markFinished(itemId, mark)
         }
         session = MediaSession.Builder(this, guarded)
-            .setCallback(PlaybackSessionCallback(onFinish = { finished -> markFinished(marker, finished) }, onSleep = ::setSleep))
+            .setCallback(PlaybackSessionCallback(onFinish = { args -> markFinished(marker, args) }, onSleep = ::setSleep))
             .build()
     }
 
     /** Mark finished or unfinished; the answer comes once the server has it. */
-    private fun markFinished(marker: FinishMarker, finished: Boolean): ListenableFuture<SessionResult> {
+    private fun markFinished(marker: FinishMarker, args: Bundle): ListenableFuture<SessionResult> {
         val answer = SettableFuture.create<SessionResult>()
         scope.launch {
-            val result = marker.mark(finished)
+            val result = marker.mark(FinishCommand.finishedOf(args), FinishCommand.itemOf(args), FinishCommand.episodeOf(args))
             answer.set(SessionResult(if (result.isSuccess) SessionResult.RESULT_SUCCESS else SessionError.ERROR_UNKNOWN))
         }
         return answer
@@ -142,7 +142,7 @@ class PlaybackService : MediaSessionService() {
  * finished ([FinishCommand]), handed to [onFinish].
  */
 internal class PlaybackSessionCallback(
-    private val onFinish: (Boolean) -> ListenableFuture<SessionResult> = {
+    private val onFinish: (Bundle) -> ListenableFuture<SessionResult> = {
         Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
     },
     private val onSleep: (Bundle) -> Unit
@@ -181,7 +181,7 @@ internal class PlaybackSessionCallback(
         if (!ours) return super.onCustomCommand(session, controller, customCommand, args)
         // Media3 already refuses a command it did not offer; this says so here too.
         if (!controller.isTrusted) return Futures.immediateFuture(SessionResult(SessionError.ERROR_PERMISSION_DENIED))
-        if (customCommand.customAction == FinishCommand.COMMAND.customAction) return onFinish(FinishCommand.finishedOf(args))
+        if (customCommand.customAction == FinishCommand.COMMAND.customAction) return onFinish(args)
         onSleep(args)
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }

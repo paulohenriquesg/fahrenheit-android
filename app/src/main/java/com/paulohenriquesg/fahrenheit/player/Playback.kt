@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.SessionResult
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 
@@ -26,6 +27,24 @@ object Playback {
         if (!finishing) return
         controller.stop()
         controller.clearMediaItems()
+    }
+
+    /**
+     * Marks a book finished or not from outside the player - its details
+     * screen (#105) - through the service, which knows whether that book is
+     * playing and must first be paused (see [FinishMarker]).
+     */
+    fun markFinished(context: Context, itemId: String, finished: Boolean, onDone: (Boolean) -> Unit) {
+        val future = connect(context.applicationContext)
+        val main = ContextCompat.getMainExecutor(context)
+        future.addListener({
+            val controller = runCatching { future.get() }.getOrNull() ?: return@addListener onDone(false)
+            val answer = controller.sendCustomCommand(FinishCommand.COMMAND, FinishCommand.args(finished, itemId))
+            answer.addListener({
+                onDone(runCatching { answer.get().resultCode == SessionResult.RESULT_SUCCESS }.getOrDefault(false))
+                controller.release()
+            }, main)
+        }, main)
     }
 
     /** Stops whatever is playing, from anywhere - sign-out uses it. */

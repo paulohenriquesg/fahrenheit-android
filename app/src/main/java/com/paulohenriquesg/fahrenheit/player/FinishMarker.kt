@@ -23,6 +23,10 @@ import com.paulohenriquesg.fahrenheit.api.ProgressMark
  * and only then says finished. Un-finishing says so, then says where the
  * listener is, or the book would reopen at the start.
  *
+ * An item that is not the one queued - Mark finished on another book's details
+ * screen (#105) - is marked directly: nothing reports on it, and what plays
+ * keeps playing.
+ *
  * @param send one progress update for an item or episode; throwing is a failure.
  */
 class FinishMarker(
@@ -30,10 +34,18 @@ class FinishMarker(
     private val closed: suspend () -> Unit,
     private val send: suspend (itemId: String, episodeId: String?, mark: ProgressMark) -> Unit
 ) {
-    suspend fun mark(finished: Boolean): Result<Unit> {
-        val file = QueuedFile.of(player.currentMediaItem) ?: return Result.failure(IllegalStateException("nothing queued"))
+    /** @param itemId the item to mark; null for whatever is queued. */
+    suspend fun mark(finished: Boolean, itemId: String? = null, episodeId: String? = null): Result<Unit> {
+        val queued = QueuedFile.of(player.currentMediaItem)
+        val file = when {
+            itemId == null -> queued ?: return Result.failure(IllegalStateException("nothing queued"))
+            queued?.isFor(itemId, episodeId) == true -> queued
+            else -> null
+        }
         return try {
-            if (finished) {
+            if (file == null) {
+                send(itemId!!, episodeId, ProgressMark(isFinished = finished))
+            } else if (finished) {
                 player.pause()
                 closed()
                 send(file.itemId, file.episodeId, ProgressMark(isFinished = true))
@@ -55,7 +67,18 @@ class FinishMarker(
 object FinishCommand {
     val COMMAND = SessionCommand("fahrenheit.FINISH", Bundle.EMPTY)
     private const val FINISHED = "fahrenheit.finish.finished"
-    fun args(finished: Boolean): Bundle = Bundle().apply { putBoolean(FINISHED, finished) }
+    private const val ITEM = "fahrenheit.finish.itemId"
+    private const val EPISODE = "fahrenheit.finish.episodeId"
+
+    /** @param itemId the item to mark; null for whatever is queued. */
+    fun args(finished: Boolean, itemId: String? = null, episodeId: String? = null): Bundle = Bundle().apply {
+        putBoolean(FINISHED, finished)
+        itemId?.let { putString(ITEM, it) }
+        episodeId?.let { putString(EPISODE, it) }
+    }
+
+    fun itemOf(args: Bundle): String? = args.getString(ITEM)
+    fun episodeOf(args: Bundle): String? = args.getString(EPISODE)
     fun finishedOf(args: Bundle): Boolean = args.getBoolean(FINISHED)
 }
 
