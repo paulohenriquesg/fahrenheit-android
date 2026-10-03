@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.compose.ui.test.performScrollTo
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -54,7 +55,9 @@ class AboutPanelTest {
     private fun show(
         description: String? = "<p>A short description.</p>",
         series: SeriesBooks? = this.series,
-        finishedAt: Boolean? = false
+        finishedAt: Boolean? = false,
+        facts: List<AboutFact> = this.facts,
+        marking: Boolean = false
     ) {
         compose.setContent {
             FahrenheitTheme {
@@ -68,6 +71,7 @@ class AboutPanelTest {
                             facts = facts,
                             series = series,
                             finished = finished,
+                            marking = marking,
                             onPlayInstead = { switched += it.itemId },
                             onMarkFinished = { marked += it; finished = it },
                             onClose = panels::close
@@ -166,5 +170,30 @@ class AboutPanelTest {
         show(series = null, finishedAt = null)
         compose.onNodeWithText("Mark finished").assertDoesNotExist()
         compose.onNodeWithText("Mark unfinished").assertDoesNotExist()
+    }
+
+    // Review: with no description nothing in the panel took focus.
+    @Test fun `without a description, focus lands on this book in the series`() {
+        show(description = null)
+        compose.onNodeWithContentDescription("The Second").assertIsFocused()
+    }
+
+    @Test fun `without a description or a series, focus lands on Mark finished`() {
+        show(description = " ", series = null)
+        compose.onNodeWithText("Mark finished").assertIsFocused()
+    }
+
+    // Review: the column had no room to spare, and wrapping facts clipped the button.
+    @Test fun `everything in About can be scrolled to`() {
+        val many = AboutFact.Kind.entries.map { kind -> AboutFact(kind, (1..12).joinToString(", ") { "A long value $it" }) }
+        show(description = long, facts = many)
+        compose.onNodeWithText("Mark finished").performScrollTo().assertIsDisplayed()
+    }
+
+    // Review: two quick presses sent two marks.
+    @Test fun `while a mark is being made, the button does nothing`() {
+        show(marking = true)
+        press("Mark finished")
+        assertEquals(emptyList<Boolean>(), marked)
     }
 }

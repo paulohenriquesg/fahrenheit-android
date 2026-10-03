@@ -45,11 +45,11 @@ interface LibraryApi {
 
     /** Marks a book finished or not (#107). */
     @PATCH("api/me/progress/{itemId}")
-    suspend fun markFinished(@Path("itemId") itemId: String, @Body body: FinishedRequest)
+    suspend fun markFinished(@Path("itemId") itemId: String, @Body body: ProgressMark)
 
     /** Marks an episode finished or not. */
     @PATCH("api/me/progress/{itemId}/{episodeId}")
-    suspend fun markFinished(@Path("itemId") itemId: String, @Path("episodeId") episodeId: String, @Body body: FinishedRequest)
+    suspend fun markFinished(@Path("itemId") itemId: String, @Path("episodeId") episodeId: String, @Body body: ProgressMark)
 
     @GET("api/libraries/{libraryId}/personalized")
     suspend fun getPersonalizedView(
@@ -64,4 +64,4 @@ interface LibraryApi {
  * [currentTime] is the position the closing report will carry, so that report
  * does not un-finish the item (the server does that when currentTime moves).
  */
-data class FinishedRequest(val isFinished: Boolean, val currentTime: Double? = null)
+data class ProgressMark(val isFinished: Boolean? = null, val currentTime: Double? = null)

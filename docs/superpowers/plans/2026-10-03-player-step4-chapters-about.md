@@ -15,7 +15,7 @@
 **Architecture:**
 - **Pure:** `SeriesBooks` (the series' books in order, this one's place, the total), `AboutFacts` (the fact lines), `NowPlaying` gains what About needs: the series reference, the library id, the facts and whether the book is finished.
 - **API:** `LibraryApi.getLibraryItems` takes a `filter`. `LibraryRepository.seriesBooks(libraryId, seriesId)`. `LibraryApi.markFinished` for a book and an episode.
-- **Mark finished** (`FinishMark`): pause, then `PATCH` `isFinished` together with the paused position.
+- **Mark finished** (`FinishMarker`, in the playback service, behind `FinishCommand`): pause, wait for the closing report, then `PATCH` `isFinished` alone (finding 2; reworked after review).
 - **Screen:** `ChapterList` and `ChaptersPanel`; `AboutPanel`, with a confirm step for switching books; `FullDescription` from the details screen, shared rather than copied. The chips are Chapters (only with chapters), Speed, Sleep, About; for an episode, Go to podcast, Speed, Sleep, About.
 
 **Tech Stack:** Kotlin, Compose TV Material, Retrofit + Gson, JUnit4 + Robolectric + MockWebServer.
@@ -33,10 +33,10 @@
 ## Findings from the server's code (they shape the design)
 
 1. **The series endpoint (`GET /api/libraries/:id/series/:seriesId`) lists its books as ids only** (`progress.libraryItemIds`, with `include=progress`). "Play <title> instead?" needs titles. **`GET /api/libraries/:id/items?filter=series.<base64 id>&sort=sequence`** returns the same books in series order, with titles, and its `total` is M. One call. The id is base64-encoded and then URL-encoded, as the web client does.
-2. **Once an item is finished, any later progress update that changes `currentTime` un-finishes it**, and `isFinished: false` resets `currentTime` to 0. A playing book keeps syncing, so marking it finished while it plays would undo itself within seconds. Mark finished therefore:
-   - pauses first, which sends the closing report;
-   - sends `isFinished: true` with the **same paused position** as `currentTime`.
-   Whichever reaches the server first, the other changes nothing.
+2. **Two server rules shape Mark finished.** `applyProgressUpdate` applies the payload, then un-finishes the item if its `currentTime` moved.
+   - **The first version was wrong.** It sent `{isFinished: true, currentTime: P}`, which un-finishes itself whenever P differs from the stored position. A closing report landing afterwards un-finished it again. The review found this, and a test against a fake server that keeps the real rules now pins it.
+   - **The design now:** the **playback service** marks the item, through a `FinishCommand` custom command. It pauses, waits for the closing report to be delivered (`PlaybackReporting.closeAndWait`), and only then sends `{isFinished: true}` with no position. Nothing else reports while it is paused.
+   - **Un-finishing** sets the server's position to 0. So Mark unfinished then sends the listener's position, or the book would reopen at the start.
 
 ## Rulings (to confirm with the maintainer in the PR)
 
@@ -47,13 +47,13 @@
    - books with no sequence sort last, as the server sorts them.
 
 1. **After Mark finished the player stays open, paused.** Playing on is listening again, and the server un-finishes the book by itself.
-2. **Mark unfinished** keeps the player where it is. The server resets its saved position to 0, and the next report sets it to where the listener is.
+2. **Mark unfinished** keeps the player where it is, and sends that position after the un-finish (finding 2).
 3. **Switching to another book in the series** stops this one, then opens the player on the other, playing from its saved position.
 4. **Chapter start times** use the player's spoken lengths ("1 h 5 min"), like every other time on the screen.
 
 ## Review Focus
 
-1. **Mark finished while playing stays finished.** Pinned in Task 3 (`marking finished pauses first, and sends the paused position`).
+1. **Mark finished while playing stays finished,** against a fake server that keeps the real rules. Pinned in `FinishMarkerTest` (`marked finished while playing stays finished, though the closing report lands late`).
 2. **The series request encodes the id as the server decodes it.** Pinned in Task 2.
 3. **A book with no series, a series of one, or a series that fails to load:** no series row, and the line keeps "Book N". Pinned in Tasks 2 and 4.
 4. **Focus:** Chapters lands on the current chapter; About lands on the description, which Down scrolls; Back from the confirm step returns to the series row, not out of the panel. Pinned in Tasks 1 and 4.
@@ -81,7 +81,7 @@
 
 ### Task 3: Mark finished
 
-**Files:** modify `api/LibraryApi.kt`; create `player/FinishMark.kt`. Test `FinishMarkTest.kt` (MockWebServer + TestExoPlayer).
+**Files:** modify `api/LibraryApi.kt`; create `player/FinishMark.kt`. Test `FinishMarkTest.kt` (MockWebServer + TestExoPlayer). *Superseded in review: `FinishMarker.kt` and `FinishMarkerTest.kt`, with a fake server that keeps the real rules.*
 
 - [ ] Red:
   - `marking finished pauses first, and sends the paused position`: the body is `{"isFinished":true,"currentTime":P}` to `/api/me/progress/b1`, and the player has stopped playing;
@@ -114,7 +114,7 @@
   - the chips;
   - the series is loaded with the item, and the kicker updates;
   - Chapters seeks;
-  - About's actions call `FinishMark` and switch books.
+  - About's actions send `FinishCommand` and switch books.
 - [ ] Gate, commit: "Chapters and About in the player (#107)".
 
 ### Task 6: The details screen's chapter list (#105)

@@ -14,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,7 +34,6 @@ import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
 import retrofit2.awaitResponse
 
 /**
@@ -155,9 +153,7 @@ class PlayerActivity : ComponentActivity() {
         var ready by remember(connected, playing) { mutableStateOf(false) }
         val listening = remember(connected, playing) {
             if (connected == null || playing == null) null
-            else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds) { command, args ->
-                connected.sendCustomCommand(command, args)
-            }
+            else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds, connected::sendCustomCommand)
         }
         LaunchedEffect(connected, playing) {
             if (connected == null || playing == null) return@LaunchedEffect
@@ -168,9 +164,11 @@ class PlayerActivity : ComponentActivity() {
             ready = start.begin(connected, playing, { savedProgress(itemId, episodeId) }) { ApiClient.generateFullUrl(it) }
             if (!ready) failed = true
         }
+        // Above the screen's states, so a mark made in this visit survives Home and back.
+        var finished by rememberFinished(connected, playing?.finished)
+        var marking by remember(playing) { mutableStateOf(false) }
         // A panel left open when the screen went away does not come back over it.
         val panels = rememberPlayerPanels(connected)
-        val scope = rememberCoroutineScope()
         val playback = remember(connected, playing) {
             val timeline = playing?.timeline
             if (connected == null || timeline == null) null else BookPlayback(connected, timeline)
@@ -199,7 +197,6 @@ class PlayerActivity : ComponentActivity() {
                 modifier = Modifier.padding(16.dp)
             )
             else -> {
-                var finished by rememberFinished(connected, playing.finished)
                 PlayerScreen(
                     nowPlaying = series?.let { playing.withSeriesTotal(it.total) } ?: playing,
                     currentTime = currentTime,
@@ -243,8 +240,15 @@ class PlayerActivity : ComponentActivity() {
                                         handedOver = true
                                         switchTo(this@PlayerActivity, connected, other.itemId)
                                     },
+                                    marking = marking,
                                     onMarkFinished = { done ->
-                                        scope.launch { markFinished(done, connected, playback, itemId, episodeId) { finished = done } }
+                                        // The service marks it, once the closing report is in (FinishMarker).
+                                        marking = true
+                                        listening?.markFinished(done) { worked ->
+                                            marking = false
+                                            if (worked) finished = done
+                                            else Toast.makeText(this@PlayerActivity, getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
+                                        }
                                     },
                                     onClose = panels::close
                                 )
@@ -269,27 +273,6 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun goToPodcast(podcastId: String) = leaveForPodcast(this, podcastId)
-
-    /** Mark finished or unfinished (see [FinishMark]); a failure is said, and the button stays as it was. */
-    private suspend fun markFinished(
-        done: Boolean,
-        player: androidx.media3.common.Player,
-        playback: BookPlayback?,
-        itemId: String,
-        episodeId: String?,
-        onMarked: () -> Unit
-    ) {
-        val mark = ApiClient.getLibraryApi()?.let(::FinishMark)
-        val result = when {
-            mark == null -> Result.failure(IllegalStateException("not signed in"))
-            done && playback != null -> mark.finished(player, playback, itemId, episodeId)
-            done -> Result.failure(IllegalStateException("nothing playing"))
-            else -> mark.unfinished(itemId, episodeId)
-        }
-        result
-            .onSuccess { onMarked() }
-            .onFailure { Toast.makeText(this, getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show() }
-    }
 
     /**
      * Where the listener left off; null starts from the beginning. When the
@@ -332,11 +315,6 @@ class PlayerActivity : ComponentActivity() {
             DetailActivity.createIntent(context, podcastId).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
         /**
-         * "Go to podcast" leaves the episode: closing the player stops it, as
-         * Back does. Opened from the podcast's screen the clear-top closed it
-         * anyway; opened from anywhere else the episode played on behind it.
-         */
-        /**
          * About's "Play <title> instead?": this book stops - its closing
          * report going to it - before the other opens and plays. The caller
          * must not stop playback again when it closes: by then the other book
@@ -348,6 +326,11 @@ class PlayerActivity : ComponentActivity() {
             player.finish()
         }
 
+        /**
+         * "Go to podcast" leaves the episode: closing the player stops it, as
+         * Back does. Opened from the podcast's screen the clear-top closed it
+         * anyway; opened from anywhere else the episode played on behind it.
+         */
         internal fun leaveForPodcast(player: android.app.Activity, podcastId: String) {
             player.startActivity(podcastIntent(player, podcastId))
             player.finish()

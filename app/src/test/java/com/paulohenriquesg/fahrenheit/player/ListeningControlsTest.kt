@@ -1,5 +1,8 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import com.google.common.util.concurrent.Futures
+import androidx.media3.session.SessionError
+import androidx.media3.session.SessionResult
 import android.content.Context
 import android.os.Bundle
 import androidx.media3.exoplayer.ExoPlayer
@@ -19,6 +22,7 @@ class ListeningControlsTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val player: ExoPlayer = TestExoPlayerBuilder(context).build()
     private val sent = mutableListOf<Pair<SessionCommand, Bundle>>()
+    private var answer = SessionResult(SessionResult.RESULT_SUCCESS)
     private val memory = SpeedMemory(context)
 
     private val chapters = listOf(
@@ -27,7 +31,10 @@ class ListeningControlsTest {
     )
 
     private fun controls(itemId: String = "b1", chapters: List<Chapter>? = this.chapters) =
-        ListeningControls(player, itemId, chapters, total = 1800.0, memory) { command, args -> sent += command to args }
+        ListeningControls(player, itemId, chapters, total = 1800.0, memory) { command, args ->
+            sent += command to args
+            Futures.immediateFuture(answer)
+        }
 
     @After
     fun tearDown() = player.release()
@@ -67,5 +74,23 @@ class ListeningControlsTest {
     @Test fun `end of chapter is offered only with chapters`() {
         assertEquals(true, controls().hasChapters)
         assertEquals(false, controls(chapters = null).hasChapters)
+    }
+
+    // Review: the service marks it, after the closing report (FinishMarker).
+    @Test fun `mark finished asks the service, and hears whether it worked`() {
+        val heard = mutableListOf<Boolean>()
+        controls().markFinished(true) { heard += it }
+        val (command, args) = sent.single()
+        assertEquals(FinishCommand.COMMAND, command)
+        assertEquals(true, FinishCommand.finishedOf(args))
+        assertEquals(listOf(true), heard)
+    }
+
+    @Test fun `a mark the service could not make is said`() {
+        answer = SessionResult(SessionError.ERROR_UNKNOWN)
+        val heard = mutableListOf<Boolean>()
+        controls().markFinished(false) { heard += it }
+        assertEquals(false, FinishCommand.finishedOf(sent.single().second))
+        assertEquals(listOf(false), heard)
     }
 }

@@ -245,4 +245,24 @@ class PlaybackServiceTest {
         assertEquals(0, set)
         session.release()
     }
+
+    @Test
+    fun `only the app may mark an item finished`() {
+        val session = service.get().sessionPlayer!!.let { MediaSession.Builder(context, it).setId("pin-finish").build() }
+        val stranger = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            "com.example.stranger", 0, 0, 0, 0, false, Bundle.EMPTY, true
+        )
+        val own = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            context.packageName, 0, 0, 0, 0, true, Bundle.EMPTY, true
+        )
+        val callback = PlaybackSessionCallback {}
+
+        assertFalse(callback.onConnectAsync(session, stranger).get().availableSessionCommands.contains(FinishCommand.COMMAND))
+        assertTrue(callback.onConnectAsync(session, own).get().availableSessionCommands.contains(FinishCommand.COMMAND))
+        assertEquals(
+            SessionError.ERROR_PERMISSION_DENIED,
+            callback.onCustomCommand(session, stranger, FinishCommand.COMMAND, FinishCommand.args(true)).get().resultCode
+        )
+        session.release()
+    }
 }

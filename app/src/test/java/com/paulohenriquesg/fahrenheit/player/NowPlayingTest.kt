@@ -202,4 +202,13 @@ class NowPlayingTest {
         assertEquals(listOf(AboutFact(AboutFact.Kind.Published, "Yesterday"), AboutFact(AboutFact.Kind.Length, "30 min 0 s")), playing.facts)
         assertEquals(null, playing.finished)
     }
+
+    // Review: a library holding books 1, 2 and 7 of a series read "Book 7 of 3".
+    @Test
+    fun `a number beyond the books held keeps just the number`() =
+        assertEquals("The Long Way · Book 7", NowPlaying.of(inSeries("7"), episodeId = null, now = now)!!.withSeriesTotal(3).kicker)
+
+    @Test
+    fun `a series of one says no more than Book N`() =
+        assertEquals("The Long Way · Book 1", NowPlaying.of(inSeries("1"), episodeId = null, now = now)!!.withSeriesTotal(1).kicker)
 }

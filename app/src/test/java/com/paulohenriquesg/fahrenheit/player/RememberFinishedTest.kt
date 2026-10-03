@@ -1,5 +1,8 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -59,5 +62,21 @@ class RememberFinishedTest {
         compose.runOnUiThread { finished.value = true }
         compose.waitForIdle()
         assertEquals(true, finished.value)
+    }
+
+    // Review: after Home and back the mark made in this visit was forgotten.
+    @Test fun `a mark survives the player reconnecting`() {
+        player = TestExoPlayerBuilder(compose.activity).build()
+        var connected by mutableStateOf<androidx.media3.common.Player?>(player)
+        compose.setContent { finished = rememberFinished(connected, initial = false) }
+        compose.runOnUiThread { finished.value = true }
+        compose.waitForIdle()
+
+        val again = TestExoPlayerBuilder(compose.activity).build()
+        connected = again
+        compose.waitForIdle()
+
+        assertEquals(true, finished.value)
+        again.release()
     }
 }

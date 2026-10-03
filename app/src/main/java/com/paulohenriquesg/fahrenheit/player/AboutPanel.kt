@@ -3,7 +3,9 @@ package com.paulohenriquesg.fahrenheit.player
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -93,31 +95,60 @@ fun AboutPanel(
     facts: List<AboutFact>,
     series: SeriesBooks?,
     finished: Boolean?,
+    marking: Boolean = false,
     onPlayInstead: (SeriesBook) -> Unit,
     onMarkFinished: (Boolean) -> Unit,
     onClose: () -> Unit
 ) {
     SidePanel(stringResource(R.string.about), onClose, width = 430.dp) {
         val landing = rememberInitialFocus(enabled = true)
-        description?.takeIf { it.isNotBlank() }?.let {
-            val scroll = rememberScrollState()
-            Box(Modifier.heightIn(max = 170.dp).verticalScroll(scroll)) {
-                FullDescription(it, scroll, modifier = Modifier.focusRequester(landing), alwaysFocusable = true)
-            }
+        val text = description?.takeIf { it.isNotBlank() }
+        val row = series?.takeIf { it.total > 1 }
+        // Focus must land inside the panel whatever it holds, or it stays on
+        // the chip behind the scrim: the description, else this book, else
+        // Mark finished, else the facts themselves.
+        val landOn = when {
+            text != null -> Landing.Description
+            row != null -> Landing.Series
+            finished != null -> Landing.Mark
+            else -> Landing.Facts
         }
-        series?.takeIf { it.total > 1 }?.let { SeriesRow(it, onPlayInstead) }
-        facts.forEach { FactLine(it) }
-        finished?.let { done ->
-            OutlinedButton(onClick = { onMarkFinished(!done) }, modifier = Modifier.padding(top = 14.dp)) {
-                Text(stringResource(if (done) R.string.mark_unfinished else R.string.mark_finished))
+        fun Modifier.landing(on: Landing) = if (landOn == on) focusRequester(landing) else this
+        // Long facts and a long description together outgrow the screen.
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            text?.let {
+                val scroll = rememberScrollState()
+                Box(Modifier.heightIn(max = 170.dp).verticalScroll(scroll)) {
+                    FullDescription(it, scroll, modifier = Modifier.landing(Landing.Description), alwaysFocusable = true)
+                }
+            }
+            row?.let { SeriesRow(it, onPlayInstead, landHere = Modifier.landing(Landing.Series)) }
+            Column(Modifier.landing(Landing.Facts).then(if (landOn == Landing.Facts) Modifier.focusable() else Modifier)) {
+                facts.forEach { FactLine(it) }
+            }
+            finished?.let { done ->
+                OutlinedButton(
+                    onClick = { if (!marking) onMarkFinished(!done) },
+                    // One mark at a time: a second press would send a second request.
+                    enabled = !marking,
+                    modifier = Modifier.padding(top = 14.dp).landing(Landing.Mark)
+                ) {
+                    Text(stringResource(if (done) R.string.mark_unfinished else R.string.mark_finished))
+                }
             }
         }
     }
 }
 
-/** The series as small covers, this book marked; another asks before it plays. */
+private enum class Landing { Description, Series, Mark, Facts }
+
+/**
+ * The series as small covers, this book marked; another asks before it plays.
+ *
+ * @param landHere applied to this book's cover, for when focus lands on the row.
+ */
 @Composable
-private fun SeriesRow(series: SeriesBooks, onPlayInstead: (SeriesBook) -> Unit) {
+private fun SeriesRow(series: SeriesBooks, onPlayInstead: (SeriesBook) -> Unit, landHere: Modifier = Modifier) {
     var asking by remember { mutableStateOf<SeriesBook?>(null) }
     val covers = remember(series) { series.books.associate { it.itemId to FocusRequester() } }
     var returnTo by remember { mutableStateOf<SeriesBook?>(null) }
@@ -147,12 +178,13 @@ private fun SeriesRow(series: SeriesBooks, onPlayInstead: (SeriesBook) -> Unit) 
     val keys = remember(series) { StableKeys.of(series.books) { it.itemId } }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
         itemsIndexed(series.books, key = { index, _ -> keys[index] }) { index, book ->
-            val isThis = index == series.current
+            val isThis = index == (series.current ?: 0)
             Surface(
-                onClick = { if (!isThis) asking = book },
+                onClick = { if (index != series.current) asking = book },
                 modifier = Modifier
                     .focusRequester(covers.getValue(book.itemId))
-                    .semantics { selected = isThis },
+                    .then(if (isThis) landHere else Modifier)
+                    .semantics { selected = index == series.current },
                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
                 border = ClickableSurfaceDefaults.border(
                     border = if (isThis) Border(BorderStroke(2.dp, MaterialTheme.colorScheme.primary)) else Border.None,

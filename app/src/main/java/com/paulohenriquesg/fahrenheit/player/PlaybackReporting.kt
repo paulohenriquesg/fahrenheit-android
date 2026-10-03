@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -38,6 +39,8 @@ class PlaybackReporting(
     private var reporter: ProgressReporter? = null
     private var time: ListeningTime? = null
     private var rounds: Job? = null
+    /** Closing reports still on their way. */
+    private val closings = mutableSetOf<Job>()
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         when {
@@ -58,6 +61,16 @@ class PlaybackReporting(
 
     /** The queue is about to be stopped, replaced or cleared. */
     fun beforeLeaving() = finish()
+
+    /**
+     * Closes this stretch of listening now and waits until its report is
+     * delivered (or has failed): Mark finished must reach the server after it,
+     * or the report's new position would un-finish the item again.
+     */
+    suspend fun closeAndWait() {
+        finish()
+        closings.toList().joinAll()
+    }
 
     private fun start() {
         val current = QueuedFile.of(player.currentMediaItem) ?: return
@@ -90,8 +103,12 @@ class PlaybackReporting(
         // Undispatched, so the position is read now, before the queue changes.
         // Not cancellable: on Back the service, and its scope, are gone
         // within milliseconds, which would drop the report mid-send.
-        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+        val closing = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             withContext(NonCancellable) { active.finish() }
+        }
+        if (closing.isActive) {
+            closings += closing
+            closing.invokeOnCompletion { closings -= closing }
         }
     }
 

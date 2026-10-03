@@ -3,6 +3,9 @@ package com.paulohenriquesg.fahrenheit.player
 import android.os.Bundle
 import androidx.media3.common.Player
 import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import com.paulohenriquesg.fahrenheit.api.Chapter
 
 /**
@@ -11,6 +14,8 @@ import com.paulohenriquesg.fahrenheit.api.Chapter
  * Speed is set on [player] and remembered for [itemId]. The sleep timer
  * lives in the playback service, so a choice is [send]t to it as a
  * [SleepCommand], with the chapter ends in whole-book time for End of chapter.
+ * So is Mark finished ([FinishCommand]): only the service can make it wait
+ * for the closing report.
  */
 class ListeningControls(
     private val player: Player,
@@ -18,7 +23,7 @@ class ListeningControls(
     chapters: List<Chapter>?,
     total: Double,
     private val memory: SpeedMemory,
-    private val send: (SessionCommand, Bundle) -> Unit
+    private val send: (SessionCommand, Bundle) -> ListenableFuture<SessionResult>
 ) {
     private val chapterEnds = ChapterClock.spans(chapters, total).map { it.end }
 
@@ -32,5 +37,16 @@ class ListeningControls(
         player.setPlaybackSpeed(speed)
     }
 
-    fun chooseSleep(choice: SleepChoice) = send(SleepCommand.COMMAND, SleepCommand.args(choice, chapterEnds))
+    fun chooseSleep(choice: SleepChoice) {
+        send(SleepCommand.COMMAND, SleepCommand.args(choice, chapterEnds))
+    }
+
+    /** Asks the service to mark what is queued finished or not ([FinishMarker]); [onDone] hears whether it worked. */
+    fun markFinished(finished: Boolean, onDone: (Boolean) -> Unit) {
+        val answer = send(FinishCommand.COMMAND, FinishCommand.args(finished))
+        answer.addListener(
+            { onDone(runCatching { answer.get().resultCode == SessionResult.RESULT_SUCCESS }.getOrDefault(false)) },
+            MoreExecutors.directExecutor()
+        )
+    }
 }

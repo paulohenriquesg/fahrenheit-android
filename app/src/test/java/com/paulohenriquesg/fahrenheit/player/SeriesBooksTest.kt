@@ -27,9 +27,9 @@ class SeriesBooksTest {
     fun tearDown() = server.shutdown()
 
     private val three = """{"results":[
-        {"id":"b1","media":{"metadata":{"title":"The First","explicit":false}}},
-        {"id":"b2","media":{"metadata":{"title":"The Second","explicit":false}}},
-        {"id":"b3","media":{"metadata":{"title":"The Third","explicit":false}}}],"total":3}"""
+        {"id":"b1","media":{"numTracks":1,"metadata":{"title":"The First","explicit":false}}},
+        {"id":"b2","media":{"numTracks":2,"metadata":{"title":"The Second","explicit":false}}},
+        {"id":"b3","media":{"numTracks":1,"metadata":{"title":"The Third","explicit":false}}}],"total":3}"""
 
     // Review Focus 2: the server base64-decodes the id after URL-decoding it.
     @Test
@@ -42,6 +42,8 @@ class SeriesBooksTest {
         assertTrue(request.path!!, request.path!!.startsWith("/api/libraries/l1/items?"))
         assertTrue(request.path!!, request.path!!.contains("filter=series.czE%3D"))
         assertEquals("sequence", request.requestUrl!!.queryParameter("sort"))
+        // Review: only ids, titles and track counts are needed.
+        assertEquals("1", request.requestUrl!!.queryParameter("minified"))
     }
 
     @Test
@@ -63,5 +65,17 @@ class SeriesBooksTest {
     fun `a failed request is a failure, not an empty series`() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(500))
         assertTrue(LibraryRepository(api).seriesBooks("l1", "s1").isFailure)
+    }
+
+    // Review: an ebook-only book in the series would stop this one for an error screen.
+    @Test
+    fun `books with nothing to play are left out`() = runBlocking {
+        server.enqueue(MockResponse().setBody("""{"results":[
+            {"id":"b1","media":{"numTracks":1,"metadata":{"title":"The First","explicit":false}}},
+            {"id":"e2","media":{"numTracks":0,"metadata":{"title":"Only to Read","explicit":false}}}],"total":2}"""))
+
+        val series = SeriesBooks.of(LibraryRepository(api).seriesBooks("l1", "s1").getOrThrow(), currentId = "b1")
+
+        assertEquals(listOf("The First"), series.books.map { it.title })
     }
 }

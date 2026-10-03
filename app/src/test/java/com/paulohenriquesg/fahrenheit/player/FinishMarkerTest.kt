@@ -1,0 +1,137 @@
+package com.paulohenriquesg.fahrenheit.player
+
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.test.utils.TestExoPlayerBuilder
+import androidx.media3.test.utils.robolectric.TestPlayerRunHelper.run
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.paulohenriquesg.fahrenheit.api.ProgressMark
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * Mark finished and unfinished, as the playback service does them (#107),
+ * against a server that keeps the real rules:
+ * - any update that moves currentTime un-finishes a finished item, even the
+ *   one that finishes it;
+ * - un-finishing puts currentTime back to 0.
+ */
+@RunWith(AndroidJUnit4::class)
+class FinishMarkerTest {
+
+    /** The server's progress for one item, by its rules. */
+    private class Server(var currentTime: Double = 0.0, var isFinished: Boolean = false, val duration: Double = 5400.0) {
+        val marks = mutableListOf<ProgressMark>()
+
+        fun apply(mark: ProgressMark) {
+            marks += mark
+            var time = mark.currentTime
+            var moved = false
+            if (mark.isFinished == false && isFinished) {
+                currentTime = 0.0
+                moved = true
+                time = null
+            }
+            mark.isFinished?.let { isFinished = it }
+            if (time != null && time != currentTime) {
+                currentTime = time
+                moved = true
+            }
+            val nearTheEnd = duration - currentTime < 10
+            if (!isFinished && nearTheEnd) isFinished = true
+            else if (isFinished && moved && !nearTheEnd) isFinished = false
+        }
+    }
+
+    private val server = Server()
+    private val closing = CompletableDeferred<Unit>()
+    private lateinit var player: ExoPlayer
+    private lateinit var reporting: PlaybackReporting
+
+    /** The item's listening session: reports move the server's position; a close waits for [closing]. */
+    private inner class Session : ListeningDelivery {
+        override suspend fun sync(report: ListeningReport) = server.apply(ProgressMark(currentTime = report.currentTime))
+        override suspend fun close(report: ListeningReport?) {
+            closing.await()
+            report?.let { server.apply(ProgressMark(currentTime = it.currentTime)) }
+        }
+    }
+
+    private val book = NowPlaying(
+        "b1", "b1",
+        TrackTimeline(listOf(TimelineTrack(index = 1, startOffset = 0.0, duration = 5400.0, contentUrl = "/b1"))),
+        null, null, null, false, null
+    )
+
+    @Before
+    fun setUp() {
+        player = TestExoPlayerBuilder(ApplicationProvider.getApplicationContext()).setMediaSourceFactory(hourLongFiles()).build()
+        reporting = PlaybackReporting(
+            player, CoroutineScope(Dispatchers.Unconfined), open = { Session() },
+            pause = { awaitCancellation() }, now = { player.clock.elapsedRealtime() }
+        )
+        player.addListener(reporting)
+        val queue = PlaybackQueue.of(book, 300.0) { "https://abs.test$it" }!!
+        player.setMediaItems(queue.items, queue.index, queue.positionMs)
+        player.prepare()
+    }
+
+    @After
+    fun tearDown() = player.release()
+
+    private fun marker() = FinishMarker(player, reporting::closeAndWait) { _, _, mark -> server.apply(mark) }
+
+    // Review: {isFinished, currentTime} un-finished itself, and a late close undid it again.
+    @Test
+    fun `marked finished while playing stays finished, though the closing report lands late`() = runBlocking {
+        player.play()
+        run(player).untilPositionAtLeast(305_000)
+
+        val marking = async(Dispatchers.Unconfined) { marker().mark(finished = true) }
+        assertFalse("nothing is marked before the close is delivered", server.isFinished)
+        closing.complete(Unit)
+
+        assertTrue(marking.await().isSuccess)
+        assertFalse(player.playWhenReady)
+        assertTrue(server.isFinished)
+        assertEquals(ProgressMark(isFinished = true), server.marks.last())
+    }
+
+    // Review: un-finishing put the server's position to 0, and nothing set it back.
+    @Test
+    fun `unfinished keeps the listener's place`() = runBlocking {
+        closing.complete(Unit)
+        server.isFinished = true
+        server.currentTime = 1000.0
+
+        assertTrue(marker().mark(finished = false).isSuccess)
+
+        assertFalse(server.isFinished)
+        assertEquals(300.0, server.currentTime, 0.001)
+    }
+
+    @Test
+    fun `nothing queued, nothing to mark`() = runBlocking {
+        player.clearMediaItems()
+        assertTrue(marker().mark(finished = true).isFailure)
+        assertEquals(emptyList<ProgressMark>(), server.marks)
+    }
+
+    @Test
+    fun `a failed request is a failure`() = runBlocking {
+        closing.complete(Unit)
+        val failing = FinishMarker(player, reporting::closeAndWait) { _, _, _ -> error("offline") }
+        assertTrue(failing.mark(finished = true).isFailure)
+    }
+}

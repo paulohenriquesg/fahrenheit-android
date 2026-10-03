@@ -38,9 +38,15 @@ data class NowPlaying(
     /** Whether the server has the book finished; null for an episode, which has no Mark finished. */
     val finished: Boolean? = null
 ) {
-    /** "Series · Book N of M", once the series' size is known; unchanged for a book with no number. */
+    /**
+     * "Series · Book N of M", once the series' size is known. Unchanged for a
+     * book with no number, for a series of one, and where the number is beyond
+     * the books held - a library with books 1, 2 and 7 would read "7 of 3".
+     */
     fun withSeriesTotal(total: Int): NowPlaying {
         val number = series?.sequence?.takeIf { it.isNotBlank() } ?: return this
+        val n = number.toDoubleOrNull() ?: return this
+        if (total < 2 || n > total) return this
         return copy(kicker = "${series.name} · Book $number of $total")
     }
 
