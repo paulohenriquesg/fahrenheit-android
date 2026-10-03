@@ -19,11 +19,7 @@ import com.paulohenriquesg.fahrenheit.ui.StableKeys
 @Composable
 fun SeriesShelfRow(shelf: Shelf, series: List<Series>, onItemClick: (Series) -> Unit) {
     Column {
-        Text(
-            text = shelf.label,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        ShelfHeading(shelf.label)
         Spacer(modifier = Modifier.height(8.dp))
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
