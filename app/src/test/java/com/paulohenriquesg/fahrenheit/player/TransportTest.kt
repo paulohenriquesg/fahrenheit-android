@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -66,19 +68,16 @@ class TransportTest {
         player: ExoPlayer,
         timeline: TrackTimeline = twoParts,
         chapters: List<Chapter>? = null,
-        onPlay: (() -> Unit)? = null
+        onPlay: () -> Unit = { player.play() },
+        focusPlayAgain: () -> Int = { 0 }
     ) {
         this.player = player
         compose.setContent {
             FahrenheitTheme {
-                if (onPlay == null) {
-                    MediaPlayerController(player = player, playback = BookPlayback(player, timeline), totalTime = timeline.totalDuration, chapters = chapters)
-                } else {
-                    MediaPlayerController(
-                        player = player, playback = BookPlayback(player, timeline), totalTime = timeline.totalDuration,
-                        chapters = chapters, onPlay = onPlay
-                    )
-                }
+                MediaPlayerController(
+                    player = player, playback = BookPlayback(player, timeline), totalTime = timeline.totalDuration,
+                    chapters = chapters, onPlay = onPlay, focusPlayAgain = focusPlayAgain()
+                )
             }
         }
         compose.waitForIdle()
@@ -117,6 +116,20 @@ class TransportTest {
 
         assertEquals(1, asked)
         assertFalse(player.playWhenReady)
+    }
+
+    // After the question closes, its focused button is gone; Play takes focus.
+    @Test
+    fun `asked to, Play takes focus again`() {
+        var again by androidx.compose.runtime.mutableIntStateOf(0)
+        show(queuedAt(0.0), focusPlayAgain = { again })
+        compose.onNodeWithContentDescription(compose.activity.getString(com.paulohenriquesg.fahrenheit.R.string.skip_forward_seconds, 30))
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+
+        again++
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Play").assertIsFocused()
     }
 
     @Test

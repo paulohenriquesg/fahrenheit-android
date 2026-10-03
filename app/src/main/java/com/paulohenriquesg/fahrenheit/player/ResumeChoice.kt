@@ -17,6 +17,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.activity.compose.BackHandler
+import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -71,11 +76,14 @@ private fun heardAgo(resources: Resources, millis: Long): String {
  * The question, over the player. Focus starts on the server's position: the
  * listener most likely moved on elsewhere on purpose.
  */
+@OptIn(ExperimentalComposeUiApi::class) // focusProperties.exit
 @Composable
 fun ResumeChoice(offer: ResumeOffer, now: Long, onContinue: () -> Unit, onStay: () -> Unit) {
     val resources = LocalContext.current.resources
+    // Back is the safe answer: stay where this player is.
+    BackHandler(onBack = onStay)
     val continueFocus = remember { FocusRequester() }
-    LaunchedEffect(offer) { continueFocus.requestFocus() }
+    LaunchedEffect(offer) { continueFocus.requestFocusWhenAttached() }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -87,6 +95,9 @@ fun ResumeChoice(offer: ResumeOffer, now: Long, onContinue: () -> Unit, onStay: 
             modifier = Modifier
                 .widthIn(max = 640.dp)
                 .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+                // Holds the D-pad until answered: the transport sits behind it.
+                .focusProperties { exit = { FocusRequester.Cancel } }
+                .focusGroup()
                 .padding(28.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {

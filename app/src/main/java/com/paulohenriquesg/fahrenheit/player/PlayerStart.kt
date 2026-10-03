@@ -17,13 +17,22 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
  *   than opened: it has started before, and follows what plays (see [follows]).
  * @param knowledge told when an item is queued from the server's position,
  *   so a later position written elsewhere can be told apart (#90).
+ * @param now this device's clock, in ms since the epoch.
  */
 class PlayerStart(
     private val autoPlay: Boolean,
     private val startAt: Double? = null,
     resumed: Boolean = false,
-    private val knowledge: ServerKnowledge = ServerKnowledge.process
+    private val knowledge: ServerKnowledge = ServerKnowledge.process,
+    private val now: () -> Long = System::currentTimeMillis
 ) {
+    /**
+     * Whether the last [begin] started where the opening screen asked: a
+     * choice the listener just made, which nothing should question (#90).
+     */
+    var choseStart = false
+        private set
+
 
     private var started = resumed
 
@@ -63,6 +72,7 @@ class PlayerStart(
         val firstTime = !started
         started = true
         val asked = startAt?.takeIf { firstTime }
+        choseStart = asked != null
         if (QueuedFile.of(player.currentMediaItem)?.isFor(nowPlaying.itemId, nowPlaying.episodeId) == true) {
             dropWhatHasPlayed(player, nowPlaying)
             val timeline = nowPlaying.timeline
@@ -74,7 +84,9 @@ class PlayerStart(
             return true
         }
         val saved = if (asked == null) progress() else null
-        saved?.lastUpdate?.let { knowledge.saw(nowPlaying.itemId, nowPlaying.episodeId, it) }
+        // Known as of the server's own copy, or, starting where asked, as of now.
+        (saved?.lastUpdate ?: now().takeIf { asked != null })
+            ?.let { knowledge.saw(nowPlaying.itemId, nowPlaying.episodeId, it) }
         val start = asked ?: ResumePoint.decide(saved, nowPlaying.trackTotal, nowPlaying.mediaDuration).positionSeconds
         val queue = PlaybackQueue.of(nowPlaying, start, resolveUrl, next, nextStartAt) ?: return false
         player.setMediaItems(queue.items, queue.index, queue.positionMs)

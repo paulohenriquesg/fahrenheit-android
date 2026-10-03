@@ -6,6 +6,8 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
@@ -45,7 +47,13 @@ class ResumeChoiceTest {
     private fun show(offer: ResumeOffer = offer()) {
         compose.setContent {
             FahrenheitTheme {
-                ResumeChoice(offer, now, onContinue = { chosen = "there" }, onStay = { chosen = "here" })
+                // Something behind the question, as the transport is.
+                androidx.compose.foundation.layout.Box {
+                    androidx.tv.material3.Button(onClick = {}, modifier = androidx.compose.ui.Modifier.testTag("behind")) {
+                        androidx.tv.material3.Text("behind")
+                    }
+                    ResumeChoice(offer, now, onContinue = { chosen = "there" }, onStay = { chosen = "here" })
+                }
             }
         }
         compose.waitForIdle()
@@ -105,6 +113,28 @@ class ResumeChoiceTest {
         compose.waitForIdle()
 
         assertEquals("there", chosen)
+    }
+
+    // The question holds the D-pad until it is answered.
+    @Test
+    fun `the D-pad does not leave the question`() {
+        show()
+
+        for (key in listOf(Key.DirectionDown, Key.DirectionUp, Key.DirectionLeft)) {
+            compose.onNodeWithTag("resume_continue").performKeyInput { pressKey(key) }
+            compose.waitForIdle()
+            compose.onNodeWithTag("behind").assertIsNotFocused()
+        }
+    }
+
+    @Test
+    fun `Back stays`() {
+        show()
+
+        compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
+
+        assertEquals("here", chosen)
     }
 
     @Test

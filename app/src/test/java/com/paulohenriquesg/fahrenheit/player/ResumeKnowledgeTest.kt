@@ -52,6 +52,28 @@ class ResumeKnowledgeTest {
         assertEquals(5000L, knowledge.knownAt("b1", null))
     }
 
+    // A chapter chosen on the details screen starts where it was asked, not
+    // from the server's position: still, the player knows the server as of now.
+    @Test
+    fun `a chosen start counts as known, at this device's time`() {
+        runBlocking {
+            PlayerStart(autoPlay = false, startAt = 600.0, knowledge = knowledge, now = { 42L })
+                .begin(player, book("b1"), { error("not read") }, resolve)
+        }
+
+        assertEquals(42L, knowledge.knownAt("b1", null))
+    }
+
+    @Test
+    fun `coming back with a chosen start says so, so nothing is asked over it`() {
+        runBlocking { PlayerStart(autoPlay = false, knowledge = ServerKnowledge()).begin(player, book("b1"), { null }, resolve) }
+        val start = PlayerStart(autoPlay = false, startAt = 600.0, knowledge = ServerKnowledge())
+
+        runBlocking { start.begin(player, book("b1"), { null }, resolve) }
+
+        assertTrue(start.choseStart)
+    }
+
     @Test
     fun `a delivered report is known, at the time it was delivered`() {
         val reporting = PlaybackReporting(

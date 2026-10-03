@@ -16,10 +16,11 @@ class ResumeCheckTest {
     private var asked = 0
     private var server = MediaProgressResponse(currentTime = 4800.0, lastUpdate = 9_000L)
     private var device: String? = "phone-1"
+    private var sessionsRead = 0
 
     private val check = ResumeCheck(
         progress = { _, _ -> asked++; server },
-        latestDevice = { _, _ -> device },
+        latestDevice = { _, _ -> sessionsRead++; device },
         thisDevice = "tv-1",
         knowledge = knowledge
     )
@@ -38,6 +39,15 @@ class ResumeCheckTest {
     fun `a player that is playing is not checked`() {
         assertNull(runBlocking { check.offer("b1", null, here = 3900.0, playing = true) })
         assertEquals(0, asked)
+    }
+
+    // The sessions are a second request; not made when the answer is no anyway.
+    @Test
+    fun `the sessions are read only when everything else says ask`() {
+        server = MediaProgressResponse(currentTime = 3910.0, lastUpdate = 9_000L)
+
+        assertNull(runBlocking { check.offer("b1", null, here = 3900.0, playing = false) })
+        assertEquals(0, sessionsRead)
     }
 
     @Test

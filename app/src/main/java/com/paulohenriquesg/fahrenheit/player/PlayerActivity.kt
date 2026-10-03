@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.compose.runtime.mutableIntStateOf
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import android.view.KeyEvent
@@ -188,8 +189,10 @@ class PlayerActivity : ComponentActivity() {
         // Which position to continue from, when the server's is newer and from
         // elsewhere (#90); asked on coming back to a paused item, and on Play.
         val scope = rememberCoroutineScope()
-        var offer by remember(connected, playing?.itemId) { mutableStateOf<ResumeOffer?>(null) }
-        var playAfterChoice by remember(connected, playing?.itemId) { mutableStateOf(false) }
+        // Set when the screen came back to this item queued already; asked once the prompt exists.
+        var reattached by remember(connected, playing?.itemId, playing?.episodeId) { mutableStateOf(false) }
+        // After an answer the question's focused button is gone: Play takes focus.
+        var focusPlayAgain by remember { mutableIntStateOf(0) }
         val resumeCheck = remember {
             ResumeCheck(
                 progress = ::progressQuietly,
@@ -230,11 +233,8 @@ class PlayerActivity : ComponentActivity() {
                 nextStartAt = nextStartAt
             )
             if (!ready) failed = true
-            val timeline = playing.timeline
-            if (ready && reattaching && timeline != null) {
-                playAfterChoice = false
-                offer = resumeCheck.offer(itemId, playing.episodeId, BookPlayback(connected, timeline).bookPosition(), connected.isPlaying)
-            }
+            // A start chosen on the opening screen is not questioned.
+            if (ready && reattaching && !start.choseStart) reattached = true
         }
         // Above the screen's states, so a mark made in this visit survives Home and back.
         var finished by rememberFinished(connected, playing?.finished)
@@ -262,30 +262,33 @@ class PlayerActivity : ComponentActivity() {
                 ?.also { if (it.current == null) Log.w(TAG, "The series ${ref.id} does not list $itemId") }
                 ?.takeIf { it.current != null }
         }
-        val askThenPlay: () -> Unit = askThenPlay@{
-            val player = connected ?: return@askThenPlay
-            val shown = playing ?: return@askThenPlay
-            val at = playback ?: return@askThenPlay
-            scope.launch {
-                val asked = resumeCheck.offer(itemId, shown.episodeId, at.bookPosition(), playing = false)
-                if (asked == null) {
-                    player.play()
-                } else {
-                    playAfterChoice = true
-                    offer = asked
+        // Keyed on the episode too: an answer must not seek one episode to another's position.
+        val prompt = remember(connected, playing?.itemId, playing?.episodeId, playback) {
+            val player = connected
+            val shown = playing
+            val at = playback
+            if (player == null || shown == null || at == null) null
+            else ResumePrompt(
+                scope = scope,
+                check = { resumeCheck.offer(itemId, shown.episodeId, at.bookPosition(), playing = false) },
+                playWhenReady = { player.playWhenReady },
+                play = { player.play() },
+                seek = { at.seekToBookTime(it) },
+                answered = {
+                    resumeCheck.answered(itemId, shown.episodeId, it)
+                    focusPlayAgain++
                 }
-            }
+            )
+        }
+        LaunchedEffect(prompt, reattached) {
+            if (!reattached) return@LaunchedEffect
+            reattached = false
+            prompt?.onReattach()
         }
         // The remote's Play reaches the screen before the media session: from a
         // pause it asks first too, and while the question shows it waits.
-        DisposableEffect(connected, playing, playback) {
-            remotePlay = remotePlay@{ down ->
-                val player = connected ?: return@remotePlay false
-                if (offer != null) return@remotePlay true
-                if (player.playWhenReady) return@remotePlay false
-                if (down) askThenPlay()
-                true
-            }
+        DisposableEffect(prompt) {
+            remotePlay = { down -> prompt?.onKey(down) ?: false }
             onDispose { remotePlay = null }
         }
         when {
@@ -318,7 +321,8 @@ class PlayerActivity : ComponentActivity() {
                                 skipBack = playerSettings.skipBackSeconds,
                                 skipForward = playerSettings.skipForwardSeconds,
                                 onCurrentTimeUpdate = { currentTime = it },
-                                onPlay = askThenPlay,
+                                onPlay = { if (prompt != null) prompt.onPlay() else connected.play() },
+                                focusPlayAgain = focusPlayAgain,
                                 // An episode's outer buttons open the episodes either side (#108).
                                 episodes = playing.episodeId?.let {
                                     EpisodeSkip(
@@ -338,19 +342,12 @@ class PlayerActivity : ComponentActivity() {
                         }
                     },
                     overlay = {
-                        offer?.let { asked ->
-                            val answered: (Boolean) -> Unit = { moveThere ->
-                                if (moveThere) playback?.seekToBookTime(asked.there)
-                                // Staying sends nothing until playback moves.
-                                resumeCheck.answered(itemId, playing.episodeId, asked)
-                                offer = null
-                                if (playAfterChoice) connected.play()
-                            }
+                        prompt?.offer?.let { asked ->
                             ResumeChoice(
                                 asked,
                                 now = System.currentTimeMillis(),
-                                onContinue = { answered(true) },
-                                onStay = { answered(false) }
+                                onContinue = { prompt.answer(moveThere = true) },
+                                onStay = { prompt.answer(moveThere = false) }
                             )
                         }
                         PlayerPanelHost(panels) { panel ->

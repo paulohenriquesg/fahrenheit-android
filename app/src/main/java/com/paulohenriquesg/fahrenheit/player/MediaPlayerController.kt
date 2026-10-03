@@ -74,7 +74,10 @@ fun MediaPlayerController(
     episodes: EpisodeSkip? = null,
     skipBack: Int = 30,
     skipForward: Int = 30,
+    // Play from a pause: the screen may ask first where to continue from (#90).
     onPlay: () -> Unit = { player.play() },
+    // A new value puts focus back on Play, after something over it closed.
+    focusPlayAgain: Int = 0,
     trailing: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {}
 ) {
     var isPlaying by remember(player) { mutableStateOf(player.playWhenReady) }
@@ -125,7 +128,7 @@ fun MediaPlayerController(
 
     // Something must hold focus or no D-pad key reaches this screen at all;
     // play, so the remote's centre button does the obvious thing (frame C).
-    val playFocus = rememberInitialFocus(enabled = true, player)
+    val playFocus = rememberInitialFocus(enabled = true, player, focusPlayAgain)
 
     Column(modifier = Modifier.fillMaxWidth()) {
         // The bar you seek with is the chapter's; the book's sits under it

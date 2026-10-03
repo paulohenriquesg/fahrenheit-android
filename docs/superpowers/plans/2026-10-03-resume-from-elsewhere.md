@@ -1,6 +1,6 @@
 # Ask which position to continue from - Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** When the player still holds a book or episode and the server's position is newer and more than 30 seconds away, and was not written by this device, ask which to continue from (#90).
 
@@ -44,34 +44,35 @@
 **Files:** create `player/ResumeOffer.kt`; test `player/ResumeOfferTest.kt`.
 
 - Produces `data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long)` and `ResumeOffer.of(here: Double, server: MediaProgressResponse?, knownAt: Long?, latestDevice: String?, thisDevice: String): ResumeOffer?`.
-- [ ] Tests: newer and 41 s away from another device asks; 30 s does not; 31 s does; not newer than known does not; nothing known counts as newer; latest session from this device does not; sessions unknown (null) asks; no server progress, no `currentTime`, no `lastUpdate`, or finished does not.
-- [ ] Implement; green.
+- [x] Tests: newer and 41 s away from another device asks; 30 s does not; 31 s does; not newer than known does not; nothing known counts as newer; latest session from this device does not; sessions unknown (null) asks; no server progress, no `currentTime`, no `lastUpdate`, or finished does not.
+- [x] Implement; green.
 
 ### Task 2: the latest listening session's device
 
 **Files:** modify `api/ApiService.kt` (two `@GET`s), create `api/ItemListeningSessions.kt`; test `api/ItemListeningSessionsTest.kt` (Gson parse of an invented reply, plus the pick).
 - Produces `ItemListeningSessions.latestDeviceId(): String?`: the `deviceInfo.deviceId` of the session with the greatest `updatedAt`, null when none.
-- [ ] Tests: picks the latest by `updatedAt`, not the first listed; none gives null; a session without device info gives null.
+- [x] Tests: picks the latest by `updatedAt`, not the first listed; none gives null; a session without device info gives null.
 
 ### Task 3: what this player last knew
 
 **Files:** create `player/ServerKnowledge.kt`; modify `player/PlaybackReporting.kt` (a delivered report records), `player/PlayerStart.kt` (queuing from the server's progress records its `lastUpdate`); tests `ServerKnowledgeTest.kt`, additions to `PlaybackReportingTest`.
 - Produces a process-wide `ServerKnowledge` with `knownAt(itemId, episodeId): Long?`, `saw(itemId, episodeId, at: Long)` keeping the later time.
-- [ ] Tests: later wins, earlier is ignored, books and episodes are separate; a delivered report records; a failed one does not.
+- [x] Tests: later wins, earlier is ignored, books and episodes are separate; a delivered report records; a failed one does not.
 
 ### Task 4: `ResumeChoice` - the question
 
 **Files:** create `player/ResumeChoice.kt`, strings and plurals in `res/values/strings.xml`; test `player/ResumeChoiceTest.kt` (Compose + Robolectric).
-- [ ] Tests: the sentence with both times and "10 minutes ago"; "1 minute ago", "just now", hours, days; times under an hour; focus starts on the server's position; its button (centre key) chooses the server position; Stay chooses to stay; both are TV buttons.
+- [x] Tests: the sentence with both times and "10 minutes ago"; "1 minute ago", "just now", hours, days; times under an hour; focus starts on the server's position; its button (centre key) chooses the server position; Stay chooses to stay; both are TV buttons.
 
 ### Task 5: `ResumeCheck`, and asking at the right moments
 
 **Files:** create `player/ResumeCheck.kt`; modify `player/MediaPlayerController.kt` (`onPlay` parameter), `player/PlayerActivity.kt` (overlay, the two moments); test `player/ResumeCheckTest.kt`, `MediaPlayerController` transport test for `onPlay`.
-- Produces `ResumeCheck(progress, latestDevice, thisDevice, knowledge).offer(itemId, episodeId, here, playing): ResumeOffer?`, and `stayed(offer)` / `moved(offer)` recording the server's `lastUpdate` as known.
-- [ ] Tests: a playing player is not checked; an offer comes from the rule's inputs; after Stay the same server position is not offered again; the transport's Play calls `onPlay` when paused and pauses directly when playing.
-- [ ] Wire: on reattach to a queued item that is paused, check and show `ResumeChoice`; Play (button or remote Play key on the screen) while paused checks first and plays after the choice.
+- Produces `ResumeCheck(progress, latestDevice, thisDevice, knowledge).offer(itemId, episodeId, here, playing): ResumeOffer?`, and `answered(itemId, episodeId, offer)` recording the server's `lastUpdate` as known.
+- After review: `ResumePrompt` holds the question's state and races (one check at a time, a result dropped once playback started, a 1.5 s cap on Play, the remote key's down and up paired), unit-tested apart from the Activity. The question traps focus and Back (Back stays); Play takes focus again after it.
+- [x] Tests: a playing player is not checked; an offer comes from the rule's inputs; after Stay the same server position is not offered again; the transport's Play calls `onPlay` when paused and pauses directly when playing.
+- [x] Wire: on reattach to a queued item that is paused, check and show `ResumeChoice`; Play (button or remote Play key on the screen) while paused checks first and plays after the choice.
 
 ### Task 6: gate, review, PR
 
-- [ ] `./gradlew :app:testDebugUnitTest :app:lintDebug`, exit code 0 (when given the Gradle slot).
-- [ ] Fresh review, one fix pass, PR `Closes #90` with what to check on the stick.
+- [x] `./gradlew :app:testDebugUnitTest :app:lintDebug`, exit code 0 (when given the Gradle slot).
+- [x] Fresh review, one fix pass, PR `Closes #90` with what to check on the stick.
