@@ -412,11 +412,16 @@ class PlayerActivity : ComponentActivity() {
     /** Set while the player screen shows: takes the remote's Play from a pause (#90). */
     private var remotePlay: ((down: Boolean) -> Boolean)? = null
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val play = event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
-        if (play && remotePlay?.invoke(event.action == KeyEvent.ACTION_DOWN) == true) return true
-        return super.dispatchKeyEvent(event)
-    }
+    // Keys the screen leaves alone come here before the window hands media keys
+    // to the media session, so Play can ask first.
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean =
+        (isPlayKey(keyCode) && remotePlay?.invoke(true) == true) || super.onKeyDown(keyCode, event)
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean =
+        (isPlayKey(keyCode) && remotePlay?.invoke(false) == true) || super.onKeyUp(keyCode, event)
+
+    private fun isPlayKey(keyCode: Int) =
+        keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
 
     /** The server's progress, or null - quietly: the check is a question, not a load (#90). */
     private suspend fun progressQuietly(itemId: String, episodeId: String?): MediaProgressResponse? {
