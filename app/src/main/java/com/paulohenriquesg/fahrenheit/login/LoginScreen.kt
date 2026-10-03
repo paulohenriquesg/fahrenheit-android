@@ -81,12 +81,24 @@ fun LoginScreen(
     var isUsernameFocused by remember { mutableStateOf(false) }
     var isPasswordFocused by remember { mutableStateOf(false) }
 
+    // After a sign-out the server and username are still known (#63), so a
+    // return visit shows them as a fact and asks only for the password (#100).
+    val remembered = remember {
+        userPreferences.host.isNotBlank() && userPreferences.username.isNotBlank()
+    }
+    var differentServer by remember { mutableStateOf(false) }
+    val returning = remembered && !differentServer
+
     // Beside the field that caused it - the band above the keyboard is the only
     // part of the screen visible while typing. If that field is not on screen
-    // (a password error, then a switch to the API key), the top of the form.
-    val shownFields = if (useApiKey) setOf(LoginField.Host, LoginField.ApiKey)
-    else setOf(LoginField.Host, LoginField.Username, LoginField.Password)
-    val errorField = error?.field?.takeIf { it in shownFields } ?: LoginField.Host
+    // (a password error, then a switch to the API key), the first one that is.
+    val shownFields = when {
+        returning && useApiKey -> listOf(LoginField.ApiKey)
+        returning -> listOf(LoginField.Password)
+        useApiKey -> listOf(LoginField.Host, LoginField.ApiKey)
+        else -> listOf(LoginField.Host, LoginField.Username, LoginField.Password)
+    }
+    val errorField = error?.field?.takeIf { it in shownFields } ?: shownFields.first()
     @Composable
     fun ErrorAbove(field: LoginField) {
         if (error != null && errorField == field) LoginErrorBand(error)
@@ -97,51 +109,58 @@ fun LoginScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .testTag("login_screen")
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
+            // The Fire TV keyboard owns the bottom 45% while typing; a centred
+            // form puts its own buttons under it.
+            .padding(start = 16.dp, end = 16.dp, top = 32.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = context.getString(R.string.app_name),
+            text = if (returning) stringResource(R.string.login_welcome_back)
+            else context.getString(R.string.app_name),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
                 .padding(bottom = 16.dp)
         )
 
-        ErrorAbove(LoginField.Host)
-        OutlinedTextField(
-            value = host,
-            onValueChange = { host = it },
-            label = {
-                Text(
-                    stringResource(R.string.host),
-                    color = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            leadingIcon = {
-                Icon(
-                    Icons.Filled.Language,
-                    contentDescription = stringResource(R.string.host_icon),
-                    tint = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            singleLine = true,
-            modifier = Modifier
-                .formWidth()
-                .testTag("login_host_field")
-                .onFocusChanged {
-                    isHostFocused = it.isFocused
+        if (returning) {
+            RememberedAccount(username, host)
+        } else {
+            ErrorAbove(LoginField.Host)
+            OutlinedTextField(
+                value = host,
+                onValueChange = { host = it },
+                label = {
+                    Text(
+                        stringResource(R.string.host),
+                        color = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 },
-            keyboardOptions = KeyboardOptions.Default.copy(
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            colors = fieldColors()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+                leadingIcon = {
+                    Icon(
+                        Icons.Filled.Language,
+                        contentDescription = stringResource(R.string.host_icon),
+                        tint = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                singleLine = true,
+                modifier = Modifier
+                    .formWidth()
+                    .testTag("login_host_field")
+                    .onFocusChanged {
+                        isHostFocused = it.isFocused
+                    },
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                colors = fieldColors()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         if (useApiKey) {
             ErrorAbove(LoginField.ApiKey)
             OutlinedTextField(
@@ -179,39 +198,41 @@ fun LoginScreen(
                 colors = fieldColors()
             )
         } else {
-            ErrorAbove(LoginField.Username)
-            OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = {
-                    Text(
-                        stringResource(R.string.username),
-                        color = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        Icons.Filled.Person,
-                        contentDescription = stringResource(R.string.username_icon),
-                        tint = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                singleLine = true,
-                modifier = Modifier
-                    .formWidth()
-                    .testTag("login_username_field")
-                    .onFocusChanged {
-                        isUsernameFocused = it.isFocused
+            if (!returning) {
+                ErrorAbove(LoginField.Username)
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = {
+                        Text(
+                            stringResource(R.string.username),
+                            color = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     },
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                ),
-                colors = fieldColors()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+                    leadingIcon = {
+                        Icon(
+                            Icons.Filled.Person,
+                            contentDescription = stringResource(R.string.username_icon),
+                            tint = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    singleLine = true,
+                    modifier = Modifier
+                        .formWidth()
+                        .testTag("login_username_field")
+                        .onFocusChanged {
+                            isUsernameFocused = it.isFocused
+                        },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    ),
+                    colors = fieldColors()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             ErrorAbove(LoginField.Password)
             OutlinedTextField(
                 value = password,
@@ -249,6 +270,37 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(16.dp))
         if (isLoading.value) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        } else if (returning) {
+            Row(
+                modifier = Modifier.formWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Button(
+                    onClick = {
+                        if (useApiKey) handleApiKeyLogin(host, apiKey, isLoading)
+                        else handleLogin(host, username, password, isLoading)
+                    },
+                    modifier = Modifier.testTag("login_submit_button")
+                ) {
+                    Text(stringResource(R.string.login_sign_in))
+                }
+                Button(
+                    onClick = { useApiKey = !useApiKey },
+                    modifier = Modifier.testTag("login_mode_toggle")
+                ) {
+                    Text(
+                        stringResource(
+                            if (useApiKey) R.string.login_use_password else R.string.login_use_api_key
+                        )
+                    )
+                }
+                Button(
+                    onClick = { differentServer = true },
+                    modifier = Modifier.testTag("login_different_server")
+                ) {
+                    Text(stringResource(R.string.login_different_server))
+                }
+            }
         } else {
             Button(
                 onClick = {
@@ -280,6 +332,34 @@ fun LoginScreen(
         }
     }
 }
+
+/** Who and where, as a fact rather than two fields to fill in. */
+@Composable
+private fun RememberedAccount(username: String, host: String) {
+    Row(
+        modifier = Modifier
+            .padding(bottom = 16.dp)
+            .testTag("login_account")
+            .semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            Icons.Filled.Person,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            stringResource(R.string.login_account, username, displayHost(host)),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+/** The address as a person reads it: no scheme, no trailing slash. */
+private fun displayHost(host: String): String =
+    host.substringAfter("://").trimEnd('/')
 
 @Composable
 private fun LoginErrorBand(error: LoginError) {
