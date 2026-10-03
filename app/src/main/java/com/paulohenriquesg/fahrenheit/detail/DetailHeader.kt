@@ -57,14 +57,18 @@ import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
+import com.paulohenriquesg.fahrenheit.player.AboutFact
 import com.paulohenriquesg.fahrenheit.player.ActionChip
 import com.paulohenriquesg.fahrenheit.player.ChapterSpan
 import com.paulohenriquesg.fahrenheit.player.ChaptersChip
 import com.paulohenriquesg.fahrenheit.player.ChaptersPanel
 import com.paulohenriquesg.fahrenheit.player.PlayerPanelHost
+import com.paulohenriquesg.fahrenheit.player.SeriesBook
+import com.paulohenriquesg.fahrenheit.player.SeriesBooks
 import com.paulohenriquesg.fahrenheit.player.rememberPlayerPanels
 import com.paulohenriquesg.fahrenheit.podcast.Fact
 import com.paulohenriquesg.fahrenheit.ui.Space
+import com.paulohenriquesg.fahrenheit.ui.components.BookOverview
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import com.paulohenriquesg.fahrenheit.utils.RichText
@@ -72,12 +76,11 @@ import kotlinx.coroutines.launch
 
 const val PRIMARY_ACTION_TAG = "detail_primary_action"
 const val DESCRIPTION_TAG = "detail_full_description"
-const val DETAIL_SCROLL_TAG = "detail_scroll"
 
 /**
- * A book's screen: the header with the whole description, scrolling when the
- * description is longer than the screen. The room under the button is free on
- * a book, unlike a podcast, where the episodes follow.
+ * A book's screen, as the one book layout ([BookOverview], #134): the book
+ * and its actions on the left, the description, the series and the facts on
+ * the right. Resume holds focus on arrival.
  *
  * Beside Resume (#105, frame 3): Mark finished, when [finished] is known, and
  * Chapters, when there are any - the player's own panel, opening on the
@@ -97,36 +100,51 @@ fun BookDetailView(
     finished: Boolean? = null,
     marking: Boolean = false,
     onMarkFinished: (Boolean) -> Unit = {},
-    padding: PaddingValues = PaddingValues()
+    padding: PaddingValues = PaddingValues(),
+    facts: List<AboutFact> = emptyList(),
+    series: SeriesBooks? = null,
+    seriesName: String? = null,
+    onSeriesBook: (SeriesBook) -> Unit = {}
 ) {
-    val scroll = rememberScrollState()
     val panels = rememberPlayerPanels()
+    // Keyed on whether there is a primary action, not its label: the label
+    // changes after Mark finished ("Resume at…" to "Play"), and focus must not
+    // jump off the button just pressed.
+    val initialFocus = rememberInitialFocus(enabled = content.primary != null, itemId, content.primary != null)
     Box(Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scroll)
-                .testTag(DETAIL_SCROLL_TAG)
-                .padding(padding)
+        BookOverview(
+            itemId = itemId,
+            title = content.title,
+            byline = content.byline,
+            description = content.description,
+            facts = facts,
+            series = series,
+            seriesName = seriesName,
+            onSeriesBook = onSeriesBook,
+            askBeforeSwitching = false,
+            landOnDescription = false,
+            modifier = Modifier.padding(padding)
         ) {
-            DetailHeader(
-                itemId = itemId,
-                content = content,
-                onPrimary = onPrimary,
-                fullDescription = scroll,
-                actions = {
-                    finished?.let { done ->
-                        ActionChip(
-                            text = stringResource(if (done) R.string.mark_unfinished else R.string.mark_finished),
-                            onClick = { onMarkFinished(!done) },
-                            icon = Icons.Filled.Check,
-                            // One mark at a time: a book playing first waits for its closing report.
-                            enabled = !marking
-                        )
-                    }
-                    if (chapters.isNotEmpty()) ChaptersChip(panels)
+            content.primary?.let { label ->
+                Button(
+                    onClick = onPrimary,
+                    modifier = Modifier.focusRequester(initialFocus).testTag(PRIMARY_ACTION_TAG)
+                ) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = LocalContentColor.current, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-            )
+            }
+            finished?.let { done ->
+                ActionChip(
+                    text = stringResource(if (done) R.string.mark_unfinished else R.string.mark_finished),
+                    onClick = { onMarkFinished(!done) },
+                    icon = Icons.Filled.Check,
+                    // One mark at a time: a book playing first waits for its closing report.
+                    enabled = !marking
+                )
+            }
+            if (chapters.isNotEmpty()) ChaptersChip(panels)
         }
         PlayerPanelHost(panels) {
             ChaptersPanel(chapters, at, onChoose = onChapter, onClose = panels::close)
@@ -142,16 +160,13 @@ fun BookDetailView(
  * nothing on a TV responds to the remote until something holds focus.
  *
  * @param actions drawn after the primary action, e.g. the admin's feed check.
- * @param fullDescription the scroll holding the header, to show the whole
- *   description in it; null for a three-line preview.
  */
 @Composable
 fun DetailHeader(
     itemId: String,
     content: DetailHeaderContent,
     onPrimary: () -> Unit,
-    actions: @Composable () -> Unit = {},
-    fullDescription: ScrollState? = null
+    actions: @Composable () -> Unit = {}
 ) {
     // Keyed on whether there is a primary action, not its label: the label
     // changes after Mark finished ("Resume at…" to "Play"), and focus must not
@@ -213,19 +228,15 @@ fun DetailHeader(
                 actions()
             }
             content.description?.takeIf { it.isNotBlank() }?.let { description ->
-                if (fullDescription != null) {
-                    FullDescription(description, fullDescription)
-                } else {
-                    // Rendered, not stripped: emphasis survives (#57).
-                    val text = remember(description) { RichText.fromHtml(DetailHeaderModel.previewOf(description)) }
-                    Text(
-                        text = text,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                // Rendered, not stripped: emphasis survives (#57).
+                val text = remember(description) { RichText.fromHtml(DetailHeaderModel.previewOf(description)) }
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

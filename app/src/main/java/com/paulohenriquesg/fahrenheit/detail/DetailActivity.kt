@@ -50,7 +50,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import android.util.Log
+import com.paulohenriquesg.fahrenheit.player.AboutFact
+import com.paulohenriquesg.fahrenheit.player.AboutFacts
 import com.paulohenriquesg.fahrenheit.player.ChapterClock
+import com.paulohenriquesg.fahrenheit.player.SeriesBooks
 import com.paulohenriquesg.fahrenheit.player.Playback
 import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
@@ -117,6 +121,21 @@ class DetailActivity : ComponentActivity() {
             ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId) }?.onSuccess { itemDetail = it }
         }
 
+        // The rest of a book's series (#134), as the player reads it.
+        val seriesRef = itemDetail?.media?.metadata?.series?.firstOrNull()
+        var seriesBooks by remember { mutableStateOf<SeriesBooks?>(null) }
+        LaunchedEffect(seriesRef?.id, itemDetail?.libraryId) {
+            val ref = seriesRef ?: return@LaunchedEffect
+            val libraryId = itemDetail?.libraryId ?: return@LaunchedEffect
+            val api = ApiClient.getLibraryApi() ?: return@LaunchedEffect
+            seriesBooks = LibraryRepository(api).seriesBooks(libraryId, ref.id)
+                .onFailure { Log.w(TAG, "Couldn't read the series ${ref.id}", it) }
+                .getOrNull()
+                ?.let { SeriesBooks.of(it, currentId = itemId) }
+                ?.also { if (it.current == null) Log.w(TAG, "The series ${ref.id} does not list $itemId") }
+                ?.takeIf { it.current != null }
+        }
+
         // One call for both who the user is (the admin check) and what they
         // have heard (#78); read again on every return, e.g. from the player.
         val isPodcast = itemDetail?.mediaType == "podcast"
@@ -161,6 +180,13 @@ class DetailActivity : ComponentActivity() {
                     at = item.userMediaProgress?.currentTime ?: 0.0,
                     onChapter = { start -> context.startActivity(playChapterIntent(context, itemId, start)) },
                     padding = margin,
+                    facts = remember(item) {
+                        AboutFacts.book(item.media.metadata, item.media.duration) +
+                            listOfNotNull(DetailHeaderModel.progressOf(item)?.let { AboutFact(AboutFact.Kind.Progress, it) })
+                    },
+                    series = seriesBooks,
+                    seriesName = seriesRef?.name,
+                    onSeriesBook = { context.startActivity(createIntent(context, it.itemId)) },
                     finished = item.userMediaProgress?.isFinished == true,
                     marking = marking,
                     onMarkFinished = { done ->
@@ -172,7 +198,7 @@ class DetailActivity : ComponentActivity() {
                                 Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
                                 return@markFinished
                             }
-                            // Read again, so the chips and Resume say what the server now holds.
+                            // Read again, so the facts and Resume say what the server now holds.
                             scope.launch {
                                 ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId) }
                                     ?.onSuccess { itemDetail = it }
@@ -327,6 +353,7 @@ class DetailActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val TAG = "DetailActivity"
         private const val EXTRA_ITEM_ID = "item_id"
 
         fun createIntent(context: Context, itemId: String): Intent {

@@ -64,26 +64,7 @@ fun PlayerScreen(
     }
     val chapter = ChapterClock.at(spans, currentTime)?.title?.takeIf { it.isNotBlank() }
 
-    val background = MaterialTheme.colorScheme.background
-    // A colour that arrives after the screen showed fades in, not jumps in.
-    val shown by animateColorAsState(
-        wash?.takeIf { CoverWash.appliesOn(background) } ?: background,
-        animationSpec = tween(700),
-        label = "wash"
-    )
-    // The cover's colour behind it, fading into the background (frame C).
-    val washed = Modifier.drawWithCache {
-        val glow = Brush.radialGradient(
-            listOf(shown, Color.Transparent),
-            center = Offset(size.width * 0.18f, size.height * 0.30f),
-            radius = maxOf(size.width, size.height) * 0.75f
-        )
-        val fade = Brush.verticalGradient(listOf(shown.copy(alpha = 0.55f), background), endY = size.height * 0.75f)
-        onDrawBehind {
-            drawRect(fade)
-            drawRect(glow)
-        }
-    }
+    val washed = Modifier.coverWash(wash)
     Box(Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -159,5 +140,33 @@ fun GoToPodcastButton(onClick: () -> Unit) {
         )
         Spacer(Modifier.width(8.dp))
         Text("Go to podcast")
+    }
+}
+
+/**
+ * The cover's colour behind a screen, fading into the background (frame C;
+ * see [CoverWash]); the background alone when there is none, or under the
+ * light theme. A colour that arrives after the screen showed fades in.
+ * The player and its About (#134) share it.
+ */
+@Composable
+fun Modifier.coverWash(wash: Color?): Modifier {
+    val background = MaterialTheme.colorScheme.background
+    val shown by animateColorAsState(
+        wash?.takeIf { CoverWash.appliesOn(background) } ?: background,
+        animationSpec = tween(700),
+        label = "wash"
+    )
+    return drawWithCache {
+        val glow = Brush.radialGradient(
+            listOf(shown, Color.Transparent),
+            center = Offset(size.width * 0.18f, size.height * 0.30f),
+            radius = maxOf(size.width, size.height) * 0.75f
+        )
+        val fade = Brush.verticalGradient(listOf(shown.copy(alpha = 0.55f), background), endY = size.height * 0.75f)
+        onDrawBehind {
+            drawRect(fade)
+            drawRect(glow)
+        }
     }
 }

@@ -140,4 +140,12 @@ class DetailHeaderModelTest {
             DetailHeaderModel.podcast(podcast(), emptyList(), resumeTitle = "E2").primary
         )
     }
+
+    // #134: the book screen's facts list says how far in, where the chip did.
+    @Test
+    fun `how far in, as the book screen's facts say it`() {
+        assertEquals("34% in", DetailHeaderModel.progressOf(book(progress = """{"currentTime":19788.0,"progress":0.34,"isFinished":false}""")))
+        assertEquals("Finished", DetailHeaderModel.progressOf(book(progress = """{"currentTime":100.0,"progress":1.0,"isFinished":true}""")))
+        assertEquals(null, DetailHeaderModel.progressOf(book()))
+    }
 }

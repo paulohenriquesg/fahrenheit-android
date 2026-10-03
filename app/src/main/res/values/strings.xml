@@ -38,6 +38,8 @@
     <string name="fact_published">Published</string>
     <string name="fact_length">Length</string>
     <string name="fact_genres">Genres</string>
+    <string name="fact_progress">Progress</string>
+    <string name="series_count">%1$s · %2$d books</string>
     <string name="speed">Speed</string>
     <string name="speed_chip">Speed %1$s</string>
     <string name="speed_note_book">Remembered for this book. The time left in the book counts at this speed.</string>

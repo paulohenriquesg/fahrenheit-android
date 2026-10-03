@@ -43,6 +43,7 @@ import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.LibraryItemMetadata
 import com.paulohenriquesg.fahrenheit.detail.FullDescription
+import com.paulohenriquesg.fahrenheit.ui.components.SeriesShelf
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
@@ -50,7 +51,8 @@ import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 
 /** One of About's facts: what it is, and its value as written. */
 data class AboutFact(val kind: Kind, val value: String) {
-    enum class Kind { ReadBy, Publisher, Published, Length, Genres }
+    /** [Progress] only on the book screen (#134): how far in, or finished. */
+    enum class Kind { ReadBy, Publisher, Published, Length, Genres, Progress }
 }
 
 /** About's facts, one line each, in the mock's order; a missing one is left out (#107). */
@@ -122,7 +124,15 @@ fun AboutPanel(
                     FullDescription(it, scroll, modifier = Modifier.landing(Landing.Description), alwaysFocusable = true)
                 }
             }
-            row?.let { SeriesRow(it, onPlayInstead, landHere = Modifier.landing(Landing.Series)) }
+            row?.let {
+                SeriesShelf(
+                    series = it,
+                    label = stringResource(R.string.about_series),
+                    askBeforeSwitching = true,
+                    onChoose = onPlayInstead,
+                    landHere = Modifier.landing(Landing.Series)
+                )
+            }
             Column(Modifier.landing(Landing.Facts).then(if (landOn == Landing.Facts) Modifier.focusable() else Modifier)) {
                 facts.forEach { FactLine(it) }
             }
@@ -142,74 +152,10 @@ fun AboutPanel(
 
 private enum class Landing { Description, Series, Mark, Facts }
 
-/**
- * The series as small covers, this book marked; another asks before it plays.
- *
- * @param landHere applied to this book's cover, for when focus lands on the row.
- */
-@Composable
-private fun SeriesRow(series: SeriesBooks, onPlayInstead: (SeriesBook) -> Unit, landHere: Modifier = Modifier) {
-    var asking by remember { mutableStateOf<SeriesBook?>(null) }
-    val covers = remember(series) { series.books.associate { it.itemId to FocusRequester() } }
-    var returnTo by remember { mutableStateOf<SeriesBook?>(null) }
-    LaunchedEffect(asking) {
-        if (asking == null) returnTo?.let { covers[it.itemId]?.requestFocusWhenAttached() }
-    }
-    Text(
-        stringResource(R.string.about_series).uppercase(),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 14.dp, bottom = 6.dp)
-    )
-    val question = asking
-    if (question != null) {
-        // Back answers the question, before it can close the panel.
-        BackHandler { returnTo = question; asking = null }
-        val play = rememberInitialFocus(enabled = true, question)
-        Text(stringResource(R.string.play_instead, question.title), style = MaterialTheme.typography.bodyLarge)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 8.dp)) {
-            Button(onClick = { onPlayInstead(question) }, modifier = Modifier.focusRequester(play)) {
-                Text(stringResource(R.string.play))
-            }
-            OutlinedButton(onClick = { returnTo = question; asking = null }) { Text(stringResource(R.string.cancel)) }
-        }
-        return
-    }
-    val keys = remember(series) { StableKeys.of(series.books) { it.itemId } }
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        itemsIndexed(series.books, key = { index, _ -> keys[index] }) { index, book ->
-            val isThis = index == (series.current ?: 0)
-            Surface(
-                onClick = { if (index != series.current) asking = book },
-                modifier = Modifier
-                    .focusRequester(covers.getValue(book.itemId))
-                    .then(if (isThis) landHere else Modifier)
-                    .semantics { selected = index == series.current },
-                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
-                border = ClickableSurfaceDefaults.border(
-                    border = if (isThis) Border(BorderStroke(2.dp, MaterialTheme.colorScheme.primary)) else Border.None,
-                    focusedBorder = Border(BorderStroke(3.dp, MaterialTheme.colorScheme.onSurface))
-                ),
-                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
-            ) {
-                CoverImage(itemId = book.itemId, contentDescription = book.title, size = 56.dp)
-            }
-        }
-    }
-}
-
 /** "Read by A Reader": the label quiet and bold, the value plain. */
 @Composable
 private fun FactLine(fact: AboutFact) {
-    val label = stringResource(
-        when (fact.kind) {
-            AboutFact.Kind.ReadBy -> R.string.fact_read_by
-            AboutFact.Kind.Publisher -> R.string.fact_publisher
-            AboutFact.Kind.Published -> R.string.fact_published
-            AboutFact.Kind.Length -> R.string.fact_length
-            AboutFact.Kind.Genres -> R.string.fact_genres
-        }
-    )
+    val label = factLabel(fact.kind)
     Text(
         buildAnnotatedString {
             withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)) { append(label) }
@@ -220,3 +166,16 @@ private fun FactLine(fact: AboutFact) {
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
+
+/** What a fact is called: "Read by", "Length". */
+@Composable
+fun factLabel(kind: AboutFact.Kind): String = stringResource(
+    when (kind) {
+        AboutFact.Kind.ReadBy -> R.string.fact_read_by
+        AboutFact.Kind.Publisher -> R.string.fact_publisher
+        AboutFact.Kind.Published -> R.string.fact_published
+        AboutFact.Kind.Length -> R.string.fact_length
+        AboutFact.Kind.Genres -> R.string.fact_genres
+        AboutFact.Kind.Progress -> R.string.fact_progress
+    }
+)
