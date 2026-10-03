@@ -33,6 +33,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import kotlin.math.roundToInt
+import androidx.annotation.PluralsRes
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
+import java.text.NumberFormat
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
@@ -173,22 +177,29 @@ private fun tileLine(library: Library, stats: LibraryStats?): String {
         val episodes = stats.numAudioTracks ?: 0
         return stringResource(
             R.string.switch_library_tile_line,
-            pluralStringResource(R.plurals.switch_library_shows, items, items),
-            pluralStringResource(R.plurals.switch_library_episodes, episodes, episodes)
+            count(R.plurals.switch_library_shows, items),
+            count(R.plurals.switch_library_episodes, episodes)
         )
     }
-    val books = pluralStringResource(R.plurals.switch_library_books, items, items)
+    val books = count(R.plurals.switch_library_books, items)
     val seconds = stats.totalDuration ?: 0.0
     if (seconds <= 0.0) return books
     val hours = (seconds / 3600).roundToInt()
     val duration = if (hours >= 1) {
-        pluralStringResource(R.plurals.switch_library_hours, hours, hours)
+        count(R.plurals.switch_library_hours, hours)
     } else {
         // Rounding a short library to "0 hours" would say it is empty.
-        val minutes = (seconds / 60).roundToInt().coerceAtLeast(1)
-        pluralStringResource(R.plurals.switch_library_minutes, minutes, minutes)
+        count(R.plurals.switch_library_minutes, (seconds / 60).roundToInt().coerceAtLeast(1))
     }
     return stringResource(R.string.switch_library_tile_line, books, duration)
+}
+
+/** "4,966 hours": grouped as the device writes numbers, pluralised by the count. */
+@Composable
+private fun count(@PluralsRes id: Int, n: Int): String {
+    val locale = LocalConfiguration.current.locales[0]
+    val formatted = remember(locale, n) { NumberFormat.getIntegerInstance(locale).format(n) }
+    return pluralStringResource(id, n, formatted)
 }
 
 /** The old picker showed one; a wall of identical tiles tells you nothing. */

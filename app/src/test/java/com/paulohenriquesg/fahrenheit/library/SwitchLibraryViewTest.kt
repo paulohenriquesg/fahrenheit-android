@@ -160,4 +160,25 @@ class SwitchLibraryViewTest {
         compose.onNodeWithTag("library_add")
             .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
     }
+
+    private val large = mapOf(
+        "lib-1" to LibraryStats(totalItems = 1234, totalDuration = 4966 * 3600.0, numAudioTracks = 9000),
+        "lib-2" to LibraryStats(totalItems = 12, totalDuration = 0.0, numAudioTracks = 5951)
+    )
+
+    @Test
+    fun `large counts are grouped as the device writes numbers`() {
+        render(stats = large)
+
+        compose.onNodeWithText("1,234 books \u00b7 4,966 hours", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("12 shows \u00b7 5,951 episodes", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = "de-rDE-w960dp-h540dp")
+    fun `the grouping follows the device's locale`() {
+        render(stats = large)
+
+        compose.onNodeWithText("1.234 books \u00b7 4.966 hours", useUnmergedTree = true).assertIsDisplayed()
+    }
 }

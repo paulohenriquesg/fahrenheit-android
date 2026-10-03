@@ -68,16 +68,18 @@ class SettingsViewTest {
         }
     }
 
+    // Fire OS reports night mode off while its own menus are dark, so the row
+    // says what the TV reports rather than claiming what it is set to.
     @Test
-    fun `the theme row says what the TV is set to right now`() {
+    fun `the theme row says what the TV reports`() {
         render(deviceIsDark = true)
-        compose.onNodeWithText("Your TV is set to dark right now").assertIsDisplayed()
+        compose.onNodeWithText("The TV reports dark mode").assertIsDisplayed()
     }
 
     @Test
-    fun `a TV set to light is said to be light`() {
+    fun `a TV reporting light is said to report light`() {
         render(deviceIsDark = false)
-        compose.onNodeWithText("Your TV is set to light right now").assertIsDisplayed()
+        compose.onNodeWithText("The TV reports light mode").assertIsDisplayed()
     }
 
     @OptIn(ExperimentalTestApi::class)
