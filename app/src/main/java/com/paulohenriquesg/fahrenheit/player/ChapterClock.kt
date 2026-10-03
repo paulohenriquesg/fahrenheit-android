@@ -59,14 +59,20 @@ object ChapterClock {
 
     /**
      * Ticks a bar [widthPx] wide can show apart (#143): the first, then each
-     * at least [minGapPx] from the last one kept. A book of a hundred short
-     * chapters otherwise draws a comb; a few chapters keep every tick.
+     * at least [minGapPx] from the last one kept, and none crowding the bar's
+     * end. A book of a hundred short chapters otherwise draws a comb; a few
+     * chapters keep every tick. Even chapters come out evenly spaced; uneven
+     * ones keep those that fit.
      */
     fun thinned(ticks: List<Float>, widthPx: Float, minGapPx: Float): List<Float> {
+        // Half a pixel of slack: a gap meant to be the minimum must not hang on rounding.
+        val gap = minGapPx - 0.5f
         val kept = mutableListOf<Float>()
         for (t in ticks) {
             val last = kept.lastOrNull()
-            if (last == null || (t - last) * widthPx >= minGapPx) kept += t
+            val roomBefore = last == null || (t - last) * widthPx >= gap
+            val roomAfter = kept.isEmpty() || (1f - t) * widthPx >= gap
+            if (roomBefore && roomAfter) kept += t
         }
         return kept
     }

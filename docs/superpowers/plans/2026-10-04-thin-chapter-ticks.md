@@ -11,7 +11,7 @@
 ## Rulings
 
 1. **The minimum gap is 6 dp.**
-2. **Thinning is greedy from the start.** For evenly spaced chapters that keeps every n-th one; uneven chapters keep the ones that fit.
+2. **Thinning is greedy from the start.** For evenly spaced chapters that keeps every n-th one; uneven chapters keep the ones that fit (even only for even chapters; the device check on the 158-chapter book decides whether a stride is worth it). No tick sits within the minimum gap of the bar's end, and half a pixel of slack keeps rounding from deciding a gap of exactly the minimum (review).
 
 ## Tasks
 
