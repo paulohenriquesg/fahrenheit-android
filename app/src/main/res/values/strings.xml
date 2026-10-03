@@ -47,7 +47,14 @@
     <string name="loading_series">Loading series…</string>
     <string name="loading_stats">Loading stats…</string>
     <string name="login">Login</string>
-    <string name="login_successful">Login successful</string>
+    <string name="login_welcome_back">Welcome back</string>
+    <string name="login_sign_in">Sign in</string>
+    <string name="login_signing_in">Signing in…</string>
+    <string name="login_use_api_key">Use an API key</string>
+    <string name="login_use_password">Use a password</string>
+    <string name="login_use_api_key_instead">Sign in with an API key instead</string>
+    <string name="login_use_username_instead">Use username and password instead</string>
+    <string name="login_different_server">Different server</string>
     <string name="login_error_host_missing">Enter the server address first.</string>
     <string name="login_error_host_scheme">Start the address with http:// or https://.</string>
     <string name="login_error_username_missing">Enter your username.</string>

@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +31,23 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Border
+import androidx.tv.material3.LocalContentColor
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -76,17 +95,41 @@ fun LoginScreen(
     var isApiKeyFocused by remember { mutableStateOf(false) }
     var isLoading = remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    // Down from the last field goes to the button that signs in. Left to
+    // geometry it went to whichever button sits under the field's centre.
+    val submitFocus = remember { FocusRequester() }
 
     var isHostFocused by remember { mutableStateOf(false) }
     var isUsernameFocused by remember { mutableStateOf(false) }
     var isPasswordFocused by remember { mutableStateOf(false) }
 
+    // After a sign-out the server and username are still known (#63), so a
+    // return visit shows them as a fact and asks only for the password (#100).
+    val remembered = remember {
+        userPreferences.host.isNotBlank() && userPreferences.username.isNotBlank()
+    }
+    var differentServer by remember { mutableStateOf(false) }
+    val returning = remembered && !differentServer
+
     // Beside the field that caused it - the band above the keyboard is the only
     // part of the screen visible while typing. If that field is not on screen
-    // (a password error, then a switch to the API key), the top of the form.
-    val shownFields = if (useApiKey) setOf(LoginField.Host, LoginField.ApiKey)
-    else setOf(LoginField.Host, LoginField.Username, LoginField.Password)
-    val errorField = error?.field?.takeIf { it in shownFields } ?: LoginField.Host
+    // (a password error, then a switch to the API key), the first one that is.
+    val shownFields = when {
+        returning && useApiKey -> listOf(LoginField.ApiKey)
+        returning -> listOf(LoginField.Password)
+        useApiKey -> listOf(LoginField.Host, LoginField.ApiKey)
+        else -> listOf(LoginField.Host, LoginField.Username, LoginField.Password)
+    }
+    val errorField = error?.field?.takeIf { it in shownFields } ?: shownFields.first()
+    // One way in, whatever pressed it: the keyboard's Done, the remote's Play
+    // or the button. Ignored while a request is out, so a second press does
+    // not send a second one.
+    val submit: () -> Unit = {
+        if (!isLoading.value) {
+            if (useApiKey) handleApiKeyLogin(host, apiKey, isLoading)
+            else handleLogin(host, username, password, isLoading)
+        }
+    }
     @Composable
     fun ErrorAbove(field: LoginField) {
         if (error != null && errorField == field) LoginErrorBand(error)
@@ -97,51 +140,65 @@ fun LoginScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .testTag("login_screen")
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            // The Fire TV keyboard owns the bottom 45% while typing; a centred
+            // form puts its own buttons under it.
+            .padding(start = if (returning) 60.dp else 16.dp, end = 16.dp, top = 32.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.Top,
+        // Frame 3 of the login mock reads from the left, like a page.
+        horizontalAlignment = if (returning) Alignment.Start else Alignment.CenterHorizontally
     ) {
         Text(
-            text = context.getString(R.string.app_name),
-            style = MaterialTheme.typography.headlineMedium,
+            text = if (returning) stringResource(R.string.login_welcome_back)
+            else context.getString(R.string.app_name),
+            style = if (returning) {
+                MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold)
+            } else {
+                MaterialTheme.typography.headlineMedium
+            },
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
                 .padding(bottom = 16.dp)
+                .testTag("login_title")
         )
 
-        ErrorAbove(LoginField.Host)
-        OutlinedTextField(
-            value = host,
-            onValueChange = { host = it },
-            label = {
-                Text(
-                    stringResource(R.string.host),
-                    color = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            leadingIcon = {
-                Icon(
-                    Icons.Filled.Language,
-                    contentDescription = stringResource(R.string.host_icon),
-                    tint = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            singleLine = true,
-            modifier = Modifier
-                .formWidth()
-                .testTag("login_host_field")
-                .onFocusChanged {
-                    isHostFocused = it.isFocused
+        if (returning) {
+            RememberedAccount(username, host)
+        } else {
+            ErrorAbove(LoginField.Host)
+            OutlinedTextField(
+                value = host,
+                onValueChange = { host = it },
+                label = {
+                    Text(
+                        stringResource(R.string.host),
+                        color = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 },
-            keyboardOptions = KeyboardOptions.Default.copy(
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            colors = fieldColors()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+                leadingIcon = {
+                    Icon(
+                        Icons.Filled.Language,
+                        contentDescription = stringResource(R.string.host_icon),
+                        tint = if (isHostFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                singleLine = true,
+                modifier = Modifier
+                    .formWidth()
+                    .testTag("login_host_field")
+                    .remoteKeys(focusManager)
+                    .onFocusChanged {
+                        isHostFocused = it.isFocused
+                    },
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                colors = fieldColors()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         if (useApiKey) {
             ErrorAbove(LoginField.ApiKey)
             OutlinedTextField(
@@ -171,47 +228,52 @@ fun LoginScreen(
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_api_key_field")
+                    .focusProperties { down = submitFocus }
+                    .remoteKeys(focusManager, onPlay = submit)
                     .onFocusChanged { isApiKeyFocused = it.isFocused },
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
-                    onDone = { handleApiKeyLogin(host, apiKey, isLoading) }
+                    onDone = { submit() }
                 ),
                 colors = fieldColors()
             )
         } else {
-            ErrorAbove(LoginField.Username)
-            OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = {
-                    Text(
-                        stringResource(R.string.username),
-                        color = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        Icons.Filled.Person,
-                        contentDescription = stringResource(R.string.username_icon),
-                        tint = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                singleLine = true,
-                modifier = Modifier
-                    .formWidth()
-                    .testTag("login_username_field")
-                    .onFocusChanged {
-                        isUsernameFocused = it.isFocused
+            if (!returning) {
+                ErrorAbove(LoginField.Username)
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = {
+                        Text(
+                            stringResource(R.string.username),
+                            color = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     },
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                ),
-                colors = fieldColors()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+                    leadingIcon = {
+                        Icon(
+                            Icons.Filled.Person,
+                            contentDescription = stringResource(R.string.username_icon),
+                            tint = if (isUsernameFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    singleLine = true,
+                    modifier = Modifier
+                        .formWidth()
+                        .testTag("login_username_field")
+                        .remoteKeys(focusManager)
+                        .onFocusChanged {
+                            isUsernameFocused = it.isFocused
+                        },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    ),
+                    colors = fieldColors()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             ErrorAbove(LoginField.Password)
             OutlinedTextField(
                 value = password,
@@ -234,6 +296,8 @@ fun LoginScreen(
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_password_field")
+                    .focusProperties { down = submitFocus }
+                    .remoteKeys(focusManager, onPlay = submit)
                     .onFocusChanged {
                         isPasswordFocused = it.isFocused
                     },
@@ -241,45 +305,194 @@ fun LoginScreen(
                     imeAction = ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(
-                    onDone = { handleLogin(host, username, password, isLoading) }
+                    onDone = { submit() }
                 ),
                 colors = fieldColors()
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
-        if (isLoading.value) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        // The buttons stay while signing in: the spinner used to replace them,
+        // taking focus along, and on the stick that looked like nothing at all.
+        val loading = isLoading.value
+        if (returning) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                LoginButton(
+                    text = stringResource(R.string.login_sign_in),
+                    onClick = submit,
+                    primary = true,
+                    loading = loading,
+                    modifier = Modifier
+                        .focusRequester(submitFocus)
+                        .testTag("login_submit_button")
+                )
+                LoginButton(
+                    text = stringResource(if (useApiKey) R.string.login_use_password else R.string.login_use_api_key),
+                    onClick = { useApiKey = !useApiKey },
+                    modifier = Modifier.testTag("login_mode_toggle")
+                )
+                LoginButton(
+                    text = stringResource(R.string.login_different_server),
+                    onClick = { differentServer = true },
+                    modifier = Modifier.testTag("login_different_server")
+                )
+            }
         } else {
-            Button(
-                onClick = {
-                    if (useApiKey) handleApiKeyLogin(host, apiKey, isLoading)
-                    else handleLogin(host, username, password, isLoading)
-                },
+            LoginButton(
+                text = stringResource(R.string.login),
+                onClick = submit,
+                primary = true,
+                loading = loading,
+                fillWidth = true,
                 modifier = Modifier
                     .formWidth()
+                    .focusRequester(submitFocus)
                     .testTag("login_submit_button")
-            ) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.login))
-                }
-            }
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            Button(
+            LoginButton(
+                text = stringResource(if (useApiKey) R.string.login_use_username_instead else R.string.login_use_api_key_instead),
                 onClick = { useApiKey = !useApiKey },
+                fillWidth = true,
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_mode_toggle")
-            ) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text(
-                        if (useApiKey) "Use username and password instead"
-                        else "Sign in with an API key instead"
+            )
+        }
+    }
+}
+
+/**
+ * Frame 3's buttons: the one that signs in filled with the primary colour,
+ * the rest outlined.
+ *
+ * @param loading shows progress in place of the label; the button keeps its
+ *   place and its focus.
+ * @param fillWidth centres the label across a button given a width; in a row
+ *   it would take the whole row from its neighbours.
+ */
+@Composable
+private fun LoginButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    primary: Boolean = false,
+    loading: Boolean = false,
+    fillWidth: Boolean = false
+) {
+    val scheme = MaterialTheme.colorScheme
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        colors = if (primary) {
+            // Focus inverts it. The TV default turns any button white, and
+            // the dark theme's light primary to white barely changes (#117).
+            ButtonDefaults.colors(
+                containerColor = scheme.primary,
+                contentColor = scheme.onPrimary,
+                focusedContainerColor = scheme.onPrimary,
+                focusedContentColor = scheme.primary
+            )
+        } else {
+            ButtonDefaults.colors(containerColor = Color.Transparent, contentColor = scheme.onSurface)
+        },
+        border = if (primary) ButtonDefaults.border() else ButtonDefaults.border(
+            border = Border(BorderStroke(1.dp, scheme.onSurfaceVariant))
+        )
+    ) {
+        Row(
+            modifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier,
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // The label keeps its space while the spinner shows, so the
+            // buttons beside this one do not shift under the cursor.
+            Box(contentAlignment = Alignment.Center) {
+                Text(text, modifier = Modifier.alpha(if (loading) 0f else 1f))
+                if (loading) {
+                    val signingIn = stringResource(R.string.login_signing_in)
+                    CircularProgressIndicator(
+                        color = LocalContentColor.current,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .testTag("login_progress")
+                            .semantics { contentDescription = signingIn }
                     )
                 }
             }
         }
     }
 }
+
+/**
+ * The remote on a text field. The field keeps the D-pad for its cursor, so
+ * on the stick Down from the password reached no button: Up and Down leave
+ * the field instead. Play on a Fire TV remote is the field's Enter; [onPlay]
+ * makes it sign in from the last field, where it used to do nothing.
+ */
+private fun Modifier.remoteKeys(focusManager: FocusManager, onPlay: (() -> Unit)? = null) =
+    onPreviewKeyEvent { event ->
+        val isPlay = event.key == Key.MediaPlayPause || event.key == Key.MediaPlay
+        // The press signs in; its release is kept from the media keys too.
+        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent isPlay && onPlay != null
+        when (event.key) {
+            Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
+            Key.DirectionUp -> focusManager.moveFocus(FocusDirection.Up)
+            Key.MediaPlayPause, Key.MediaPlay -> onPlay?.let { it(); true } ?: false
+            else -> false
+        }
+    }
+
+/** Who and where, as a fact rather than two fields to fill in: frame 3's card. */
+@Composable
+private fun RememberedAccount(username: String, host: String) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(10.dp)
+    Row(
+        modifier = Modifier
+            .padding(bottom = 16.dp)
+            .formWidth()
+            .testTag("login_account")
+            .semantics(mergeDescendants = true) {}
+            .background(scheme.surface, shape)
+            .border(1.dp, scheme.onSurfaceVariant, shape)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(scheme.surfaceVariant, RoundedCornerShape(6.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Person,
+                contentDescription = null,
+                tint = scheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Column {
+            Text(
+                username,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = scheme.onSurface,
+                modifier = Modifier.testTag("login_account_name")
+            )
+            Text(
+                displayHost(host),
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.testTag("login_account_server")
+            )
+        }
+    }
+}
+
+/** The address as a person reads it: no scheme, no trailing slash. */
+private fun displayHost(host: String): String =
+    host.substringAfter("://").trimEnd('/')
 
 @Composable
 private fun LoginErrorBand(error: LoginError) {

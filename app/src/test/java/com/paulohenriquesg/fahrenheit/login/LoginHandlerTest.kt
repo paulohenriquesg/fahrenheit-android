@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.login
 
 import android.os.Looper
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.test.core.app.ApplicationProvider
 import com.paulohenriquesg.fahrenheit.api.FakeTokenStore
 import com.paulohenriquesg.fahrenheit.auth.AuthSession
@@ -9,11 +10,15 @@ import com.paulohenriquesg.fahrenheit.auth.SessionManager
 import com.paulohenriquesg.fahrenheit.auth.SessionState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowToast
+import androidx.activity.ComponentActivity
+import org.robolectric.Robolectric
+import com.paulohenriquesg.fahrenheit.main.MainActivity
 import java.io.IOException
 
 /**
@@ -23,6 +28,10 @@ import java.io.IOException
 @RunWith(RobolectricTestRunner::class)
 class LoginHandlerTest {
 
+    private var wentHome = 0
+
+    // No Activity: one built here and never destroyed left later Compose test
+    // classes in the same JVM unable to go idle. Going home is a function.
     private fun handler(login: suspend (String, String, String) -> AuthSession) = LoginHandler(
         ApplicationProvider.getApplicationContext(),
         LoginCoordinator(
@@ -30,10 +39,20 @@ class LoginHandlerTest {
             performLogin = login,
             performApiKeyLogin = { _, _ -> error("not used") },
             activateSession = { SessionState.Ready }
-        )
+        ),
+        goHome = { wentHome++ }
     )
 
     private fun settle() = shadowOf(Looper.getMainLooper()).idle()
+
+    // The handler writes Compose state outside any composition. Left pending,
+    // such a write kept later Compose test classes in this JVM from ever
+    // going idle; applying it here ends that with the test.
+    @After
+    fun applyStateWrites() {
+        settle()
+        Snapshot.sendApplyNotifications()
+    }
 
     @Test
     fun `a failure becomes the screen's error, and no Toast is shown`() {
@@ -71,5 +90,29 @@ class LoginHandlerTest {
         settle()
 
         assertEquals(false, loading.value)
+    }
+
+    // Home is the confirmation; a Toast on top of it said the same thing late.
+    @Test
+    fun `a successful sign-in goes straight to Home, with no Toast`() {
+        val h = handler { _, _, _ -> AuthSession("a", "r", "someone") }
+
+        h.handleLogin("http://abs.local", "someone", "hunter2", mutableStateOf(false))
+        settle()
+
+        assertNull(ShadowToast.getLatestToast())
+        assertEquals(1, wentHome)
+    }
+
+    // Seen on the stick as a Toast; empty fields belong in the band too.
+    @Test
+    fun `empty fields are the screen's error, not a Toast`() {
+        val h = handler { _, _, _ -> error("must not be called") }
+
+        h.handleLogin("", "", "", mutableStateOf(false))
+        settle()
+
+        assertEquals(LoginError.HostMissing, h.error.value)
+        assertNull(ShadowToast.getLatestToast())
     }
 }
