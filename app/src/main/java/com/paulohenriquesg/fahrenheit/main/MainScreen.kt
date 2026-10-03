@@ -1,6 +1,5 @@
 package com.paulohenriquesg.fahrenheit.main
 
-import com.paulohenriquesg.fahrenheit.player.rememberRailEntry
 import androidx.media3.common.Player
 import com.paulohenriquesg.fahrenheit.player.PlayerSettings
 import android.app.Activity
@@ -341,22 +340,24 @@ fun MainScreen(
         }
     }
 
-    // What the playback service has queued, for the rail's way back to the player (#107).
-    val nowPlaying = rememberRailEntry(playback) { itemId ->
-        ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.media?.chapters
-    }
     NavigationRail(
         items = menuItems,
         secondary = MenuConfig.commonItems,
         selectedId = highlightedMenuItemId,
         firstFocus = initialFocus,
         onRailFocusChanged = { railHasFocus = it },
-        nowPlaying = nowPlaying?.let { entry ->
+        // What the playback service has queued: the way back to the player (#107).
+        nowPlaying = playback?.let { player ->
             { open ->
-                NowPlayingEntry(entry, open, onOpen = {
+                NowPlayingSlot(
+                    player = player,
+                    open = open,
+                    chaptersOf = { itemId ->
+                        ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.media?.chapters
+                    },
                     // The player reattaches to what is queued, where it is.
-                    context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId))
-                })
+                    onOpen = { context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId)) }
+                )
             }
         },
         onSelect = { menuItem ->

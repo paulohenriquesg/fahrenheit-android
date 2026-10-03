@@ -1,5 +1,9 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.media3.exoplayer.ExoPlayer
@@ -7,6 +11,7 @@ import androidx.media3.test.utils.TestExoPlayerBuilder
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper.run
 import com.paulohenriquesg.fahrenheit.api.Chapter
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -23,6 +28,10 @@ class RailEntrySourceTest {
     private lateinit var player: ExoPlayer
     private var entry: RailEntry? = null
     private val asked = mutableListOf<String>()
+
+    // The chapters are kept for the process; each test starts without them.
+    @Before
+    fun forget() = RailChapters.known.clear()
 
     @After
     fun tearDown() = player.release()
@@ -77,5 +86,27 @@ class RailEntrySourceTest {
         compose.setContent { entry = rememberRailEntry(null) { null } }
         compose.waitForIdle()
         assertNull(entry)
+    }
+
+    // Review (#107): each return to the main screen brings a new controller,
+    // and a new composition of the entry.
+    @Test fun `a book's chapters are asked for once, across returns to the screen`() {
+        player = TestExoPlayerBuilder(compose.activity).setMediaSourceFactory(hourLongFiles()).build()
+        var visit by mutableStateOf(0)
+        compose.setContent {
+            key(visit) {
+                entry = rememberRailEntry(player) { itemId ->
+                    asked += itemId
+                    listOf(Chapter(start = 0.0, end = 1800.0, title = "One"), Chapter(start = 1800.0, end = 3600.0, title = "Two"))
+                }
+            }
+        }
+        queue(startAt = 2000.0)
+
+        visit = 1
+        compose.waitForIdle()
+
+        assertEquals(listOf("b1"), asked)
+        assertEquals("Two", entry!!.chapter)
     }
 }

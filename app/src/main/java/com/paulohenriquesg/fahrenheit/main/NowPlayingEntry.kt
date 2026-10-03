@@ -1,5 +1,10 @@
 package com.paulohenriquesg.fahrenheit.main
 
+import com.paulohenriquesg.fahrenheit.player.rememberRailEntry
+import com.paulohenriquesg.fahrenheit.api.Chapter
+import androidx.media3.common.Player
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -45,41 +50,77 @@ const val NOW_PLAYING_TAG = "rail_now_playing"
  */
 @Composable
 fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit, modifier: Modifier = Modifier) {
-    Surface(
-        onClick = { onOpen(entry) },
-        modifier = modifier.testTag(NOW_PLAYING_TAG),
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
-    ) {
-        Row(
-            modifier = Modifier.padding(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+    // Widths of their own, as the sections have: the drawer gives its content
+    // the whole screen to grow into, so nothing here may fill or wrap a width.
+    val width = if (open) OPEN_WIDTH else CLOSED_WIDTH
+    Column(modifier) {
+        Surface(
+            onClick = { onOpen(entry) },
+            modifier = Modifier.width(width).testTag(NOW_PLAYING_TAG),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
         ) {
-            CoverWithRing(entry)
-            if (open) {
-                Column {
-                    Text(entry.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    val left = PlaybackPosition.spoken(entry.leftSeconds)
-                    Text(
-                        entry.chapter?.let { stringResource(R.string.rail_chapter_left, it, left) }
-                            ?: stringResource(R.string.time_left, left),
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+            Row(
+                modifier = Modifier.padding(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                CoverWithRing(entry)
+                if (open) {
+                    Column(Modifier.weight(1f)) {
+                        Text(entry.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        val left = leftWords(entry.leftSeconds)
+                        val chapter = entry.chapter ?: entry.chapterNumber?.let { stringResource(R.string.chapter_number, it) }
+                        Text(
+                            chapter?.let { stringResource(R.string.rail_chapter_left, it, left) }
+                                ?: stringResource(R.string.time_left, left),
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
+        // The line between what is playing and the sections.
+        Box(
+            Modifier
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+                .width(width - 16.dp)
+                .height(1.dp)
+                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+        )
     }
 }
+
+/**
+ * The entry for what [player] has queued, or nothing. Reads the player
+ * inside itself, so its changes redraw this entry and not the whole screen.
+ */
+@Composable
+fun NowPlayingSlot(
+    player: Player,
+    open: Boolean,
+    chaptersOf: suspend (String) -> List<Chapter>?,
+    onOpen: (RailEntry) -> Unit
+) {
+    val entry = rememberRailEntry(player, chaptersOf) ?: return
+    NowPlayingEntry(entry, open, onOpen)
+}
+
+/** Whole minutes, as the mock writes it - the seconds would jump with each poll - and seconds under one. */
+private fun leftWords(seconds: Double): String =
+    if (seconds in 60.0..3599.0) "${(seconds / 60).toInt()} min" else PlaybackPosition.spoken(seconds)
+
+private val CLOSED_WIDTH = 56.dp
+private val OPEN_WIDTH = 240.dp
 
 /** The cover inside a ring of progress, and the play state at its corner. */
 @Composable
 private fun CoverWithRing(entry: RailEntry) {
     val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
     val done = MaterialTheme.colorScheme.primary
-    Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 3.dp.toPx()
             val inset = stroke / 2
@@ -87,7 +128,7 @@ private fun CoverWithRing(entry: RailEntry) {
             drawArc(track, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(stroke))
             drawArc(done, -90f, 360f * entry.progress, false, Offset(inset, inset), arc, style = Stroke(stroke))
         }
-        CoverImage(itemId = entry.itemId, contentDescription = entry.title, size = 36.dp)
+        CoverImage(itemId = entry.itemId, contentDescription = entry.title, size = 32.dp)
         Box(
             Modifier
                 .align(Alignment.BottomEnd)

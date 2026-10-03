@@ -17,7 +17,8 @@ import kotlinx.coroutines.delay
  * rail frames of docs/mocks/player.html).
  *
  * @property progress how far through the whole book or episode, 0..1: the ring.
- * @property chapter the chapter playing, for a book with chapters; null otherwise.
+ * @property chapter the title of the chapter playing; null for none, or an untitled one.
+ * @property chapterNumber the chapter's number, for a book with chapters.
  * @property leftSeconds what is left of the chapter, or of the whole when
  *   there is no chapter, at the speed - as the player counts it.
  */
@@ -28,6 +29,7 @@ data class RailEntry(
     val playing: Boolean,
     val progress: Float,
     val chapter: String?,
+    val chapterNumber: Int? = null,
     val leftSeconds: Double
 ) {
     companion object {
@@ -43,7 +45,8 @@ data class RailEntry(
             file ?: return null
             val at = file.bookTime(positionInFile)
             val span = ChapterClock.at(spans, at)
-            val chapter = span?.let { it.title.ifBlank { "Chapter ${spans.indexOf(it) + 1}" } }
+            val chapter = span?.title?.takeIf { it.isNotBlank() }
+            val number = span?.let { spans.indexOf(it) + 1 }
             val left = span?.left(at) ?: PlaybackPosition.left(at, file.bookTotal)
             return RailEntry(
                 itemId = file.itemId,
@@ -52,6 +55,7 @@ data class RailEntry(
                 playing = playing,
                 progress = PlaybackPosition.fraction(at, file.bookTotal),
                 chapter = chapter,
+                chapterNumber = number,
                 leftSeconds = left / speed
             )
         }
@@ -88,10 +92,13 @@ fun rememberRailEntry(player: Player?, chaptersOf: suspend (String) -> List<Chap
     // Read on every change.
     changes.let { }
     val file = QueuedFile.of(player.currentMediaItem)
-    var spans by remember(file?.itemId, file?.episodeId) { mutableStateOf(emptyList<ChapterSpan>()) }
+    var spans by remember(file?.itemId, file?.episodeId) {
+        mutableStateOf(file?.itemId?.let { RailChapters.known[it] }.orEmpty())
+    }
     LaunchedEffect(file?.itemId, file?.episodeId) {
-        if (file == null || file.episodeId != null) return@LaunchedEffect
+        if (file == null || file.episodeId != null || file.itemId in RailChapters.known) return@LaunchedEffect
         spans = ChapterClock.spans(chaptersOf(file.itemId), file.bookTotal)
+            .also { RailChapters.known[file.itemId] = it }
     }
     return RailEntry.of(
         file = file,
@@ -105,3 +112,11 @@ fun rememberRailEntry(player: Player?, chaptersOf: suspend (String) -> List<Chap
 }
 
 private const val POLL_MS = 5_000L
+
+/**
+ * Books' chapters, once asked for: the main screen gets a new controller on
+ * every return to it, and should not fetch the item each time. Main thread only.
+ */
+internal object RailChapters {
+    val known = mutableMapOf<String, List<ChapterSpan>>()
+}

@@ -1,10 +1,7 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
@@ -27,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.DrawerValue
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
-import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.NavigationDrawer
 import androidx.tv.material3.NavigationDrawerItem
 import androidx.tv.material3.NavigationDrawerScope
@@ -88,17 +84,8 @@ fun NavigationRail(
                     .padding(vertical = Space.gap),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // What is playing, above the sections with a line under it (#107).
-                nowPlaying?.let { entry ->
-                    entry(drawerValue == DrawerValue.Open)
-                    Box(
-                        Modifier
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-                    )
-                }
+                // What is playing, above the sections (#107).
+                nowPlaying?.invoke(drawerValue == DrawerValue.Open)
                 items.forEach { item -> Section(item, selectedId, drawerValue, onSelect, firstFocus) }
                 if (secondary.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(Space.gap))
