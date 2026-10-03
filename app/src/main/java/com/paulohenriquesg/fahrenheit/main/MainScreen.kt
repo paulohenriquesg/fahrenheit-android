@@ -17,7 +17,6 @@ import com.paulohenriquesg.fahrenheit.utils.Alphabetical
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -231,15 +230,11 @@ fun MainScreen(
     var updateCheck by remember { mutableStateOf<UpdateCheck>(UpdateCheck.Idle) }
     var deviceName by remember { mutableStateOf(PlaybackDevice.name(context)) }
 
-    val backAction = BackAction.decide(view)
-    BackHandler(enabled = backAction != BackAction.Exit) {
-        when (backAction) {
-            BackAction.GoHome -> {
-                view = MainView.HOME
-                highlightedMenuItemId = MainView.HOME.menuItemId
-            }
-            BackAction.Exit -> Unit
-        }
+    // Back walks up a level: content -> rail -> Home -> out (#125).
+    var railHasFocus by remember { mutableStateOf(false) }
+    MainBackHandler(view = view, railHasFocus = railHasFocus, rail = initialFocus) {
+        view = MainView.HOME
+        highlightedMenuItemId = MainView.HOME.menuItemId
     }
 
     // Get menu items for current library type
@@ -343,6 +338,7 @@ fun MainScreen(
         secondary = MenuConfig.commonItems,
         selectedId = highlightedMenuItemId,
         firstFocus = initialFocus,
+        onRailFocusChanged = { railHasFocus = it },
         onSelect = { menuItem ->
             highlightedMenuItemId = menuItem.id
             handleMenuAction(menuItem.action, currentLibrary?.id)

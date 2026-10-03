@@ -4,29 +4,36 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * What Back does on the main screen (#53).
+ * What Back does on the main screen (#53, #125).
  *
  * It used to be handled only while the drawer was open, so from any content
  * view it fell through to the system and quit the app - and with the menu
  * unreachable, that was the only way out.
  *
- * Since #58 the rail is always on screen, so there is no hidden drawer for Back
- * to close: it walks up a level, or leaves.
+ * Since #58 the rail is always on screen, so Back walks up a level at a time:
+ * from the content to the rail, from the rail to Home, and from Home's rail out.
  */
 class BackActionTest {
 
-    // Back should walk up a level before leaving, as it does elsewhere on TV.
+    // #125: on Home, Back from the shelves closed the app at once.
     @Test
-    fun `from a section, Back returns to Home`() {
-        assertEquals(BackAction.GoHome, BackAction.decide(MainView.STATS))
-        assertEquals(BackAction.GoHome, BackAction.decide(MainView.LIBRARY))
-        assertEquals(BackAction.GoHome, BackAction.decide(MainView.SERIES))
-        assertEquals(BackAction.GoHome, BackAction.decide(MainView.COLLECTIONS))
+    fun `from the content, Back goes to the rail, whatever the section`() {
+        MainView.entries.forEach { view ->
+            assertEquals(view.name, BackAction.FocusRail, BackAction.decide(view, railHasFocus = false))
+        }
     }
 
-    // Amazon expects Back from the app's root to leave the app, so Home is
-    // where that happens - once, and predictably.
     @Test
-    fun `from Home, Back leaves the app`() =
-        assertEquals(BackAction.Exit, BackAction.decide(MainView.HOME))
+    fun `from the rail on a section, Back returns to Home`() {
+        assertEquals(BackAction.GoHome, BackAction.decide(MainView.STATS, railHasFocus = true))
+        assertEquals(BackAction.GoHome, BackAction.decide(MainView.LIBRARY, railHasFocus = true))
+        assertEquals(BackAction.GoHome, BackAction.decide(MainView.SERIES, railHasFocus = true))
+        assertEquals(BackAction.GoHome, BackAction.decide(MainView.SETTINGS, railHasFocus = true))
+    }
+
+    // Amazon expects Back from the app's root to leave the app, so Home's rail
+    // is where that happens - once, and predictably.
+    @Test
+    fun `from the rail on Home, Back leaves the app`() =
+        assertEquals(BackAction.Exit, BackAction.decide(MainView.HOME, railHasFocus = true))
 }

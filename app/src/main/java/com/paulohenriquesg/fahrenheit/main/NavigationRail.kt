@@ -52,6 +52,7 @@ fun NavigationRail(
     modifier: Modifier = Modifier,
     secondary: List<MenuItem> = emptyList(),
     firstFocus: FocusRequester? = null,
+    onRailFocusChanged: (Boolean) -> Unit = {},
     content: @Composable () -> Unit
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -70,7 +71,10 @@ fun NavigationRail(
         drawerContent = { drawerValue ->
             Column(
                 modifier = Modifier
-                    .onFocusChanged { railHasFocus = it.hasFocus }
+                    .onFocusChanged {
+                        railHasFocus = it.hasFocus
+                        onRailFocusChanged(it.hasFocus)
+                    }
                     .fillMaxHeight()
                     .verticalScroll(rememberScrollState())
                     .padding(vertical = Space.gap),
