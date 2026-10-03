@@ -207,7 +207,8 @@ class SettingsViewTest {
     fun `the account says who and where`() {
         render()
 
-        compose.onNodeWithText("admin").assertIsDisplayed()
+        // The Playback group (#108) moved the account below the first screenful.
+        compose.onNodeWithText("admin").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("http://books.example:13378").assertIsDisplayed()
     }
 

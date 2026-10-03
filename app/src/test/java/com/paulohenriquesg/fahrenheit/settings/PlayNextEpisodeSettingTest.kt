@@ -42,9 +42,13 @@ class PlayNextEpisodeSettingTest {
     }
 
     @Test
-    fun `the row shows the setting as it is`() {
+    fun `off, the row says off`() {
         render(on = false)
         compose.onNodeWithTag(PLAY_NEXT_EPISODE_TAG).performScrollTo().assertIsOff()
+    }
+
+    @Test
+    fun `on, the row says on`() {
         render(on = true)
         compose.onNodeWithTag(PLAY_NEXT_EPISODE_TAG).performScrollTo().assertIsOn()
     }
