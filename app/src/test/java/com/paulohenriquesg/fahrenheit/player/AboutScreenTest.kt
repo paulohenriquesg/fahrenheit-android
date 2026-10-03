@@ -1,5 +1,9 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.input.key.Key
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.SemanticsActions
@@ -44,6 +48,8 @@ class AboutScreenTest {
         compose.setContent {
             FahrenheitTheme {
                 val panels = rememberPlayerPanels()
+                // As in the player: the chip stays, under the screen drawn over it.
+                AboutChip(panels)
                 if (panels.open == PlayerPanel.About) {
                     AboutScreen(
                         nowPlaying = book,
@@ -54,8 +60,6 @@ class AboutScreenTest {
                         onMarkFinished = { marked += it },
                         onClose = panels::close
                     )
-                } else {
-                    AboutChip(panels)
                 }
                 PlayerPanelHost(panels) {}
             }
@@ -86,5 +90,14 @@ class AboutScreenTest {
         compose.waitForIdle()
         assertFalse(compose.activity.isFinishing)
         compose.onNodeWithText("About").assertIsFocused()
+    }
+
+    // Review (#134): focus must not wander to the player hidden under About.
+    @OptIn(ExperimentalTestApi::class)
+    @Test fun `focus cannot leave About for the player underneath`() {
+        show()
+        compose.onNodeWithTag(DESCRIPTION_TAG).performKeyInput { pressKey(Key.DirectionUp) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(DESCRIPTION_TAG).assertIsFocused()
     }
 }

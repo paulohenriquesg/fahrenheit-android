@@ -206,4 +206,26 @@ class DetailActionsTest {
         compose.waitForIdle()
         assertEquals(listOf("b2"), opened)
     }
+
+    // Review (#134): a long title pushed the last action off the screen.
+    @Test fun `a long title and byline still leave every action on screen`() {
+        compose.setContent {
+            FahrenheitTheme {
+                BookDetailView(
+                    itemId = "b1",
+                    content = DetailHeaderContent(
+                        "A Very Long Title of a Book, Volume Three: The Part Where Everything Happens at Once",
+                        "First Author, Second Author, Third Author · read by A Reader and Another Reader",
+                        emptyList(), "Resume at 1 h 2 min", "<p>A short blurb.</p>"
+                    ),
+                    onPrimary = {},
+                    chapters = three,
+                    finished = false
+                )
+            }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithText("Chapters").assertIsDisplayed()
+        compose.onNodeWithText("Mark finished").assertIsDisplayed()
+    }
 }

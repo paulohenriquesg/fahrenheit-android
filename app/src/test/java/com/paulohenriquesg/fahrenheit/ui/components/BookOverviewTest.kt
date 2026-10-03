@@ -167,4 +167,13 @@ class BookOverviewTest {
         compose.onNodeWithText("BOOKS", substring = true).assertDoesNotExist()
         compose.onNodeWithText("Read by").assertDoesNotExist()
     }
+
+    // Review (#134): Down from the description went to a neighbouring cover.
+    @OptIn(ExperimentalTestApi::class)
+    @Test fun `down from the description lands on this book in the series`() {
+        show(landOnDescription = true)
+        compose.onNodeWithTag(DESCRIPTION_TAG).performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+        compose.onNode(hasContentDescription("The Long Drift") and hasClickAction()).assertIsFocused()
+    }
 }
