@@ -52,7 +52,10 @@
     <string name="new_version">New Version</string>
     <string name="no_authors_found">No authors found</string>
     <string name="no_collections_found">No collections found</string>
-    <string name="no_recent_episodes_found">No recent episodes found</string>
+    <string name="latest_caught_up">You\'re all caught up</string>
+    <string name="latest_caught_up_why">Finished episodes are not listed here. New ones appear when your server next checks the feeds.</string>
+    <string name="episode_new">New</string>
+    <string name="episode_percent_in">%1$d%% in</string>
     <string name="no_series_found">No series found</string>
     <string name="no_statistics_available">No statistics available</string>
     <string name="open_menu">Open Menu</string>

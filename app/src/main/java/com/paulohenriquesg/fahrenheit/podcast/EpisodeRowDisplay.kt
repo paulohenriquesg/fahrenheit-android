@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.podcast
 
 import com.paulohenriquesg.fahrenheit.api.RecentPodcastEpisode
 import com.paulohenriquesg.fahrenheit.utils.EpisodeDate
+import kotlin.math.roundToInt
 
 object EpisodeRowDisplay {
 
@@ -23,4 +24,21 @@ object EpisodeRowDisplay {
         episode.podcast?.metadata?.title?.takeIf { it.isNotBlank() }
             ?: episode.title?.takeIf { it.isNotBlank() }
             ?: "Podcast cover"
+
+    /**
+     * Whether the row is marked New (#109): out in the last day or two, the
+     * Today and Yesterday groups, and not yet touched. Once started or heard,
+     * the row says that instead.
+     */
+    fun isNew(episode: RecentPodcastEpisode, progress: EpisodeProgress?, now: Long): Boolean {
+        if (progress != null) return false
+        val publishedAt = episode.publishedAt?.takeIf { it > 0 } ?: return false
+        return now - publishedAt < NEW_FOR_MS
+    }
+
+    /** How far in, as the whole percentage the row's "38% in" shows. */
+    fun percentIn(progress: EpisodeProgress.InProgress): Int =
+        (progress.fraction * 100).roundToInt().coerceIn(0, 100)
+
+    private const val NEW_FOR_MS = 2 * 24 * 60 * 60 * 1000L
 }

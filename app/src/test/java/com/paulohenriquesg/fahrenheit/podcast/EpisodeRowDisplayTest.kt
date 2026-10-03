@@ -7,6 +7,8 @@ import java.util.Locale
 import java.util.TimeZone
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -79,4 +81,41 @@ class EpisodeRowDisplayTest {
     @Test
     fun `a row with no date says nothing rather than guessing`() =
         assertEquals("", EpisodeRowDisplay.published(episode(), now))
+
+    private val hour = 60 * 60 * 1000L
+
+    // "New" is the last day or two (#109): the Today and Yesterday groups.
+    @Test
+    fun `an episode out this morning is new`() =
+        assertTrue(EpisodeRowDisplay.isNew(episode(publishedAt = now - 3 * hour), progress = null, now = now))
+
+    @Test
+    fun `an episode from yesterday evening is still new`() =
+        assertTrue(EpisodeRowDisplay.isNew(episode(publishedAt = now - 47 * hour), progress = null, now = now))
+
+    @Test
+    fun `an episode from three days ago is not`() =
+        assertFalse(EpisodeRowDisplay.isNew(episode(publishedAt = now - 72 * hour), progress = null, now = now))
+
+    @Test
+    fun `an episode published ahead of time counts as new, as it groups under Today`() =
+        assertTrue(EpisodeRowDisplay.isNew(episode(publishedAt = now + hour), progress = null, now = now))
+
+    @Test
+    fun `an undated episode is not new, as nothing says it is`() =
+        assertFalse(EpisodeRowDisplay.isNew(episode(publishedAt = null), progress = null, now = now))
+
+    @Test
+    fun `a new episode already started is no longer news`() =
+        assertFalse(
+            EpisodeRowDisplay.isNew(episode(publishedAt = now - hour), EpisodeProgress.InProgress(0.2, 600.0), now)
+        )
+
+    @Test
+    fun `a new episode already heard is no longer news`() =
+        assertFalse(EpisodeRowDisplay.isNew(episode(publishedAt = now - hour), EpisodeProgress.Heard, now))
+
+    @Test
+    fun `how far in reads as a whole percentage`() =
+        assertEquals(38, EpisodeRowDisplay.percentIn(EpisodeProgress.InProgress(0.384, 600.0)))
 }
