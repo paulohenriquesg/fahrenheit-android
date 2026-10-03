@@ -536,9 +536,27 @@ fun PersonalizedHomeView(
                     }
                     "book", "podcast" -> {
                         shelf.bookEntities?.let { books ->
-                            ShelfRow(shelf = shelf, progress = progress, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it.opens) } }) { item ->
-                                val intent = com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(context, item.id)
-                                context.startActivity(intent)
+                            fun openDetails(item: LibraryItem) =
+                                context.startActivity(com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(context, item.id))
+                            // A book in Continue listening plays from where it
+                            // was, as an episode there already does; its details
+                            // are a long press away (#124). Other shelves open
+                            // details, as before.
+                            val playsOnPress = shelf.id == CONTINUE_LISTENING && shelf.type == "book"
+                            ShelfRow(
+                                shelf = shelf,
+                                progress = progress,
+                                seeAllTotal = seeAll?.total,
+                                onSeeAll = { seeAll?.let { onSeeAll(it.opens) } },
+                                onItemLongClick = if (playsOnPress) ::openDetails else null
+                            ) { item ->
+                                // A book whose audio has gone would only reach a
+                                // player that cannot start; its details say why.
+                                if (playsOnPress && item.media.numAudioFiles > 0) {
+                                    context.startActivity(PlayerActivity.createIntent(context, item.id, autoPlay = true))
+                                } else {
+                                    openDetails(item)
+                                }
                             }
                         }
                     }
@@ -565,6 +583,5 @@ fun PersonalizedHomeView(
     }
 }
 
-
-
-
+/** The server's id for the shelf of things the user has started. */
+private const val CONTINUE_LISTENING = "continue-listening"

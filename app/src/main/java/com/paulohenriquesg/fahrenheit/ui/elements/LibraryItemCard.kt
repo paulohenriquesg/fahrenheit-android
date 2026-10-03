@@ -45,7 +45,12 @@ import com.paulohenriquesg.fahrenheit.utils.listeningLength
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun LibraryItemCard(item: LibraryItem, progress: CoverProgress.Started? = null, onClick: (LibraryItem) -> Unit) {
+fun LibraryItemCard(
+    item: LibraryItem,
+    progress: CoverProgress.Started? = null,
+    onLongClick: ((LibraryItem) -> Unit)? = null,
+    onClick: (LibraryItem) -> Unit
+) {
     var isFocused by remember { mutableStateOf(false) }
 
     Box(
@@ -57,6 +62,7 @@ fun LibraryItemCard(item: LibraryItem, progress: CoverProgress.Started? = null, 
         Card(
             scale = CardFocus.noGrowth,
             onClick = { onClick(item) },
+            onLongClick = onLongClick?.let { longPress -> { longPress(item) } },
             modifier = Modifier
                 .fillMaxSize()
                 .onFocusChanged { isFocused = it.isFocused },

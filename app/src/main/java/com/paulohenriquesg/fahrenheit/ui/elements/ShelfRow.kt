@@ -25,6 +25,7 @@ fun ShelfRow(
     progress: CoverProgress = CoverProgress.None,
     seeAllTotal: Int? = null,
     onSeeAll: () -> Unit = {},
+    onItemLongClick: ((LibraryItem) -> Unit)? = null,
     onItemClick: (LibraryItem) -> Unit
 ) {
     Column {
@@ -38,7 +39,7 @@ fun ShelfRow(
                 val keys = StableKeys.of(entities) { e -> e.id }
                 items(entities.size, key = { keys[it] }) { index ->
                     val item = entities[index]
-                    LibraryItemCard(item = item, progress = progress.of(item), onClick = onItemClick)
+                    LibraryItemCard(item = item, progress = progress.of(item), onLongClick = onItemLongClick, onClick = onItemClick)
                 }
             }
             if (seeAllTotal != null) {
