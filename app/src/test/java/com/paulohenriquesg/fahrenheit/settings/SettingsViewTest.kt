@@ -209,7 +209,7 @@ class SettingsViewTest {
 
         // The Playback group (#108) moved the account below the first screenful.
         compose.onNodeWithText("admin").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("http://books.example:13378").assertIsDisplayed()
+        compose.onNodeWithText("http://books.example:13378").performScrollTo().assertIsDisplayed()
     }
 
     @OptIn(ExperimentalTestApi::class)
