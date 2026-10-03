@@ -57,8 +57,7 @@
         </service>
         <activity android:name=".search.SearchActivity" />
         <activity android:name=".author.AuthorDetailActivity" />
-        <activity android:name=".series.SeriesDetailActivity" />
-        <activity android:name=".collection.CollectionDetailActivity" />
+        <activity android:name=".group.BookGroupActivity" />
         <activity android:name=".update.UpdateActivity" />
 
         <!-- FileProvider for APK installation -->

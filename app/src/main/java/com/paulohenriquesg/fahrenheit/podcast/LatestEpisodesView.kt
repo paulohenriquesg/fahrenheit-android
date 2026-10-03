@@ -32,7 +32,6 @@ import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.RecentEpisodesResponse
 import com.paulohenriquesg.fahrenheit.api.RecentPodcastEpisode
-import com.paulohenriquesg.fahrenheit.ui.components.BrowseTopBar
 import com.paulohenriquesg.fahrenheit.ui.components.ScreenTitle
 import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText

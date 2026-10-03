@@ -607,7 +607,7 @@ fun PersonalizedHomeView(
                     "series" -> {
                         shelf.seriesEntities?.let { series ->
                             SeriesShelfRow(shelf = shelf, series = series, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it.opens) } }) { seriesItem ->
-                                val intent = com.paulohenriquesg.fahrenheit.series.SeriesDetailActivity.createIntent(context, seriesItem)
+                                val intent = com.paulohenriquesg.fahrenheit.group.BookGroupActivity.forSeries(context, seriesItem)
                                 context.startActivity(intent)
                             }
                         }
