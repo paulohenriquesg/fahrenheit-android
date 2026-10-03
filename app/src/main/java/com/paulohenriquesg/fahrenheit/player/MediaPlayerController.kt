@@ -26,8 +26,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -40,6 +38,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.ui.platform.testTag
@@ -69,6 +72,8 @@ fun MediaPlayerController(
     chapters: List<Chapter>? = null,
     onCurrentTimeUpdate: (Double) -> Unit = {},
     episodes: EpisodeSkip? = null,
+    skipBack: Int = 30,
+    skipForward: Int = 30,
     trailing: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {}
 ) {
     var isPlaying by remember(player) { mutableStateOf(player.playWhenReady) }
@@ -203,12 +208,12 @@ fun MediaPlayerController(
                 }
             }
             TransportButton(
-                onClick = { seekTo(PlaybackPosition.skip(playback.bookPosition(), -SKIP_SECONDS, totalTime)) },
+                onClick = { seekTo(PlaybackPosition.skip(playback.bookPosition(), -skipBack.toDouble(), totalTime)) },
                 size = 48.dp,
                 container = TvMaterialTheme.colorScheme.secondaryContainer,
                 content = TvMaterialTheme.colorScheme.onSecondaryContainer
             ) {
-                Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.skip_back_30_seconds))
+                SkipIcon(skipBack, forward = false, description = stringResource(R.string.skip_back_seconds, skipBack))
             }
             TransportButton(
                 onClick = {
@@ -231,12 +236,12 @@ fun MediaPlayerController(
                 )
             }
             TransportButton(
-                onClick = { seekTo(PlaybackPosition.skip(playback.bookPosition(), SKIP_SECONDS, totalTime)) },
+                onClick = { seekTo(PlaybackPosition.skip(playback.bookPosition(), skipForward.toDouble(), totalTime)) },
                 size = 48.dp,
                 container = TvMaterialTheme.colorScheme.secondaryContainer,
                 content = TvMaterialTheme.colorScheme.onSecondaryContainer
             ) {
-                Icon(Icons.Filled.FastForward, contentDescription = stringResource(R.string.skip_forward_30_seconds))
+                SkipIcon(skipForward, forward = true, description = stringResource(R.string.skip_forward_seconds, skipForward))
             }
             if (chapter != null) {
                 TransportButton(
@@ -304,8 +309,26 @@ private fun TimesRow(left: String, right: String?, small: Boolean = false, error
     }
 }
 
-/** How far the skip buttons jump. */
-private const val SKIP_SECONDS = 30.0
+/**
+ * A skip button's icon: a circular arrow, turning back or forward, with how
+ * many seconds it jumps inside it (#107; the transport in frame C).
+ */
+@Composable
+private fun SkipIcon(seconds: Int, forward: Boolean, description: String) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.semantics { contentDescription = description }) {
+        Icon(
+            Icons.Filled.Replay,
+            contentDescription = null,
+            modifier = Modifier.size(30.dp).graphicsLayer { if (forward) scaleX = -1f }
+        )
+        Text(
+            text = seconds.toString(),
+            style = TvMaterialTheme.typography.labelSmall,
+            color = TvLocalContentColor.current,
+            modifier = Modifier.padding(top = 3.dp)
+        )
+    }
+}
 
 /**
  * A transport button: the TV IconButton, which takes focus by key as well as

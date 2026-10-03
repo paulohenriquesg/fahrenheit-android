@@ -276,4 +276,20 @@ class PlaybackServiceTest {
         runMainLooperUntil { heard.isNotEmpty() }
         assertEquals(listOf(false), heard)
     }
+
+    // Review (#107): the remote's rewind and fast-forward reach the session's
+    // player, which must follow the lengths set in Settings.
+    @Test
+    fun `the session's player skips by the lengths set in Settings`() {
+        PlayerSettings(context).skipBackSeconds = 10
+        PlayerSettings(context).skipForwardSeconds = 60
+        queued(connect(), startAt = 600.0)
+        val player = service.get().sessionPlayer!!
+
+        assertEquals(10_000L, player.seekBackIncrement)
+        player.seekBack()
+        assertEquals(590_000L, player.currentPosition)
+        player.seekForward()
+        assertEquals(650_000L, player.currentPosition)
+    }
 }

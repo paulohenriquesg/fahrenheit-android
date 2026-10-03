@@ -98,7 +98,7 @@ class TransportTest {
     fun `skipping forward near the end of a file crosses into the next`() {
         show(queuedAt(3590.0))
 
-        compose.onNodeWithContentDescription(compose.activity.getString(com.paulohenriquesg.fahrenheit.R.string.skip_forward_30_seconds)).performSemanticsAction(SemanticsActions.OnClick)
+        compose.onNodeWithContentDescription(compose.activity.getString(com.paulohenriquesg.fahrenheit.R.string.skip_forward_seconds, 30)).performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
 
         assertEquals(1, player.currentMediaItemIndex)
@@ -258,7 +258,7 @@ class TransportTest {
         compose.waitForIdle()
 
         compose.onNodeWithContentDescription("Play").performKeyInput { pressKey(Key.DirectionRight) }
-        compose.onNodeWithContentDescription(compose.activity.getString(R.string.skip_forward_30_seconds)).performKeyInput { pressKey(Key.DirectionRight) }
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.skip_forward_seconds, 30)).performKeyInput { pressKey(Key.DirectionRight) }
 
         compose.onNodeWithTag(GO_TO_PODCAST_TAG).assertIsFocused()
     }
@@ -340,5 +340,39 @@ class TransportTest {
     fun `a book has no episode buttons`() {
         show(queuedAt(1900.0), chapters = chapters)
         compose.onNodeWithContentDescription(compose.activity.getString(R.string.next_episode)).assertDoesNotExist()
+    }
+
+    // #107: skip lengths from Settings.
+    private fun showSkipping(back: Int, forward: Int) {
+        player = queuedAt(600.0)
+        compose.setContent {
+            FahrenheitTheme {
+                MediaPlayerController(
+                    player = player, playback = BookPlayback(player, twoParts), totalTime = twoParts.totalDuration,
+                    skipBack = back, skipForward = forward
+                )
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `the skip buttons jump by the lengths set, and say so`() {
+        showSkipping(back = 10, forward = 60)
+
+        press(compose.activity.getString(R.string.skip_back_seconds, 10))
+        compose.waitForIdle()
+        assertEquals(590_000L, player.currentPosition)
+
+        press(compose.activity.getString(R.string.skip_forward_seconds, 60))
+        compose.waitForIdle()
+        assertEquals(650_000L, player.currentPosition)
+    }
+
+    @Test
+    fun `the skip icons show the number`() {
+        showSkipping(back = 15, forward = 60)
+        compose.onNodeWithText("15", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("60", useUnmergedTree = true).assertExists()
     }
 }

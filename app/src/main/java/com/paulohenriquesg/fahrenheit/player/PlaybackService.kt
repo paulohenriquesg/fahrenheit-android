@@ -79,7 +79,9 @@ class PlaybackService : MediaSessionService() {
                 if (timeline.isEmpty) stopSelf()
             }
         })
-        val guarded = LeavingGuard(exo) {
+        val settings = PlayerSettings(this)
+        val skipping = SkipLengths(exo, { settings.skipBackSeconds }, { settings.skipForwardSeconds })
+        val guarded = LeavingGuard(skipping) {
             reporting.beforeLeaving()
             watch.beforeLeaving()
         }

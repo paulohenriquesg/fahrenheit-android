@@ -231,6 +231,8 @@ fun MainScreen(
     var updateCheck by remember { mutableStateOf<UpdateCheck>(UpdateCheck.Idle) }
     var deviceName by remember { mutableStateOf(PlaybackDevice.name(context)) }
     var playNextEpisode by remember { mutableStateOf(PlayerSettings(context).playNextEpisode) }
+    var skipBack by remember { mutableStateOf(PlayerSettings(context).skipBackSeconds) }
+    var skipForward by remember { mutableStateOf(PlayerSettings(context).skipForwardSeconds) }
 
     // Back walks up a level: content -> rail -> Home -> out (#125).
     var railHasFocus by remember { mutableStateOf(false) }
@@ -421,6 +423,16 @@ fun MainScreen(
                         onPlayNextEpisode = {
                             PlayerSettings(context).playNextEpisode = it
                             playNextEpisode = it
+                        },
+                        skipBack = skipBack,
+                        onSkipBack = {
+                            PlayerSettings(context).skipBackSeconds = it
+                            skipBack = it
+                        },
+                        skipForward = skipForward,
+                        onSkipForward = {
+                            PlayerSettings(context).skipForwardSeconds = it
+                            skipForward = it
                         }
                     )
                     MainView.SWITCH_LIBRARY -> SwitchLibraryView(
