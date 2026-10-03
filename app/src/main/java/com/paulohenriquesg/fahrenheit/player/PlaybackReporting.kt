@@ -27,6 +27,7 @@ import kotlinx.coroutines.withContext
  *
  * @param open the delivery for an item, made when it first plays.
  * @param now a monotonic clock in milliseconds, for listening time.
+ * @param delivered told each time a report about an item reaches the server.
  */
 class PlaybackReporting(
     private val player: Player,
@@ -106,7 +107,10 @@ class PlaybackReporting(
                 total = { current.bookTotal },
                 pause = pause,
                 listened = listening::pending,
-                delivered = listening::delivered,
+                delivered = { seconds ->
+                    listening.delivered(seconds)
+                    this.delivered(current)
+                },
                 close = delivery::close
             )
         }

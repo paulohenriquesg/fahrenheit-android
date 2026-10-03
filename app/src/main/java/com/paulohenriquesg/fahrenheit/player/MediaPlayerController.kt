@@ -223,7 +223,9 @@ fun MediaPlayerController(
                         // preparing again retries from there.
                         failed -> { player.prepare(); player.play() }
                         isPlaying -> player.pause()
-                        else -> player.play()
+                        // Through the screen: it may ask first which position
+                        // to continue from (#90).
+                        else -> onPlay()
                     }
                 },
                 size = 60.dp,

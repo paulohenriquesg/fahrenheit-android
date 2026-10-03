@@ -1,5 +1,8 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import android.view.KeyEvent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -182,6 +185,18 @@ class PlayerActivity : ComponentActivity() {
         }
         // Keyed on the item, not the episode: following a move is not a new start.
         var ready by remember(connected, playing?.itemId) { mutableStateOf(false) }
+        // Which position to continue from, when the server's is newer and from
+        // elsewhere (#90); asked on coming back to a paused item, and on Play.
+        val scope = rememberCoroutineScope()
+        var offer by remember(connected, playing?.itemId) { mutableStateOf<ResumeOffer?>(null) }
+        var playAfterChoice by remember(connected, playing?.itemId) { mutableStateOf(false) }
+        val resumeCheck = remember {
+            ResumeCheck(
+                progress = ::progressQuietly,
+                latestDevice = ::latestSessionDevice,
+                thisDevice = PlaybackDevice.info(this).deviceId.orEmpty()
+            )
+        }
         val listening = remember(connected, playing) {
             if (connected == null || playing == null) null
             else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds, connected::sendCustomCommand)
@@ -205,6 +220,7 @@ class PlayerActivity : ComponentActivity() {
             val nextStartAt = next?.let {
                 ResumePoint.decide(savedProgress(itemId, it.episodeId), it.trackTotal, it.mediaDuration).positionSeconds
             } ?: 0.0
+            val reattaching = QueuedFile.of(connected.currentMediaItem)?.isFor(itemId, playing.episodeId) == true
             ready = start.begin(
                 connected,
                 playing,
@@ -214,6 +230,11 @@ class PlayerActivity : ComponentActivity() {
                 nextStartAt = nextStartAt
             )
             if (!ready) failed = true
+            val timeline = playing.timeline
+            if (ready && reattaching && timeline != null) {
+                playAfterChoice = false
+                offer = resumeCheck.offer(itemId, playing.episodeId, BookPlayback(connected, timeline).bookPosition(), connected.isPlaying)
+            }
         }
         // Above the screen's states, so a mark made in this visit survives Home and back.
         var finished by rememberFinished(connected, playing?.finished)
@@ -240,6 +261,32 @@ class PlayerActivity : ComponentActivity() {
                 ?.let { SeriesBooks.of(it, currentId = itemId) }
                 ?.also { if (it.current == null) Log.w(TAG, "The series ${ref.id} does not list $itemId") }
                 ?.takeIf { it.current != null }
+        }
+        val askThenPlay: () -> Unit = askThenPlay@{
+            val player = connected ?: return@askThenPlay
+            val shown = playing ?: return@askThenPlay
+            val at = playback ?: return@askThenPlay
+            scope.launch {
+                val asked = resumeCheck.offer(itemId, shown.episodeId, at.bookPosition(), playing = false)
+                if (asked == null) {
+                    player.play()
+                } else {
+                    playAfterChoice = true
+                    offer = asked
+                }
+            }
+        }
+        // The remote's Play reaches the screen before the media session: from a
+        // pause it asks first too, and while the question shows it waits.
+        DisposableEffect(connected, playing, playback) {
+            remotePlay = remotePlay@{ down ->
+                val player = connected ?: return@remotePlay false
+                if (offer != null) return@remotePlay true
+                if (player.playWhenReady) return@remotePlay false
+                if (down) askThenPlay()
+                true
+            }
+            onDispose { remotePlay = null }
         }
         when {
             failed || connectFailed -> Text(
@@ -271,6 +318,7 @@ class PlayerActivity : ComponentActivity() {
                                 skipBack = playerSettings.skipBackSeconds,
                                 skipForward = playerSettings.skipForwardSeconds,
                                 onCurrentTimeUpdate = { currentTime = it },
+                                onPlay = askThenPlay,
                                 // An episode's outer buttons open the episodes either side (#108).
                                 episodes = playing.episodeId?.let {
                                     EpisodeSkip(
@@ -290,6 +338,21 @@ class PlayerActivity : ComponentActivity() {
                         }
                     },
                     overlay = {
+                        offer?.let { asked ->
+                            val answered: (Boolean) -> Unit = { moveThere ->
+                                if (moveThere) playback?.seekToBookTime(asked.there)
+                                // Staying sends nothing until playback moves.
+                                resumeCheck.answered(itemId, playing.episodeId, asked)
+                                offer = null
+                                if (playAfterChoice) connected.play()
+                            }
+                            ResumeChoice(
+                                asked,
+                                now = System.currentTimeMillis(),
+                                onContinue = { answered(true) },
+                                onStay = { answered(false) }
+                            )
+                        }
                         PlayerPanelHost(panels) { panel ->
                             when (panel) {
                                 PlayerPanel.Chapters -> ChaptersPanel(
@@ -344,6 +407,32 @@ class PlayerActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    /** Set while the player screen shows: takes the remote's Play from a pause (#90). */
+    private var remotePlay: ((down: Boolean) -> Boolean)? = null
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val play = event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
+        if (play && remotePlay?.invoke(event.action == KeyEvent.ACTION_DOWN) == true) return true
+        return super.dispatchKeyEvent(event)
+    }
+
+    /** The server's progress, or null - quietly: the check is a question, not a load (#90). */
+    private suspend fun progressQuietly(itemId: String, episodeId: String?): MediaProgressResponse? {
+        val api = ApiClient.getApiService() ?: return null
+        val saved = SavedProgress.read(episodeId) {
+            val call = if (episodeId != null) api.userGetMediaProgress(itemId, episodeId) else api.userGetMediaProgress(itemId)
+            call.awaitResponse()
+        }
+        return (saved as? SavedProgress.Found)?.progress
+    }
+
+    /** The device behind the item's latest listening session; null when it cannot be read. */
+    private suspend fun latestSessionDevice(itemId: String, episodeId: String?): String? {
+        val api = ApiClient.getApiService() ?: return null
+        val call = if (episodeId != null) api.itemListeningSessions(itemId, episodeId) else api.itemListeningSessions(itemId)
+        return runCatching { call.awaitResponse().body()?.latestDeviceId() }.getOrNull()
     }
 
     private fun goToPodcast(podcastId: String) = leaveForPodcast(this, podcastId)

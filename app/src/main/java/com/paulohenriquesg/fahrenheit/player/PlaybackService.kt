@@ -64,9 +64,14 @@ class PlaybackService : MediaSessionService() {
             .build()
         // Read for each file rather than once, so a rename in Settings names
         // the next session without restarting the service.
-        val reporting = PlaybackReporting(exo, scope, open = {
-            ListeningSession(it, ApiClient::getApiService, PlaybackDevice.info(this))
-        })
+        val reporting = PlaybackReporting(
+            exo,
+            scope,
+            open = { ListeningSession(it, ApiClient::getApiService, PlaybackDevice.info(this)) },
+            // This device's clock: the server stamps its own time, which the
+            // app never sees (#90).
+            delivered = { ServerKnowledge.process.saw(it.itemId, it.episodeId, System.currentTimeMillis()) }
+        )
         exo.addListener(reporting)
         val watch = SleepWatch(exo, now = { SystemClock.elapsedRealtime() }, publish = { session?.setSessionExtras(it) })
         exo.addListener(watch)

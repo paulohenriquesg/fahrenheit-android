@@ -64,6 +64,20 @@ interface ApiService {
         @Body request: MediaProgressRequest
     ): Call<Void>
 
+    /** Newest first; a few are plenty to find the latest (#90). */
+    @GET("api/me/item/listening-sessions/{libraryItemId}")
+    fun itemListeningSessions(
+        @Path("libraryItemId") libraryItemId: String,
+        @Query("itemsPerPage") itemsPerPage: Int = 5
+    ): Call<ItemListeningSessions>
+
+    @GET("api/me/item/listening-sessions/{libraryItemId}/{episodeId}")
+    fun itemListeningSessions(
+        @Path("libraryItemId") libraryItemId: String,
+        @Path("episodeId") episodeId: String,
+        @Query("itemsPerPage") itemsPerPage: Int = 5
+    ): Call<ItemListeningSessions>
+
     @GET("api/me/progress/{libraryItemId}")
     fun userGetMediaProgress(
         @Path("libraryItemId") libraryItemId: String,

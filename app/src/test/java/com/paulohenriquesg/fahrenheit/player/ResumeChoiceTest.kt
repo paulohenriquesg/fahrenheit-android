@@ -51,7 +51,7 @@ class ResumeChoiceTest {
         compose.waitForIdle()
     }
 
-    private fun text(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode()
+    private fun text(tag: String) = compose.onNodeWithTag(tag).fetchSemanticsNode()
         .config[SemanticsProperties.Text].joinToString(" ") { it.text }
 
     @Test
