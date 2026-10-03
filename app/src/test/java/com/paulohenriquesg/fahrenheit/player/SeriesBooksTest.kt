@@ -78,4 +78,20 @@ class SeriesBooksTest {
 
         assertEquals(listOf("The First"), series.books.map { it.title })
     }
+
+    // Device check: filtered by series, the server gives each book's
+    // metadata.series as one object, not the list an item usually has.
+    @Test
+    fun `a series reply with each book's series as one object still reads`() = runBlocking {
+        server.enqueue(MockResponse().setBody("""{"results":[
+            {"id":"b1","media":{"numTracks":1,"metadata":{"title":"The First","explicit":false,
+              "series":{"id":"s1","name":"A Long Saga","sequence":"1"}}}},
+            {"id":"b2","media":{"numTracks":1,"metadata":{"title":"The Second","explicit":false,
+              "series":{"id":"s1","name":"A Long Saga","sequence":null}}}}],"total":2,"sortBy":"sequence"}"""))
+
+        val books = LibraryRepository(api).seriesBooks("l1", "s1").getOrThrow()
+
+        assertEquals(listOf("The First", "The Second"), books.map { it.media.metadata.title })
+        assertEquals("A Long Saga", books[0].media.metadata.series!!.single().name)
+    }
 }
