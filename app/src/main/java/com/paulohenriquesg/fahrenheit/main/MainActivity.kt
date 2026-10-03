@@ -1,5 +1,9 @@
 package com.paulohenriquesg.fahrenheit.main
 
+import com.paulohenriquesg.fahrenheit.player.Playback
+import com.paulohenriquesg.fahrenheit.player.ControllerSlot
+import androidx.core.content.ContextCompat
+import androidx.media3.session.MediaController
 import android.os.Bundle
 import com.paulohenriquesg.fahrenheit.R
 import androidx.activity.ComponentActivity
@@ -33,6 +37,33 @@ import com.paulohenriquesg.fahrenheit.update.UpdateActivity
 
 class MainActivity : ComponentActivity() {
     private lateinit var mainHandler: MainHandler
+
+    /**
+     * The playback service's player while this screen is visible, for the
+     * rail's Now playing entry (#107) - the same connection the player uses,
+     * so there is one source of truth.
+     */
+    private var playback by mutableStateOf<MediaController?>(null)
+    private val connection by lazy {
+        ControllerSlot(
+            connect = { Playback.connect(this) },
+            release = { it.release() },
+            executor = ContextCompat.getMainExecutor(this),
+            onChange = { playback = it }
+        )
+    }
+
+    override fun onStart() {
+        super.onStart()
+        connection.open()
+    }
+
+    override fun onStop() {
+        // Leaves playback alone: only the player screen's Back stops it.
+        connection.close {}
+        playback = null
+        super.onStop()
+    }
 
     @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,7 +103,8 @@ class MainActivity : ComponentActivity() {
                     MainScreen(
                         mainHandler::fetchLibraryItems,
                         mainHandler::fetchPersonalizedView,
-                        mainHandler::fetchProgress
+                        mainHandler::fetchProgress,
+                        playback = playback
                     )
                 }
             }

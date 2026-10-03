@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.main
 
+import androidx.media3.common.Player
 import com.paulohenriquesg.fahrenheit.player.PlayerSettings
 import android.app.Activity
 import com.paulohenriquesg.fahrenheit.settings.SettingsView
@@ -90,7 +91,9 @@ import kotlinx.coroutines.launch
 fun MainScreen(
     fetchLibraryItems: suspend (String) -> List<LibraryItem>,
     fetchPersonalizedView: suspend (String) -> List<Shelf>,
-    fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() }
+    fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() },
+    /** The playback service's player, while this screen is visible; null when not connected (#107). */
+    playback: Player? = null
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -343,6 +346,20 @@ fun MainScreen(
         selectedId = highlightedMenuItemId,
         firstFocus = initialFocus,
         onRailFocusChanged = { railHasFocus = it },
+        // What the playback service has queued: the way back to the player (#107).
+        nowPlaying = playback?.let { player ->
+            { open ->
+                NowPlayingSlot(
+                    player = player,
+                    open = open,
+                    chaptersOf = { itemId ->
+                        ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.media?.chapters
+                    },
+                    // The player reattaches to what is queued, where it is.
+                    onOpen = { context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId)) }
+                )
+            }
+        },
         onSelect = { menuItem ->
             highlightedMenuItemId = menuItem.id
             handleMenuAction(menuItem.action, currentLibrary?.id)

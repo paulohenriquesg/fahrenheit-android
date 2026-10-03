@@ -42,6 +42,9 @@ fun menuItemTestTag(id: String): String = "menu_item_$id"
  * screen when it was, so there was nothing at the left edge for a D-pad to
  * reach (#58). The TV drawer keeps a rail of icons in the layout and widens to
  * show labels when focus enters it, which is what gives LEFT somewhere to go.
+ *
+ * @param nowPlaying what is playing, drawn above the sections and told whether
+ *   the rail is open (#107); null when nothing is.
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -53,6 +56,7 @@ fun NavigationRail(
     secondary: List<MenuItem> = emptyList(),
     firstFocus: FocusRequester? = null,
     onRailFocusChanged: (Boolean) -> Unit = {},
+    nowPlaying: (@Composable (open: Boolean) -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -80,6 +84,8 @@ fun NavigationRail(
                     .padding(vertical = Space.gap),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // What is playing, above the sections (#107).
+                nowPlaying?.invoke(drawerValue == DrawerValue.Open)
                 items.forEach { item -> Section(item, selectedId, drawerValue, onSelect, firstFocus) }
                 if (secondary.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(Space.gap))

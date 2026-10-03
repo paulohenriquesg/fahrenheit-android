@@ -19,9 +19,9 @@ object Playback {
             .buildAsync()
 
     /**
-     * The player screen is going away. Back ([finishing]) stops playback - with
-     * no mini-player yet there would be no other way to stop it; Home leaves it
-     * playing. Either way the controller is released by the caller afterwards.
+     * The player screen is going away. Back ([finishing]) stops playback - the
+     * rail's Now playing entry leads back to the player, but is not a control
+     * (#107); Home leaves it playing. Either way the controller is released by the caller afterwards.
      */
     fun leave(controller: Player, finishing: Boolean) {
         if (!finishing) return
