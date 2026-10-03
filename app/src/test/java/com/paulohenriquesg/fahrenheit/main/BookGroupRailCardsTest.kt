@@ -68,7 +68,10 @@ class BookGroupRailCardsTest {
         compose.onNodeWithText("2 books").assertIsDisplayed()
         assertCardSize("An Invented Series")
         compose.onNodeWithText("An Invented Series").performSemanticsAction(SemanticsActions.OnClick)
-        assertEquals(BookGroupActivity::class.java.name, started().component?.className)
+        val started = started()
+        assertEquals(BookGroupActivity::class.java.name, started.component?.className)
+        // Which kind decides the empty group's words: a collection must not say "series".
+        assertEquals("SERIES", started.getStringExtra("kind"))
     }
 
     @Test
@@ -84,7 +87,10 @@ class BookGroupRailCardsTest {
         compose.onNodeWithText("1 book").assertIsDisplayed()
         assertCardSize("An Invented Collection")
         compose.onNodeWithText("An Invented Collection").performSemanticsAction(SemanticsActions.OnClick)
-        assertEquals(BookGroupActivity::class.java.name, started().component?.className)
+        val started = started()
+        assertEquals(BookGroupActivity::class.java.name, started.component?.className)
+        // Which kind decides the empty group's words: a collection must not say "series".
+        assertEquals("COLLECTION", started.getStringExtra("kind"))
     }
 
     @Test
@@ -94,5 +100,22 @@ class BookGroupRailCardsTest {
         compose.waitForIdle()
 
         compose.onNodeWithText("book", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a series on a Home shelf opens it as a series`() {
+        val series = Series(id = "s1", name = "An Invented Series", books = listOf(book))
+        val shelf = com.paulohenriquesg.fahrenheit.api.Shelf(
+            id = "recent-series", label = "Recent Series", labelStringKey = "", type = "series",
+            seriesEntities = listOf(series)
+        )
+        compose.setContent { FahrenheitTheme { PersonalizedHomeView(listOf(shelf), "lib") } }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("An Invented Series").performSemanticsAction(SemanticsActions.OnClick)
+
+        val started = started()
+        assertEquals(BookGroupActivity::class.java.name, started.component?.className)
+        assertEquals("SERIES", started.getStringExtra("kind"))
     }
 }

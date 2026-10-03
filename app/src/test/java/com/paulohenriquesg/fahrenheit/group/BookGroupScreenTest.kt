@@ -177,4 +177,25 @@ class BookGroupScreenTest {
 
         assertEquals(Lifecycle.State.DESTROYED, scenario!!.state)
     }
+
+    @Test
+    fun `a group without its kind closes rather than guessing which words to use`() {
+        open(seriesIntent(series(twoBooks)).apply { removeExtra("kind") })
+
+        assertEquals(Lifecycle.State.DESTROYED, scenario!!.state)
+    }
+
+    @Test
+    fun `a group of a kind this version does not know closes too`() {
+        open(seriesIntent(series(twoBooks)).apply { putExtra("kind", "SHELF") })
+
+        assertEquals(Lifecycle.State.DESTROYED, scenario!!.state)
+    }
+
+    @Test
+    fun `a collection with one book says book, not books`() {
+        open(collectionIntent(collection(twoBooks.take(1))))
+
+        compose.onNodeWithText("1 book").assertIsDisplayed()
+    }
 }
