@@ -101,6 +101,8 @@ fun MediaPlayerController(
         onCurrentTimeUpdate(seconds)
     }
 
+    // Presses read the player's position at that moment: the polled one can
+    // be a second old while playing, enough to break the 3 s restart rule.
     val spans = remember(chapters, totalTime) { ChapterClock.spans(chapters, totalTime) }
     val chapter = ChapterClock.at(spans, currentTime)
 
@@ -114,7 +116,7 @@ fun MediaPlayerController(
         PlaybackBar(
             fraction = chapter?.fraction(currentTime) ?: PlaybackPosition.fraction(currentTime, totalTime),
             modifier = Modifier.fillMaxWidth().testTag(CHAPTER_BAR_TAG),
-            onSeekBy = { by -> seekTo(PlaybackPosition.skip(currentTime, by, totalTime)) }
+            onSeekBy = { by -> seekTo(PlaybackPosition.skip(playback.bookPosition(), by, totalTime)) }
         )
         when {
             failed -> TimesRow(stringResource(R.string.playback_failed), null, error = true)
@@ -135,7 +137,7 @@ fun MediaPlayerController(
             PlaybackBar(
                 fraction = PlaybackPosition.fraction(currentTime, totalTime),
                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp).testTag(BOOK_BAR_TAG),
-                ticks = PlaybackPosition.chapterMarks(chapters, totalTime).map { it / 100f },
+                ticks = ChapterClock.ticks(spans, totalTime),
                 thick = false
             )
             TimesRow(
@@ -152,7 +154,7 @@ fun MediaPlayerController(
         ) {
             if (chapter != null) {
                 TransportButton(
-                    onClick = { ChapterClock.previousTarget(spans, currentTime)?.let(::seekTo) },
+                    onClick = { ChapterClock.previousTarget(spans, playback.bookPosition())?.let(::seekTo) },
                     size = 48.dp,
                     container = TvMaterialTheme.colorScheme.secondaryContainer,
                     content = TvMaterialTheme.colorScheme.onSecondaryContainer
@@ -161,7 +163,7 @@ fun MediaPlayerController(
                 }
             }
             TransportButton(
-                onClick = { seekTo(PlaybackPosition.skip(currentTime, -SKIP_SECONDS, totalTime)) },
+                onClick = { seekTo(PlaybackPosition.skip(playback.bookPosition(), -SKIP_SECONDS, totalTime)) },
                 size = 48.dp,
                 container = TvMaterialTheme.colorScheme.secondaryContainer,
                 content = TvMaterialTheme.colorScheme.onSecondaryContainer
@@ -189,7 +191,7 @@ fun MediaPlayerController(
                 )
             }
             TransportButton(
-                onClick = { seekTo(PlaybackPosition.skip(currentTime, SKIP_SECONDS, totalTime)) },
+                onClick = { seekTo(PlaybackPosition.skip(playback.bookPosition(), SKIP_SECONDS, totalTime)) },
                 size = 48.dp,
                 container = TvMaterialTheme.colorScheme.secondaryContainer,
                 content = TvMaterialTheme.colorScheme.onSecondaryContainer
@@ -200,7 +202,7 @@ fun MediaPlayerController(
                 TransportButton(
                     // Nothing after the last chapter: the press does nothing
                     // rather than leaving a button that cannot take focus.
-                    onClick = { ChapterClock.nextTarget(spans, currentTime)?.let(::seekTo) },
+                    onClick = { ChapterClock.nextTarget(spans, playback.bookPosition())?.let(::seekTo) },
                     size = 48.dp,
                     container = TvMaterialTheme.colorScheme.secondaryContainer,
                     content = TvMaterialTheme.colorScheme.onSecondaryContainer

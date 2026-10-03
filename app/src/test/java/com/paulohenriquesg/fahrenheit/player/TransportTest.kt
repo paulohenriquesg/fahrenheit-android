@@ -228,4 +228,36 @@ class TransportTest {
 
         compose.onNodeWithText("ACTIONS").assertIsDisplayed()
     }
+
+    // Review: chapter skip read the position the screen last polled, up to a
+    // second old while playing, so the 3 s restart rule misfired.
+    @Test
+    fun `chapter skip reads where the player is now, not the last poll`() {
+        show(queuedAt(1801.0), chapters = chapters)
+        // The player moves on without the screen polling (as between polls).
+        player.seekTo(0, 1_810_000L)
+
+        press(compose.activity.getString(R.string.previous_chapter))
+        compose.waitForIdle()
+
+        assertEquals(1_800_000L, player.currentPosition)
+    }
+
+    // Review: Go to podcast moved beside the transport; it must be reachable by key.
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun `right from the transport reaches the actions`() {
+        player = queuedAt(0.0)
+        compose.setContent {
+            FahrenheitTheme {
+                MediaPlayerController(player, BookPlayback(player, twoParts), twoParts.totalDuration, trailing = { GoToPodcastButton {} })
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Play").performKeyInput { pressKey(Key.DirectionRight) }
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.skip_forward_30_seconds)).performKeyInput { pressKey(Key.DirectionRight) }
+
+        compose.onNodeWithTag(GO_TO_PODCAST_TAG).assertIsFocused()
+    }
 }

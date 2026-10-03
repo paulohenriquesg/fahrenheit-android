@@ -54,4 +54,25 @@ class ChapterClockTest {
         assertEquals(emptyList<ChapterSpan>(), ChapterClock.spans(null, 100.0))
         assertNull(ChapterClock.at(emptyList(), 10.0))
     }
+
+    // Review: a seek drops the fraction of a millisecond, and chapter starts
+    // from the server are fractional; the position must not read as the
+    // chapter before, or Next repeats and Previous jumps back two.
+    @Test fun `a position a hair before a start belongs to that chapter`() {
+        val fractional = ChapterClock.spans(listOf(Chapter(start = 0.0, end = 1234.5678, title = "One"), Chapter(start = 1234.5678, end = 2000.0, title = "Two")), total = 2000.0)
+        assertEquals("Two", ChapterClock.at(fractional, 1234.567)!!.title)
+        assertEquals(2000.0 - 1234.5678, ChapterClock.at(fractional, 1234.567)!!.left(1234.567), 0.01)
+    }
+
+    @Test fun `before the first chapter, previous goes to the start and next to the first chapter`() {
+        val late = ChapterClock.spans(listOf(Chapter(start = 5.0, end = 600.0, title = "One"), Chapter(start = 600.0, end = 1200.0, title = "Two")), total = 1200.0)
+        assertEquals(0.0, ChapterClock.previousTarget(late, 2.0)!!, 0.0)
+        assertEquals(5.0, ChapterClock.nextTarget(late, 2.0)!!, 0.0)
+    }
+
+    // Review: ticks came from each chapter's end, so chapters without one had none.
+    @Test fun `the book's ticks are every chapter start after the first`() {
+        val open = ChapterClock.spans(listOf(Chapter(start = 0.0, title = "A"), Chapter(start = 600.0, title = "B"), Chapter(start = 900.0, title = "C")), total = 1200.0)
+        assertEquals(listOf(0.5f, 0.75f), ChapterClock.ticks(open, 1200.0))
+    }
 }

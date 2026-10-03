@@ -133,4 +133,14 @@ class NowPlayingTest {
         assertEquals("Welcome to Night Vale · Yesterday", playing.kicker)
         assertNull(playing.byline)
     }
+
+    @Test
+    fun `an episode of a show without a title still reads cleanly`() {
+        val untitled = Gson().fromJson(
+            """{"id":"p2","mediaType":"podcast","media":{"metadata":{"title":"","explicit":false},
+                "episodes":[{"libraryItemId":"p2","id":"e1","index":1,"title":"Pilot","publishedAt":${now - day - 1000},"addedAt":0,"updatedAt":0}]}}""",
+            LibraryItemResponse::class.java
+        )
+        assertEquals("Yesterday", NowPlaying.of(untitled, episodeId = "e1", now = now)!!.kicker)
+    }
 }

@@ -85,7 +85,8 @@ data class NowPlaying(
                 episodeId = episode.id,
                 goToPodcast = true,
                 description = episode.description,
-                kicker = listOfNotNull(metadata.title, published.takeIf { it.isNotEmpty() }).joinToString(" · "),
+                kicker = listOfNotNull(metadata.title.takeIf { it.isNotBlank() }, published.takeIf { it.isNotEmpty() })
+                    .joinToString(" · ").takeIf { it.isNotEmpty() },
                 byline = null
             )
         }

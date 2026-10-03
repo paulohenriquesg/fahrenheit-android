@@ -1,6 +1,5 @@
 package com.paulohenriquesg.fahrenheit.player
 
-import com.paulohenriquesg.fahrenheit.api.Chapter
 import java.util.Locale
 
 /**
@@ -21,19 +20,6 @@ object PlaybackPosition {
     fun skip(current: Double, by: Double, total: Double): Double =
         (current + by).coerceIn(0.0, total.coerceAtLeast(0.0))
 
-    /**
-     * Where to draw a mark for each chapter boundary, as a percentage of the
-     * track. The final chapter ends where the book does, so it gets no mark,
-     * and an end beyond the reported duration is left out rather than drawn
-     * off the end of the bar.
-     */
-    fun chapterMarks(chapters: List<Chapter>?, total: Double): List<Float> {
-        if (total <= 0) return emptyList()
-        return chapters.orEmpty()
-            .mapNotNull { it.end }
-            .filter { it > 0 && it < total }
-            .map { (it / total * 100).toFloat() }
-    }
 
     /**
      * A length as frame 4 writes it: "5 h 28 min" over an hour, "12 min 30 s"

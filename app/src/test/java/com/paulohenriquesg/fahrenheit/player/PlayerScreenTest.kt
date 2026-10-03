@@ -117,4 +117,17 @@ class PlayerScreenTest {
 
         assertEquals(1, went)
     }
+
+    // Review: upper-casing in the device's language turns "i" into "İ" in Turkish.
+    @Test
+    fun `the line above the title is upper-cased the same in every language`() {
+        val before = java.util.Locale.getDefault()
+        java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr"))
+        try {
+            render(book.copy(kicker = "Science fiction"), currentTime = 0.0)
+            compose.onNodeWithText("SCIENCE FICTION").assertIsDisplayed()
+        } finally {
+            java.util.Locale.setDefault(before)
+        }
+    }
 }
