@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,17 +51,26 @@ import retrofit2.awaitResponse
 class PlayerActivity : ComponentActivity() {
     private var controller by mutableStateOf<MediaController?>(null)
     private var connectFailed by mutableStateOf(false)
+    /** The sleep timer as the service reports it; null when none runs. */
+    private var sleep by mutableStateOf<SleepState?>(null)
+    private val sleepReports = object : MediaController.Listener {
+        override fun onExtrasChanged(controller: MediaController, extras: Bundle) {
+            sleep = SleepCommand.state(extras)
+        }
+    }
     private val connection by lazy {
         ControllerSlot(
-            connect = { Playback.connect(this) },
+            connect = { Playback.connect(this, sleepReports) },
             release = { it.release() },
             executor = ContextCompat.getMainExecutor(this),
             onChange = {
                 controller = it
                 connectFailed = it == null
+                sleep = it?.let { connected -> SleepCommand.state(connected.sessionExtras) }
             }
         )
     }
+    private val speeds by lazy { SpeedMemory(this) }
     private lateinit var start: PlayerStart
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -146,6 +156,17 @@ class PlayerActivity : ComponentActivity() {
             ready = start.begin(connected, playing, { savedProgress(itemId, episodeId) }) { ApiClient.generateFullUrl(it) }
             if (!ready) failed = true
         }
+        val listening = remember(connected, playing) {
+            if (connected == null || playing == null) null
+            else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds) { command, args ->
+                connected.sendCustomCommand(command, args)
+            }
+        }
+        var speed by remember(itemId) { mutableFloatStateOf(speeds.of(itemId)) }
+        LaunchedEffect(listening, ready) {
+            if (ready) listening?.applyRememberedSpeed()
+        }
+        val panels = rememberPlayerPanels()
         when {
             failed || connectFailed -> Text(
                 text = stringResource(R.string.item_load_failed),
@@ -174,8 +195,30 @@ class PlayerActivity : ComponentActivity() {
                             onCurrentTimeUpdate = { currentTime = it },
                             trailing = {
                                 if (playing.goToPodcast) GoToPodcastButton { goToPodcast(itemId) }
+                                SpeedChip(speed, panels)
+                                SleepChip(sleep, panels)
                             }
                         )
+                    }
+                },
+                overlay = {
+                    PlayerPanelHost(panels) { panel ->
+                        when (panel) {
+                            PlayerPanel.Speed -> SpeedPanel(
+                                current = speed,
+                                onChoose = {
+                                    speed = it
+                                    listening?.chooseSpeed(it)
+                                },
+                                onClose = panels::close
+                            )
+                            PlayerPanel.Sleep -> SleepPanel(
+                                sleep = sleep,
+                                chapters = listening?.hasChapters == true,
+                                onChoose = { listening?.chooseSleep(it) },
+                                onClose = panels::close
+                            )
+                        }
                     }
                 }
             )

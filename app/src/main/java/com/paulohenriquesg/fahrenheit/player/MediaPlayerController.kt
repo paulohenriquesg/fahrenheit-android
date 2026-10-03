@@ -17,6 +17,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.media3.common.PlaybackParameters
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,6 +73,8 @@ fun MediaPlayerController(
     var isPlaying by remember(player) { mutableStateOf(player.playWhenReady) }
     var failed by remember(player) { mutableStateOf(player.playerError != null) }
     var currentTime by remember(player) { mutableDoubleStateOf(playback.bookPosition()) }
+    // The book's time left counts at the speed; the service's player holds it.
+    var speed by remember(player) { mutableFloatStateOf(player.playbackParameters.speed) }
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -78,6 +82,7 @@ fun MediaPlayerController(
             // once rather than after buffering.
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { isPlaying = playWhenReady }
             override fun onPlayerErrorChanged(error: PlaybackException?) { failed = error != null }
+            override fun onPlaybackParametersChanged(parameters: PlaybackParameters) { speed = parameters.speed }
         }
         player.addListener(listener)
         onDispose { player.removeListener(listener) }
@@ -124,12 +129,21 @@ fun MediaPlayerController(
                 PlaybackPosition.spoken(chapter.elapsed(currentTime)),
                 stringResource(R.string.time_left_in_chapter, PlaybackPosition.spoken(chapter.left(currentTime)))
             )
-            else -> TimesRow(
+            speed == ListeningSpeed.NORMAL -> TimesRow(
                 PlaybackPosition.spoken(currentTime),
                 stringResource(
                     R.string.time_left_of,
                     PlaybackPosition.spoken(PlaybackPosition.left(currentTime, totalTime)),
                     PlaybackPosition.spoken(totalTime)
+                )
+            )
+            else -> TimesRow(
+                PlaybackPosition.spoken(currentTime),
+                stringResource(
+                    R.string.time_left_of_at,
+                    PlaybackPosition.spoken(ListeningSpeed.left(currentTime, totalTime, speed)),
+                    PlaybackPosition.spoken(totalTime),
+                    ListeningSpeed.label(speed)
                 )
             )
         }
@@ -142,7 +156,15 @@ fun MediaPlayerController(
             )
             TimesRow(
                 stringResource(R.string.time_of, PlaybackPosition.spoken(currentTime), PlaybackPosition.spoken(totalTime)),
-                stringResource(R.string.time_left, PlaybackPosition.spoken(PlaybackPosition.left(currentTime, totalTime))),
+                if (speed == ListeningSpeed.NORMAL) {
+                    stringResource(R.string.time_left, PlaybackPosition.spoken(PlaybackPosition.left(currentTime, totalTime)))
+                } else {
+                    stringResource(
+                        R.string.time_left_at,
+                        PlaybackPosition.spoken(ListeningSpeed.left(currentTime, totalTime, speed)),
+                        ListeningSpeed.label(speed)
+                    )
+                },
                 small = true
             )
         }

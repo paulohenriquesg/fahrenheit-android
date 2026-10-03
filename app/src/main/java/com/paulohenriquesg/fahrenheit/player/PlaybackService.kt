@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.annotation.OptIn
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.media3.common.AudioAttributes
@@ -7,6 +8,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
@@ -126,6 +128,7 @@ internal class PlaybackSessionCallback(private val onSleep: (Bundle) -> Unit) : 
     // Media3's own default, trusted or not, plus the sleep timer for the
     // trusted. Its default onConnect answers with a placeholder that only
     // onConnectAsync turns into this, so it cannot be built upon.
+    @OptIn(UnstableApi::class) // the trust-aware default builder and its commands
     override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
         val accepted = MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
         if (controller.isTrusted) {
