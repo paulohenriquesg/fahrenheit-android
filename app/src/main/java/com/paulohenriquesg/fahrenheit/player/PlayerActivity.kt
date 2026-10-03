@@ -327,16 +327,16 @@ class PlayerActivity : ComponentActivity() {
         fun podcastIntent(context: Context, podcastId: String): Intent =
             DetailActivity.createIntent(context, podcastId).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
+        /** The start position the intent asks for (see [PlayerStart]); null for the saved one. */
+        internal fun startAtOf(intent: Intent): Double? =
+            if (intent.hasExtra(EXTRA_START_AT)) intent.getDoubleExtra(EXTRA_START_AT, 0.0) else null
+
         /**
          * About's "Play <title> instead?": this book stops - its closing
          * report going to it - before the other opens and plays. The caller
          * must not stop playback again when it closes: by then the other book
          * may already be queued.
          */
-        /** The start position the intent asks for (see [PlayerStart]); null for the saved one. */
-        internal fun startAtOf(intent: Intent): Double? =
-            if (intent.hasExtra(EXTRA_START_AT)) intent.getDoubleExtra(EXTRA_START_AT, 0.0) else null
-
         internal fun switchTo(player: android.app.Activity, controller: androidx.media3.common.Player, itemId: String) {
             Playback.leave(controller, finishing = true)
             player.startActivity(createIntent(player, itemId, autoPlay = true))

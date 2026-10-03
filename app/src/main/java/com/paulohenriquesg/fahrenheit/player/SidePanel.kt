@@ -140,8 +140,9 @@ fun PanelOption(label: String, selected: Boolean, onClick: () -> Unit, modifier:
 
 /** A chip beside the transport that opens a panel (frame C's actions). */
 @Composable
-fun ActionChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null) {
-    Button(onClick = onClick, modifier = modifier) {
+fun ActionChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null, enabled: Boolean = true) {
+    // Disabled TV buttons still answer a semantics click: the guard is the press itself.
+    Button(onClick = { if (enabled) onClick() }, modifier = modifier, enabled = enabled) {
         icon?.let {
             Icon(it, contentDescription = null, tint = LocalContentColor.current, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))

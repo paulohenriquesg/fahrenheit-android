@@ -32,20 +32,20 @@ import com.paulohenriquesg.fahrenheit.api.ProgressMark
 class FinishMarker(
     private val player: Player,
     private val closed: suspend () -> Unit,
+    private val pending: suspend () -> Unit = {},
     private val send: suspend (itemId: String, episodeId: String?, mark: ProgressMark) -> Unit
 ) {
     /** @param itemId the item to mark; null for whatever is queued. */
-    suspend fun mark(finished: Boolean, itemId: String? = null, episodeId: String? = null): Result<Unit> {
+    /**
+     * @param keepAt for an item not queued being un-finished: where it was,
+     *   sent back after the server has put it to 0. Null leaves it at 0.
+     */
+    suspend fun mark(finished: Boolean, itemId: String? = null, episodeId: String? = null, keepAt: Double? = null): Result<Unit> {
         val queued = QueuedFile.of(player.currentMediaItem)
-        val file = when {
-            itemId == null -> queued ?: return Result.failure(IllegalStateException("nothing queued"))
-            queued?.isFor(itemId, episodeId) == true -> queued
-            else -> null
-        }
-        return try {
-            if (file == null) {
-                send(itemId!!, episodeId, ProgressMark(isFinished = finished))
-            } else if (finished) {
+        if (itemId != null && queued?.isFor(itemId, episodeId) != true) return markElsewhere(finished, itemId, episodeId, keepAt)
+        val file = queued ?: return Result.failure(IllegalStateException("nothing queued"))
+        return attempt {
+            if (finished) {
                 player.pause()
                 closed()
                 send(file.itemId, file.episodeId, ProgressMark(isFinished = true))
@@ -54,24 +54,44 @@ class FinishMarker(
                 send(file.itemId, file.episodeId, ProgressMark(isFinished = false))
                 send(file.itemId, file.episodeId, ProgressMark(currentTime = at))
             }
-            Result.success(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Result.failure(e)
         }
+    }
+
+    /**
+     * An item not queued. It may have been playing a moment ago - Back, then
+     * Mark finished on its details screen - with its closing report still on
+     * the way, which would un-finish it: so that goes first ([pending]).
+     */
+    private suspend fun markElsewhere(finished: Boolean, itemId: String, episodeId: String?, keepAt: Double?) = attempt {
+        pending()
+        send(itemId, episodeId, ProgressMark(isFinished = finished))
+        if (!finished && keepAt != null) send(itemId, episodeId, ProgressMark(currentTime = keepAt))
+    }
+
+    private suspend fun attempt(block: suspend () -> Unit): Result<Unit> = try {
+        block()
+        Result.success(Unit)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(e)
     }
 }
 
-/** The session command a screen sends to mark what is queued finished or not (#107). */
+/** The session command a screen sends to mark an item finished or not - the one named, or whatever is queued (#107, #105). */
 object FinishCommand {
     val COMMAND = SessionCommand("fahrenheit.FINISH", Bundle.EMPTY)
     private const val FINISHED = "fahrenheit.finish.finished"
     private const val ITEM = "fahrenheit.finish.itemId"
     private const val EPISODE = "fahrenheit.finish.episodeId"
+    private const val KEEP_AT = "fahrenheit.finish.keepAt"
 
-    /** @param itemId the item to mark; null for whatever is queued. */
-    fun args(finished: Boolean, itemId: String? = null, episodeId: String? = null): Bundle = Bundle().apply {
+    /**
+     * @param itemId the item to mark; null for whatever is queued.
+     * @param keepAt see [FinishMarker.mark].
+     */
+    fun args(finished: Boolean, itemId: String? = null, episodeId: String? = null, keepAt: Double? = null): Bundle = Bundle().apply {
+        keepAt?.let { putDouble(KEEP_AT, it) }
         putBoolean(FINISHED, finished)
         itemId?.let { putString(ITEM, it) }
         episodeId?.let { putString(EPISODE, it) }
@@ -79,6 +99,7 @@ object FinishCommand {
 
     fun itemOf(args: Bundle): String? = args.getString(ITEM)
     fun episodeOf(args: Bundle): String? = args.getString(EPISODE)
+    fun keepAtOf(args: Bundle): Double? = if (args.containsKey(KEEP_AT)) args.getDouble(KEEP_AT) else null
     fun finishedOf(args: Bundle): Boolean = args.getBoolean(FINISHED)
 }
 

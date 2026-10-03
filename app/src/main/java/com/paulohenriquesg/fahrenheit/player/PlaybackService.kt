@@ -81,7 +81,7 @@ class PlaybackService : MediaSessionService() {
             reporting.beforeLeaving()
             watch.beforeLeaving()
         }
-        val marker = FinishMarker(exo, reporting::closeAndWait) { itemId, episodeId, mark ->
+        val marker = FinishMarker(exo, reporting::closeAndWait, pending = Closings.process::settled) { itemId, episodeId, mark ->
             val api = ApiClient.getLibraryApi() ?: error("signed out")
             if (episodeId != null) api.markFinished(itemId, episodeId, mark) else api.markFinished(itemId, mark)
         }
@@ -94,7 +94,9 @@ class PlaybackService : MediaSessionService() {
     private fun markFinished(marker: FinishMarker, args: Bundle): ListenableFuture<SessionResult> {
         val answer = SettableFuture.create<SessionResult>()
         scope.launch {
-            val result = marker.mark(FinishCommand.finishedOf(args), FinishCommand.itemOf(args), FinishCommand.episodeOf(args))
+            val result = marker.mark(
+                FinishCommand.finishedOf(args), FinishCommand.itemOf(args), FinishCommand.episodeOf(args), FinishCommand.keepAtOf(args)
+            )
             answer.set(SessionResult(if (result.isSuccess) SessionResult.RESULT_SUCCESS else SessionError.ERROR_UNKNOWN))
         }
         return answer
@@ -138,8 +140,8 @@ class PlaybackService : MediaSessionService() {
  * [PlayableItems] rebuilds it.
  *
  * Trusted controllers - the app's own screen - may also set the sleep
- * timer ([SleepCommand]), handed to [onSleep], and mark what is queued
- * finished ([FinishCommand]), handed to [onFinish].
+ * timer ([SleepCommand]), handed to [onSleep], and mark an item finished -
+ * the one named, or whatever is queued ([FinishCommand]) - handed to [onFinish].
  */
 internal class PlaybackSessionCallback(
     private val onFinish: (Bundle) -> ListenableFuture<SessionResult> = {

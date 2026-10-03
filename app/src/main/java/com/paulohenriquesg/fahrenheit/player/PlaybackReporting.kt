@@ -32,15 +32,14 @@ class PlaybackReporting(
     private val scope: CoroutineScope,
     private val open: (QueuedFile) -> ListeningDelivery,
     private val pause: suspend () -> Unit = { delay(ProgressSync.INTERVAL_MS) },
-    private val now: () -> Long = { SystemClock.elapsedRealtime() }
+    private val now: () -> Long = { SystemClock.elapsedRealtime() },
+    private val closings: Closings = Closings.process
 ) : Player.Listener {
 
     private var reportingFor: QueuedFile? = null
     private var reporter: ProgressReporter? = null
     private var time: ListeningTime? = null
     private var rounds: Job? = null
-    /** Closing reports still on their way. */
-    private val closings = mutableSetOf<Job>()
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         when {
@@ -69,7 +68,7 @@ class PlaybackReporting(
      */
     suspend fun closeAndWait() {
         finish()
-        closings.toList().joinAll()
+        closings.settled()
     }
 
     private fun start() {
@@ -106,10 +105,7 @@ class PlaybackReporting(
         val closing = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             withContext(NonCancellable) { active.finish() }
         }
-        if (closing.isActive) {
-            closings += closing
-            closing.invokeOnCompletion { closings -= closing }
-        }
+        closings.track(closing)
     }
 
     /** Whole-book time, or -1 (never sent) once the player has moved on to something else. */
@@ -117,5 +113,28 @@ class PlaybackReporting(
         val now = QueuedFile.of(player.currentMediaItem) ?: return -1.0
         if (!now.isFor(owner.itemId, owner.episodeId)) return -1.0
         return now.bookTime(player.currentPosition / 1000.0)
+    }
+}
+
+/**
+ * Closing reports still on their way, for the whole process: Back stops
+ * playback and the service goes, but its last report is still being sent, and
+ * a Mark finished made meanwhile must wait for it (see [FinishMarker]).
+ * Main thread only.
+ */
+class Closings {
+    private val jobs = mutableSetOf<Job>()
+
+    fun track(job: Job) {
+        if (!job.isActive) return
+        jobs += job
+        job.invokeOnCompletion { jobs -= job }
+    }
+
+    /** Returns once every closing report tracked so far is delivered, or has failed. */
+    suspend fun settled() = jobs.toList().joinAll()
+
+    companion object {
+        val process = Closings()
     }
 }

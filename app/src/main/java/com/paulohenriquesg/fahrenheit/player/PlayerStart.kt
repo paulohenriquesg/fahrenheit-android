@@ -39,8 +39,7 @@ class PlayerStart(private val autoPlay: Boolean, private val startAt: Double? = 
         if (QueuedFile.of(player.currentMediaItem)?.isFor(nowPlaying.itemId, nowPlaying.episodeId) == true) {
             val timeline = nowPlaying.timeline
             if (asked != null && timeline != null) {
-                val at = timeline.locate(asked)
-                player.seekTo(at.trackIndex, (at.positionInTrack * 1000).toLong())
+                BookPlayback(player, timeline).seekToBookTime(asked)
                 if (autoPlay) player.play()
             }
             return true

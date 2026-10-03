@@ -95,6 +95,7 @@ class DetailActivity : ComponentActivity() {
 
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
+        var marking by remember { mutableStateOf(false) }
 
         LaunchedEffect(itemId) {
             val api = ApiClient.getLibraryApi()
@@ -105,6 +106,13 @@ class DetailActivity : ComponentActivity() {
             LibraryRepository(api).item(itemId)
                 .onSuccess { itemDetail = it; loadFailed = false }
                 .onFailure { loadFailed = true }
+        }
+
+        // A book is read again on coming back - from the player, say - so
+        // Chapters opens where it was left and Mark says what the server holds.
+        LaunchedEffect(resumes) {
+            if (resumes <= 1 || itemDetail?.mediaType != "book") return@LaunchedEffect
+            ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId) }?.onSuccess { itemDetail = it }
         }
 
         // One call for both who the user is (the admin check) and what they
@@ -154,9 +162,12 @@ class DetailActivity : ComponentActivity() {
                     at = item.userMediaProgress?.currentTime ?: 0.0,
                     onChapter = { start -> context.startActivity(playChapterIntent(context, itemId, start)) },
                     finished = item.userMediaProgress?.isFinished == true,
+                    marking = marking,
                     onMarkFinished = { done ->
+                        marking = true
                         // Through the playback service, in case this book is the one playing (#105).
-                        Playback.markFinished(context, itemId, done) { worked ->
+                        Playback.markFinished(context, itemId, done, keepAt = placeToKeep(item)) { worked ->
+                            marking = false
                             if (!worked) {
                                 Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
                                 return@markFinished
@@ -334,6 +345,17 @@ class DetailActivity : ComponentActivity() {
         /** An episode chosen from the list, or the header's Play/Resume. Starts playing (#122). */
         fun playEpisodeIntent(context: Context, itemId: String, episodeId: String): Intent =
             PlayerActivity.createIntent(context, itemId, episodeId, autoPlay = true)
+
+        /**
+         * Where an un-finished book should stay, rather than the start the
+         * server would put it at: where it was, unless that is so near the end
+         * that the server would finish it again (its rule: under 10 s left).
+         */
+        internal fun placeToKeep(item: LibraryItemResponse): Double? {
+            val at = item.userMediaProgress?.currentTime ?: return null
+            val length = item.media.duration ?: return null
+            return at.takeIf { at > 0 && length - at > 10 }
+        }
 
         /** A chapter chosen from the book's Chapters: the player opens there and plays (#105). */
         fun playChapterIntent(context: Context, itemId: String, start: Double): Intent =

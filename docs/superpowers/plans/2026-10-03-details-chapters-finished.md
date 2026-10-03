@@ -28,13 +28,15 @@
 1. **Focus still lands on Resume.** The chapter list is behind its button, as in the player.
 2. **Chapters opens on the chapter of the saved position,** or the first chapter when the book is not started.
 3. **Choosing a chapter plays at once** (autoPlay), as #126 made Play do.
-4. **Mark unfinished on the details screen** loses the saved position. That is the server's rule when the book is not playing, and a finished book's place is its end anyway. When the book is the one queued, the listener's place is sent back as in the player.
+4. **Mark unfinished on the details screen keeps the book where it was.** The server keeps the position on a manual finish, then puts it to 0 on un-finish. So the details screen sends back the place it knew, unless that is within 10 s of the end, where the server would finish the book again. *(Revised after review: the first version assumed a finished book's place was always its end.)*
+5. **A book just stopped (Back, then Mark finished at once)** waits for its closing report, which outlives the service, before it is marked (`Closings.process`).
 
 ## Review Focus
 
 1. **A chapter chosen while the same book is already queued** (Home left it playing) seeks there rather than starting over at the saved position. Pinned in `PlayerStartTest`.
 2. **Mark finished for a book that is not queued** does not pause whatever else is playing. Pinned in `FinishMarkerTest`.
-3. **A book without chapters** has no Chapters button. Pinned in `DetailHeaderTest`.
+3. **A book without chapters** has no Chapters button. Pinned in `DetailActionsTest`.
+4. **Back, then Mark finished at once, stays finished.** Pinned in `FinishMarkerTest` (`a book just stopped is marked only once its closing report is in`).
 
 ### Task 1: Start at a position (`PlayerStart`, intent extra)
 ### Task 2: `FinishCommand` names the item; `Playback.markFinished`
@@ -49,6 +51,7 @@
   - with the same book already playing (Home), choosing one jumps there.
 - **Mark finished:**
   - the server shows the book finished;
+  - listen near the end, Back, then Mark finished at once: after a few seconds the server still shows it finished;
   - Mark unfinished works;
   - with another book playing behind, that book keeps playing.
 - **A book without chapters** has no Chapters button.

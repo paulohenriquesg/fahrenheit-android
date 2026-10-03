@@ -46,13 +46,16 @@ class DetailActionsTest {
         total = 2400.0
     )
 
-    private fun show(chapters: List<ChapterSpan> = three, at: Double = 700.0, finishedAt: Boolean = false) {
+    private fun show(chapters: List<ChapterSpan> = three, at: Double = 700.0, finishedAt: Boolean = false, marking: Boolean = false) {
         compose.setContent {
             FahrenheitTheme {
                 var finished by remember { mutableStateOf(finishedAt) }
+                // As the screen does once the book is read again: a finished book just plays.
+                val primary = if (finished) "Play" else "Resume at 11 min"
                 BookDetailView(
                     itemId = "b1",
-                    content = DetailHeaderContent("A Book", null, emptyList(), "Resume at 11 min", null),
+                    content = DetailHeaderContent("A Book", null, emptyList(), primary, null),
+                    marking = marking,
                     onPrimary = {},
                     chapters = chapters,
                     at = at,
@@ -110,5 +113,19 @@ class DetailActionsTest {
         show(chapters = emptyList())
         compose.onNodeWithText("Chapters").assertDoesNotExist()
         compose.onNodeWithText("Mark finished").assertIsDisplayed()
+    }
+
+    // Review: Resume's label changing took focus off the button just pressed.
+    @Test fun `focus stays on Mark finished when Resume's label changes`() {
+        show()
+        compose.onNodeWithText("Mark finished").performSemanticsAction(SemanticsActions.RequestFocus)
+        press("Mark finished")
+        compose.onNodeWithText("Mark unfinished").assertIsFocused()
+    }
+
+    @Test fun `while a mark is being made, the button does nothing`() {
+        show(marking = true)
+        press("Mark finished")
+        assertEquals(emptyList<Boolean>(), marked)
     }
 }

@@ -34,12 +34,13 @@ object Playback {
      * screen (#105) - through the service, which knows whether that book is
      * playing and must first be paused (see [FinishMarker]).
      */
-    fun markFinished(context: Context, itemId: String, finished: Boolean, onDone: (Boolean) -> Unit) {
+    /** @param keepAt where an un-finished book was, to keep it there (see [FinishMarker.mark]). */
+    fun markFinished(context: Context, itemId: String, finished: Boolean, keepAt: Double? = null, onDone: (Boolean) -> Unit) {
         val future = connect(context.applicationContext)
         val main = ContextCompat.getMainExecutor(context)
         future.addListener({
             val controller = runCatching { future.get() }.getOrNull() ?: return@addListener onDone(false)
-            val answer = controller.sendCustomCommand(FinishCommand.COMMAND, FinishCommand.args(finished, itemId))
+            val answer = controller.sendCustomCommand(FinishCommand.COMMAND, FinishCommand.args(finished, itemId, keepAt = keepAt))
             answer.addListener({
                 onDone(runCatching { answer.get().resultCode == SessionResult.RESULT_SUCCESS }.getOrDefault(false))
                 controller.release()
