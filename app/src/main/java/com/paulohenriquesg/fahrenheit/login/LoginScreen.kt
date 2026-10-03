@@ -35,6 +35,8 @@ import androidx.tv.material3.ListItem
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.tv.material3.ButtonDefaults
@@ -60,7 +62,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.tv.material3.Text
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -128,8 +129,16 @@ fun LoginScreen(
     var manualAddress by remember { mutableStateOf(false) }
     val listing = !addressConfirmed && findServers != null && !manualAddress
     val found = remember { mutableStateListOf<FoundServer>() }
-    var scanning by remember { mutableStateOf(false) }
+    var scanning by remember { mutableStateOf(true) }
     if (listing && findServers != null) {
+        // The last scan's rows go with the list: shown again on return, they
+        // would take focus and then vanish as the new scan starts.
+        DisposableEffect(Unit) {
+            onDispose {
+                found.clear()
+                scanning = true
+            }
+        }
         // Leaving the list cancels the scan; coming back looks again.
         LaunchedEffect(Unit) {
             found.clear()
@@ -167,7 +176,9 @@ fun LoginScreen(
     val firstFieldFocus = remember { FocusRequester() }
     // The server list's first row: the first server found, or typing one.
     val listFocus = remember { FocusRequester() }
-    var stepChanged by remember { mutableStateOf(false) }
+    // The list has no keyboard to fight, so it takes focus from the start; the
+    // text fields wait for the remote rather than raising the keyboard.
+    var stepChanged by remember { mutableStateOf(listing) }
     val step = when {
         addressConfirmed -> firstFieldFocus
         listing -> listFocus
@@ -240,7 +251,9 @@ fun LoginScreen(
             // In address order: probes answer in any order, and a list that
             // reshuffles under the cursor is worse than a predictable one.
             found.sortedBy { addressOrder(it.address) }.forEachIndexed { index, server ->
-                ServerRow(
+                // Keyed, so a server found later slots in without the focused
+                // row starting to show a different server.
+                key(server.address) { ServerRow(
                     title = displayHost(server.address),
                     detail = server.version?.let { stringResource(R.string.login_server_version, it) }
                         ?: stringResource(R.string.login_server_unknown_version),
@@ -255,7 +268,7 @@ fun LoginScreen(
                     modifier = Modifier
                         .then(if (index == 0) Modifier.focusRequester(listFocus) else Modifier)
                         .testTag("login_server_${displayHost(server.address)}")
-                )
+                ) }
             }
             ServerRow(
                 title = stringResource(R.string.login_manual_address),
@@ -325,6 +338,7 @@ fun LoginScreen(
                     LoginButton(
                         text = stringResource(R.string.login_search_again),
                         onClick = {
+                            addressError = null
                             stepChanged = true
                             manualAddress = false
                         },

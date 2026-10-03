@@ -8,6 +8,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -44,7 +46,13 @@ class LoginFindServerTest {
 
     private var scans = 0
 
-    private fun show(vararg servers: FoundServer, hold: CompletableDeferred<Unit>? = null) {
+    private fun show(vararg servers: FoundServer, hold: CompletableDeferred<Unit>? = null) =
+        showWith { onFound ->
+            servers.forEach(onFound)
+            hold?.await()
+        }
+
+    private fun showWith(scan: suspend ((FoundServer) -> Unit) -> Unit) {
         compose.setContent {
             FahrenheitTheme {
                 LoginScreen(
@@ -52,8 +60,7 @@ class LoginFindServerTest {
                     { _, _, _ -> },
                     findServers = { onFound ->
                         scans++
-                        servers.forEach(onFound)
-                        hold?.await()
+                        scan(onFound)
                     }
                 )
             }
@@ -169,14 +176,17 @@ class LoginFindServerTest {
         compose.onNodeWithTag("login_host_field").assertIsFocused()
     }
 
+    // Servers answer after the list appears. Focus stays where it was put
+    // rather than jumping to a server under someone about to press Centre.
     @Test
-    fun `back on the list after a different server, focus is on the first server`() {
+    fun `back on the list after a different server, focus is on entering an address`() {
         show(FoundServer("http://10.0.0.2:13378", null))
         press("login_server_10.0.0.2:13378")
 
         press("login_different_server")
 
-        compose.onNodeWithTag("login_server_10.0.0.2:13378").assertIsFocused()
+        compose.onNodeWithTag("login_manual_address").assertIsFocused()
+        compose.onNodeWithTag("login_server_10.0.0.2:13378").assertExists()
     }
 
     @Test
@@ -189,5 +199,97 @@ class LoginFindServerTest {
         press("login_different_server")
 
         compose.onNodeWithTag("login_manual_address").assertIsFocused()
+    }
+
+    // There is no keyboard on the list to fight with, so the first press of
+    // the remote should not be a blind one.
+    @Test
+    fun `on first run, focus stays put when a server answers`() {
+        show(FoundServer("http://10.0.0.2:13378", null))
+
+        compose.onNodeWithTag("login_manual_address").assertIsFocused()
+    }
+
+    @Test
+    fun `on first run with nothing found yet, focus is on entering an address`() {
+        show(hold = CompletableDeferred())
+
+        compose.onNodeWithTag("login_manual_address").assertIsFocused()
+    }
+
+    // The last scan's rows would take focus and then vanish as the new scan
+    // starts, leaving nothing focused.
+    @Test
+    fun `back on the list while it looks again, focus is on entering an address`() {
+        showWith { onFound ->
+            if (scans == 1) onFound(FoundServer("http://10.0.0.2:13378", null))
+            else awaitCancellation()
+        }
+        press("login_server_10.0.0.2:13378")
+
+        press("login_different_server")
+
+        compose.onNodeWithTag("login_server_10.0.0.2:13378").assertDoesNotExist()
+        compose.onNodeWithTag("login_manual_address").assertIsFocused()
+    }
+
+    // Rows arrive in any order; the focused one must stay the server it shows.
+    @Test
+    fun `a server found later does not take over the focused row`() {
+        val more = CompletableDeferred<Unit>()
+        showWith { onFound ->
+            onFound(FoundServer("http://10.0.0.81:13378", null))
+            more.await()
+            onFound(FoundServer("http://10.0.0.2:13378", null))
+        }
+        compose.onNodeWithTag("login_server_10.0.0.81:13378")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+
+        more.complete(Unit)
+        compose.waitForIdle()
+        compose.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+
+        assertEquals(string(R.string.login_sign_in_to, "10.0.0.81:13378"), text("login_title"))
+    }
+
+    @Test
+    fun `looking again from the address goes back to the list`() {
+        show(FoundServer("http://10.0.0.2:13378", null))
+        press("login_manual_address")
+
+        press("login_search_again")
+
+        compose.onNodeWithTag("login_host_field").assertDoesNotExist()
+        compose.onNodeWithTag("login_manual_address").assertIsFocused()
+        assertEquals(2, scans)
+    }
+
+    @Test
+    fun `looking again does not bring a typed address's error to the list`() {
+        show()
+        press("login_manual_address")
+        press("login_continue")
+        compose.onNodeWithTag("login_error").assertExists()
+
+        press("login_search_again")
+
+        compose.onNodeWithTag("login_error").assertDoesNotExist()
+    }
+
+    @Test
+    fun `leaving the list stops looking`() {
+        var cancelled = false
+        showWith {
+            try {
+                awaitCancellation()
+            } finally {
+                cancelled = true
+            }
+        }
+
+        press("login_manual_address")
+
+        assertTrue(cancelled)
     }
 }

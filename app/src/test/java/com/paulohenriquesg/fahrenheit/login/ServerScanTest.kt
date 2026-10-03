@@ -1,6 +1,9 @@
 package com.paulohenriquesg.fahrenheit.login
 
+import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.ServerStatus
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -61,7 +64,7 @@ class ServerScanTest {
 
         scan.scan("10.0.0.9") {}
 
-        assertTrue("${most.get()} at once", most.get() <= 8)
+        assertEquals("at once", 8, most.get())
         assertEquals(254, asked.size)
     }
 
@@ -78,15 +81,43 @@ class ServerScanTest {
         assertEquals(listOf("http://10.0.0.6:13378"), found.map { it.address })
     }
 
+    // A probe waiting for its turn has not started; only the asking is timed.
+    @Test
+    fun `waiting for a turn does not count against an address's time`() = runBlocking {
+        val scan = ServerScan(parallel = 1, perHostMillis = 50, probe = { url ->
+            delay(20)
+            if (url == "http://10.0.0.254:13378") ServerStatus(app = "audiobookshelf") else null
+        })
+        val found = mutableListOf<FoundServer>()
+
+        scan.scan("10.0.0.9") { found += it }
+
+        assertEquals(listOf("http://10.0.0.254:13378"), found.map { it.address })
+    }
+
+    // A VPN's subnet may be someone else's machines; the home network is the
+    // one the TV is on.
+    @Test
+    fun `a VPN's address is not the home network`() {
+        val picked = LocalNetwork.pick(
+            listOf(
+                "tun0" to InetAddress.getByName("10.8.0.2"),
+                "wlan0" to InetAddress.getByName("192.168.1.37")
+            )
+        )
+
+        assertEquals("192.168.1.37", picked)
+    }
+
     // Never a public range: the scan is for the home network only.
     @Test
     fun `the device's own address is its private IPv4 one`() {
         val picked = LocalNetwork.pick(
             listOf(
-                InetAddress.getByName("::1"),
-                InetAddress.getByName("127.0.0.1"),
-                InetAddress.getByName("fe80::1"),
-                InetAddress.getByName("192.168.1.37")
+                "lo" to InetAddress.getByName("::1"),
+                "lo" to InetAddress.getByName("127.0.0.1"),
+                "wlan0" to InetAddress.getByName("fe80::1"),
+                "wlan0" to InetAddress.getByName("192.168.1.37")
             )
         )
 
@@ -95,6 +126,29 @@ class ServerScanTest {
 
     @Test
     fun `a public address is never scanned around`() {
-        assertEquals(null, LocalNetwork.pick(listOf(InetAddress.getByName("203.0.113.7"))))
+        assertEquals(null, LocalNetwork.pick(listOf("eth0" to InetAddress.getByName("203.0.113.7"))))
+    }
+
+    // Whatever answers on the port could otherwise send the probe anywhere,
+    // the internet included.
+    @Test
+    fun `a probe does not follow a redirect`() {
+        val elsewhere = MockWebServer().apply {
+            enqueue(MockResponse().setBody("{\"app\":\"audiobookshelf\"}"))
+            start()
+        }
+        val local = MockWebServer().apply {
+            enqueue(MockResponse().setResponseCode(302).setHeader("Location", elsewhere.url("/status")))
+            start()
+        }
+
+        val status = runCatching {
+            runBlocking { ApiClient.createProbeApi(local.url("/").toString()).status() }
+        }.getOrNull()
+
+        assertEquals(null, status?.app)
+        assertEquals(0, elsewhere.requestCount)
+        local.shutdown()
+        elsewhere.shutdown()
     }
 }

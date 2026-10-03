@@ -25,12 +25,13 @@ data class FoundServer(val address: String, val version: String?)
  *
  * @param probe fetches `/status` from a base URL; null or a throw is no server.
  * @param parallel how many addresses are asked at once.
- * @param perHostMillis how long one address gets before it counts as silent.
+ * @param perHostMillis how long one address gets before it counts as silent;
+ *   long enough for a NAS waking its disks.
  */
 class ServerScan(
     private val probe: suspend (baseUrl: String) -> ServerStatus?,
     private val parallel: Int = 32,
-    private val perHostMillis: Long = 1_500
+    private val perHostMillis: Long = 2_500
 ) {
     suspend fun scan(ownAddress: String, onFound: (FoundServer) -> Unit) = coroutineScope {
         val permits = Semaphore(parallel)
@@ -78,15 +79,20 @@ object LocalNetwork {
     fun ownAddress(): String? = runCatching {
         NetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
             .filter { it.isUp && !it.isLoopback }
-            .flatMap { it.inetAddresses.toList() }
+            .flatMap { nic -> nic.inetAddresses.toList().map { nic.name to it } }
     }.getOrNull()?.let(::pick)
 
     /**
-     * The first private (RFC 1918) IPv4 address. Never a public one: the scan
-     * is for the home network, not someone else's.
+     * The first private (RFC 1918) IPv4 address, by interface name. Never a
+     * public one, and never a VPN's: either subnet may be someone else's
+     * machines, and the scan is for the network the TV is on.
      */
-    fun pick(addresses: List<InetAddress>): String? =
-        addresses.filterIsInstance<Inet4Address>()
+    fun pick(interfaces: List<Pair<String, InetAddress>>): String? =
+        interfaces.filterNot { (name, _) -> VPN_PREFIXES.any(name::startsWith) }
+            .map { it.second }
+            .filterIsInstance<Inet4Address>()
             .firstOrNull { it.isSiteLocalAddress }
             ?.hostAddress
+
+    private val VPN_PREFIXES = listOf("tun", "tap", "ppp", "wg", "ipsec", "utun")
 }
