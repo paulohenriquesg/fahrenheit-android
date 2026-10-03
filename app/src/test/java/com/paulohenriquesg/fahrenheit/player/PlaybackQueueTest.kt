@@ -88,7 +88,7 @@ class PlaybackQueueTest {
         val current = NowPlaying("p1", "e1", oneFile, null, null, "e1", true, null)
         val next = NowPlaying("p1", "e2", TrackTimeline(listOf(TimelineTrack(1, 0.0, 1500.0, "/e2"))), null, null, "e2", true, null)
 
-        val queue = PlaybackQueue.of(current, 60.0, resolve, next = next)!!
+        val queue = PlaybackQueue.of(current, 60.0, next = next, resolveUrl = resolve)!!
 
         assertEquals(2, queue.items.size)
         assertEquals(0, queue.index)

@@ -207,7 +207,7 @@ class PlayerStartTest {
     // should be first again so the screen's timeline maps onto the queue.
     @Test
     fun `reattaching after a move drops what has already played`() {
-        val queue = PlaybackQueue.of(episodeIn("e1"), 0.0, resolve, next = episodeIn("e2"))!!
+        val queue = PlaybackQueue.of(episodeIn("e1"), 0.0, next = episodeIn("e2"), resolveUrl = resolve)!!
         player.setMediaItems(queue.items, 1, 5_000L)
 
         runBlocking { PlayerStart(autoPlay = false).begin(player, episodeIn("e2"), { null }, resolve) }

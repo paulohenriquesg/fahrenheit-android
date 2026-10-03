@@ -23,7 +23,8 @@ object PlaybackQueue {
      * @param next an episode to play after this one (#108), queued as itself.
      * @return null when there is nothing to play.
      */
-    fun of(nowPlaying: NowPlaying, startAt: Double, resolveUrl: (String) -> String?, next: NowPlaying? = null): QueueStart? {
+    // next before resolveUrl: callers pass resolveUrl as a trailing lambda.
+    fun of(nowPlaying: NowPlaying, startAt: Double, next: NowPlaying? = null, resolveUrl: (String) -> String?): QueueStart? {
         val timeline = nowPlaying.timeline ?: return null
         val items = itemsOf(nowPlaying, resolveUrl) ?: return null
         val after = next?.let { itemsOf(it, resolveUrl) }.orEmpty()

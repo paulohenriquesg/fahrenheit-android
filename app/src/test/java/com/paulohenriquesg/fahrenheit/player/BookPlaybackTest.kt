@@ -106,7 +106,7 @@ class BookPlaybackTest {
     fun `the position comes from the item playing, even one this timeline does not have`() {
         val e1 = NowPlaying("p1", "e1", TrackTimeline(listOf(TimelineTrack(1, 0.0, 1800.0, "/e1"))), null, null, "e1", true, null)
         val e2 = NowPlaying("p1", "e2", TrackTimeline(listOf(TimelineTrack(1, 0.0, 1500.0, "/e2"))), null, null, "e2", true, null)
-        val queue = PlaybackQueue.of(e1, 0.0, { "https://abs.test$it" }, next = e2)!!
+        val queue = PlaybackQueue.of(e1, 0.0, next = e2) { "https://abs.test$it" }!!
         player.setMediaItems(queue.items, 1, 5_000L)
 
         assertEquals(5.0, BookPlayback(player, e1.timeline!!).bookPosition(), 0.001)
