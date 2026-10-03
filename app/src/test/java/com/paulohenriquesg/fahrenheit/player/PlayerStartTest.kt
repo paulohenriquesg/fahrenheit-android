@@ -176,4 +176,30 @@ class PlayerStartTest {
         assertEquals(0, player.currentMediaItemIndex)
         assertEquals(5_000L, player.currentPosition)
     }
+
+    private fun episodeIn(id: String) =
+        NowPlaying("p1", id, TrackTimeline(listOf(TimelineTrack(1, 0.0, 1800.0, "/$id"))), null, null, id, true, null)
+
+    @Test
+    fun `with a next episode, it is queued after the one asked for`() {
+        runBlocking { PlayerStart(autoPlay = false).begin(player, episodeIn("e1"), { null }, resolve, next = episodeIn("e2")) }
+
+        assertEquals(2, player.mediaItemCount)
+        assertEquals(QueuedFile("p1", "e2", 0.0, 1800.0), QueuedFile.of(player.getMediaItemAt(1)))
+    }
+
+    // The screen followed a move to e2: it reattaches, and queues e3 behind it, once.
+    @Test
+    fun `reattaching queues the next episode behind, once`() {
+        runBlocking { PlayerStart(autoPlay = false).begin(player, episodeIn("e2"), { null }, resolve) }
+        player.seekTo(0, 5_000L)
+
+        val start = PlayerStart(autoPlay = false)
+        runBlocking { start.begin(player, episodeIn("e2"), { null }, resolve, next = episodeIn("e3")) }
+        runBlocking { start.begin(player, episodeIn("e2"), { null }, resolve, next = episodeIn("e3")) }
+
+        assertEquals(2, player.mediaItemCount)
+        assertEquals(5_000L, player.currentPosition)
+        assertEquals(QueuedFile("p1", "e3", 0.0, 1800.0), QueuedFile.of(player.getMediaItemAt(1)))
+    }
 }

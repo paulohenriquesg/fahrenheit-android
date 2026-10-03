@@ -59,4 +59,19 @@ class PlayerActivityTest {
         assertTrue(player.isFinishing)
         playing.release()
     }
+
+    // #108: Previous and Next episode.
+    @Test
+    fun `switching to another episode opens it, playing`() {
+        val player = screen.create().get()
+        val playing = TestExoPlayerBuilder(player).build()
+
+        PlayerActivity.switchTo(player, playing, "p1", episodeId = "e3")
+
+        val started = shadowOf(player).nextStartedActivity
+        assertEquals("p1", started.getStringExtra("item_id"))
+        assertEquals("e3", started.getStringExtra("episode_id"))
+        assertTrue(started.getBooleanExtra("auto_play", false))
+        playing.release()
+    }
 }
