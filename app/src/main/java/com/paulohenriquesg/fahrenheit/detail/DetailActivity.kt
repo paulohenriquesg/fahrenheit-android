@@ -146,7 +146,7 @@ class DetailActivity : ComponentActivity() {
                 BookDetailView(
                     itemId = itemId,
                     content = DetailHeaderModel.book(item),
-                    onPrimary = { context.startActivity(PlayerActivity.createIntent(context, itemId)) }
+                    onPrimary = { context.startActivity(playBookIntent(context, itemId)) }
                 )
             }
         }
@@ -237,7 +237,7 @@ class DetailActivity : ComponentActivity() {
         }.toMap()
 
         val play: (Episode) -> Unit = { episode ->
-            context.startActivity(PlayerActivity.createIntent(context, itemId, episode.id))
+            context.startActivity(playEpisodeIntent(context, itemId, episode.id))
         }
 
         PodcastEpisodesView(
@@ -302,5 +302,16 @@ class DetailActivity : ComponentActivity() {
                 putExtra(EXTRA_ITEM_ID, itemId)
             }
         }
+
+        /**
+         * The book's Play. Starts playing, as Home's podcast shelves do: the
+         * press was already a request to play (#122).
+         */
+        fun playBookIntent(context: Context, itemId: String): Intent =
+            PlayerActivity.createIntent(context, itemId, autoPlay = true)
+
+        /** An episode chosen from the list, or the header's Play/Resume. Starts playing (#122). */
+        fun playEpisodeIntent(context: Context, itemId: String, episodeId: String): Intent =
+            PlayerActivity.createIntent(context, itemId, episodeId, autoPlay = true)
     }
 }
