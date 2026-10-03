@@ -135,7 +135,7 @@ class BrowseRepositoryTest {
 
         val found = BrowseRepository(api).search("lib", "dune", mediaType = "book").getOrThrow()
 
-        assertEquals(listOf("b1", "b2"), found.map { it.id })
+        assertEquals(listOf("b1", "b2"), found.items.map { it.id })
     }
 
     @Test
@@ -146,7 +146,7 @@ class BrowseRepositoryTest {
 
         val found = BrowseRepository(api).search("lib", "news", mediaType = "podcast").getOrThrow()
 
-        assertEquals(listOf("p1"), found.map { it.id })
+        assertEquals(listOf("p1"), found.items.map { it.id })
     }
 
     // Nothing found has to reach the screen, or it keeps showing the last
@@ -155,7 +155,26 @@ class BrowseRepositoryTest {
     fun `a search that matches nothing returns no items rather than nothing at all`() = runBlocking {
         val api = FakeBrowseApi(search = { SearchLibraryItemsResponse() })
 
-        assertEquals(emptyList<String>(), BrowseRepository(api).search("lib", "zzz", "book").getOrThrow().map { it.id })
+        val found = BrowseRepository(api).search("lib", "zzz", "book").getOrThrow()
+
+        assertEquals(emptyList<String>(), found.items.map { it.id })
+        assertEquals(emptyList<String>(), found.authors.map { it.id })
+    }
+
+    // Search results come grouped by kind (#106): the matching authors are a
+    // group of their own, not dropped.
+    @Test
+    fun `a search brings back the matching authors alongside the items`() = runBlocking {
+        val api = FakeBrowseApi(search = {
+            SearchLibraryItemsResponse(
+                book = listOf(item("b1")),
+                authors = listOf(Author(id = "a1", name = "An Invented Writer", numBooks = 3))
+            )
+        })
+
+        val found = BrowseRepository(api).search("lib", "writer", "book").getOrThrow()
+
+        assertEquals(listOf("a1"), found.authors.map { it.id })
     }
 
     @Test
