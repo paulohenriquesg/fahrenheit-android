@@ -31,6 +31,12 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.tv.material3.Button
+import androidx.tv.material3.ListItem
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Border
 import androidx.tv.material3.LocalContentColor
@@ -117,6 +123,25 @@ fun LoginScreen(
     var differentServer by remember { mutableStateOf(false) }
     val returning = remembered && !differentServer
 
+    // Frame 1 (#101): before asking for an address, offer the servers that
+    // answer on this network. Typing one is the fallback.
+    var manualAddress by remember { mutableStateOf(false) }
+    val listing = !addressConfirmed && findServers != null && !manualAddress
+    val found = remember { mutableStateListOf<FoundServer>() }
+    var scanning by remember { mutableStateOf(false) }
+    if (listing && findServers != null) {
+        // Leaving the list cancels the scan; coming back looks again.
+        LaunchedEffect(Unit) {
+            found.clear()
+            scanning = true
+            try {
+                findServers { server -> if (server !in found) found += server }
+            } finally {
+                scanning = false
+            }
+        }
+    }
+
     // Beside the field that caused it - the band above the keyboard is the only
     // part of the screen visible while typing. If that field is not on screen
     // (the address, once it is a fact; a password error, then a switch to the
@@ -191,6 +216,46 @@ fun LoginScreen(
                 .testTag("login_title")
         )
 
+        if (listing) {
+            Text(
+                stringResource(
+                    when {
+                        scanning -> R.string.login_looking_for_servers
+                        found.isEmpty() -> R.string.login_no_servers_found
+                        else -> R.string.login_choose_server
+                    }
+                ),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            ErrorAbove(LoginField.Host)
+            // In address order: probes answer in any order, and a list that
+            // reshuffles under the cursor is worse than a predictable one.
+            found.sortedBy { addressOrder(it.address) }.forEach { server ->
+                ServerRow(
+                    title = displayHost(server.address),
+                    detail = server.version?.let { stringResource(R.string.login_server_version, it) }
+                        ?: stringResource(R.string.login_server_unknown_version),
+                    icon = Icons.Filled.Dns,
+                    onClick = {
+                        host = server.address
+                        addressError = null
+                        addressConfirmed = true
+                    },
+                    modifier = Modifier.testTag("login_server_${displayHost(server.address)}")
+                )
+            }
+            ServerRow(
+                title = stringResource(R.string.login_manual_address),
+                detail = stringResource(R.string.login_manual_address_detail),
+                icon = Icons.Filled.Edit,
+                onClick = { manualAddress = true },
+                modifier = Modifier.testTag("login_manual_address")
+            )
+            return@Column
+        }
+
         if (!addressConfirmed) {
             Text(
                 stringResource(R.string.login_address_hint),
@@ -233,12 +298,21 @@ fun LoginScreen(
                 colors = fieldColors()
             )
             Spacer(modifier = Modifier.height(16.dp))
-            LoginButton(
-                text = stringResource(R.string.login_continue),
-                onClick = confirmAddress,
-                primary = true,
-                modifier = Modifier.testTag("login_continue")
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                LoginButton(
+                    text = stringResource(R.string.login_continue),
+                    onClick = confirmAddress,
+                    primary = true,
+                    modifier = Modifier.testTag("login_continue")
+                )
+                if (findServers != null) {
+                    LoginButton(
+                        text = stringResource(R.string.login_search_again),
+                        onClick = { manualAddress = false },
+                        modifier = Modifier.testTag("login_search_again")
+                    )
+                }
+            }
             return@Column
         }
 
@@ -387,6 +461,7 @@ fun LoginScreen(
                         differentServer = true
                         stepChanged = true
                         addressConfirmed = false
+                        manualAddress = false
                     }
                 },
                 modifier = Modifier.testTag("login_different_server")
@@ -472,6 +547,32 @@ private fun Modifier.remoteKeys(focusManager: FocusManager, onPlay: (() -> Unit)
             else -> false
         }
     }
+
+/** One server that answered, or the way to type an address: frame 1's rows. */
+@Composable
+private fun ServerRow(
+    title: String,
+    detail: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    ListItem(
+        selected = false,
+        onClick = onClick,
+        modifier = modifier
+            .formWidth()
+            .padding(bottom = 8.dp),
+        leadingContent = { Icon(icon, contentDescription = null, tint = LocalContentColor.current) },
+        headlineContent = { Text(title) },
+        supportingContent = { Text(detail) }
+    )
+}
+
+/** Sorts dotted IPv4 URLs numerically, so .9 comes before .81. */
+private fun addressOrder(address: String): Long =
+    displayHost(address).substringBefore(':').split('.')
+        .fold(0L) { acc, part -> acc * 256 + (part.toLongOrNull() ?: 0L) }
 
 /** Who and where, as a fact rather than two fields to fill in: frame 3's card. */
 @Composable

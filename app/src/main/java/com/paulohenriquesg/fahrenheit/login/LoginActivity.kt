@@ -15,10 +15,19 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.main.MainActivity
+import com.paulohenriquesg.fahrenheit.api.ApiClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 
 class LoginActivity : ComponentActivity() {
+    /** Frame 1 (#101): the Audiobookshelf servers answering on this network. */
+    private suspend fun findServers(onFound: (FoundServer) -> Unit) {
+        val own = withContext(Dispatchers.IO) { LocalNetwork.ownAddress() } ?: return
+        ServerScan(probe = { url -> ApiClient.createProbeApi(url).status() }).scan(own, onFound)
+    }
+
     private lateinit var loginHandler: LoginHandler
 
     @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -51,7 +60,8 @@ class LoginActivity : ComponentActivity() {
                         loginHandler::handleLogin,
                         loginHandler::handleApiKeyLogin,
                         error = loginHandler.error.value,
-                        onDismissError = loginHandler::clearError
+                        onDismissError = loginHandler::clearError,
+                        findServers = ::findServers
                     )
                 }
             }

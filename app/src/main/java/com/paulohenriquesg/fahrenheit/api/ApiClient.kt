@@ -123,6 +123,21 @@ object ApiClient {
         buildRetrofit(host, OkHttpClient.Builder().apply { applyTimeouts() }.build())
             .create(AuthApi::class.java)
 
+    /**
+     * Status only, for looking for servers on the local network (#101): one
+     * client for all 254 addresses, and short timeouts, since an address
+     * that does not connect within a second on a home network is not a server.
+     */
+    fun createProbeApi(host: String): AuthApi =
+        buildRetrofit(host, probeClient).create(AuthApi::class.java)
+
+    private val probeClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(1, TimeUnit.SECONDS)
+            .readTimeout(2, TimeUnit.SECONDS)
+            .build()
+    }
+
     fun generateFullUrl(path: String): String? {
         return host?.let { "$it$path" }
     }
