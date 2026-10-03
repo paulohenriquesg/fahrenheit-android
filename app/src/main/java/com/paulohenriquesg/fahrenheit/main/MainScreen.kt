@@ -66,6 +66,7 @@ import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryStats
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
+import com.paulohenriquesg.fahrenheit.api.LibraryQuery
 import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
@@ -89,7 +90,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun MainScreen(
-    fetchLibraryItems: suspend (String) -> List<LibraryItem>,
+    fetchLibraryItems: suspend (String, LibraryQuery) -> List<LibraryItem>,
     fetchPersonalizedView: suspend (String) -> List<Shelf>,
     fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() },
     /** The playback service's player, while this screen is visible; null when not connected (#107). */
@@ -104,6 +105,9 @@ fun MainScreen(
     var libraries by remember { mutableStateOf(listOf<Library>()) }
     var libraryStats by remember { mutableStateOf(mapOf<String, LibraryStats>()) }
     var libraryItems by remember { mutableStateOf(listOf<LibraryItem>()) }
+    // Which view of the library is showing: the whole of it from the rail, or
+    // the one a Home shelf's "See all" stands for (#146).
+    var libraryQuery by remember { mutableStateOf(LibraryQuery.Everything) }
     var shelves by remember { mutableStateOf(listOf<Shelf>()) }
     var currentLibrary by remember { mutableStateOf<Library?>(null) }
     val listState = rememberLazyListState()
@@ -168,10 +172,11 @@ fun MainScreen(
                 // shelves for the second or two the fetch took.
                 shelves = emptyList()
                 libraryItems = emptyList()
+                libraryQuery = LibraryQuery.Everything
                 isLoadingHome = true
                 newLibrary.id?.let { libraryId ->
                     shelves = fetchPersonalizedView(libraryId)
-                    libraryItems = fetchLibraryItems(libraryId)
+                    libraryItems = fetchLibraryItems(libraryId, LibraryQuery.Everything)
                 }
                 isLoadingHome = false
             }
@@ -192,7 +197,7 @@ fun MainScreen(
                         currentLibrary?.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
                         currentLibrary?.id?.let { libraryId ->
                             shelves = fetchPersonalizedView(libraryId)
-                            libraryItems = fetchLibraryItems(libraryId)
+                            libraryItems = fetchLibraryItems(libraryId, LibraryQuery.Everything)
                         }
                     }
                 }
@@ -264,7 +269,7 @@ fun MainScreen(
         (context as? Activity)?.finish()
     }
 
-    fun handleMenuAction(action: MenuAction, libraryId: String?) {
+    fun handleMenuAction(action: MenuAction, libraryId: String?, query: LibraryQuery = LibraryQuery.Everything) {
         when (action) {
             MenuAction.HOME -> {
                 view = MainView.HOME
@@ -274,8 +279,12 @@ fun MainScreen(
             }
             MenuAction.LIBRARY -> {
                 view = MainView.LIBRARY
+                // Cleared first, so a list of one view never shows under the
+                // other's label while the fetch is in flight.
+                if (query != libraryQuery) libraryItems = emptyList()
+                libraryQuery = query
                 libraryId?.let { id ->
-                    scope.launch { libraryItems = fetchLibraryItems(id) }
+                    scope.launch { libraryItems = fetchLibraryItems(id, query) }
                 }
             }
             MenuAction.SERIES -> {
@@ -394,14 +403,15 @@ fun MainScreen(
                         // As though the rail's row had been chosen, so the rail
                         // highlights the screen the tile opened.
                         MainView.forMenuAction(tile.opens)?.let { highlightedMenuItemId = it.menuItemId }
-                        handleMenuAction(tile.opens, currentLibrary?.id)
+                        handleMenuAction(tile.opens, currentLibrary?.id, tile.query)
                     })
                     MainView.LIBRARY -> LibraryBrowseView(
                         name = currentLibrary?.name,
                         itemLabel = if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts",
                         items = libraryItems,
                         rowLayout = isRowLayout,
-                        listState = listState
+                        listState = listState,
+                        query = libraryQuery
                     )
                     MainView.SERIES -> SeriesBrowseView(seriesList, isLoadingSeries)
                     MainView.AUTHORS -> AuthorsBrowseView(currentLibrary?.id)

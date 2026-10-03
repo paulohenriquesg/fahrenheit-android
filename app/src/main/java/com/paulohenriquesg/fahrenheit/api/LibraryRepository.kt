@@ -30,7 +30,12 @@ class LibraryRepository(private val api: LibraryApi) {
     }
 
     suspend fun items(libraryId: String, query: LibraryQuery = LibraryQuery.Everything): Result<List<LibraryItem>> = runCatching {
-        api.getLibraryItems(libraryId).results
+        api.getLibraryItems(
+            libraryId,
+            sort = query.sort,
+            desc = if (query.newestFirst) 1 else null,
+            filter = query.filter
+        ).results
     }
 
     /**
@@ -48,6 +53,9 @@ class LibraryRepository(private val api: LibraryApi) {
     }
 }
 
-/** The items filter for one series: its id base64-encoded, then URL-encoded, as the web client sends it. */
-internal fun seriesFilter(seriesId: String): String =
-    "series." + java.net.URLEncoder.encode(android.util.Base64.encodeToString(seriesId.toByteArray(), android.util.Base64.NO_WRAP), "UTF-8")
+/** The items filter for one series. */
+internal fun seriesFilter(seriesId: String): String = itemsFilter("series", seriesId)
+
+/** An items filter, "group.value": the value base64-encoded, then URL-encoded, as the web client sends it. */
+internal fun itemsFilter(group: String, value: String): String =
+    "$group." + java.net.URLEncoder.encode(android.util.Base64.encodeToString(value.toByteArray(), android.util.Base64.NO_WRAP), "UTF-8")

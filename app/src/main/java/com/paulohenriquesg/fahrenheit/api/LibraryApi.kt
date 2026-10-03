@@ -36,7 +36,8 @@ interface LibraryApi {
         @Query("sort") sort: String = "media.metadata.title",
         @Query("limit") limit: Int? = null,
         @Query("page") page: Int? = null,
-        @Query("desc") desc: Boolean? = null,
+        /** The server reads "1" as descending and anything else as ascending. */
+        @Query("desc") desc: Int? = null,
         @Query("include", encoded = true) include: String = "rssfeed,numEpisodesIncomplete",
         @Query("minified") minified: Int = 0,
         /** "group.value", the value base64- then URL-encoded, as the server decodes it. */

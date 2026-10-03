@@ -354,8 +354,16 @@ fun LibraryBrowseView(
             text = name ?: stringResource(R.string.library),
             modifier = Modifier.padding(bottom = Space.gap)
         ) {
+            // Opened from a Home shelf, the list is narrower than the
+            // library and says which view it is (#146).
+            val view = when (query) {
+                com.paulohenriquesg.fahrenheit.api.LibraryQuery.Everything -> null
+                com.paulohenriquesg.fahrenheit.api.LibraryQuery.RecentlyAdded -> stringResource(R.string.library_recently_added)
+                com.paulohenriquesg.fahrenheit.api.LibraryQuery.InProgress -> stringResource(R.string.library_in_progress)
+                com.paulohenriquesg.fahrenheit.api.LibraryQuery.Finished -> stringResource(R.string.library_finished)
+            }
             Text(
-                text = "(${items.size} $itemLabel)",
+                text = listOfNotNull(view, "(${items.size} $itemLabel)").joinToString("  "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
