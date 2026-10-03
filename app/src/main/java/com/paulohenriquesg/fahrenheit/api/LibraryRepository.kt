@@ -21,6 +21,10 @@ class LibraryRepository(private val api: LibraryApi) {
         api.getLibrary(libraryId)
     }
 
+    suspend fun stats(libraryId: String): Result<LibraryStats> = runCatching {
+        api.getLibraryStats(libraryId)
+    }
+
     suspend fun item(itemId: String): Result<LibraryItemResponse> = runCatching {
         api.getLibraryItem(itemId)
     }

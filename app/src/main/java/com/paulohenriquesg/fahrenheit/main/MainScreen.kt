@@ -61,6 +61,7 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.Library
+import com.paulohenriquesg.fahrenheit.api.LibraryStats
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
@@ -96,6 +97,7 @@ fun MainScreen(
     val userPreferences = sharedPreferencesHandler.getUserPreferences()
     val username = userPreferences.username
     var libraries by remember { mutableStateOf(listOf<Library>()) }
+    var libraryStats by remember { mutableStateOf(mapOf<String, LibraryStats>()) }
     var libraryItems by remember { mutableStateOf(listOf<LibraryItem>()) }
     var shelves by remember { mutableStateOf(listOf<Shelf>()) }
     var currentLibrary by remember { mutableStateOf<Library?>(null) }
@@ -196,6 +198,16 @@ fun MainScreen(
                         Toast.LENGTH_SHORT
                     ).show()
                 }
+        }
+    }
+
+    // Counts for the Switch Library tiles, asked for each time that view opens
+    // and never in its way: a tile without them says what kind of library it is.
+    LaunchedEffect(view, libraries) {
+        if (view != MainView.SWITCH_LIBRARY) return@LaunchedEffect
+        val repository = ApiClient.getLibraryApi()?.let(::LibraryRepository) ?: return@LaunchedEffect
+        libraries.mapNotNull { it.id }.forEach { id ->
+            repository.stats(id).onSuccess { libraryStats = libraryStats + (id to it) }
         }
     }
 
@@ -399,6 +411,7 @@ fun MainScreen(
                     MainView.SWITCH_LIBRARY -> SwitchLibraryView(
                         libraries = libraries,
                         currentId = currentLibrary?.id,
+                        stats = libraryStats,
                         onSelect = { chosen ->
                             // Save and ask for a refresh, and nothing else: the
                             // refresh compares the saved library with the current

@@ -32,6 +32,7 @@ class SettingsViewTest {
     private fun render(
         theme: ThemePreference = ThemePreference.System,
         rowLayout: Boolean = true,
+        deviceIsDark: Boolean = false,
         update: UpdateCheck = UpdateCheck.Idle,
         onTheme: (ThemePreference) -> Unit = {},
         onLayout: (Boolean) -> Unit = {},
@@ -43,6 +44,7 @@ class SettingsViewTest {
                 SettingsView(
                     theme = theme,
                     onTheme = onTheme,
+                    deviceIsDark = deviceIsDark,
                     rowLayout = rowLayout,
                     onLayout = onLayout,
                     version = "v0.0.10",
@@ -64,6 +66,20 @@ class SettingsViewTest {
         listOf("System", "Light", "Dark").forEach {
             compose.onNodeWithTag("theme_$it").assertExists()
         }
+    }
+
+    // Fire OS reports night mode off while its own menus are dark, so the row
+    // says what the TV reports rather than claiming what it is set to.
+    @Test
+    fun `the theme row says what the TV reports`() {
+        render(deviceIsDark = true)
+        compose.onNodeWithText("The TV reports dark mode").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a TV reporting light is said to report light`() {
+        render(deviceIsDark = false)
+        compose.onNodeWithText("The TV reports light mode").assertIsDisplayed()
     }
 
     @OptIn(ExperimentalTestApi::class)
