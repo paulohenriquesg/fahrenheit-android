@@ -26,15 +26,18 @@ class BrowseRepository(private val api: BrowseApi) {
     }
 
     /**
-     * Library items matching [query]. Results are grouped by media type and a
-     * group is absent when it has no matches, which must still reach the screen
-     * as an empty list: otherwise it keeps showing the previous search.
+     * Library items and authors matching [query]. Results are grouped by media
+     * type and a group is absent when it has no matches, which must still reach
+     * the screen as an empty list: otherwise it keeps showing the previous search.
      */
-    suspend fun search(libraryId: String, query: String, mediaType: String): Result<List<LibraryItem>> =
+    suspend fun search(libraryId: String, query: String, mediaType: String): Result<SearchResults> =
         runCatching {
             val response = api.searchLibraryItems(libraryId, query)
             val matches = if (mediaType == "podcast") response.podcast else response.book
-            matches.orEmpty().mapNotNull { it.libraryItem }
+            SearchResults(
+                items = matches.orEmpty().mapNotNull { it.libraryItem },
+                authors = response.authors.orEmpty()
+            )
         }
 
     suspend fun author(authorId: String): Result<AuthorDetailResponse> = runCatching {

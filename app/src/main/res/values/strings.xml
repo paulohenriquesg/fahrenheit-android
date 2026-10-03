@@ -61,6 +61,9 @@
     <string name="search">Search</string>
     <string name="search_2">Search…</string>
     <string name="search_failed">Search failed. Check the connection to your server.</string>
+    <string name="search_nothing_found">Nothing found for \"%1$s\"</string>
+    <string name="search_group">%1$s · %2$d</string>
+    <string name="podcasts">Podcasts</string>
     <string name="select_library">Select Library</string>
     <string name="series">Series</string>
     <string name="settings">Settings</string>
