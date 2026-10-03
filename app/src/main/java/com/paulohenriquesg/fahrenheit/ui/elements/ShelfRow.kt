@@ -18,7 +18,7 @@ import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.Shelf
 
 @Composable
-fun ShelfRow(shelf: Shelf, onItemClick: (LibraryItem) -> Unit) {
+fun ShelfRow(shelf: Shelf, progress: CoverProgress = CoverProgress.None, onItemClick: (LibraryItem) -> Unit) {
     Column {
         Text(
             text = shelf.label,
@@ -34,7 +34,7 @@ fun ShelfRow(shelf: Shelf, onItemClick: (LibraryItem) -> Unit) {
                 val keys = StableKeys.of(entities) { e -> e.id }
                 items(entities.size, key = { keys[it] }) { index ->
                     val item = entities[index]
-                    LibraryItemCard(item = item, onClick = onItemClick)
+                    LibraryItemCard(item = item, progress = progress.of(item), onClick = onItemClick)
                 }
             }
         }

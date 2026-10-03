@@ -126,4 +126,37 @@ class LibraryItemDisplayTest {
     fun `an episode card is never dimmed, since the server sends 0 for every one`() {
         assertFalse(LibraryItemDisplay.dimmed(item(mediaType = "podcast", recentEpisodeTitle = "E1", episodes = 0)))
     }
+
+    private fun withMetadata(mediaType: String, metadata: String): LibraryItem = Gson().fromJson(
+        """{"id":"li1","ino":"1","libraryId":"lib","folderId":"f","path":"/p","relPath":"p",
+            "isFile":true,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0,"addedAt":0,"updatedAt":0,
+            "isMissing":false,"isInvalid":false,"mediaType":"$mediaType",
+            "media":{"metadata":$metadata,"tags":[],"numTracks":0,"numAudioFiles":0,
+            "numChapters":0,"duration":0.0,"size":0}}""",
+        LibraryItem::class.java
+    )
+
+    @Test
+    fun `a shelf book names its author as the server summarised it`() =
+        assertEquals(
+            "First Writer, Second Writer",
+            LibraryItemDisplay.author(withMetadata("book", """{"title":"T","authorName":"First Writer, Second Writer"}"""))
+        )
+
+    @Test
+    fun `a full book record joins its authors`() =
+        assertEquals(
+            "First Writer, Second Writer",
+            LibraryItemDisplay.author(
+                withMetadata("book", """{"title":"T","authors":[{"id":"a1","name":"First Writer"},{"id":"a2","name":"Second Writer"}]}""")
+            )
+        )
+
+    @Test
+    fun `a podcast names whoever makes it`() =
+        assertEquals("A Studio", LibraryItemDisplay.author(withMetadata("podcast", """{"title":"T","author":"A Studio"}""")))
+
+    @Test
+    fun `no author is no line, not an empty one`() =
+        assertNull(LibraryItemDisplay.author(withMetadata("book", """{"title":"T","authorName":"  "}""")))
 }

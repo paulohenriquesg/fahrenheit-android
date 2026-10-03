@@ -75,6 +75,9 @@ import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.elements.AuthorShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.SeriesShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.ShelfRow
+import com.paulohenriquesg.fahrenheit.ui.elements.CoverProgress
+import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
+import androidx.compose.runtime.mutableIntStateOf
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsFluid
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsRow
 import kotlinx.coroutines.launch
@@ -83,7 +86,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(
     fetchLibraryItems: suspend (String) -> List<LibraryItem>,
-    fetchPersonalizedView: suspend (String) -> List<Shelf>
+    fetchPersonalizedView: suspend (String) -> List<Shelf>,
+    fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() }
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -354,7 +358,7 @@ fun MainScreen(
                     )
                 }
                 when (view) {
-                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, isLoadingHome)
+                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, isLoadingHome, fetchProgress)
                     MainView.LIBRARY -> LibraryBrowseView(
                         name = currentLibrary?.name,
                         itemLabel = if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts",
@@ -434,9 +438,26 @@ fun getIconForMediaType(mediaType: String?): ImageVector {
 fun PersonalizedHomeView(
     shelves: List<Shelf>,
     libraryId: String?,
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() }
 ) {
     val context = LocalContext.current
+    // The shelves carry no progress, so it comes from GET /api/me: read again
+    // with each new set of shelves and on every return, typically from the
+    // player, so a cover's time left is not the one from before listening.
+    var progress by remember { mutableStateOf(CoverProgress.None) }
+    var resumes by remember { mutableIntStateOf(0) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumes++
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(shelves, resumes) {
+        runCatching { fetchProgress() }.onSuccess { progress = CoverProgress.index(it) }
+    }
     // Filter out empty shelves
     val nonEmptyShelves = shelves.filter {
         (it.bookEntities != null && it.bookEntities.isNotEmpty()) ||
@@ -472,7 +493,7 @@ fun PersonalizedHomeView(
                 when (shelf.type) {
                     "episode" -> {
                         shelf.bookEntities?.let { books ->
-                            ShelfRow(shelf = shelf) { item ->
+                            ShelfRow(shelf = shelf, progress = progress) { item ->
                                 val episodeId = item.recentEpisode?.id
                                 val podcastId = item.recentEpisode?.libraryItemId ?: item.id
 
@@ -492,7 +513,7 @@ fun PersonalizedHomeView(
                     }
                     "book", "podcast" -> {
                         shelf.bookEntities?.let { books ->
-                            ShelfRow(shelf = shelf) { item ->
+                            ShelfRow(shelf = shelf, progress = progress) { item ->
                                 val intent = com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(context, item.id)
                                 context.startActivity(intent)
                             }
