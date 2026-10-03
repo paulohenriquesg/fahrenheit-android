@@ -155,4 +155,31 @@ class PlayerScreenTest {
         compose.onNodeWithText("PANEL").assertIsDisplayed()
         compose.onNodeWithText("TRANSPORT").assertIsDisplayed()
     }
+
+    private val middleEpisode = episode.copy(
+        badge = "Bonus",
+        details = "Season 2 · Episode 295 · 30 min 0 s",
+        notes = "Dale has written a book, and the whole town is reading it.",
+        next = EpisodeRef("e296", "296 - A Sad Song", 1680.0)
+    )
+
+    @Test
+    fun `an episode shows its badge, details and notes under the title`() {
+        render(middleEpisode, currentTime = 0.0)
+        compose.onNodeWithText("BONUS").assertIsDisplayed()
+        compose.onNodeWithText("Season 2 · Episode 295 · 30 min 0 s").assertIsDisplayed()
+        compose.onNodeWithText("Dale has written a book, and the whole town is reading it.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `up next names what Next plays`() {
+        render(middleEpisode, currentTime = 0.0)
+        compose.onNodeWithText("Up next · 296 - A Sad Song · 28 min 0 s").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the newest episode has no up next`() {
+        render(middleEpisode.copy(next = null), currentTime = 0.0)
+        compose.onNodeWithText("Up next", substring = true).assertDoesNotExist()
+    }
 }
