@@ -10,6 +10,8 @@ data class ItemListeningSessions(
     @SerializedName("sessions") val sessions: List<ItemSession>? = null
 ) {
     /** The device behind the most recently updated session, if it says. */
+    fun latest(): com.paulohenriquesg.fahrenheit.player.LatestSession? = null
+
     fun latestDeviceId(): String? =
         sessions.orEmpty().maxByOrNull { it.updatedAt ?: 0L }?.deviceInfo?.deviceId
 }

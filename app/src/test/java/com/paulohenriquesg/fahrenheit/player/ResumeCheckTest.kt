@@ -20,7 +20,7 @@ class ResumeCheckTest {
 
     private val check = ResumeCheck(
         progress = { _, _ -> asked++; server },
-        latestDevice = { _, _ -> sessionsRead++; device },
+        latestSession = { _, _ -> sessionsRead++; device?.let { LatestSession(it, updatedAt = 9_000L) } },
         thisDevice = "tv-1",
         knowledge = knowledge
     )

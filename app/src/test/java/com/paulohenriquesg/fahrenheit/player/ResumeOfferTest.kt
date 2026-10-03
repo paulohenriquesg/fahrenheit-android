@@ -22,8 +22,8 @@ class ResumeOfferTest {
         here: Double = 3900.0,
         server: MediaProgressResponse? = server(4800.0),
         known: KnownProgress? = KnownProgress.ServerCopy(tenMinutesAgo),
-        latestDevice: String? = "phone-1"
-    ) = ResumeOffer.of(here, server, known, latestDevice, thisDevice = "tv-1")
+        latestSession: LatestSession? = LatestSession("phone-1", updatedAt = now - 60_000)
+    ) = ResumeOffer.of(here, server, known, latestSession, thisDevice = "tv-1")
 
     @Test
     fun `a newer position from another device, far enough away, is offered`() {
@@ -61,14 +61,14 @@ class ResumeOfferTest {
 
     @Test
     fun `listening on this same device is not asked about`() {
-        assertNull(offer(latestDevice = "tv-1"))
+        assertNull(offer(latestSession = LatestSession("tv-1", updatedAt = now - 60_000)))
     }
 
     // The server's copy is newer than anything this player knows; asking is
     // the safe side when the sessions cannot say who wrote it.
     @Test
     fun `when the sessions cannot be read, it asks`() {
-        assertEquals(4800.0, offer(latestDevice = null)!!.there, 0.0)
+        assertEquals(4800.0, offer(latestSession = null)!!.there, 0.0)
     }
 
     // An unreadable position is #16's notice, not a choice between two.
@@ -118,5 +118,20 @@ class ResumeOfferTest {
     fun `exactly a second from what was written is still that write`() {
         assertNull(offer(here = 3000.0, server = server(4801.0), known = KnownProgress.Wrote(4800.0)))
         assertEquals(4801.01, offer(here = 3000.0, server = server(4801.01), known = KnownProgress.Wrote(4800.0))!!.there, 0.0)
+    }
+
+    // #144: a web-UI edit, or an app using the plain progress PATCH, writes the
+    // progress and no session, so the latest session is still this TV's.
+    @Test
+    fun `a copy newer than this TV's latest session was written elsewhere`() {
+        val olderSession = LatestSession("tv-1", updatedAt = now - 60_000 - 10_001)
+
+        assertEquals(4800.0, offer(latestSession = olderSession)!!.there, 0.0)
+    }
+
+    // A sync writes the session and the progress together, a moment apart.
+    @Test
+    fun `this TV's session written with the copy excuses it`() {
+        assertNull(offer(latestSession = LatestSession("tv-1", updatedAt = now - 60_000 - 10_000)))
     }
 }

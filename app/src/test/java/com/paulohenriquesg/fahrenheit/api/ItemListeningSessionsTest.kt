@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.api
 
 import com.google.gson.Gson
+import com.paulohenriquesg.fahrenheit.player.LatestSession
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -24,16 +25,16 @@ class ItemListeningSessionsTest {
             """
         )
 
-        assertEquals("phone-1", reply.latestDeviceId())
+        assertEquals(LatestSession("phone-1", updatedAt = 3000), reply.latest())
     }
 
     @Test
     fun `no sessions, no device`() {
-        assertNull(parse("""{"total": 0, "sessions": []}""").latestDeviceId())
+        assertNull(parse("""{"total": 0, "sessions": []}""").latest())
     }
 
     @Test
     fun `a session that names no device names none`() {
-        assertNull(parse("""{"sessions": [{"id": "s1", "updatedAt": 1000}]}""").latestDeviceId())
+        assertNull(parse("""{"sessions": [{"id": "s1", "updatedAt": 1000}]}""").latest())
     }
 }

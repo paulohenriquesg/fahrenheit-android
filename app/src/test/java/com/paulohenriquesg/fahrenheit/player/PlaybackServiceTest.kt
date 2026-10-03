@@ -14,6 +14,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.After
 import org.junit.Assert.assertEquals
+import androidx.media3.session.SessionResult
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -154,6 +155,58 @@ class PlaybackServiceTest {
 
         assertFalse(commands.contains(Player.COMMAND_SET_MEDIA_ITEM))
         assertFalse(commands.contains(Player.COMMAND_CHANGE_MEDIA_ITEMS))
+        session.release()
+    }
+
+    // #144: Play from outside the player screen - the remote on Home, the
+    // system - is held while paused and checked; the app's own Play passes.
+    @Test
+    fun `a play from outside the app, while paused, is held for the check`() {
+        val session = service.get().sessionPlayer!!.let { MediaSession.Builder(context, it).setId("pin-outside").build() }
+        val system = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            "com.example.launcher", 0, 0, 0, 0, true, Bundle.EMPTY, true
+        )
+        var held = 0
+        val callback = PlaybackSessionCallback(onSleep = {}, ownPackage = context.packageName, outsidePlay = { held++; true })
+
+        val result = callback.onPlayerCommandRequest(session, system, Player.COMMAND_PLAY_PAUSE)
+
+        assertEquals(1, held)
+        assertTrue(result != SessionResult.RESULT_SUCCESS)
+        session.release()
+    }
+
+    @Test
+    fun `the app's own play passes`() {
+        val session = service.get().sessionPlayer!!.let { MediaSession.Builder(context, it).setId("pin-own-play").build() }
+        val own = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            context.packageName, 0, 0, 0, 0, true, Bundle.EMPTY, true
+        )
+        var held = 0
+        val callback = PlaybackSessionCallback(onSleep = {}, ownPackage = context.packageName, outsidePlay = { held++; true })
+
+        val result = callback.onPlayerCommandRequest(session, own, Player.COMMAND_PLAY_PAUSE)
+
+        assertEquals(0, held)
+        assertEquals(SessionResult.RESULT_SUCCESS, result)
+        session.release()
+    }
+
+    @Test
+    fun `a pause from outside passes`() {
+        val player = service.get().sessionPlayer!!
+        val session = MediaSession.Builder(context, player).setId("pin-outside-pause").build()
+        player.playWhenReady = true
+        val system = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            "com.example.launcher", 0, 0, 0, 0, true, Bundle.EMPTY, true
+        )
+        var held = 0
+        val callback = PlaybackSessionCallback(onSleep = {}, ownPackage = context.packageName, outsidePlay = { held++; true })
+
+        val result = callback.onPlayerCommandRequest(session, system, Player.COMMAND_PLAY_PAUSE)
+
+        assertEquals(0, held)
+        assertEquals(SessionResult.RESULT_SUCCESS, result)
         session.release()
     }
 

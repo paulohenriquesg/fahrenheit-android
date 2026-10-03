@@ -7,6 +7,8 @@ import kotlin.math.abs
  * A question worth asking (#90): this player is at [here], and the server
  * holds [there], heard elsewhere at [listenedAt] (the server's clock, ms).
  */
+data class LatestSession(val deviceId: String, val updatedAt: Long)
+
 data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long) {
     companion object {
         /** Decided on #90: a flat 30 seconds, whatever the length of the book. */
@@ -36,7 +38,7 @@ data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long
             here: Double,
             server: MediaProgressResponse?,
             known: KnownProgress?,
-            latestDevice: String?,
+            latestSession: LatestSession?,
             thisDevice: String
         ): ResumeOffer? {
             // Unreadable, never started or finished: nothing to choose between.
@@ -45,7 +47,7 @@ data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long
             val listenedAt = server.lastUpdate ?: return null
             if (!writtenSince(known, there, listenedAt)) return null
             if (abs(there - here) <= THRESHOLD_SECONDS) return null
-            if (latestDevice == thisDevice) return null
+            if (latestSession?.deviceId == thisDevice) return null
             return ResumeOffer(here, there, listenedAt)
         }
 

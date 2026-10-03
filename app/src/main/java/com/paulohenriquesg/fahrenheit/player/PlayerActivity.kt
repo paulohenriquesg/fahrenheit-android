@@ -196,7 +196,7 @@ class PlayerActivity : ComponentActivity() {
         val resumeCheck = remember {
             ResumeCheck(
                 progress = ::progressQuietly,
-                latestDevice = ::latestSessionDevice,
+                latestSession = ::latestSession,
                 thisDevice = PlaybackDevice.info(this).deviceId.orEmpty()
             )
         }
@@ -431,10 +431,10 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** The device behind the item's latest listening session; null when it cannot be read. */
-    private suspend fun latestSessionDevice(itemId: String, episodeId: String?): String? {
+    private suspend fun latestSession(itemId: String, episodeId: String?): LatestSession? {
         val api = ApiClient.getApiService() ?: return null
         val call = if (episodeId != null) api.itemListeningSessions(itemId, episodeId) else api.itemListeningSessions(itemId)
-        return runCatching { call.awaitResponse().body()?.latestDeviceId() }.getOrNull()
+        return runCatching { call.awaitResponse().body()?.latest() }.getOrNull()
     }
 
     private fun goToPodcast(podcastId: String) = leaveForPodcast(this, podcastId)

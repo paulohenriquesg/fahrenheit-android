@@ -161,6 +161,9 @@ internal class PlaybackSessionCallback(
     private val onFinish: (Bundle) -> ListenableFuture<SessionResult> = {
         Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
     },
+    private val ownPackage: String? = null,
+    private val outsidePlay: () -> Boolean = { false },
+    // Last, so `PlaybackSessionCallback { ... }` still names the sleep timer.
     private val onSleep: (Bundle) -> Unit
 ) : MediaSession.Callback {
     // Media3's own default, trusted or not, plus the sleep timer and Mark
