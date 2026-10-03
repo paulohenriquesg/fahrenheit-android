@@ -156,8 +156,9 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
                 val seriesKeys = StableKeys.of(seriesList) { s -> s.id }
                 items(seriesList.size, key = { seriesKeys[it] }) { index ->
                     val series = seriesList[index]
-                    com.paulohenriquesg.fahrenheit.series.SeriesCard(
-                        series = series,
+                    com.paulohenriquesg.fahrenheit.ui.elements.BookGroupCard(
+                        name = series.name,
+                        bookCount = series.books?.size,
                         onClick = {
                             val intent = com.paulohenriquesg.fahrenheit.series.SeriesDetailActivity.createIntent(context, series)
                             context.startActivity(intent)
@@ -294,8 +295,9 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
                 val collectionKeys = StableKeys.of(collectionsList) { c -> c.id }
                 items(collectionsList.size, key = { collectionKeys[it] }) { index ->
                     val collection = collectionsList[index]
-                    com.paulohenriquesg.fahrenheit.collection.CollectionCard(
-                        collection = collection,
+                    com.paulohenriquesg.fahrenheit.ui.elements.BookGroupCard(
+                        name = collection.name,
+                        bookCount = collection.books?.size,
                         onClick = {
                             val intent = com.paulohenriquesg.fahrenheit.collection.CollectionDetailActivity.createIntent(context, collection)
                             context.startActivity(intent)
