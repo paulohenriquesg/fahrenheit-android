@@ -147,19 +147,6 @@ fun SettingsView(
                 }
             }
 
-            Group(stringResource(R.string.settings_playback)) {
-                SettingRow(
-                    title = stringResource(R.string.play_next_episode),
-                    subtitle = stringResource(R.string.play_next_episode_subtitle)
-                ) {
-                    Switch(
-                        checked = playNextEpisode,
-                        onCheckedChange = onPlayNextEpisode,
-                        modifier = Modifier.testTag(PLAY_NEXT_EPISODE_TAG)
-                    )
-                }
-            }
-
             Group(stringResource(R.string.settings_updates)) {
                 SettingRow(
                     title = stringResource(R.string.check_for_updates),
@@ -185,6 +172,19 @@ fun SettingsView(
                             Text(stringResource(R.string.settings_install))
                         }
                     }
+                }
+            }
+
+            Group(stringResource(R.string.settings_playback)) {
+                SettingRow(
+                    title = stringResource(R.string.play_next_episode),
+                    subtitle = stringResource(R.string.play_next_episode_subtitle)
+                ) {
+                    Switch(
+                        checked = playNextEpisode,
+                        onCheckedChange = onPlayNextEpisode,
+                        modifier = Modifier.testTag(PLAY_NEXT_EPISODE_TAG)
+                    )
                 }
             }
 
