@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -147,14 +148,8 @@ class DetailActivity : ComponentActivity() {
             return
         }
 
-        val margin = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
-        // A book keeps the margin inside, so its Chapters panel reaches the edges.
         val isBook = item.mediaType != "podcast"
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(if (isBook) Modifier else Modifier.padding(margin))
-        ) {
+        DetailBody(isBook) { margin ->
             if (!isBook) {
                 PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it })
             } else {
@@ -365,5 +360,20 @@ class DetailActivity : ComponentActivity() {
         /** A chapter chosen from the book's Chapters: the player opens there and plays (#105). */
         fun playChapterIntent(context: Context, itemId: String, start: Double): Intent =
             PlayerActivity.createIntent(context, itemId, autoPlay = true, startAt = start)
+    }
+}
+
+/**
+ * The details screen's body. A book keeps the screen's margin inside its
+ * content (handed to [content]), so its Chapters panel reaches the screen's
+ * edges; a podcast's screen is padded around, as before.
+ */
+@Composable
+internal fun DetailBody(isBook: Boolean, content: @Composable (PaddingValues) -> Unit) {
+    val margin = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
+    if (isBook) {
+        Box(Modifier.fillMaxSize()) { content(margin) }
+    } else {
+        Column(Modifier.fillMaxSize().padding(margin)) { content(PaddingValues()) }
     }
 }
