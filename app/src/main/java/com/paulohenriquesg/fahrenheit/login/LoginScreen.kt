@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -183,7 +185,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_host_field")
-                .remoteKeys(focusManager)
+                    .remoteKeys(focusManager)
                     .onFocusChanged {
                         isHostFocused = it.isFocused
                     },
@@ -348,7 +350,7 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             LoginButton(
-                text = if (useApiKey) "Use username and password instead" else "Sign in with an API key instead",
+                text = stringResource(if (useApiKey) R.string.login_use_username_instead else R.string.login_use_api_key_instead),
                 onClick = { useApiKey = !useApiKey },
                 fillWidth = true,
                 modifier = Modifier
@@ -361,7 +363,7 @@ fun LoginScreen(
 
 /**
  * Frame 3's buttons: the one that signs in filled with the primary colour,
- * the rest outlined. Focus is the TV button's own white fill and lift.
+ * the rest outlined.
  *
  * @param loading shows progress in place of the label; the button keeps its
  *   place and its focus.
@@ -382,7 +384,14 @@ private fun LoginButton(
         onClick = onClick,
         modifier = modifier,
         colors = if (primary) {
-            ButtonDefaults.colors(containerColor = scheme.primary, contentColor = scheme.onPrimary)
+            // Focus inverts it. The TV default turns any button white, and
+            // the dark theme's light primary to white barely changes (#117).
+            ButtonDefaults.colors(
+                containerColor = scheme.primary,
+                contentColor = scheme.onPrimary,
+                focusedContainerColor = scheme.onPrimary,
+                focusedContentColor = scheme.primary
+            )
         } else {
             ButtonDefaults.colors(containerColor = Color.Transparent, contentColor = scheme.onSurface)
         },
@@ -395,18 +404,21 @@ private fun LoginButton(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (loading) {
-                CircularProgressIndicator(
-                    color = LocalContentColor.current,
-                    strokeWidth = 2.dp,
-                    modifier = Modifier
-                        .size(18.dp)
-                        .testTag("login_progress")
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.login_signing_in))
-            } else {
-                Text(text)
+            // The label keeps its space while the spinner shows, so the
+            // buttons beside this one do not shift under the cursor.
+            Box(contentAlignment = Alignment.Center) {
+                Text(text, modifier = Modifier.alpha(if (loading) 0f else 1f))
+                if (loading) {
+                    val signingIn = stringResource(R.string.login_signing_in)
+                    CircularProgressIndicator(
+                        color = LocalContentColor.current,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .testTag("login_progress")
+                            .semantics { contentDescription = signingIn }
+                    )
+                }
             }
         }
     }
@@ -420,7 +432,9 @@ private fun LoginButton(
  */
 private fun Modifier.remoteKeys(focusManager: FocusManager, onPlay: (() -> Unit)? = null) =
     onPreviewKeyEvent { event ->
-        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+        val isPlay = event.key == Key.MediaPlayPause || event.key == Key.MediaPlay
+        // The press signs in; its release is kept from the media keys too.
+        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent isPlay && onPlay != null
         when (event.key) {
             Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
             Key.DirectionUp -> focusManager.moveFocus(FocusDirection.Up)

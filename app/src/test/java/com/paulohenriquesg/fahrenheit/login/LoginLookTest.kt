@@ -92,10 +92,14 @@ class LoginLookTest {
         return map!!
     }
 
-    /** The button's bounds with room for a ring drawn around it, in pixels. */
-    private fun around(tag: String): Rect {
-        val margin = with(compose.density) { 10f * density }
-        return compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot.inflate(margin)
+    /**
+     * The middle of the button, clear of its edge. A focused TV button also
+     * grows a little; counting the pixels it grows into let the old 80% to
+     * 100% white change pass as visible, which on the stick it was not.
+     */
+    private fun inside(tag: String): Rect {
+        val bounds = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+        return bounds.deflate(minOf(bounds.width, bounds.height) * 0.2f)
     }
 
     private fun PixelMap.colours(area: Rect): List<Color> {
@@ -120,20 +124,18 @@ class LoginLookTest {
     private fun assertFocusShows(dark: Boolean) {
         show(dark)
         for (tag in buttons) {
-            val area = around(tag)
+            val area = inside(tag)
             focus("login_password_field")
             val before = snapshot().colours(area)
             focus(tag)
             val after = snapshot().colours(area)
 
-            // WCAG 2.2 focus appearance: the indicator changes by at least
-            // 3:1 over an area at least a 2px ring around the control.
+            // WCAG 2.2 focus appearance asks for a 3:1 change between the
+            // states. Most of the button's middle - its fill - has to make it.
             val changed = before.zip(after).count { (b, a) -> Contrast.ratio(b, a) >= 3f }
-            val bounds = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
-            val ring = (2 * (bounds.width + bounds.height) * 2).roundToInt()
             assertTrue(
-                "$tag (dark=$dark): $changed pixels change by 3:1 on focus, a 2px ring is $ring",
-                changed >= ring
+                "$tag (dark=$dark): $changed of ${before.size} pixels change by 3:1 on focus",
+                changed >= before.size / 2
             )
         }
     }

@@ -200,9 +200,10 @@ class LoginReturningTest {
     private fun text(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode()
         .config[SemanticsProperties.Text].joinToString(" ") { it.text }
 
-    // The remote's centre key reaches a TV button as a click; so does OnClick.
+    // Accessibility services click; the remote's centre key is covered by
+    // `sign in uses the remembered user too`.
     @Test
-    fun `Sign in submits when clicked the way the remote does`() {
+    fun `Sign in submits when clicked by an accessibility service`() {
         remember("http://abs.local:13378", "someone")
         show()
 
