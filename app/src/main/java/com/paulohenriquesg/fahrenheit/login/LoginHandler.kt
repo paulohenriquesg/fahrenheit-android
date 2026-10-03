@@ -24,9 +24,16 @@ import kotlinx.coroutines.withContext
  * Presents [LoginCoordinator]'s result. Deliberately thin: everything worth
  * testing lives in the coordinator, which needs no Context.
  */
+/**
+ * @param goHome where a successful sign-in goes; Home is its confirmation.
+ */
 class LoginHandler(
     private val context: Context,
-    private val coordinator: LoginCoordinator = defaultCoordinator(context)
+    private val coordinator: LoginCoordinator = defaultCoordinator(context),
+    private val goHome: () -> Unit = {
+        context.startActivity(Intent(context, MainActivity::class.java))
+        if (context is LoginActivity) context.finish()
+    }
 ) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -67,10 +74,7 @@ class LoginHandler(
     private fun present(outcome: LoginOutcome) {
         when (outcome) {
             // Home is the confirmation; a Toast on top of it said so late.
-            is LoginOutcome.Success -> {
-                context.startActivity(Intent(context, MainActivity::class.java))
-                if (context is LoginActivity) context.finish()
-            }
+            is LoginOutcome.Success -> goHome()
 
             is LoginOutcome.Failed -> {
                 Log.e("LoginHandler", "Login failed: ${outcome.error} ${outcome.detail.orEmpty()}")

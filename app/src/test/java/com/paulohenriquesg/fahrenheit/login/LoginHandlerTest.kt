@@ -26,18 +26,19 @@ import java.io.IOException
 @RunWith(RobolectricTestRunner::class)
 class LoginHandlerTest {
 
-    // An Activity, as in the app: starting Home from the application context
-    // would need a new task.
-    private val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
+    private var wentHome = 0
 
+    // No Activity: one built here and never destroyed left later Compose test
+    // classes in the same JVM unable to go idle. Going home is a function.
     private fun handler(login: suspend (String, String, String) -> AuthSession) = LoginHandler(
-        activity,
+        ApplicationProvider.getApplicationContext(),
         LoginCoordinator(
             sessionManager = SessionManager(FakeTokenStore()),
             performLogin = login,
             performApiKeyLogin = { _, _ -> error("not used") },
             activateSession = { SessionState.Ready }
-        )
+        ),
+        goHome = { wentHome++ }
     )
 
     private fun settle() = shadowOf(Looper.getMainLooper()).idle()
@@ -89,8 +90,7 @@ class LoginHandlerTest {
         settle()
 
         assertNull(ShadowToast.getLatestToast())
-        val started = shadowOf(activity).nextStartedActivity
-        assertEquals(MainActivity::class.java.name, started?.component?.className)
+        assertEquals(1, wentHome)
     }
 
     // Seen on the stick as a Toast; empty fields belong in the band too.

@@ -26,6 +26,7 @@ import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,6 +52,14 @@ class LoginReturningTest {
     private var login: Triple<String, String, String>? = null
     private var logins = 0
     private var loadingOnSubmit = false
+    private var loadingState: MutableState<Boolean>? = null
+
+    // A sign-in left loading keeps its spinner animating after the test.
+    @After
+    fun stopLoading() {
+        compose.runOnUiThread { loadingState?.value = false }
+        compose.waitForIdle()
+    }
     private var apiKey: Pair<String, String>? = null
 
     private fun remember(host: String, username: String) {
@@ -66,6 +75,7 @@ class LoginReturningTest {
                         login = Triple(h, u, p)
                         logins++
                         if (loadingOnSubmit) loading.value = true
+                        loadingState = loading
                     },
                     { h, k, _ -> apiKey = h to k },
                     error = error
