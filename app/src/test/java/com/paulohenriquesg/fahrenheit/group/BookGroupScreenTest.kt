@@ -15,9 +15,7 @@ import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.Collection
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.Series
-import com.paulohenriquesg.fahrenheit.collection.CollectionDetailActivity
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
-import com.paulohenriquesg.fahrenheit.series.SeriesDetailActivity
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -53,11 +51,11 @@ class BookGroupScreenTest {
 
     // --- the two ways in: the only lines the merge may change ---
 
-    private fun seriesIntent(series: Series): Intent = SeriesDetailActivity.createIntent(context, series)
+    private fun seriesIntent(series: Series): Intent = BookGroupActivity.forSeries(context, series)
 
-    private fun collectionIntent(collection: Collection): Intent = CollectionDetailActivity.createIntent(context, collection)
+    private fun collectionIntent(collection: Collection): Intent = BookGroupActivity.forCollection(context, collection)
 
-    private fun bareIntent(): Intent = Intent(context, SeriesDetailActivity::class.java)
+    private fun bareIntent(): Intent = Intent(context, BookGroupActivity::class.java)
 
     // --- fixtures ---
 

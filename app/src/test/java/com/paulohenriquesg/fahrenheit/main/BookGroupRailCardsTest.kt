@@ -12,8 +12,7 @@ import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.Collection
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.Series
-import com.paulohenriquesg.fahrenheit.collection.CollectionDetailActivity
-import com.paulohenriquesg.fahrenheit.series.SeriesDetailActivity
+import com.paulohenriquesg.fahrenheit.group.BookGroupActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -69,7 +68,7 @@ class BookGroupRailCardsTest {
         compose.onNodeWithText("2 books").assertIsDisplayed()
         assertCardSize("An Invented Series")
         compose.onNodeWithText("An Invented Series").performSemanticsAction(SemanticsActions.OnClick)
-        assertEquals(SeriesDetailActivity::class.java.name, started().component?.className)
+        assertEquals(BookGroupActivity::class.java.name, started().component?.className)
     }
 
     @Test
@@ -85,7 +84,7 @@ class BookGroupRailCardsTest {
         compose.onNodeWithText("1 book").assertIsDisplayed()
         assertCardSize("An Invented Collection")
         compose.onNodeWithText("An Invented Collection").performSemanticsAction(SemanticsActions.OnClick)
-        assertEquals(CollectionDetailActivity::class.java.name, started().component?.className)
+        assertEquals(BookGroupActivity::class.java.name, started().component?.className)
     }
 
     @Test
