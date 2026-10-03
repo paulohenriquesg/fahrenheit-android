@@ -52,7 +52,7 @@ class PlayerStart(private val autoPlay: Boolean, private val startAt: Double? = 
             return true
         }
         val start = asked ?: ResumePoint.decide(progress(), nowPlaying.trackTotal, nowPlaying.mediaDuration).positionSeconds
-        val queue = PlaybackQueue.of(nowPlaying, start, next, resolveUrl) ?: return false
+        val queue = PlaybackQueue.of(nowPlaying, start, resolveUrl, next) ?: return false
         player.setMediaItems(queue.items, queue.index, queue.positionMs)
         player.prepare()
         // Explicitly either way: the player keeps playWhenReady across a new

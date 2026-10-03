@@ -23,14 +23,17 @@ object PlaybackQueue {
      * @param next an episode to play after this one (#108), queued as itself.
      * @return null when there is nothing to play.
      */
-    // next before resolveUrl: callers pass resolveUrl as a trailing lambda.
-    fun of(nowPlaying: NowPlaying, startAt: Double, next: NowPlaying? = null, resolveUrl: (String) -> String?): QueueStart? {
+    fun of(nowPlaying: NowPlaying, startAt: Double, resolveUrl: (String) -> String?, next: NowPlaying?): QueueStart? {
         val timeline = nowPlaying.timeline ?: return null
         val items = itemsOf(nowPlaying, resolveUrl) ?: return null
         val after = next?.let { itemsOf(it, resolveUrl) }.orEmpty()
         val at = timeline.locate(startAt)
         return QueueStart(items + after, at.trackIndex, (at.positionInTrack * 1000).toLong())
     }
+
+    /** As above, with nothing after it. An overload, not a default: callers pass [resolveUrl] as a trailing lambda. */
+    fun of(nowPlaying: NowPlaying, startAt: Double, resolveUrl: (String) -> String?): QueueStart? =
+        of(nowPlaying, startAt, resolveUrl, next = null)
 
     /** One item per file of [nowPlaying], each carrying its own [QueuedFile]; null when there is nothing to play. */
     fun itemsOf(nowPlaying: NowPlaying, resolveUrl: (String) -> String?): List<MediaItem>? {

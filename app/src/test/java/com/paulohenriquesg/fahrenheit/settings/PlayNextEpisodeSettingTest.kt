@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import com.paulohenriquesg.fahrenheit.ui.theme.ThemePreference
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
