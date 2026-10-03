@@ -43,6 +43,8 @@ class RailEntryTest {
 
     @Test fun `a chapter without a title is numbered`() {
         val untitled = ChapterClock.spans(listOf(Chapter(start = 0.0, end = 3600.0, title = "")), total = 3600.0)
-        assertEquals("Chapter 1", RailEntry.of(book, "A Book", 10.0, playing = true, speed = 1f, spans = untitled)!!.chapter)
+        val entry = RailEntry.of(book, "A Book", 10.0, playing = true, speed = 1f, spans = untitled)!!
+        assertNull(entry.chapter)
+        assertEquals(1, entry.chapterNumber)
     }
 }

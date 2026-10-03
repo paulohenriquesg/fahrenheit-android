@@ -27,7 +27,7 @@ class NowPlayingEntryTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val opened = mutableListOf<RailEntry>()
-    private val book = RailEntry("b1", null, "A Long Drift", playing = true, progress = 0.4f, chapter = "Chapter 12", leftSeconds = 1210.0)
+    private val book = RailEntry("b1", null, "A Long Drift", playing = true, progress = 0.4f, chapter = "Chapter 12", chapterNumber = 12, leftSeconds = 1210.0)
 
     private fun show(entry: RailEntry, open: Boolean) {
         compose.setContent { FahrenheitTheme { NowPlayingEntry(entry, open = open, onOpen = { opened += it }) } }
@@ -38,7 +38,7 @@ class NowPlayingEntryTest {
         show(book, open = false)
         compose.onNodeWithContentDescription("A Long Drift").assertIsDisplayed()
         compose.onNodeWithContentDescription("Playing").assertExists()
-        compose.onNodeWithText("Chapter 12 · 20 min 10 s left").assertDoesNotExist()
+        compose.onNodeWithText("Chapter 12 · 20 min left").assertDoesNotExist()
     }
 
     @Test fun `paused says so`() {
@@ -49,12 +49,13 @@ class NowPlayingEntryTest {
     @Test fun `open, the title and the chapter's time left`() {
         show(book, open = true)
         compose.onNodeWithText("A Long Drift").assertIsDisplayed()
-        compose.onNodeWithText("Chapter 12 · 20 min 10 s left").assertIsDisplayed()
+        // Whole minutes, as the mock writes it: the seconds would jump with each poll.
+        compose.onNodeWithText("Chapter 12 · 20 min left").assertIsDisplayed()
     }
 
     @Test fun `an episode says what is left of it`() {
-        show(RailEntry("p1", "e1", "An Episode", playing = false, progress = 0.5f, chapter = null, leftSeconds = 600.0), open = true)
-        compose.onNodeWithText("10 min 0 s left").assertIsDisplayed()
+        show(RailEntry("p1", "e1", "An Episode", playing = false, progress = 0.5f, chapter = null, chapterNumber = null, leftSeconds = 600.0), open = true)
+        compose.onNodeWithText("10 min left").assertIsDisplayed()
     }
 
     // Review Focus 3.
@@ -63,5 +64,15 @@ class NowPlayingEntryTest {
         compose.onNodeWithTag(NOW_PLAYING_TAG).performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
         assertEquals(listOf(book), opened)
+    }
+
+    @Test fun `an untitled chapter is numbered`() {
+        show(book.copy(chapter = null, chapterNumber = 3), open = true)
+        compose.onNodeWithText("Chapter 3 · 20 min left").assertIsDisplayed()
+    }
+
+    @Test fun `under a minute left says the seconds`() {
+        show(book.copy(leftSeconds = 42.0), open = true)
+        compose.onNodeWithText("Chapter 12 · 42 s left").assertIsDisplayed()
     }
 }

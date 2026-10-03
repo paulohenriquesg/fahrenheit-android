@@ -1,5 +1,7 @@
 package com.paulohenriquesg.fahrenheit.main
 
+import androidx.compose.ui.unit.dp
+import com.paulohenriquesg.fahrenheit.player.RailEntry
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -169,5 +171,46 @@ class NavigationRailTest {
         compose.onNodeWithTag(menuItemTestTag("home")).performSemanticsAction(SemanticsActions.RequestFocus)
         compose.waitForIdle()
         compose.onNodeWithText("NOW OPEN").assertExists()
+    }
+
+    // Review (#107): the entry's line took the whole width, and the rail with it.
+    private val longTitle = RailEntry(
+        "b1", null, "A Very Long Title of a Book That Goes On and On Past Any Rail", playing = true,
+        progress = 0.3f, chapter = "Chapter 12", chapterNumber = 12, leftSeconds = 1210.0
+    )
+
+    private fun renderWithEntry() {
+        compose.setContent {
+            FahrenheitTheme {
+                NavigationRail(
+                    items = items, selectedId = "home", onSelect = {},
+                    nowPlaying = { open -> NowPlayingEntry(longTitle, open, onOpen = {}) }
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        BasicText("a book", Modifier.testTag("content_item").focusable())
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `with something playing the closed rail stays narrow`() {
+        renderWithEntry()
+        compose.onNodeWithTag("content_item").assertLeftPositionInRootIsAtMost(64.dp)
+    }
+
+    @Test
+    fun `a long title does not widen the open rail`() {
+        renderWithEntry()
+        compose.onNodeWithTag(menuItemTestTag("home")).performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+        compose.onNodeWithTag("content_item").assertLeftPositionInRootIsAtMost(270.dp)
+    }
+
+    private fun androidx.compose.ui.test.SemanticsNodeInteraction.assertLeftPositionInRootIsAtMost(limit: androidx.compose.ui.unit.Dp) {
+        val left = getUnclippedBoundsInRoot().left
+        assertTrue("left at $left, at most $limit", left <= limit)
     }
 }
