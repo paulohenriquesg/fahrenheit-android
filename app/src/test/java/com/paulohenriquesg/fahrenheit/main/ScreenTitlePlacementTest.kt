@@ -151,7 +151,9 @@ class ScreenTitlePlacementTest {
                     onCheckUpdates = {},
                     username = "admin",
                     server = "http://books.example:13378",
-                    onSignOut = {}
+                    onSignOut = {},
+                    deviceName = "AFTMODEL",
+                    onDeviceName = {}
                 )
             }
         }

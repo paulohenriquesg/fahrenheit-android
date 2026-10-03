@@ -17,7 +17,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +69,8 @@ fun SettingsView(
     username: String,
     server: String,
     onSignOut: () -> Unit,
+    deviceName: String,
+    onDeviceName: (String) -> Unit,
     modifier: Modifier = Modifier,
     deviceIsDark: Boolean = isSystemInDarkTheme()
 ) {
@@ -136,6 +151,7 @@ fun SettingsView(
                         Text(stringResource(R.string.settings_sign_out))
                     }
                 }
+                DeviceNameRow(deviceName, onDeviceName)
             }
         }
     }
@@ -148,6 +164,56 @@ private fun updateLine(update: UpdateCheck, version: String): String = when (upd
     UpdateCheck.UpToDate -> stringResource(R.string.settings_update_up_to_date, version)
     is UpdateCheck.Available -> stringResource(R.string.settings_update_available, update.version)
     is UpdateCheck.Failed -> update.reason
+}
+
+/**
+ * How the server lists this TV's listening sessions. The text field appears
+ * only when asked for: one passed on the way down the page would bring up the
+ * keyboard.
+ */
+@Composable
+private fun DeviceNameRow(name: String, onRename: (String) -> Unit) {
+    var editing by remember { mutableStateOf(false) }
+    if (!editing) {
+        SettingRow(title = stringResource(R.string.settings_device_name), subtitle = name) {
+            Button(onClick = { editing = true }, modifier = Modifier.testTag("device_name_rename")) {
+                Text(stringResource(R.string.settings_device_name_rename))
+            }
+        }
+        return
+    }
+
+    var draft by remember { mutableStateOf(TextFieldValue(name, TextRange(name.length))) }
+    val field = remember { FocusRequester() }
+    val save = {
+        onRename(draft.text)
+        editing = false
+    }
+    LaunchedEffect(Unit) { field.requestFocus() }
+    SettingRow(
+        title = stringResource(R.string.settings_device_name),
+        subtitle = stringResource(R.string.settings_device_name_hint)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                singleLine = true,
+                modifier = Modifier
+                    .width(280.dp)
+                    .focusRequester(field)
+                    .testTag("device_name_field"),
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { save() })
+            )
+            Button(onClick = save, modifier = Modifier.testTag("device_name_save")) {
+                Text(stringResource(R.string.settings_device_name_save))
+            }
+        }
+    }
 }
 
 @Composable

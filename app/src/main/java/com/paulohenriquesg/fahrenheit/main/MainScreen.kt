@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.main
 import android.app.Activity
 import com.paulohenriquesg.fahrenheit.settings.SettingsView
 import com.paulohenriquesg.fahrenheit.settings.UpdateCheck
+import com.paulohenriquesg.fahrenheit.player.PlaybackDevice
 import com.paulohenriquesg.fahrenheit.library.SwitchLibraryView
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemeManager
 import com.paulohenriquesg.fahrenheit.BuildConfig
@@ -227,6 +228,7 @@ fun MainScreen(
     )
 
     var updateCheck by remember { mutableStateOf<UpdateCheck>(UpdateCheck.Idle) }
+    var deviceName by remember { mutableStateOf(PlaybackDevice.name(context)) }
 
     val backAction = BackAction.decide(view)
     BackHandler(enabled = backAction != BackAction.Exit) {
@@ -406,7 +408,12 @@ fun MainScreen(
                         },
                         username = username,
                         server = sharedPreferencesHandler.getUserPreferences().host,
-                        onSignOut = { signOut() }
+                        onSignOut = { signOut() },
+                        deviceName = deviceName,
+                        onDeviceName = {
+                            PlaybackDevice.setName(context, it)
+                            deviceName = PlaybackDevice.name(context)
+                        }
                     )
                     MainView.SWITCH_LIBRARY -> SwitchLibraryView(
                         libraries = libraries,
