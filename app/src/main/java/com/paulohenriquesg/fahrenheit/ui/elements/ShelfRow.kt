@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.tv.material3.Text
@@ -18,7 +20,13 @@ import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.Shelf
 
 @Composable
-fun ShelfRow(shelf: Shelf, progress: CoverProgress = CoverProgress.None, onItemClick: (LibraryItem) -> Unit) {
+fun ShelfRow(
+    shelf: Shelf,
+    progress: CoverProgress = CoverProgress.None,
+    seeAllTotal: Int? = null,
+    onSeeAll: () -> Unit = {},
+    onItemClick: (LibraryItem) -> Unit
+) {
     Column {
         ShelfHeading(shelf.label)
         Spacer(modifier = Modifier.height(8.dp))
@@ -31,6 +39,12 @@ fun ShelfRow(shelf: Shelf, progress: CoverProgress = CoverProgress.None, onItemC
                 items(entities.size, key = { keys[it] }) { index ->
                     val item = entities[index]
                     LibraryItemCard(item = item, progress = progress.of(item), onClick = onItemClick)
+                }
+            }
+            if (seeAllTotal != null) {
+                // Last, after everything the server sent (#123).
+                item(key = "see-all") {
+                    SeeAllCard(seeAllTotal, onSeeAll, Modifier.padding(8.dp).width(200.dp).height(300.dp))
                 }
             }
         }

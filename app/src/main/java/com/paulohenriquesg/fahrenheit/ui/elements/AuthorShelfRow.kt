@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.tv.material3.Text
@@ -17,7 +19,7 @@ import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 
 @Composable
-fun AuthorShelfRow(shelf: Shelf, authors: List<Author>, onItemClick: (Author) -> Unit) {
+fun AuthorShelfRow(shelf: Shelf, authors: List<Author>, seeAllTotal: Int? = null, onSeeAll: () -> Unit = {}, onItemClick: (Author) -> Unit) {
     Column {
         ShelfHeading(shelf.label)
         Spacer(modifier = Modifier.height(8.dp))
@@ -29,6 +31,12 @@ fun AuthorShelfRow(shelf: Shelf, authors: List<Author>, onItemClick: (Author) ->
             items(authors.size, key = { keys[it] }) { index ->
                 val author = authors[index]
                 AuthorCard(author = author, onClick = { onItemClick(author) })
+            }
+            if (seeAllTotal != null) {
+                // Last, after everything the server sent (#123).
+                item(key = "see-all") {
+                    SeeAllCard(seeAllTotal, onSeeAll, Modifier.width(180.dp).height(240.dp))
+                }
             }
         }
     }
