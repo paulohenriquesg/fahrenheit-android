@@ -23,7 +23,8 @@ class LibraryRepositoryTest {
         private val items: (() -> LibraryItemsResponse)? = null,
         private val shelves: (() -> List<Shelf>)? = null,
         private val library: (() -> Library)? = null,
-        private val item: (() -> LibraryItemResponse)? = null
+        private val item: (() -> LibraryItemResponse)? = null,
+        private val stats: (() -> LibraryStats)? = null
     ) : LibraryApi {
         var lastLibraryId: String? = null
 
@@ -50,6 +51,11 @@ class LibraryRepositoryTest {
 
         override suspend fun getLibraryItem(itemId: String, expanded: Int, include: String) =
             item?.invoke() ?: error("no item configured")
+
+        override suspend fun getLibraryStats(libraryId: String): LibraryStats {
+            lastLibraryId = libraryId
+            return stats?.invoke() ?: error("no stats configured")
+        }
     }
 
     @Test
@@ -110,6 +116,23 @@ class LibraryRepositoryTest {
         val result = LibraryRepository(api).personalizedShelves("library-456")
 
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `a library's stats are asked for by its id`() = runBlocking {
+        val api = FakeLibraryApi(stats = { LibraryStats(totalItems = 38, totalDuration = 3600.0, numAudioTracks = 40) })
+
+        val stats = LibraryRepository(api).stats("library-456").getOrThrow()
+
+        assertEquals(38, stats.totalItems)
+        assertEquals("library-456", api.lastLibraryId)
+    }
+
+    @Test
+    fun `a failure fetching stats is returned, not thrown`() = runBlocking {
+        val api = FakeLibraryApi(stats = { throw IOException("offline") })
+
+        assertTrue(LibraryRepository(api).stats("library-456").isFailure)
     }
 
     @Test

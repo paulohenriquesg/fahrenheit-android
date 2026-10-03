@@ -32,6 +32,7 @@ class SettingsViewTest {
     private fun render(
         theme: ThemePreference = ThemePreference.System,
         rowLayout: Boolean = true,
+        deviceIsDark: Boolean = false,
         update: UpdateCheck = UpdateCheck.Idle,
         onTheme: (ThemePreference) -> Unit = {},
         onLayout: (Boolean) -> Unit = {},
@@ -43,6 +44,7 @@ class SettingsViewTest {
                 SettingsView(
                     theme = theme,
                     onTheme = onTheme,
+                    deviceIsDark = deviceIsDark,
                     rowLayout = rowLayout,
                     onLayout = onLayout,
                     version = "v0.0.10",
@@ -64,6 +66,18 @@ class SettingsViewTest {
         listOf("System", "Light", "Dark").forEach {
             compose.onNodeWithTag("theme_$it").assertExists()
         }
+    }
+
+    @Test
+    fun `the theme row says what the TV is set to right now`() {
+        render(deviceIsDark = true)
+        compose.onNodeWithText("Your TV is set to dark right now").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a TV set to light is said to be light`() {
+        render(deviceIsDark = false)
+        compose.onNodeWithText("Your TV is set to light right now").assertIsDisplayed()
     }
 
     @OptIn(ExperimentalTestApi::class)

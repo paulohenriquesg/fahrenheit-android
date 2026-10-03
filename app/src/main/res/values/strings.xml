@@ -96,7 +96,8 @@
     <string name="stats_nothing_listened_yet">Nothing listened yet</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme">Theme</string>
-    <string name="settings_theme_subtitle">Follow the device, or pick one</string>
+    <string name="settings_theme_device_dark">Your TV is set to dark right now</string>
+    <string name="settings_theme_device_light">Your TV is set to light right now</string>
     <string name="settings_shelves">Shelves</string>
     <string name="settings_shelves_subtitle">Rows of covers, or a grid</string>
     <string name="settings_rows">Rows</string>
@@ -111,6 +112,31 @@
     <string name="switch_library">Switch library</string>
     <string name="switch_library_none">No libraries on this server</string>
     <string name="switch_library_current">Current</string>
+    <string name="switch_library_kind_book">Book library</string>
+    <string name="switch_library_kind_podcast">Podcast library</string>
+    <string name="switch_library_tile_line">%1$s \u00b7 %2$s</string>
+    <string name="switch_library_add">Add a library</string>
+    <string name="switch_library_add_where">On the server, not here</string>
+    <plurals name="switch_library_books">
+        <item quantity="one">%d book</item>
+        <item quantity="other">%d books</item>
+    </plurals>
+    <plurals name="switch_library_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="switch_library_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="switch_library_shows">
+        <item quantity="one">%d show</item>
+        <item quantity="other">%d shows</item>
+    </plurals>
+    <plurals name="switch_library_episodes">
+        <item quantity="one">%d episode</item>
+        <item quantity="other">%d episodes</item>
+    </plurals>
     <string name="latest_episodes">Latest Episodes</string>
     <string name="check_new_episodes">Check for new episodes</string>
     <string name="check_new_episodes_limit">Downloads up to %1$d new episodes to the server</string>

@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,7 +56,8 @@ fun SettingsView(
     username: String,
     server: String,
     onSignOut: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    deviceIsDark: Boolean = isSystemInDarkTheme()
 ) {
     Column(
         modifier = modifier
@@ -75,7 +77,9 @@ fun SettingsView(
             Group(stringResource(R.string.settings_appearance)) {
                 SettingRow(
                     title = stringResource(R.string.settings_theme),
-                    subtitle = stringResource(R.string.settings_theme_subtitle)
+                    subtitle = stringResource(
+                        if (deviceIsDark) R.string.settings_theme_device_dark else R.string.settings_theme_device_light
+                    )
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         ThemePreference.entries.forEach { option ->

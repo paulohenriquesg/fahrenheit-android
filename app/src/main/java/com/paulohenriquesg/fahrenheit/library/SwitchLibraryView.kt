@@ -21,10 +21,18 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.Library
+import com.paulohenriquesg.fahrenheit.api.LibraryStats
 import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.components.ScreenTitle
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.ui.CardFocus
+import com.paulohenriquesg.fahrenheit.ui.Border
+import com.paulohenriquesg.fahrenheit.ui.Radius
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
@@ -44,7 +52,8 @@ fun SwitchLibraryView(
     libraries: List<Library>,
     currentId: String?,
     onSelect: (Library) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    stats: Map<String, LibraryStats> = emptyMap()
 ) {
     Column(
         modifier = modifier
@@ -103,7 +112,7 @@ fun SwitchLibraryView(
                             )
                         }
                         Text(
-                            text = library.mediaType.orEmpty(),
+                            text = tileLine(library, library.id?.let { stats[it] }),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -118,8 +127,68 @@ fun SwitchLibraryView(
                     }
                 }
             }
+            item(key = "library_add") { AddLibraryTile() }
         }
     }
+}
+
+/** Libraries are made on the server; this only says so, so it takes no focus. */
+@Composable
+private fun AddLibraryTile() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(150.dp)
+            .alpha(0.55f)
+            .clip(Radius.panel)
+            .border(Border.rest, MaterialTheme.colorScheme.surfaceVariant, Radius.panel)
+            .padding(Space.inset)
+            .testTag("library_add"),
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = stringResource(R.string.switch_library_add),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = stringResource(R.string.switch_library_add_where),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/**
+ * What is in a library and how much: shows and episodes for podcasts, books
+ * and hours of audio otherwise. Until the counts arrive, the kind of library.
+ */
+@Composable
+private fun tileLine(library: Library, stats: LibraryStats?): String {
+    val podcast = library.mediaType == "podcast"
+    val items = stats?.totalItems ?: return stringResource(
+        if (podcast) R.string.switch_library_kind_podcast else R.string.switch_library_kind_book
+    )
+    if (podcast) {
+        val episodes = stats.numAudioTracks ?: 0
+        return stringResource(
+            R.string.switch_library_tile_line,
+            pluralStringResource(R.plurals.switch_library_shows, items, items),
+            pluralStringResource(R.plurals.switch_library_episodes, episodes, episodes)
+        )
+    }
+    val books = pluralStringResource(R.plurals.switch_library_books, items, items)
+    val seconds = stats.totalDuration ?: 0.0
+    if (seconds <= 0.0) return books
+    val hours = (seconds / 3600).roundToInt()
+    val duration = if (hours >= 1) {
+        pluralStringResource(R.plurals.switch_library_hours, hours, hours)
+    } else {
+        // Rounding a short library to "0 hours" would say it is empty.
+        val minutes = (seconds / 60).roundToInt().coerceAtLeast(1)
+        pluralStringResource(R.plurals.switch_library_minutes, minutes, minutes)
+    }
+    return stringResource(R.string.switch_library_tile_line, books, duration)
 }
 
 /** The old picker showed one; a wall of identical tiles tells you nothing. */

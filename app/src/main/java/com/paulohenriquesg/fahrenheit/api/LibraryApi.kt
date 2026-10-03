@@ -18,6 +18,9 @@ interface LibraryApi {
     @GET("api/libraries/{libraryId}")
     suspend fun getLibrary(@Path("libraryId") libraryId: String): Library
 
+    @GET("api/libraries/{libraryId}/stats")
+    suspend fun getLibraryStats(@Path("libraryId") libraryId: String): LibraryStats
+
     @GET("api/items/{itemId}")
     suspend fun getLibraryItem(
         @Path("itemId") itemId: String,
