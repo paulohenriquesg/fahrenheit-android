@@ -8,7 +8,9 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.tv.material3.Surface
@@ -48,6 +50,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.player.ChapterClock
+import com.paulohenriquesg.fahrenheit.player.Playback
 import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
@@ -92,6 +96,8 @@ class DetailActivity : ComponentActivity() {
         var me by remember { mutableStateOf<Me?>(null) }
 
         val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+        var marking by remember { mutableStateOf(false) }
 
         LaunchedEffect(itemId) {
             val api = ApiClient.getLibraryApi()
@@ -102,6 +108,13 @@ class DetailActivity : ComponentActivity() {
             LibraryRepository(api).item(itemId)
                 .onSuccess { itemDetail = it; loadFailed = false }
                 .onFailure { loadFailed = true }
+        }
+
+        // A book is read again on coming back - from the player, say - so
+        // Chapters opens where it was left and Mark says what the server holds.
+        LaunchedEffect(resumes) {
+            if (resumes <= 1 || itemDetail?.mediaType != "book") return@LaunchedEffect
+            ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId) }?.onSuccess { itemDetail = it }
         }
 
         // One call for both who the user is (the admin check) and what they
@@ -135,18 +148,37 @@ class DetailActivity : ComponentActivity() {
             return
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-        ) {
-            if (item.mediaType == "podcast") {
+        val isBook = item.mediaType != "podcast"
+        DetailBody(isBook) { margin ->
+            if (!isBook) {
                 PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it })
             } else {
                 BookDetailView(
                     itemId = itemId,
                     content = DetailHeaderModel.book(item),
-                    onPrimary = { context.startActivity(playBookIntent(context, itemId)) }
+                    onPrimary = { context.startActivity(playBookIntent(context, itemId)) },
+                    chapters = remember(item) { ChapterClock.spans(item.media.chapters, item.media.duration ?: 0.0) },
+                    at = item.userMediaProgress?.currentTime ?: 0.0,
+                    onChapter = { start -> context.startActivity(playChapterIntent(context, itemId, start)) },
+                    padding = margin,
+                    finished = item.userMediaProgress?.isFinished == true,
+                    marking = marking,
+                    onMarkFinished = { done ->
+                        marking = true
+                        // Through the playback service, in case this book is the one playing (#105).
+                        Playback.markFinished(context, itemId, done, keepAt = placeToKeep(item)) { worked ->
+                            marking = false
+                            if (!worked) {
+                                Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
+                                return@markFinished
+                            }
+                            // Read again, so the chips and Resume say what the server now holds.
+                            scope.launch {
+                                ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId) }
+                                    ?.onSuccess { itemDetail = it }
+                            }
+                        }
+                    }
                 )
             }
         }
@@ -313,5 +345,35 @@ class DetailActivity : ComponentActivity() {
         /** An episode chosen from the list, or the header's Play/Resume. Starts playing (#122). */
         fun playEpisodeIntent(context: Context, itemId: String, episodeId: String): Intent =
             PlayerActivity.createIntent(context, itemId, episodeId, autoPlay = true)
+
+        /**
+         * Where an un-finished book should stay, rather than the start the
+         * server would put it at: where it was, unless that is so near the end
+         * that the server would finish it again (its rule: under 10 s left).
+         */
+        internal fun placeToKeep(item: LibraryItemResponse): Double? {
+            val at = item.userMediaProgress?.currentTime ?: return null
+            val length = item.media.duration ?: return null
+            return at.takeIf { at > 0 && length - at > 10 }
+        }
+
+        /** A chapter chosen from the book's Chapters: the player opens there and plays (#105). */
+        fun playChapterIntent(context: Context, itemId: String, start: Double): Intent =
+            PlayerActivity.createIntent(context, itemId, autoPlay = true, startAt = start)
+    }
+}
+
+/**
+ * The details screen's body. A book keeps the screen's margin inside its
+ * content (handed to [content]), so its Chapters panel reaches the screen's
+ * edges; a podcast's screen is padded around, as before.
+ */
+@Composable
+internal fun DetailBody(isBook: Boolean, content: @Composable (PaddingValues) -> Unit) {
+    val margin = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
+    if (isBook) {
+        Box(Modifier.fillMaxSize()) { content(margin) }
+    } else {
+        Column(Modifier.fillMaxSize().padding(margin)) { content(PaddingValues()) }
     }
 }

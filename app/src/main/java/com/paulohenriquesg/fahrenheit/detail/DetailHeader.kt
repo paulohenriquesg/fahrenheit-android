@@ -4,15 +4,38 @@ package com.paulohenriquesg.fahrenheit.detail
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -20,44 +43,32 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.paulohenriquesg.fahrenheit.R
+import com.paulohenriquesg.fahrenheit.player.ActionChip
+import com.paulohenriquesg.fahrenheit.player.ChapterSpan
+import com.paulohenriquesg.fahrenheit.player.ChaptersChip
+import com.paulohenriquesg.fahrenheit.player.ChaptersPanel
+import com.paulohenriquesg.fahrenheit.player.PlayerPanelHost
+import com.paulohenriquesg.fahrenheit.player.rememberPlayerPanels
 import com.paulohenriquesg.fahrenheit.podcast.Fact
 import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import com.paulohenriquesg.fahrenheit.utils.RichText
+import kotlinx.coroutines.launch
 
 const val PRIMARY_ACTION_TAG = "detail_primary_action"
 const val DESCRIPTION_TAG = "detail_full_description"
@@ -67,17 +78,59 @@ const val DETAIL_SCROLL_TAG = "detail_scroll"
  * A book's screen: the header with the whole description, scrolling when the
  * description is longer than the screen. The room under the button is free on
  * a book, unlike a podcast, where the episodes follow.
+ *
+ * Beside Resume (#105, frame 3): Mark finished, when [finished] is known, and
+ * Chapters, when there are any - the player's own panel, opening on the
+ * chapter at [at]; choosing one calls [onChapter] with its start.
+ *
+ * [padding] is the screen's margin, kept inside: the Chapters panel covers the
+ * whole screen, edge to edge, as it does over the player.
  */
 @Composable
-fun BookDetailView(itemId: String, content: DetailHeaderContent, onPrimary: () -> Unit) {
+fun BookDetailView(
+    itemId: String,
+    content: DetailHeaderContent,
+    onPrimary: () -> Unit,
+    chapters: List<ChapterSpan> = emptyList(),
+    at: Double = 0.0,
+    onChapter: (Double) -> Unit = {},
+    finished: Boolean? = null,
+    marking: Boolean = false,
+    onMarkFinished: (Boolean) -> Unit = {},
+    padding: PaddingValues = PaddingValues()
+) {
     val scroll = rememberScrollState()
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scroll)
-            .testTag(DETAIL_SCROLL_TAG)
-    ) {
-        DetailHeader(itemId = itemId, content = content, onPrimary = onPrimary, fullDescription = scroll)
+    val panels = rememberPlayerPanels()
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scroll)
+                .testTag(DETAIL_SCROLL_TAG)
+                .padding(padding)
+        ) {
+            DetailHeader(
+                itemId = itemId,
+                content = content,
+                onPrimary = onPrimary,
+                fullDescription = scroll,
+                actions = {
+                    finished?.let { done ->
+                        ActionChip(
+                            text = stringResource(if (done) R.string.mark_unfinished else R.string.mark_finished),
+                            onClick = { onMarkFinished(!done) },
+                            icon = Icons.Filled.Check,
+                            // One mark at a time: a book playing first waits for its closing report.
+                            enabled = !marking
+                        )
+                    }
+                    if (chapters.isNotEmpty()) ChaptersChip(panels)
+                }
+            )
+        }
+        PlayerPanelHost(panels) {
+            ChaptersPanel(chapters, at, onChoose = onChapter, onClose = panels::close)
+        }
     }
 }
 
@@ -100,7 +153,10 @@ fun DetailHeader(
     actions: @Composable () -> Unit = {},
     fullDescription: ScrollState? = null
 ) {
-    val initialFocus = rememberInitialFocus(enabled = content.primary != null, itemId, content.primary)
+    // Keyed on whether there is a primary action, not its label: the label
+    // changes after Mark finished ("Resume at…" to "Play"), and focus must not
+    // jump off the button just pressed.
+    val initialFocus = rememberInitialFocus(enabled = content.primary != null, itemId, content.primary != null)
     Row {
         CoverImage(itemId = itemId, contentDescription = content.title)
         Spacer(Modifier.width(Space.gap * 2))

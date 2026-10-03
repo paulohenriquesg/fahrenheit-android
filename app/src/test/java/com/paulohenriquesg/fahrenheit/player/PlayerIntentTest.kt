@@ -43,4 +43,11 @@ class PlayerIntentTest {
         assertEquals(DetailActivity::class.java.name, intent.component?.className)
         assertTrue(intent.flags and Intent.FLAG_ACTIVITY_CLEAR_TOP != 0)
     }
+
+    // #105: a chapter chosen on the details screen.
+    @Test
+    fun `a start position travels with the intent`() {
+        assertEquals(3900.0, PlayerActivity.startAtOf(PlayerActivity.createIntent(context, "b1", autoPlay = true, startAt = 3900.0))!!, 0.0)
+        assertNull(PlayerActivity.startAtOf(PlayerActivity.createIntent(context, "b1")))
+    }
 }

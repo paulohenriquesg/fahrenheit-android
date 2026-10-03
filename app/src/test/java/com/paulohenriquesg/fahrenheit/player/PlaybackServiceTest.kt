@@ -265,4 +265,15 @@ class PlaybackServiceTest {
         )
         session.release()
     }
+
+    // #105: the details screen marks through the service too; signed out, it hears no.
+    @Test
+    fun `marking from elsewhere is answered`() {
+        val heard = mutableListOf<Boolean>()
+
+        Playback.markFinished(context, itemId = "b9", finished = true) { heard += it }
+
+        runMainLooperUntil { heard.isNotEmpty() }
+        assertEquals(listOf(false), heard)
+    }
 }

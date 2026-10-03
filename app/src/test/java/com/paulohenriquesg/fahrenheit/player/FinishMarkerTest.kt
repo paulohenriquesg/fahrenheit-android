@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -56,6 +57,8 @@ class FinishMarkerTest {
 
     private val server = Server()
     private val closing = CompletableDeferred<Unit>()
+    /** This test's closing reports in flight; the app keeps one set for the process. */
+    private val closings = Closings()
     private lateinit var player: ExoPlayer
     private lateinit var reporting: PlaybackReporting
 
@@ -79,7 +82,7 @@ class FinishMarkerTest {
         player = TestExoPlayerBuilder(ApplicationProvider.getApplicationContext()).setMediaSourceFactory(hourLongFiles()).build()
         reporting = PlaybackReporting(
             player, CoroutineScope(Dispatchers.Unconfined), open = { Session() },
-            pause = { awaitCancellation() }, now = { player.clock.elapsedRealtime() }
+            pause = { awaitCancellation() }, now = { player.clock.elapsedRealtime() }, closings = closings
         )
         player.addListener(reporting)
         val queue = PlaybackQueue.of(book, 300.0) { "https://abs.test$it" }!!
@@ -90,7 +93,13 @@ class FinishMarkerTest {
     @After
     fun tearDown() = player.release()
 
-    private fun marker() = FinishMarker(player, reporting::closeAndWait) { _, _, mark -> server.apply(mark) }
+    /** Which item each mark went to. */
+    private val markedFor = mutableListOf<String>()
+
+    private fun marker() = FinishMarker(player, reporting::closeAndWait, pending = closings::settled) { itemId, _, mark ->
+        markedFor += itemId
+        server.apply(mark)
+    }
 
     // Review: {isFinished, currentTime} un-finished itself, and a late close undid it again.
     @Test
@@ -133,5 +142,83 @@ class FinishMarkerTest {
         closing.complete(Unit)
         val failing = FinishMarker(player, reporting::closeAndWait) { _, _, _ -> error("offline") }
         assertTrue(failing.mark(finished = true).isFailure)
+    }
+
+    // #105, Review Focus 2: Mark finished on another book's details screen.
+    @Test
+    fun `another item is marked directly, and what plays keeps playing`() = runBlocking {
+        player.play()
+        run(player).untilPositionAtLeast(301_000)
+
+        // Bounded: a marker that waited for this book's closing report would wait for ever.
+        val result = withTimeoutOrNull(5_000) { marker().mark(finished = true, itemId = "b9", episodeId = null) }
+
+        assertTrue("marked without waiting on what plays", result?.isSuccess == true)
+        assertTrue(player.playWhenReady)
+        assertEquals(listOf("b9"), markedFor)
+        assertEquals(listOf(ProgressMark(isFinished = true)), server.marks)
+    }
+
+    @Test
+    fun `naming the item that is queued marks it as from the player`() = runBlocking {
+        closing.complete(Unit)
+        player.play()
+        run(player).untilPositionAtLeast(301_000)
+
+        assertTrue(marker().mark(finished = true, itemId = "b1", episodeId = null).isSuccess)
+
+        assertFalse(player.playWhenReady)
+        assertEquals(listOf("b1"), markedFor)
+    }
+
+    @Test
+    fun `nothing queued, a named item is still marked`() = runBlocking {
+        player.clearMediaItems()
+        assertTrue(marker().mark(finished = false, itemId = "b9", episodeId = null).isSuccess)
+        assertEquals(listOf(ProgressMark(isFinished = false)), server.marks)
+    }
+
+    @Test
+    fun `the command names its item`() {
+        val args = FinishCommand.args(true, itemId = "b9")
+        assertEquals(true, FinishCommand.finishedOf(args))
+        assertEquals("b9", FinishCommand.itemOf(args))
+        assertEquals(null, FinishCommand.itemOf(FinishCommand.args(false)))
+    }
+
+    // Review: Back stopped b1 and its close was still on its way when the
+    // details screen marked it; the close then un-finished it.
+    @Test
+    fun `a book just stopped is marked only once its closing report is in`() = runBlocking {
+        player.play()
+        run(player).untilPositionAtLeast(305_000)
+        reporting.beforeLeaving()
+        player.clearMediaItems()
+
+        val marking = async(Dispatchers.Unconfined) { marker().mark(finished = true, itemId = "b1", episodeId = null) }
+        assertFalse("nothing is marked before the close is delivered", server.isFinished)
+        closing.complete(Unit)
+
+        assertTrue(withTimeoutOrNull(5_000) { marking.await() }?.isSuccess == true)
+        assertTrue(server.isFinished)
+    }
+
+    // Review: un-finishing a book not playing sent it back to 0; the details
+    // screen knows where it was.
+    @Test
+    fun `unfinished from elsewhere puts the book back where it was`() = runBlocking {
+        server.isFinished = true
+        server.currentTime = 1000.0
+
+        assertTrue(marker().mark(finished = false, itemId = "b9", episodeId = null, keepAt = 1000.0).isSuccess)
+
+        assertFalse(server.isFinished)
+        assertEquals(1000.0, server.currentTime, 0.001)
+    }
+
+    @Test
+    fun `the command carries where to keep the book`() {
+        assertEquals(1000.0, FinishCommand.keepAtOf(FinishCommand.args(false, itemId = "b9", keepAt = 1000.0))!!, 0.0)
+        assertEquals(null, FinishCommand.keepAtOf(FinishCommand.args(false, itemId = "b9")))
     }
 }

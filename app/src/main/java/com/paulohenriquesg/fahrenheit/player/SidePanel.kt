@@ -35,6 +35,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
@@ -43,6 +44,8 @@ import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
+
+const val SIDE_PANEL_SCRIM_TAG = "side_panel_scrim"
 
 /** The panels the player's action chips open (#107). */
 enum class PlayerPanel { Chapters, Speed, Sleep, About }
@@ -99,7 +102,7 @@ fun PlayerPanelHost(panels: PlayerPanels, panel: @Composable (PlayerPanel) -> Un
 fun SidePanel(title: String, onClose: () -> Unit, width: Dp = 320.dp, content: @Composable ColumnScope.() -> Unit) {
     BackHandler(onBack = onClose)
     val shown = remember { MutableTransitionState(false) }.apply { targetState = true }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f))) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)).testTag(SIDE_PANEL_SCRIM_TAG)) {
         AnimatedVisibility(
             visibleState = shown,
             modifier = Modifier.align(Alignment.CenterEnd),
@@ -140,8 +143,9 @@ fun PanelOption(label: String, selected: Boolean, onClick: () -> Unit, modifier:
 
 /** A chip beside the transport that opens a panel (frame C's actions). */
 @Composable
-fun ActionChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null) {
-    Button(onClick = onClick, modifier = modifier) {
+fun ActionChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null, enabled: Boolean = true) {
+    // Disabled TV buttons still answer a semantics click: the guard is the press itself.
+    Button(onClick = { if (enabled) onClick() }, modifier = modifier, enabled = enabled) {
         icon?.let {
             Icon(it, contentDescription = null, tint = LocalContentColor.current, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
