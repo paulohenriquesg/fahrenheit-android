@@ -19,6 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
@@ -60,14 +62,16 @@ fun PlayerScreen(
     val chapter = ChapterClock.at(spans, currentTime)?.title?.takeIf { it.isNotBlank() }
 
     val background = MaterialTheme.colorScheme.background
+    // A colour that arrives after the screen showed fades in, not jumps in.
+    val shown by animateColorAsState(wash ?: background, animationSpec = tween(700), label = "wash")
     // The cover's colour behind it, fading into the background (frame C).
-    val washed = if (wash == null) Modifier else Modifier.drawWithCache {
+    val washed = Modifier.drawWithCache {
         val glow = Brush.radialGradient(
-            listOf(wash, Color.Transparent),
+            listOf(shown, Color.Transparent),
             center = Offset(size.width * 0.18f, size.height * 0.30f),
             radius = maxOf(size.width, size.height) * 0.75f
         )
-        val fade = Brush.verticalGradient(listOf(wash.copy(alpha = 0.55f), background), endY = size.height * 0.75f)
+        val fade = Brush.verticalGradient(listOf(shown.copy(alpha = 0.55f), background), endY = size.height * 0.75f)
         onDrawBehind {
             drawRect(fade)
             drawRect(glow)

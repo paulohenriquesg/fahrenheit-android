@@ -3,14 +3,7 @@ package com.paulohenriquesg.fahrenheit.player
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.palette.graphics.Palette
 import coil.imageLoader
 import coil.request.ImageRequest
@@ -50,19 +43,4 @@ suspend fun coverBitmap(context: Context, itemId: String): Bitmap? {
     } catch (e: Exception) {
         null
     }
-}
-
-/**
- * The wash for an item's cover: null until it is known, and when there is none.
- *
- * @param load where the bitmap comes from; the server by default.
- */
-@Composable
-fun rememberCoverWash(itemId: String, load: (suspend (String) -> Bitmap?)? = null): Color? {
-    val context = LocalContext.current
-    var wash by remember(itemId) { mutableStateOf<Color?>(null) }
-    LaunchedEffect(itemId) {
-        wash = coverWashOf(load?.invoke(itemId) ?: coverBitmap(context, itemId))
-    }
-    return wash
 }

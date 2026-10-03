@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -107,11 +108,21 @@ class PlayerActivity : ComponentActivity() {
         var nowPlaying by remember { mutableStateOf<NowPlaying?>(null) }
         var failed by remember { mutableStateOf(false) }
         var currentTime by remember { mutableDoubleStateOf(0.0) }
+        var wash by remember { mutableStateOf<Color?>(null) }
 
         LaunchedEffect(itemId, episodeId) {
             val api = ApiClient.getLibraryApi()
             val item = api?.let { LibraryRepository(it).item(itemId).getOrNull() }
             val serverFormat = SharedPreferencesHandler(this@PlayerActivity).getUserPreferences().dateFormat
+            // The cover's colour before the screen shows, so it does not open
+            // black and then change; a slow cover is faded in afterwards.
+            if (item != null) {
+                wash = washBeforeShowing(
+                    waitMs = WASH_WAIT_MS,
+                    compute = { coverWashOf(coverBitmap(this@PlayerActivity, itemId)) },
+                    late = { wash = it }
+                )
+            }
             nowPlaying = item?.let { NowPlaying.of(it, episodeId, System.currentTimeMillis(), serverFormat) }
             failed = nowPlaying == null
         }
@@ -140,7 +151,7 @@ class PlayerActivity : ComponentActivity() {
             else -> PlayerScreen(
                 nowPlaying = playing,
                 currentTime = currentTime,
-                wash = rememberCoverWash(playing.itemId),
+                wash = wash,
                 transport = {
                     // ready implies a timeline: PlayerStart refuses a NowPlaying without one.
                     val timeline = playing.timeline
@@ -181,6 +192,9 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val EXTRA_ITEM_ID = "item_id"
+
+        /** How long the player waits for its cover's colour before it shows anyway. */
+        private const val WASH_WAIT_MS = 1_500L
         private const val EXTRA_EPISODE_ID = "episode_id"
         private const val EXTRA_AUTO_PLAY = "auto_play"
 
