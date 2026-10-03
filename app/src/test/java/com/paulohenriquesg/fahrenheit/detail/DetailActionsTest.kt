@@ -18,6 +18,13 @@ import com.paulohenriquesg.fahrenheit.player.ChapterSpan
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.assertLeftPositionInRootIsEqualTo
+import com.paulohenriquesg.fahrenheit.player.SIDE_PANEL_SCRIM_TAG
+import com.paulohenriquesg.fahrenheit.ui.Space
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -127,5 +134,27 @@ class DetailActionsTest {
         show(marking = true)
         press("Mark finished")
         assertEquals(emptyList<Boolean>(), marked)
+    }
+
+    // Device check: the scrim stopped short of the screen's edges.
+    @Test fun `the chapters panel covers the whole screen, the header keeps its margins`() {
+        compose.setContent {
+            FahrenheitTheme {
+                BookDetailView(
+                    itemId = "b1",
+                    content = DetailHeaderContent("A Book", null, emptyList(), "Play", null),
+                    onPrimary = {},
+                    chapters = three,
+                    padding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
+                )
+            }
+        }
+        compose.waitForIdle()
+        press("Chapters")
+
+        val screen = compose.onRoot().getUnclippedBoundsInRoot()
+        val scrim = compose.onNodeWithTag(SIDE_PANEL_SCRIM_TAG).getUnclippedBoundsInRoot()
+        assertEquals(screen, scrim)
+        compose.onNodeWithTag(PRIMARY_ACTION_TAG).assertLeftPositionInRootIsEqualTo(24.dp + 200.dp + Space.gap * 2)
     }
 }
