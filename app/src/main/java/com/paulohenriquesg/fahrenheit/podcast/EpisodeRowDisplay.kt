@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.podcast
 
 import com.paulohenriquesg.fahrenheit.api.RecentPodcastEpisode
 import com.paulohenriquesg.fahrenheit.utils.EpisodeDate
+import com.paulohenriquesg.fahrenheit.utils.listeningLength
 import com.paulohenriquesg.fahrenheit.player.PlaybackPosition
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -47,23 +48,8 @@ object EpisodeRowDisplay {
     fun percentIn(progress: EpisodeProgress.InProgress): Int =
         (progress.fraction * 100).roundToInt().coerceIn(1, 99)
 
-    /**
-     * A length or time left on the row. Under ten minutes it keeps its seconds,
-     * as the player writes it ("9 min 59 s"); from ten minutes on the seconds
-     * are noise and it rounds to the nearest minute ("29 min", "1 h 52 min").
-     *
-     * Not PlaybackPosition.spoken itself: the player's running counter uses
-     * that, and it must keep ticking by the second.
-     */
-    fun length(seconds: Double): String {
-        if (seconds < TEN_MINUTES) return PlaybackPosition.spoken(seconds)
-        val minutes = (seconds / 60).roundToLong()
-        val h = minutes / 60
-        val m = minutes % 60
-        return if (h > 0) String.format(Locale.ROOT, "%d h %d min", h, m) else String.format(Locale.ROOT, "%d min", m)
-    }
-
-    private const val TEN_MINUTES = 600.0
+    /** A length or time left on the row: see [listeningLength]. */
+    fun length(seconds: Double): String = listeningLength(seconds)
 
     private const val NEW_FOR_MS = 2 * 24 * 60 * 60 * 1000L
 }

@@ -143,8 +143,8 @@ class EpisodeRowDisplayTest {
     @Test
     fun `a length over an hour reads in hours and minutes`() {
         assertEquals("1 h 52 min", EpisodeRowDisplay.length(6720.0 + 20))
-        // Rounding up across the hour is still in hours.
-        assertEquals("1 h 0 min", EpisodeRowDisplay.length(3599.6))
+        // Rounding up across the hour lands on a whole hour: no "0 min".
+        assertEquals("1 h", EpisodeRowDisplay.length(3599.6))
     }
 
     @Test
