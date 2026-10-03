@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.settings
 
+import com.paulohenriquesg.fahrenheit.player.PlayerSettings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -89,7 +90,11 @@ fun SettingsView(
     modifier: Modifier = Modifier,
     deviceIsDark: Boolean = isSystemInDarkTheme(),
     playNextEpisode: Boolean = false,
-    onPlayNextEpisode: (Boolean) -> Unit = {}
+    onPlayNextEpisode: (Boolean) -> Unit = {},
+    skipBack: Int = 30,
+    onSkipBack: (Int) -> Unit = {},
+    skipForward: Int = 30,
+    onSkipForward: (Int) -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -186,6 +191,8 @@ fun SettingsView(
                         modifier = Modifier.testTag(PLAY_NEXT_EPISODE_TAG)
                     )
                 }
+                SkipRow(stringResource(R.string.settings_skip_back), skipBack, "skip_back", onSkipBack)
+                SkipRow(stringResource(R.string.settings_skip_forward), skipForward, "skip_forward", onSkipForward)
             }
 
             Group(stringResource(R.string.settings_account)) {
@@ -350,6 +357,23 @@ private fun Choice(
                 text = if (selected) "$label ✓" else label,
                 style = MaterialTheme.typography.labelMedium
             )
+        }
+    }
+}
+
+/** One skip length setting: 10, 15, 30 or 60 s, the one set ticked (#107). */
+@Composable
+private fun SkipRow(title: String, seconds: Int, tag: String, onChoose: (Int) -> Unit) {
+    SettingRow(title = title, subtitle = stringResource(R.string.settings_skip_subtitle)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PlayerSettings.SKIP_LENGTHS.forEach { length ->
+                Choice(
+                    label = stringResource(R.string.settings_skip_length, length),
+                    selected = length == seconds,
+                    tag = "${tag}_$length",
+                    onClick = { onChoose(length) }
+                ) {}
+            }
         }
     }
 }
