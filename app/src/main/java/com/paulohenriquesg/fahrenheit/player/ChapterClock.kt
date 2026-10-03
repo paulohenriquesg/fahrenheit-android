@@ -24,7 +24,7 @@ object ChapterClock {
      * position just short of a start - read straight after skipping to it -
      * belongs to that chapter, not the one before.
      */
-    private const val AT_START = 0.05
+    internal const val AT_START = 0.05
 
     fun spans(chapters: List<Chapter>?, total: Double): List<ChapterSpan> {
         val sorted = chapters.orEmpty().filter { it.start != null }.sortedBy { it.start }
