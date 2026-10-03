@@ -1,7 +1,10 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
@@ -24,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.DrawerValue
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.NavigationDrawer
 import androidx.tv.material3.NavigationDrawerItem
 import androidx.tv.material3.NavigationDrawerScope
@@ -42,6 +46,9 @@ fun menuItemTestTag(id: String): String = "menu_item_$id"
  * screen when it was, so there was nothing at the left edge for a D-pad to
  * reach (#58). The TV drawer keeps a rail of icons in the layout and widens to
  * show labels when focus enters it, which is what gives LEFT somewhere to go.
+ *
+ * @param nowPlaying what is playing, drawn above the sections and told whether
+ *   the rail is open (#107); null when nothing is.
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -53,6 +60,7 @@ fun NavigationRail(
     secondary: List<MenuItem> = emptyList(),
     firstFocus: FocusRequester? = null,
     onRailFocusChanged: (Boolean) -> Unit = {},
+    nowPlaying: (@Composable (open: Boolean) -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -80,6 +88,17 @@ fun NavigationRail(
                     .padding(vertical = Space.gap),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // What is playing, above the sections with a line under it (#107).
+                nowPlaying?.let { entry ->
+                    entry(drawerValue == DrawerValue.Open)
+                    Box(
+                        Modifier
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                    )
+                }
                 items.forEach { item -> Section(item, selectedId, drawerValue, onSelect, firstFocus) }
                 if (secondary.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(Space.gap))

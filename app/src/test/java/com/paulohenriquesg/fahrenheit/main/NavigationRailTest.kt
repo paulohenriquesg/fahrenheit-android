@@ -29,6 +29,8 @@ import com.paulohenriquesg.fahrenheit.navigation.MenuAction
 import com.paulohenriquesg.fahrenheit.navigation.MenuItem
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -133,5 +135,39 @@ class NavigationRailTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag(menuItemTestTag("home")).assertIsFocused()
+    }
+
+    // #107: Now playing sits above the sections, and knows whether the rail is open.
+    private fun renderWithNowPlaying() {
+        compose.setContent {
+            FahrenheitTheme {
+                NavigationRail(
+                    items = items, selectedId = "home", onSelect = {},
+                    nowPlaying = { open -> BasicText(if (open) "NOW OPEN" else "NOW CLOSED", Modifier.testTag("now_playing")) }
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        BasicText("a book", Modifier.testTag("content_item").focusable())
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `now playing sits above the sections`() {
+        renderWithNowPlaying()
+        val entry = compose.onNodeWithTag("now_playing").getUnclippedBoundsInRoot()
+        val home = compose.onNodeWithTag(menuItemTestTag("home")).getUnclippedBoundsInRoot()
+        assertTrue("entry ${entry.top} above home ${home.top}", entry.bottom <= home.top)
+    }
+
+    @Test
+    fun `now playing opens with the rail`() {
+        renderWithNowPlaying()
+        compose.onNodeWithText("NOW CLOSED").assertExists()
+        compose.onNodeWithTag(menuItemTestTag("home")).performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+        compose.onNodeWithText("NOW OPEN").assertExists()
     }
 }

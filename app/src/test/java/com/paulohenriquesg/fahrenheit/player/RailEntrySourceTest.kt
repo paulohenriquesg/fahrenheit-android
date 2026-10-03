@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.test.utils.TestExoPlayerBuilder
+import androidx.media3.test.utils.robolectric.TestPlayerRunHelper.run
 import com.paulohenriquesg.fahrenheit.api.Chapter
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -41,6 +42,8 @@ class RailEntrySourceTest {
         val book = NowPlaying("b1", "A Book", TrackTimeline(listOf(TimelineTrack(1, 0.0, 3600.0, "/b1"))), null, null, null, false, null)
         val queue = PlaybackQueue.of(book, startAt) { "https://abs.test$it" }!!
         compose.runOnUiThread { player.setMediaItems(queue.items, queue.index, queue.positionMs) }
+        // The test player tells its listeners on its own clock: let it.
+        run(player).untilPendingCommandsAreFullyHandled()
         compose.waitForIdle()
     }
 
@@ -64,6 +67,7 @@ class RailEntrySourceTest {
         show()
         queue(startAt = 0.0)
         compose.runOnUiThread { player.clearMediaItems() }
+        run(player).untilPendingCommandsAreFullyHandled()
         compose.waitForIdle()
         assertNull(entry)
     }

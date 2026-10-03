@@ -1,0 +1,107 @@
+package com.paulohenriquesg.fahrenheit.player
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.media3.common.Player
+import com.paulohenriquesg.fahrenheit.api.Chapter
+import kotlinx.coroutines.delay
+
+/**
+ * What the rail's Now playing entry says about what is queued (#107; the
+ * rail frames of docs/mocks/player.html).
+ *
+ * @property progress how far through the whole book or episode, 0..1: the ring.
+ * @property chapter the chapter playing, for a book with chapters; null otherwise.
+ * @property leftSeconds what is left of the chapter, or of the whole when
+ *   there is no chapter, at the speed - as the player counts it.
+ */
+data class RailEntry(
+    val itemId: String,
+    val episodeId: String?,
+    val title: String,
+    val playing: Boolean,
+    val progress: Float,
+    val chapter: String?,
+    val leftSeconds: Double
+) {
+    companion object {
+        /** Null when nothing of ours is queued. */
+        fun of(
+            file: QueuedFile?,
+            title: String?,
+            positionInFile: Double,
+            playing: Boolean,
+            speed: Float,
+            spans: List<ChapterSpan>
+        ): RailEntry? {
+            file ?: return null
+            val at = file.bookTime(positionInFile)
+            val span = ChapterClock.at(spans, at)
+            val chapter = span?.let { it.title.ifBlank { "Chapter ${spans.indexOf(it) + 1}" } }
+            val left = span?.left(at) ?: PlaybackPosition.left(at, file.bookTotal)
+            return RailEntry(
+                itemId = file.itemId,
+                episodeId = file.episodeId,
+                title = title.orEmpty(),
+                playing = playing,
+                progress = PlaybackPosition.fraction(at, file.bookTotal),
+                chapter = chapter,
+                leftSeconds = left / speed
+            )
+        }
+    }
+}
+
+/**
+ * The rail's entry for what [player] - the main screen's controller - has
+ * queued; null when nothing is, or there is no player. It follows the
+ * player's events, and its position only while playing (a loop that never
+ * ends would keep Compose from idling). A book's chapters are asked for once.
+ */
+@Composable
+fun rememberRailEntry(player: Player?, chaptersOf: suspend (String) -> List<Chapter>?): RailEntry? {
+    if (player == null) return null
+    var changes by remember(player) { mutableIntStateOf(0) }
+    var playing by remember(player) { mutableStateOf(player.isPlaying) }
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onEvents(player: Player, events: Player.Events) {
+                changes++
+                playing = player.isPlaying
+            }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+    LaunchedEffect(player, playing) {
+        while (playing) {
+            delay(POLL_MS)
+            changes++
+        }
+    }
+    // Read on every change.
+    changes.let { }
+    val file = QueuedFile.of(player.currentMediaItem)
+    var spans by remember(file?.itemId, file?.episodeId) { mutableStateOf(emptyList<ChapterSpan>()) }
+    LaunchedEffect(file?.itemId, file?.episodeId) {
+        if (file == null || file.episodeId != null) return@LaunchedEffect
+        spans = ChapterClock.spans(chaptersOf(file.itemId), file.bookTotal)
+    }
+    return RailEntry.of(
+        file = file,
+        title = player.currentMediaItem?.mediaMetadata?.title?.toString(),
+        positionInFile = player.currentPosition / 1000.0,
+        // What was asked for, as the player's button shows it.
+        playing = player.playWhenReady,
+        speed = player.playbackParameters.speed,
+        spans = spans
+    )
+}
+
+private const val POLL_MS = 5_000L
