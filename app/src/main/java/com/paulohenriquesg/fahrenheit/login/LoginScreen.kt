@@ -36,6 +36,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -90,6 +93,9 @@ fun LoginScreen(
     var isApiKeyFocused by remember { mutableStateOf(false) }
     var isLoading = remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    // Down from the last field goes to the button that signs in. Left to
+    // geometry it went to whichever button sits under the field's centre.
+    val submitFocus = remember { FocusRequester() }
 
     var isHostFocused by remember { mutableStateOf(false) }
     var isUsernameFocused by remember { mutableStateOf(false) }
@@ -220,6 +226,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_api_key_field")
+                    .focusProperties { down = submitFocus }
                     .remoteKeys(focusManager, onPlay = submit)
                     .onFocusChanged { isApiKeyFocused = it.isFocused },
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
@@ -287,6 +294,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .formWidth()
                     .testTag("login_password_field")
+                    .focusProperties { down = submitFocus }
                     .remoteKeys(focusManager, onPlay = submit)
                     .onFocusChanged {
                         isPasswordFocused = it.isFocused
@@ -311,7 +319,9 @@ fun LoginScreen(
                     onClick = submit,
                     primary = true,
                     loading = loading,
-                    modifier = Modifier.testTag("login_submit_button")
+                    modifier = Modifier
+                        .focusRequester(submitFocus)
+                        .testTag("login_submit_button")
                 )
                 LoginButton(
                     text = stringResource(if (useApiKey) R.string.login_use_password else R.string.login_use_api_key),
@@ -333,6 +343,7 @@ fun LoginScreen(
                 fillWidth = true,
                 modifier = Modifier
                     .formWidth()
+                    .focusRequester(submitFocus)
                     .testTag("login_submit_button")
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -425,13 +436,13 @@ private fun RememberedAccount(username: String, host: String) {
     val shape = RoundedCornerShape(10.dp)
     Row(
         modifier = Modifier
-            .formWidth()
             .padding(bottom = 16.dp)
+            .formWidth()
+            .testTag("login_account")
+            .semantics(mergeDescendants = true) {}
             .background(scheme.surface, shape)
             .border(1.dp, scheme.onSurfaceVariant, shape)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .testTag("login_account")
-            .semantics(mergeDescendants = true) {},
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {

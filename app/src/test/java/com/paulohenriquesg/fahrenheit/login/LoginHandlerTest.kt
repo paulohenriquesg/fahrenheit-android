@@ -14,7 +14,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowToast
-import android.app.Application
+import androidx.activity.ComponentActivity
+import org.robolectric.Robolectric
 import com.paulohenriquesg.fahrenheit.main.MainActivity
 import java.io.IOException
 
@@ -25,8 +26,12 @@ import java.io.IOException
 @RunWith(RobolectricTestRunner::class)
 class LoginHandlerTest {
 
+    // An Activity, as in the app: starting Home from the application context
+    // would need a new task.
+    private val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
+
     private fun handler(login: suspend (String, String, String) -> AuthSession) = LoginHandler(
-        ApplicationProvider.getApplicationContext(),
+        activity,
         LoginCoordinator(
             sessionManager = SessionManager(FakeTokenStore()),
             performLogin = login,
@@ -84,7 +89,7 @@ class LoginHandlerTest {
         settle()
 
         assertNull(ShadowToast.getLatestToast())
-        val started = shadowOf(ApplicationProvider.getApplicationContext<Application>()).nextStartedActivity
+        val started = shadowOf(activity).nextStartedActivity
         assertEquals(MainActivity::class.java.name, started?.component?.className)
     }
 

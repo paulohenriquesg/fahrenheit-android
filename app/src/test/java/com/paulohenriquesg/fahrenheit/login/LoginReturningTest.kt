@@ -31,6 +31,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * After a sign-out the app still knows the server and the username (#63), so
@@ -40,6 +41,8 @@ import org.robolectric.annotation.Config
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp")
+// Real text metrics: the keyboard check is about heights.
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LoginReturningTest {
 
     @get:Rule
@@ -193,7 +196,8 @@ class LoginReturningTest {
 
     private fun bounds(tag: String) = compose.onNodeWithTag(tag).getUnclippedBoundsInRoot()
 
-    private fun text(tag: String) = compose.onNodeWithTag(tag).fetchSemanticsNode()
+    // The card merges its lines for a screen reader; the test reads them apart.
+    private fun text(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode()
         .config[SemanticsProperties.Text].joinToString(" ") { it.text }
 
     // The remote's centre key reaches a TV button as a click; so does OnClick.
@@ -283,7 +287,9 @@ class LoginReturningTest {
 
         assertEquals("someone", text("login_account_name"))
         assertTrue(text("login_account_server").contains("abs.local:13378"))
-        assertTrue(bounds("login_account_server").top >= bounds("login_account_name").bottom)
+        val name = compose.onNodeWithTag("login_account_name", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val server = compose.onNodeWithTag("login_account_server", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue(server.top >= name.bottom)
     }
 
     // On the stick, Down from the field left no button looking focused.
@@ -292,6 +298,7 @@ class LoginReturningTest {
         remember("http://abs.local:13378", "someone")
         show()
         compose.onNodeWithTag("login_password_field").performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.onNodeWithTag("login_password_field").assertIsFocused()
 
         compose.onNodeWithTag("login_password_field").performKeyInput { pressKey(Key.DirectionDown) }
         compose.waitForIdle()
