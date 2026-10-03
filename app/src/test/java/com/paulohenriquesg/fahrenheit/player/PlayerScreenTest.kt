@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.graphics.Color
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.api.Chapter
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
@@ -129,5 +130,18 @@ class PlayerScreenTest {
         } finally {
             java.util.Locale.setDefault(before)
         }
+    }
+
+    @Test
+    fun `with a wash the screen still shows everything`() {
+        compose.setContent {
+            FahrenheitTheme {
+                PlayerScreen(nowPlaying = book, currentTime = 700.0, wash = Color(0xFF24301A), transport = { Text("TRANSPORT") })
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Chapter 2").assertIsDisplayed()
+        compose.onNodeWithText("TRANSPORT").assertIsDisplayed()
     }
 }

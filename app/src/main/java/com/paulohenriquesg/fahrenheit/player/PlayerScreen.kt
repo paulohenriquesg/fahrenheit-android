@@ -19,6 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,12 +42,15 @@ const val GO_TO_PODCAST_TAG = "player_go_to_podcast"
  * it - the series or the show, the title, who wrote and reads it, the chapter
  * playing - and [transport] under them, across the full width.
  *
+ * Behind it all, [wash]: the cover's colour (see [CoverWash]), or nothing.
+ *
  * The description moves to the About panel (step 3 of #107).
  */
 @Composable
 fun PlayerScreen(
     nowPlaying: NowPlaying,
     currentTime: Double,
+    wash: Color? = null,
     transport: @Composable () -> Unit
 ) {
     var titleFocused by remember { mutableStateOf(false) }
@@ -52,9 +59,24 @@ fun PlayerScreen(
     }
     val chapter = ChapterClock.at(spans, currentTime)?.title?.takeIf { it.isNotBlank() }
 
+    val background = MaterialTheme.colorScheme.background
+    // The cover's colour behind it, fading into the background (frame C).
+    val washed = if (wash == null) Modifier else Modifier.drawWithCache {
+        val glow = Brush.radialGradient(
+            listOf(wash, Color.Transparent),
+            center = Offset(size.width * 0.18f, size.height * 0.30f),
+            radius = maxOf(size.width, size.height) * 0.75f
+        )
+        val fade = Brush.verticalGradient(listOf(wash.copy(alpha = 0.55f), background), endY = size.height * 0.75f)
+        onDrawBehind {
+            drawRect(fade)
+            drawRect(glow)
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .then(washed)
             .padding(horizontal = 60.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.Center
     ) {

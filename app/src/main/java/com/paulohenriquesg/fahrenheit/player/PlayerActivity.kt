@@ -140,6 +140,7 @@ class PlayerActivity : ComponentActivity() {
             else -> PlayerScreen(
                 nowPlaying = playing,
                 currentTime = currentTime,
+                wash = rememberCoverWash(playing.itemId),
                 transport = {
                     // ready implies a timeline: PlayerStart refuses a NowPlaying without one.
                     val timeline = playing.timeline
