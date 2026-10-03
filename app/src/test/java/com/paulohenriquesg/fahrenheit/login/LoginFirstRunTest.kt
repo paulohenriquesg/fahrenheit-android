@@ -24,6 +24,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * Frame 2 of the login mock (#132): on first run the address is asked for on
@@ -34,6 +35,8 @@ import org.robolectric.annotation.Config
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp")
+// Real text metrics: the keyboard checks are about heights.
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LoginFirstRunTest {
 
     @get:Rule
