@@ -8,7 +8,9 @@ data class EpisodeRef(val id: String, val title: String, val length: Double?)
 /**
  * The episodes either side of one (#108): older and newer by when they came
  * out, among those the server has audio for - "next" is the next newer one.
- * Episodes out at the same moment go by the server's own order.
+ * Episodes out at the same moment go by their index, then the server's own
+ * order. An episode added from a feed has no index, and one with no date
+ * reads as the oldest: both arrive as 0.
  */
 object EpisodeNeighbours {
     data class Around(val previous: EpisodeRef?, val next: EpisodeRef?)

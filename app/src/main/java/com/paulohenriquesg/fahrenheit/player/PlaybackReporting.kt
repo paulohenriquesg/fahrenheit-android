@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import android.os.SystemClock
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -40,6 +41,8 @@ class PlaybackReporting(
     private var reporter: ProgressReporter? = null
     private var time: ListeningTime? = null
     private var rounds: Job? = null
+    /** Where the item just left ended, for its closing report: the live position already belongs to the next. */
+    private var endedAt: Double? = null
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         when {
@@ -60,6 +63,24 @@ class PlaybackReporting(
 
     /** The queue is about to be stopped, replaced or cleared. */
     fun beforeLeaving() = finish()
+
+    /**
+     * Media3 moved on to another item by itself - the next episode (#108) -
+     * or by a skip, without isPlaying changing: close what was playing, at
+     * its end when it played through, and report what plays now. The next
+     * file of the same book is not a move.
+     */
+    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+        val owner = reportingFor ?: return
+        val arrived = QueuedFile.of(mediaItem)
+        if (arrived != null && arrived.isFor(owner.itemId, owner.episodeId)) return
+        endedAt = if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) owner.bookTotal else null
+        finish()
+        endedAt = null
+        reporter = null
+        reportingFor = null
+        if (player.isPlaying) start()
+    }
 
     /**
      * Closes this stretch of listening now and waits until its report is
@@ -108,10 +129,13 @@ class PlaybackReporting(
         closings.track(closing)
     }
 
-    /** Whole-book time, or -1 (never sent) once the player has moved on to something else. */
+    /**
+     * Whole-book time; once the player has moved on to something else, where
+     * this item ended if it played through, else -1 (never sent).
+     */
     private fun positionIn(owner: QueuedFile): Double {
-        val now = QueuedFile.of(player.currentMediaItem) ?: return -1.0
-        if (!now.isFor(owner.itemId, owner.episodeId)) return -1.0
+        val now = QueuedFile.of(player.currentMediaItem) ?: return endedAt ?: -1.0
+        if (!now.isFor(owner.itemId, owner.episodeId)) return endedAt ?: -1.0
         return now.bookTime(player.currentPosition / 1000.0)
     }
 }

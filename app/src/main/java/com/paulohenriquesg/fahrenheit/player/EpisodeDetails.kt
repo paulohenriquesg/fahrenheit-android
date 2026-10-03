@@ -1,5 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.core.text.HtmlCompat
+
 /**
  * What an episode says about itself under its title (#108; frame "C,
  * playing an episode"): a badge when it is not a regular one, a details line,
@@ -26,16 +28,10 @@ object EpisodeDetails {
         subtitle?.takeIf { it.isNotBlank() }?.trim()
             ?: description?.let(::plainText)?.takeIf { it.isNotBlank() }
 
-    /** Tags out, paragraphs run together, the common entities read. */
+    /** As the text a feed's HTML renders to: tags out, entities read, blocks run together. */
     private fun plainText(html: String): String =
-        html.replace(Regex("""(?i)</p\s*>|<br\s*/?>"""), " ")
-            .replace(Regex("<[^>]+>"), "")
-            .replace("&nbsp;", " ")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", "\"")
-            .replace("&#39;", "'")
-            .replace("&amp;", "&")
+        HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_COMPACT).toString()
+            .replace('\uFFFC', ' ')
             .replace(Regex("""\s+"""), " ")
             .trim()
 }

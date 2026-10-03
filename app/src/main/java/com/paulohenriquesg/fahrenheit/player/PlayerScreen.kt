@@ -160,7 +160,13 @@ private fun EpisodeExtras(nowPlaying: NowPlaying) {
                 )
             }
             nowPlaying.details?.let {
-                Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                Text(
+                    it,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

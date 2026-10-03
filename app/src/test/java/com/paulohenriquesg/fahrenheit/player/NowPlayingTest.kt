@@ -7,12 +7,16 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import androidx.test.ext.junit.runners.AndroidJUnit4
 
 /**
  * One player for books and episodes (#73). What differs is three things: the
  * line under the title, whether chapter marks are drawn, and which file plays.
  * Frames 4 and 4b of docs/mocks/screens.html.
  */
+// Robolectric: an episode's notes are read through Android's HTML parser.
+@RunWith(AndroidJUnit4::class)
 class NowPlayingTest {
 
     private val day = 24 * 60 * 60 * 1000L

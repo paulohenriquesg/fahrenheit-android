@@ -13,12 +13,15 @@ import androidx.media3.common.MediaItem
  *
  * @property startOffset seconds from the start of the book where this file begins.
  * @property bookTotal the length of everything that will play, in seconds.
+ * @property startAt where to start when playback moves on to this item by
+ *   itself (#108: the next episode, from where it was left); 0 for the start.
  */
 data class QueuedFile(
     val itemId: String,
     val episodeId: String?,
     val startOffset: Double,
-    val bookTotal: Double
+    val bookTotal: Double,
+    val startAt: Double = 0.0
 ) {
     /** Whole-book time for a position within this file - what progress sync reports. */
     fun bookTime(positionInFile: Double): Double = startOffset + positionInFile
@@ -32,6 +35,7 @@ data class QueuedFile(
         episodeId?.let { putString(EPISODE_ID, it) }
         putDouble(START_OFFSET, startOffset)
         putDouble(BOOK_TOTAL, bookTotal)
+        putDouble(START_AT, startAt)
     }
 
     companion object {
@@ -39,6 +43,7 @@ data class QueuedFile(
         private const val EPISODE_ID = "fahrenheit.episodeId"
         private const val START_OFFSET = "fahrenheit.startOffset"
         private const val BOOK_TOTAL = "fahrenheit.bookTotal"
+        private const val START_AT = "fahrenheit.startAt"
 
         /** The facts an item carries, or null for an item that is not one of ours. */
         fun of(item: MediaItem?): QueuedFile? {
@@ -48,7 +53,8 @@ data class QueuedFile(
                 itemId = itemId,
                 episodeId = extras.getString(EPISODE_ID),
                 startOffset = extras.getDouble(START_OFFSET),
-                bookTotal = extras.getDouble(BOOK_TOTAL)
+                bookTotal = extras.getDouble(BOOK_TOTAL),
+                startAt = extras.getDouble(START_AT)
             )
         }
     }

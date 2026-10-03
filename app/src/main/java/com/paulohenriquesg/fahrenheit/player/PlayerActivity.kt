@@ -90,7 +90,8 @@ class PlayerActivity : ComponentActivity() {
         // comes back, and not after a configuration change recreates it.
         start = PlayerStart(
             autoPlay = autoPlay && savedInstanceState == null,
-            startAt = startAtOf(intent)?.takeIf { savedInstanceState == null }
+            startAt = startAtOf(intent)?.takeIf { savedInstanceState == null },
+            resumed = savedInstanceState != null
         )
 
         setContent {
@@ -161,7 +162,8 @@ class PlayerActivity : ComponentActivity() {
 
         // The queue moved on to the next episode: show that one, from the item
         // already loaded - no request, and no "Loading" in between.
-        LaunchedEffect(shownEpisode) {
+        // Keyed on the item too: a move made before it loaded is followed once it has.
+        LaunchedEffect(shownEpisode, loaded) {
             if (shownEpisode == nowPlaying?.episodeId) return@LaunchedEffect
             val item = loaded ?: return@LaunchedEffect
             NowPlaying.of(item, shownEpisode, System.currentTimeMillis(), serverFormat)?.let { nowPlaying = it }
@@ -190,15 +192,26 @@ class PlayerActivity : ComponentActivity() {
             listening?.applyRememberedSpeed()
             // The saved position is read when it is needed, not when the
             // screen opened: by then it may have been listened past elsewhere.
-            // With auto-advance on, the next newer episode follows this one (#108).
+            // Coming back after the queue moved on with the screen closed: show
+            // the episode playing, and begin again with that (#108).
+            start.follows(connected, playing)?.let {
+                shownEpisode = it
+                return@LaunchedEffect
+            }
+            // With auto-advance on, the next newer episode follows this one, from
+            // where it was left (#108).
             val next = playing.next?.takeIf { playerSettings.playNextEpisode }
                 ?.let { ref -> loaded?.let { NowPlaying.of(it, ref.id, System.currentTimeMillis(), serverFormat) } }
+            val nextStartAt = next?.let {
+                ResumePoint.decide(savedProgress(itemId, it.episodeId), it.trackTotal, it.mediaDuration).positionSeconds
+            } ?: 0.0
             ready = start.begin(
                 connected,
                 playing,
                 progress = { savedProgress(itemId, playing.episodeId) },
                 resolveUrl = { ApiClient.generateFullUrl(it) },
-                next = next
+                next = next,
+                nextStartAt = nextStartAt
             )
             if (!ready) failed = true
         }
