@@ -6,10 +6,9 @@
 #
 # Two TV-specific things this flow depends on, both learned the hard way:
 #
-# 1. The IME is already up when the screen appears, and it owns D-pad focus.
-#    A single "Remote Dpad Down" hands focus to the first field; without it the
-#    D-pad just walks the on-screen keyboard (q -> a) and nothing is typed.
-#    Tapping a Compose field does NOT move focus here, so taps are not used.
+# 1. Tapping a Compose field does NOT move focus on TV, so taps are not used;
+#    the remote's D-pad and centre key drive the flow. Each step of the form
+#    puts focus on its first field itself.
 #
 # 2. Enter walks the form: in the address it continues to the sign-in step,
 #    which puts focus on the username (#132); in the username it moves to the
@@ -32,7 +31,22 @@ name: Login smoke
       id: "login_screen"
     timeout: 40000
 
-- pressKey: "Remote Dpad Down"
+# First run lists the servers that answer on this network (#101). The flow
+# always types its address, so it walks down to "Enter an address instead";
+# a server found on the emulator's network would sit above it.
+- extendedWaitUntil:
+    visible:
+      id: "login_manual_address"
+    timeout: 20000
+- repeat:
+    times: 10
+    while:
+      notVisible:
+        id: "login_manual_address"
+        focused: true
+    commands:
+      - pressKey: "Remote Dpad Down"
+- pressKey: "Remote Dpad Center"
 
 - assertVisible:
     id: "login_host_field"

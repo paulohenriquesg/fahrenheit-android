@@ -31,6 +31,14 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.tv.material3.Button
+import androidx.tv.material3.ListItem
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Border
 import androidx.tv.material3.LocalContentColor
@@ -54,7 +62,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.tv.material3.Text
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,7 +86,8 @@ fun LoginScreen(
     handleLogin: (String, String, String, MutableState<Boolean>) -> Unit,
     handleApiKeyLogin: (String, String, MutableState<Boolean>) -> Unit,
     error: LoginError? = null,
-    onDismissError: () -> Unit = {}
+    onDismissError: () -> Unit = {},
+    findServers: (suspend ((FoundServer) -> Unit) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val sharedPreferencesHandler = SharedPreferencesHandler(context)
@@ -116,6 +124,33 @@ fun LoginScreen(
     var differentServer by remember { mutableStateOf(false) }
     val returning = remembered && !differentServer
 
+    // Frame 1 (#101): before asking for an address, offer the servers that
+    // answer on this network. Typing one is the fallback.
+    var manualAddress by remember { mutableStateOf(false) }
+    val listing = !addressConfirmed && findServers != null && !manualAddress
+    val found = remember { mutableStateListOf<FoundServer>() }
+    var scanning by remember { mutableStateOf(true) }
+    if (listing && findServers != null) {
+        // The last scan's rows go with the list: shown again on return, they
+        // would take focus and then vanish as the new scan starts.
+        DisposableEffect(Unit) {
+            onDispose {
+                found.clear()
+                scanning = true
+            }
+        }
+        // Leaving the list cancels the scan; coming back looks again.
+        LaunchedEffect(Unit) {
+            found.clear()
+            scanning = true
+            try {
+                findServers { server -> if (server !in found) found += server }
+            } finally {
+                scanning = false
+            }
+        }
+    }
+
     // Beside the field that caused it - the band above the keyboard is the only
     // part of the screen visible while typing. If that field is not on screen
     // (the address, once it is a fact; a password error, then a switch to the
@@ -139,9 +174,18 @@ fun LoginScreen(
     // So the step that appears takes focus: its first field.
     val hostFocus = remember { FocusRequester() }
     val firstFieldFocus = remember { FocusRequester() }
-    var stepChanged by remember { mutableStateOf(false) }
-    LaunchedEffect(addressConfirmed) {
-        if (stepChanged) (if (addressConfirmed) firstFieldFocus else hostFocus).requestFocus()
+    // The server list's first row: the first server found, or typing one.
+    val listFocus = remember { FocusRequester() }
+    // The list has no keyboard to fight, so it takes focus from the start; the
+    // text fields wait for the remote rather than raising the keyboard.
+    var stepChanged by remember { mutableStateOf(listing) }
+    val step = when {
+        addressConfirmed -> firstFieldFocus
+        listing -> listFocus
+        else -> hostFocus
+    }
+    LaunchedEffect(step) {
+        if (stepChanged) step.requestFocus()
     }
 
     // Checked here, before asking for anything else: nothing is sent yet.
@@ -190,6 +234,57 @@ fun LoginScreen(
                 .testTag("login_title")
         )
 
+        if (listing) {
+            Text(
+                stringResource(
+                    when {
+                        scanning -> R.string.login_looking_for_servers
+                        found.isEmpty() -> R.string.login_no_servers_found
+                        else -> R.string.login_choose_server
+                    }
+                ),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            ErrorAbove(LoginField.Host)
+            // In address order: probes answer in any order, and a list that
+            // reshuffles under the cursor is worse than a predictable one.
+            found.sortedBy { addressOrder(it.address) }.forEachIndexed { index, server ->
+                // Keyed, so a server found later slots in without the focused
+                // row starting to show a different server.
+                key(server.address) { ServerRow(
+                    title = displayHost(server.address),
+                    detail = server.version?.let { stringResource(R.string.login_server_version, it) }
+                        ?: stringResource(R.string.login_server_unknown_version),
+                    icon = Icons.Filled.Dns,
+                    onClick = {
+                        host = server.address
+                        addressError = null
+                        onDismissError()
+                        stepChanged = true
+                        addressConfirmed = true
+                    },
+                    modifier = Modifier
+                        .then(if (index == 0) Modifier.focusRequester(listFocus) else Modifier)
+                        .testTag("login_server_${displayHost(server.address)}")
+                ) }
+            }
+            ServerRow(
+                title = stringResource(R.string.login_manual_address),
+                detail = stringResource(R.string.login_manual_address_detail),
+                icon = Icons.Filled.Edit,
+                onClick = {
+                    stepChanged = true
+                    manualAddress = true
+                },
+                modifier = Modifier
+                    .then(if (found.isEmpty()) Modifier.focusRequester(listFocus) else Modifier)
+                    .testTag("login_manual_address")
+            )
+            return@Column
+        }
+
         if (!addressConfirmed) {
             Text(
                 stringResource(R.string.login_address_hint),
@@ -232,12 +327,25 @@ fun LoginScreen(
                 colors = fieldColors()
             )
             Spacer(modifier = Modifier.height(16.dp))
-            LoginButton(
-                text = stringResource(R.string.login_continue),
-                onClick = confirmAddress,
-                primary = true,
-                modifier = Modifier.testTag("login_continue")
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                LoginButton(
+                    text = stringResource(R.string.login_continue),
+                    onClick = confirmAddress,
+                    primary = true,
+                    modifier = Modifier.testTag("login_continue")
+                )
+                if (findServers != null) {
+                    LoginButton(
+                        text = stringResource(R.string.login_search_again),
+                        onClick = {
+                            addressError = null
+                            stepChanged = true
+                            manualAddress = false
+                        },
+                        modifier = Modifier.testTag("login_search_again")
+                    )
+                }
+            }
             return@Column
         }
 
@@ -386,6 +494,7 @@ fun LoginScreen(
                         differentServer = true
                         stepChanged = true
                         addressConfirmed = false
+                        manualAddress = false
                     }
                 },
                 modifier = Modifier.testTag("login_different_server")
@@ -471,6 +580,32 @@ private fun Modifier.remoteKeys(focusManager: FocusManager, onPlay: (() -> Unit)
             else -> false
         }
     }
+
+/** One server that answered, or the way to type an address: frame 1's rows. */
+@Composable
+private fun ServerRow(
+    title: String,
+    detail: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    ListItem(
+        selected = false,
+        onClick = onClick,
+        modifier = modifier
+            .formWidth()
+            .padding(bottom = 8.dp),
+        leadingContent = { Icon(icon, contentDescription = null, tint = LocalContentColor.current) },
+        headlineContent = { Text(title) },
+        supportingContent = { Text(detail) }
+    )
+}
+
+/** Sorts dotted IPv4 URLs numerically, so .9 comes before .81. */
+private fun addressOrder(address: String): Long =
+    displayHost(address).substringBefore(':').split('.')
+        .fold(0L) { acc, part -> acc * 256 + (part.toLongOrNull() ?: 0L) }
 
 /** Who and where, as a fact rather than two fields to fill in: frame 3's card. */
 @Composable
