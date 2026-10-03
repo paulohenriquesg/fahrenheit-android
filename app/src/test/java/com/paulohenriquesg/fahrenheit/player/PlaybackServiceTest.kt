@@ -149,11 +149,42 @@ class PlaybackServiceTest {
             "com.example.stranger", 0, 0, 0, 0, false, Bundle.EMPTY, true
         )
 
-        val commands = PlaybackSessionCallback.onConnectAsync(session, stranger).get().availablePlayerCommands
+        val commands = PlaybackSessionCallback {}.onConnectAsync(session, stranger).get().availablePlayerCommands
 
         assertFalse(commands.contains(Player.COMMAND_SET_MEDIA_ITEM))
         assertFalse(commands.contains(Player.COMMAND_CHANGE_MEDIA_ITEMS))
         session.release()
+    }
+
+    // Review Focus 5: only the app sets a timer.
+    @Test
+    fun `an app that is not trusted cannot set a sleep timer`() {
+        val session = service.get().sessionPlayer!!.let { MediaSession.Builder(context, it).setId("pin-sleep").build() }
+        val stranger = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            "com.example.stranger", 0, 0, 0, 0, false, Bundle.EMPTY, true
+        )
+
+        val commands = PlaybackSessionCallback {}.onConnectAsync(session, stranger).get().availableSessionCommands
+
+        assertFalse(commands.contains(SleepCommand.COMMAND))
+        session.release()
+    }
+
+    @Test
+    fun `the app can set a sleep timer, and hears what is left`() {
+        val heard = mutableListOf<Bundle>()
+        val future = Playback.connect(context, object : MediaController.Listener {
+            override fun onExtrasChanged(controller: MediaController, extras: Bundle) { heard += extras }
+        })
+        runMainLooperUntil { future.isDone }
+        val controller = future.get().also { this.controller = it }
+        queued(controller, startAt = 0.0)
+
+        controller.sendCustomCommand(SleepCommand.COMMAND, SleepCommand.args(SleepChoice.Minutes(30)))
+
+        runMainLooperUntil { heard.isNotEmpty() }
+        assertEquals(SleepState(SleepChoice.Minutes(30), minutesLeft = 30), SleepCommand.state(heard.last()))
+        assertEquals(SleepState(SleepChoice.Minutes(30), minutesLeft = 30), SleepCommand.state(controller.sessionExtras))
     }
 
     @Test
@@ -163,7 +194,7 @@ class PlaybackServiceTest {
             context.packageName, 0, 0, 0, 0, true, Bundle.EMPTY, true
         )
 
-        val commands = PlaybackSessionCallback.onConnectAsync(session, own).get().availablePlayerCommands
+        val commands = PlaybackSessionCallback {}.onConnectAsync(session, own).get().availablePlayerCommands
 
         assertTrue(commands.contains(Player.COMMAND_SET_MEDIA_ITEM))
         session.release()

@@ -1,5 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import android.os.Bundle
+import android.os.SystemClock
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -9,13 +11,18 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Where playback lives, so it outlives the player screen (#16).
@@ -29,6 +36,8 @@ class PlaybackService : MediaSessionService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var session: MediaSession? = null
+    private var sleep: SleepWatch? = null
+    private var sleeping: Job? = null
 
     /** The player the session drives; for tests. */
     internal val sessionPlayer: Player? get() = session?.player
@@ -55,15 +64,35 @@ class PlaybackService : MediaSessionService() {
             ListeningSession(it, ApiClient::getApiService, PlaybackDevice.info(this))
         })
         exo.addListener(reporting)
+        val watch = SleepWatch(exo, now = { SystemClock.elapsedRealtime() }, publish = { session?.setSessionExtras(it) })
+        exo.addListener(watch)
+        sleep = watch
         exo.addListener(object : Player.Listener {
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
                 // Nothing queued: nothing to keep the service for.
                 if (timeline.isEmpty) stopSelf()
             }
         })
-        session = MediaSession.Builder(this, LeavingGuard(exo, reporting::beforeLeaving))
-            .setCallback(PlaybackSessionCallback)
+        val guarded = LeavingGuard(exo) {
+            reporting.beforeLeaving()
+            watch.beforeLeaving()
+        }
+        session = MediaSession.Builder(this, guarded)
+            .setCallback(PlaybackSessionCallback(::setSleep))
             .build()
+    }
+
+    /** Sets or clears the sleep timer, and ticks it while it runs. */
+    private fun setSleep(args: Bundle) {
+        val watch = sleep ?: return
+        watch.set(args)
+        if (sleeping?.isActive == true) return
+        sleeping = scope.launch {
+            while (watch.running) {
+                delay(watch.nextCheckMs())
+                watch.check()
+            }
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
@@ -89,8 +118,37 @@ class PlaybackService : MediaSessionService() {
  *
  * Items arriving from a controller in another process have lost their URI;
  * [PlayableItems] rebuilds it.
+ *
+ * Trusted controllers - the app's own screen - may also set the sleep
+ * timer ([SleepCommand]), which is handed to [onSleep].
  */
-internal object PlaybackSessionCallback : MediaSession.Callback {
+internal class PlaybackSessionCallback(private val onSleep: (Bundle) -> Unit) : MediaSession.Callback {
+    // Media3's own default, trusted or not, plus the sleep timer for the
+    // trusted. Its default onConnect answers with a placeholder that only
+    // onConnectAsync turns into this, so it cannot be built upon.
+    override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+        val accepted = MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
+        if (controller.isTrusted) {
+            accepted.setAvailableSessionCommands(
+                MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon().add(SleepCommand.COMMAND).build()
+            )
+        }
+        return accepted.build()
+    }
+
+    override fun onCustomCommand(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        customCommand: SessionCommand,
+        args: Bundle
+    ): ListenableFuture<SessionResult> {
+        if (customCommand.customAction != SleepCommand.COMMAND.customAction) {
+            return super.onCustomCommand(session, controller, customCommand, args)
+        }
+        onSleep(args)
+        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+    }
+
     override fun onAddMediaItems(
         mediaSession: MediaSession,
         controller: MediaSession.ControllerInfo,
