@@ -550,7 +550,9 @@ fun PersonalizedHomeView(
                                 onSeeAll = { seeAll?.let { onSeeAll(it.opens) } },
                                 onItemLongClick = if (playsOnPress) ::openDetails else null
                             ) { item ->
-                                if (playsOnPress) {
+                                // A book whose audio has gone would only reach a
+                                // player that cannot start; its details say why.
+                                if (playsOnPress && item.media.numAudioFiles > 0) {
                                     context.startActivity(PlayerActivity.createIntent(context, item.id, autoPlay = true))
                                 } else {
                                     openDetails(item)
