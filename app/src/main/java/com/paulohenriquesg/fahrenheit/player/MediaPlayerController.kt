@@ -167,7 +167,7 @@ fun MediaPlayerController(
             PlaybackBar(
                 fraction = PlaybackPosition.fraction(currentTime, totalTime),
                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp).testTag(BOOK_BAR_TAG),
-                ticks = ChapterClock.ticks(spans, totalTime),
+                ticks = remember(spans, totalTime) { ChapterClock.ticks(spans, totalTime) },
                 thick = false
             )
             TimesRow(

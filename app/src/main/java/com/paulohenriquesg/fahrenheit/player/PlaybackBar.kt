@@ -77,7 +77,8 @@ fun PlaybackBar(
         val at = fraction.coerceIn(0f, 1f) * size.width
         drawRoundRect(track, Offset(0f, top), Size(size.width, barHeight), radius)
         drawRoundRect(fill, Offset(0f, top), Size(at, barHeight), radius)
-        ticks.filter { it in 0f..1f }.forEach { t ->
+        // Only as many as the bar can show apart (#143).
+        ChapterClock.thinned(ticks.filter { it in 0f..1f }, size.width, MIN_TICK_GAP.toPx()).forEach { t ->
             val x = t * size.width
             drawRect(tick, Offset(x - 1.dp.toPx(), top - 3.dp.toPx()), Size(2.dp.toPx(), barHeight + 6.dp.toPx()))
         }
@@ -88,3 +89,6 @@ fun PlaybackBar(
         }
     }
 }
+
+/** The least room between two chapter ticks: three times a tick's width (#143). */
+private val MIN_TICK_GAP = 6.dp

@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.player
 import com.paulohenriquesg.fahrenheit.api.Chapter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Where a position sits in its chapter, and where chapter skip goes (#107). */
@@ -75,4 +76,32 @@ class ChapterClockTest {
         val open = ChapterClock.spans(listOf(Chapter(start = 0.0, title = "A"), Chapter(start = 600.0, title = "B"), Chapter(start = 900.0, title = "C")), total = 1200.0)
         assertEquals(listOf(0.5f, 0.75f), ChapterClock.ticks(open, 1200.0))
     }
+
+    // #143: a book with ~158 chapters drew its book bar's ticks as a comb.
+    @Test fun `ticks far apart are all kept`() =
+        assertEquals(listOf(0.25f, 0.5f, 0.75f), ChapterClock.thinned(listOf(0.25f, 0.5f, 0.75f), widthPx = 800f, minGapPx = 6f))
+
+    @Test fun `a crowd of ticks keeps the first and spaces the rest`() {
+        val crowd = (1..157).map { it / 158f }
+        val kept = ChapterClock.thinned(crowd, widthPx = 800f, minGapPx = 6f)
+        // Even chapters about 5 px apart keep every second tick, as a stride
+        // would; the last, about 5 px from the bar's end, goes too.
+        assertEquals(crowd.filterIndexed { i, _ -> i % 2 == 0 }.dropLast(1), kept)
+    }
+
+    @Test fun `no ticks, none drawn`() =
+        assertEquals(emptyList<Float>(), ChapterClock.thinned(emptyList(), widthPx = 800f, minGapPx = 6f))
+
+    @Test fun `with no width only the first is kept`() =
+        assertEquals(listOf(0.25f), ChapterClock.thinned(listOf(0.25f, 0.5f), widthPx = 0f, minGapPx = 6f))
+
+    // Review (#143): rounding must not decide a gap that is exactly the minimum.
+    @Test fun `a gap of exactly the minimum is kept`() =
+        assertEquals(listOf(0.1f, 0.106f), ChapterClock.thinned(listOf(0.1f, 0.106f), widthPx = 1000f, minGapPx = 6f))
+
+    @Test fun `duplicate ticks are drawn once`() =
+        assertEquals(listOf(0.5f, 0.9f), ChapterClock.thinned(listOf(0.5f, 0.5f, 0.9f), widthPx = 800f, minGapPx = 6f))
+
+    @Test fun `a tick crowding the bar's end is dropped`() =
+        assertEquals(listOf(0.5f), ChapterClock.thinned(listOf(0.5f, 0.996f), widthPx = 800f, minGapPx = 6f))
 }
