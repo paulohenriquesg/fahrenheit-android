@@ -149,6 +149,7 @@ class ScreenTitlePlacementTest {
                     version = "v0.0.10",
                     update = UpdateCheck.Idle,
                     onCheckUpdates = {},
+                    onInstall = {},
                     username = "admin",
                     server = "http://books.example:13378",
                     onSignOut = {},

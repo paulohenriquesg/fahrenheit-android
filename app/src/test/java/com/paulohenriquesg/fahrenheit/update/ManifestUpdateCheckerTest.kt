@@ -58,7 +58,29 @@ class ManifestUpdateCheckerTest {
     fun `a check the user asked for ignores the snooze`() = runBlocking {
         val snooze = FakeSnooze(versionCode = 12, at = 1_000_000L)
 
-        assertEquals(12, checker(snooze = snooze, now = 1_000_000L).check(force = true)?.versionCode)
+        val result = checker(snooze = snooze, now = 1_000_000L).checkNow()
+
+        assertEquals(12, (result as CheckResult.Available).update.versionCode)
+    }
+
+    @Test
+    fun `a check the user asked for says when there is nothing newer`() = runBlocking {
+        assertEquals(CheckResult.UpToDate, checker(installed = 12).checkNow())
+    }
+
+    // Asked for, a failure must not read as "nothing new": the listener would
+    // believe they are up to date while offline.
+    @Test
+    fun `a check the user asked for reports a failed fetch`() = runBlocking {
+        assertEquals(CheckResult.Failed, checker(fetch = { null }).checkNow())
+        assertEquals(CheckResult.Failed, checker(fetch = { throw java.io.IOException("offline") }).checkNow())
+    }
+
+    // A captive portal answers with its login page, not with a manifest.
+    @Test
+    fun `a check the user asked for reports an answer that is not a manifest`() = runBlocking {
+        assertEquals(CheckResult.Failed, checker(fetch = { "<html><body>Sign in</body></html>" }).checkNow())
+        assertEquals(CheckResult.Failed, checker(fetch = { "{}" }).checkNow())
     }
 
     @Test

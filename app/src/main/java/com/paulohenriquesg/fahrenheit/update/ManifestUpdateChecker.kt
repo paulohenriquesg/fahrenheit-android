@@ -7,6 +7,13 @@ interface SnoozeStore {
     fun snooze(versionCode: Int, at: Long)
 }
 
+/** The answer to a check the user asked for, where a failure must say so. */
+sealed interface CheckResult {
+    data object UpToDate : CheckResult
+    data class Available(val update: AvailableUpdate) : CheckResult
+    data object Failed : CheckResult
+}
+
 /**
  * Decides whether to offer an update, with nothing Android-specific attached.
  *
@@ -22,22 +29,34 @@ class ManifestUpdateChecker(
     private val now: () -> Long
 ) {
     /**
-     * The update to offer, or null. [force] is a check the user asked for, so
-     * it answers even while a snooze is running.
+     * The update to offer, or null. Quiet about failures, and respects a
+     * snooze: this is the check nobody asked for.
      */
-    suspend fun check(force: Boolean = false): AvailableUpdate? {
+    suspend fun check(): AvailableUpdate? {
+        val result = fetchAndPlan() as? CheckResult.Available ?: return null
+        if (isSnoozed(result.update.versionCode)) return null
+        return result.update
+    }
+
+    /**
+     * A check the user asked for: it answers even while a snooze is running,
+     * and a failure says so rather than passing for "nothing new".
+     */
+    suspend fun checkNow(): CheckResult = fetchAndPlan()
+
+    private suspend fun fetchAndPlan(): CheckResult {
         val body = try {
             fetchManifest()
         } catch (e: Exception) {
-            // Offline, DNS, a captive portal: never worth interrupting anyone.
+            // Offline, DNS, a captive portal.
             null
-        } ?: return null
+        } ?: return CheckResult.Failed
 
-        val manifest = UpdateManifest.parse(body) ?: return null
-        val update = UpdatePlanner.plan(manifest, installedVersionCode(), language()) ?: return null
-
-        if (!force && isSnoozed(update.versionCode)) return null
-        return update
+        val manifest = UpdateManifest.parse(body)
+        if (manifest?.versions == null) return CheckResult.Failed
+        val update = UpdatePlanner.plan(manifest, installedVersionCode(), language())
+            ?: return CheckResult.UpToDate
+        return CheckResult.Available(update)
     }
 
     fun snooze(update: AvailableUpdate) = snoozeStore.snooze(update.versionCode, now())
