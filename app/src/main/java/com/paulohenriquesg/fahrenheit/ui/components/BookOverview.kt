@@ -31,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -94,10 +93,12 @@ fun BookOverview(
 ) {
     val text = description?.takeIf { it.isNotBlank() }
     val descriptionFocus = rememberInitialFocus(enabled = landOnDescription && text != null)
+    val thisBook = remember { FocusRequester() }
+    val row = series?.takeIf { it.total > 1 }
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(40.dp)) {
         Column(
             Modifier
-                .width(210.dp)
+                .width(180.dp)
                 // Right from the actions goes to the description: they sit under
                 // the cover, below the description's box, where the remote's own
                 // search would find the series row instead.
@@ -107,16 +108,23 @@ fun BookOverview(
                 },
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            CoverImage(itemId = itemId, contentDescription = title, size = 210.dp)
+            // Room for three actions under a long title, at a larger font too.
+            CoverImage(itemId = itemId, contentDescription = title, size = 180.dp)
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 3,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             byline?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
             Spacer(Modifier.height(6.dp))
             actions()
@@ -128,7 +136,14 @@ fun BookOverview(
                     Modifier
                         .fillMaxWidth()
                         .heightIn(max = 230.dp)
-                        .background(Color.White.copy(alpha = 0.03f), RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), RoundedCornerShape(12.dp))
+                        // Down past the end of the description goes to this book in
+                        // the series, not whichever cover sits under its middle.
+                        .onPreviewKeyEvent { event ->
+                            val toThisBook = row != null && event.type == KeyEventType.KeyDown &&
+                                event.key == Key.DirectionDown && !scroll.canScrollForward
+                            if (toThisBook) runCatching { thisBook.requestFocus() }.isSuccess else false
+                        }
                         .verticalScroll(scroll)
                         .testTag(DESCRIPTION_BOX_TAG)
                         .padding(12.dp)
@@ -140,7 +155,6 @@ fun BookOverview(
                     )
                 }
             }
-            val row = series?.takeIf { it.total > 1 }
             if (row != null || facts.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
                     row?.let {
@@ -150,6 +164,7 @@ fun BookOverview(
                                 label = stringResource(R.string.series_count, seriesName ?: stringResource(R.string.about_series), it.total),
                                 askBeforeSwitching = askBeforeSwitching,
                                 onChoose = onSeriesBook,
+                                landHere = Modifier.focusRequester(thisBook),
                                 coverSize = 84.dp,
                                 titles = true
                             )
@@ -260,7 +275,13 @@ private fun FactsGrid(facts: List<AboutFact>, modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.width(100.dp)
                 )
-                Text(fact.value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    fact.value,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

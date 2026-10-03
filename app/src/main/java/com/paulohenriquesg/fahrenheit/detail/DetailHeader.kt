@@ -160,16 +160,13 @@ fun BookDetailView(
  * nothing on a TV responds to the remote until something holds focus.
  *
  * @param actions drawn after the primary action, e.g. the admin's feed check.
- * @param fullDescription the scroll holding the header, to show the whole
- *   description in it; null for a three-line preview.
  */
 @Composable
 fun DetailHeader(
     itemId: String,
     content: DetailHeaderContent,
     onPrimary: () -> Unit,
-    actions: @Composable () -> Unit = {},
-    fullDescription: ScrollState? = null
+    actions: @Composable () -> Unit = {}
 ) {
     // Keyed on whether there is a primary action, not its label: the label
     // changes after Mark finished ("Resume at…" to "Play"), and focus must not
@@ -231,19 +228,15 @@ fun DetailHeader(
                 actions()
             }
             content.description?.takeIf { it.isNotBlank() }?.let { description ->
-                if (fullDescription != null) {
-                    FullDescription(description, fullDescription)
-                } else {
-                    // Rendered, not stripped: emphasis survives (#57).
-                    val text = remember(description) { RichText.fromHtml(DetailHeaderModel.previewOf(description)) }
-                    Text(
-                        text = text,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                // Rendered, not stripped: emphasis survives (#57).
+                val text = remember(description) { RichText.fromHtml(DetailHeaderModel.previewOf(description)) }
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

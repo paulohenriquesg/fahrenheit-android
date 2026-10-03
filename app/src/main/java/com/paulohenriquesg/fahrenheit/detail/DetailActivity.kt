@@ -132,6 +132,7 @@ class DetailActivity : ComponentActivity() {
                 .onFailure { Log.w(TAG, "Couldn't read the series ${ref.id}", it) }
                 .getOrNull()
                 ?.let { SeriesBooks.of(it, currentId = itemId) }
+                ?.also { if (it.current == null) Log.w(TAG, "The series ${ref.id} does not list $itemId") }
                 ?.takeIf { it.current != null }
         }
 
