@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.podcast.Fact
+import com.paulohenriquesg.fahrenheit.ui.components.DESCRIPTION_BOX_TAG
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -114,8 +115,9 @@ class DetailHeaderTest {
         compose.waitForIdle()
     }
 
+    // #134: the description scrolls in its own box, beside the actions.
     private fun scrollPosition(): Float =
-        compose.onNodeWithTag(DETAIL_SCROLL_TAG).fetchSemanticsNode()
+        compose.onNodeWithTag(DESCRIPTION_BOX_TAG).fetchSemanticsNode()
             .config[SemanticsProperties.VerticalScrollAxisRange].value()
 
     @Test
@@ -128,10 +130,10 @@ class DetailHeaderTest {
 
     @OptIn(ExperimentalTestApi::class)
     @Test
-    fun `a description longer than the screen is reached with Down and scrolled with Down`() {
+    fun `a description longer than its box is reached with Right and scrolled with Down`() {
         renderBook(longBlurb)
 
-        compose.onNodeWithTag(PRIMARY_ACTION_TAG).performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNodeWithTag(PRIMARY_ACTION_TAG).performKeyInput { pressKey(Key.DirectionRight) }
         compose.waitForIdle()
         compose.onNodeWithTag(DESCRIPTION_TAG).assertIsFocused()
 
@@ -144,12 +146,12 @@ class DetailHeaderTest {
 
     @OptIn(ExperimentalTestApi::class)
     @Test
-    fun `Up at the top of the description goes back to the button`() {
+    fun `Left from the description goes back to the button`() {
         renderBook(longBlurb)
 
-        compose.onNodeWithTag(PRIMARY_ACTION_TAG).performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNodeWithTag(PRIMARY_ACTION_TAG).performKeyInput { pressKey(Key.DirectionRight) }
         compose.waitForIdle()
-        compose.onNodeWithTag(DESCRIPTION_TAG).performKeyInput { pressKey(Key.DirectionUp) }
+        compose.onNodeWithTag(DESCRIPTION_TAG).performKeyInput { pressKey(Key.DirectionLeft) }
         compose.waitForIdle()
 
         compose.onNodeWithTag(PRIMARY_ACTION_TAG).assertIsFocused()
