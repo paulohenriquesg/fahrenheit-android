@@ -171,7 +171,13 @@ class BookOverviewTest {
     // Review (#134): Down from the description went to a neighbouring cover.
     @OptIn(ExperimentalTestApi::class)
     @Test fun `down from the description lands on this book in the series`() {
-        show(landOnDescription = true)
+        // Ten books, this the second: the cover under the description's middle is another one.
+        val ten = SeriesBooks(
+            listOf(SeriesBook("b1", "The Quiet Signal"), SeriesBook("b2", "The Long Drift")) +
+                (3..10).map { SeriesBook("b$it", "Book number $it") },
+            currentId = "b2"
+        )
+        show(series = ten, landOnDescription = true)
         compose.onNodeWithTag(DESCRIPTION_TAG).performKeyInput { pressKey(Key.DirectionDown) }
         compose.waitForIdle()
         compose.onNode(hasContentDescription("The Long Drift") and hasClickAction()).assertIsFocused()

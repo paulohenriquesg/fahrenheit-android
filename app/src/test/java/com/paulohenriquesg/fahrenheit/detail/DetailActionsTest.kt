@@ -22,6 +22,7 @@ import com.paulohenriquesg.fahrenheit.player.ChapterClock
 import com.paulohenriquesg.fahrenheit.player.ChapterSpan
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.unit.dp
@@ -207,7 +208,9 @@ class DetailActionsTest {
         assertEquals(listOf("b2"), opened)
     }
 
-    // Review (#134): a long title pushed the last action off the screen.
+    // Review (#134): a long title pushed the last action off the screen -
+    // worst with a larger system font.
+    @Config(qualifiers = "w960dp-h540dp", fontScale = 1.3f)
     @Test fun `a long title and byline still leave every action on screen`() {
         compose.setContent {
             FahrenheitTheme {
@@ -225,7 +228,10 @@ class DetailActionsTest {
             }
         }
         compose.waitForIdle()
-        compose.onNodeWithText("Chapters").assertIsDisplayed()
-        compose.onNodeWithText("Mark finished").assertIsDisplayed()
+        val screen = compose.onRoot().getUnclippedBoundsInRoot()
+        listOf("Chapters", "Mark finished").forEach { action ->
+            val bounds = compose.onNodeWithText(action).getUnclippedBoundsInRoot()
+            assertTrue("$action ends at ${bounds.bottom}, the screen at ${screen.bottom}", bounds.bottom <= screen.bottom)
+        }
     }
 }
