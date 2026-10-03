@@ -21,6 +21,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import com.paulohenriquesg.fahrenheit.navigation.MenuAction
 import com.paulohenriquesg.fahrenheit.navigation.MenuItem
+import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -57,7 +58,9 @@ class MainBackTest {
         view = start
         compose.setContent {
             FahrenheitTheme {
-                val rail = remember { FocusRequester() }
+                // As MainScreen does: the rail's selected section takes focus on
+                // arrival and again whenever the view changes.
+                val rail = rememberInitialFocus(enabled = true, view)
                 var railHasFocus by remember { mutableStateOf(false) }
                 MainBackHandler(
                     view = view,
@@ -84,8 +87,11 @@ class MainBackTest {
                 }
             }
         }
+        // Let arrival focus settle on the rail, then browse into the content.
+        compose.waitForIdle()
         compose.runOnUiThread { card.requestFocus() }
         compose.waitForIdle()
+        compose.onNodeWithTag("shelf_card").assertIsFocused()
     }
 
     private fun back() {
@@ -136,5 +142,20 @@ class MainBackTest {
         back()
 
         assertFalse(compose.activity.isFinishing)
+    }
+
+    // Going Home from a section's rail must leave focus on Home's item, or
+    // the next Back would be judged against a section no longer selected.
+    @Test
+    fun `from a section, Back three times walks to Home and then out`() {
+        render(MainView.STATS)
+
+        back()
+        back()
+        compose.onNodeWithTag(menuItemTestTag(MainView.HOME.menuItemId)).assertIsFocused()
+        assertFalse(compose.activity.isFinishing)
+
+        back()
+        assertTrue(compose.activity.isFinishing)
     }
 }
