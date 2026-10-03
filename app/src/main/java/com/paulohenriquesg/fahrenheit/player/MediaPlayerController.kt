@@ -74,7 +74,7 @@ fun MediaPlayerController(
     var failed by remember(player) { mutableStateOf(player.playerError != null) }
     var currentTime by remember(player) { mutableDoubleStateOf(playback.bookPosition()) }
     // The book's time left counts at the speed; the service's player holds it.
-    var speed by remember(player) { mutableFloatStateOf(player.playbackParameters.speed) }
+    val speed = rememberPlaybackSpeed(player)
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -82,7 +82,6 @@ fun MediaPlayerController(
             // once rather than after buffering.
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { isPlaying = playWhenReady }
             override fun onPlayerErrorChanged(error: PlaybackException?) { failed = error != null }
-            override fun onPlaybackParametersChanged(parameters: PlaybackParameters) { speed = parameters.speed }
         }
         player.addListener(listener)
         onDispose { player.removeListener(listener) }
@@ -236,6 +235,23 @@ fun MediaPlayerController(
             trailing()
         }
     }
+}
+
+/**
+ * The speed [player] plays at, following every change: the one source for the
+ * chip, the Speed panel and the times, whoever set it.
+ */
+@Composable
+fun rememberPlaybackSpeed(player: Player): Float {
+    var speed by remember(player) { mutableFloatStateOf(player.playbackParameters.speed) }
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onPlaybackParametersChanged(parameters: PlaybackParameters) { speed = parameters.speed }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+    return speed
 }
 
 /** A line of times under a bar: what has passed on the left, what is left on the right. */

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -149,24 +148,23 @@ class PlayerActivity : ComponentActivity() {
         val playing = nowPlaying
         val connected = controller
         var ready by remember(connected, playing) { mutableStateOf(false) }
-        LaunchedEffect(connected, playing) {
-            if (connected == null || playing == null) return@LaunchedEffect
-            // The saved position is read when it is needed, not when the
-            // screen opened: by then it may have been listened past elsewhere.
-            ready = start.begin(connected, playing, { savedProgress(itemId, episodeId) }) { ApiClient.generateFullUrl(it) }
-            if (!ready) failed = true
-        }
         val listening = remember(connected, playing) {
             if (connected == null || playing == null) null
             else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds) { command, args ->
                 connected.sendCustomCommand(command, args)
             }
         }
-        var speed by remember(itemId) { mutableFloatStateOf(speeds.of(itemId)) }
-        LaunchedEffect(listening, ready) {
-            if (ready) listening?.applyRememberedSpeed()
+        LaunchedEffect(connected, playing) {
+            if (connected == null || playing == null) return@LaunchedEffect
+            // Before anything plays, or the first moments play at the last book's speed.
+            listening?.applyRememberedSpeed()
+            // The saved position is read when it is needed, not when the
+            // screen opened: by then it may have been listened past elsewhere.
+            ready = start.begin(connected, playing, { savedProgress(itemId, episodeId) }) { ApiClient.generateFullUrl(it) }
+            if (!ready) failed = true
         }
-        val panels = rememberPlayerPanels()
+        // A panel left open when the screen went away does not come back over it.
+        val panels = rememberPlayerPanels(connected)
         when {
             failed || connectFailed -> Text(
                 text = stringResource(R.string.item_load_failed),
@@ -195,7 +193,7 @@ class PlayerActivity : ComponentActivity() {
                             onCurrentTimeUpdate = { currentTime = it },
                             trailing = {
                                 if (playing.goToPodcast) GoToPodcastButton { goToPodcast(itemId) }
-                                SpeedChip(speed, panels)
+                                SpeedChip(rememberPlaybackSpeed(connected), panels)
                                 SleepChip(sleep, panels)
                             }
                         )
@@ -205,12 +203,10 @@ class PlayerActivity : ComponentActivity() {
                     PlayerPanelHost(panels) { panel ->
                         when (panel) {
                             PlayerPanel.Speed -> SpeedPanel(
-                                current = speed,
-                                onChoose = {
-                                    speed = it
-                                    listening?.chooseSpeed(it)
-                                },
-                                onClose = panels::close
+                                current = rememberPlaybackSpeed(connected),
+                                onChoose = { listening?.chooseSpeed(it) },
+                                onClose = panels::close,
+                                forShow = playing.goToPodcast
                             )
                             PlayerPanel.Sleep -> SleepPanel(
                                 sleep = sleep,

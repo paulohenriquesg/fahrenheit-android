@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.media3.common.Player
 import android.os.Bundle
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.test.utils.FakeClock
@@ -146,5 +147,29 @@ class SleepWatchTest {
         assertEquals(SleepChoice.Minutes(60), SleepCommand.choiceOf(SleepCommand.args(SleepChoice.Minutes(60))))
         assertEquals(SleepChoice.EndOfChapter, SleepCommand.choiceOf(SleepCommand.args(SleepChoice.EndOfChapter, listOf(1.0))))
         assertEquals(SleepChoice.Off, SleepCommand.choiceOf(Bundle.EMPTY))
+    }
+
+    // Review: the file can end a fraction short of the last chapter's stored end.
+    @Test
+    fun `at the end of the book it turns off, even short of the last chapter's end`() {
+        watch.set(SleepCommand.args(SleepChoice.EndOfChapter, chapterEnds = listOf(600.0, 3600.5)))
+        player.seekTo(3_590_000L)
+        player.play()
+        run(player).untilState(Player.STATE_ENDED)
+
+        watch.check()
+
+        assertFalse(watch.running)
+        assertNull(shown)
+    }
+
+    // Review: a paused player a few ms short of the end was polled 50 times a second.
+    @Test
+    fun `paused, it checks only once a second`() {
+        watch.set(SleepCommand.args(SleepChoice.EndOfChapter, chapterEnds = listOf(600.01)))
+        player.seekTo(600_000L)
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        assertEquals(1_000L, watch.nextCheckMs())
     }
 }

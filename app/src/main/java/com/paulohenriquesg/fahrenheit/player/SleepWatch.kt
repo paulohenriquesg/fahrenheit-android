@@ -85,7 +85,9 @@ class SleepWatch(
 
     fun check() {
         account()
-        if (timer.due(position())) {
+        // At the end of the book the file can stop a fraction short of the
+        // last chapter's stored end: there is nothing left to wait for.
+        if (timer.due(position()) || player.playbackState == Player.STATE_ENDED) {
             timer.off()
             player.pause()
         }
@@ -98,8 +100,9 @@ class SleepWatch(
         show()
     }
 
-    /** Sooner than a second when the chapter's end is closer than that. */
+    /** Sooner than a second when the chapter's end is closer than that; paused, nothing is coming closer. */
     fun nextCheckMs(): Long {
+        if (!player.isPlaying) return CHECK_MS
         val left = timer.secondsLeft(position(), player.playbackParameters.speed) ?: return CHECK_MS
         return (left * 1000).toLong().coerceIn(MIN_CHECK_MS, CHECK_MS)
     }

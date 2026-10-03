@@ -14,6 +14,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -139,6 +140,7 @@ internal class PlaybackSessionCallback(private val onSleep: (Bundle) -> Unit) : 
         return accepted.build()
     }
 
+    @OptIn(UnstableApi::class) // ControllerInfo.isTrusted
     override fun onCustomCommand(
         session: MediaSession,
         controller: MediaSession.ControllerInfo,
@@ -148,6 +150,8 @@ internal class PlaybackSessionCallback(private val onSleep: (Bundle) -> Unit) : 
         if (customCommand.customAction != SleepCommand.COMMAND.customAction) {
             return super.onCustomCommand(session, controller, customCommand, args)
         }
+        // Media3 already refuses a command it did not offer; this says so here too.
+        if (!controller.isTrusted) return Futures.immediateFuture(SessionResult(SessionError.ERROR_PERMISSION_DENIED))
         onSleep(args)
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }

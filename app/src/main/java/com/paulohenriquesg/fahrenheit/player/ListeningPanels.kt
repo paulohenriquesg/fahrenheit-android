@@ -30,9 +30,13 @@ fun SleepChip(sleep: SleepState?, panels: PlayerPanels) = ActionChip(
     icon = Icons.Outlined.Bedtime
 )
 
-/** The seven speeds; focus lands on the one playing. Choosing one closes the panel. */
+/**
+ * The seven speeds; focus lands on the one playing. Choosing one closes the panel.
+ *
+ * @param forShow an episode: its speed is remembered for the whole show.
+ */
 @Composable
-fun SpeedPanel(current: Float, onChoose: (Float) -> Unit, onClose: () -> Unit) {
+fun SpeedPanel(current: Float, onChoose: (Float) -> Unit, onClose: () -> Unit, forShow: Boolean = false) {
     SidePanel(stringResource(R.string.speed), onClose) {
         val landing = rememberInitialFocus(enabled = true)
         val focusAt = current.takeIf { it in ListeningSpeed.STEPS } ?: ListeningSpeed.NORMAL
@@ -45,7 +49,7 @@ fun SpeedPanel(current: Float, onChoose: (Float) -> Unit, onClose: () -> Unit) {
             )
         }
         Text(
-            stringResource(R.string.speed_note),
+            stringResource(if (forShow) R.string.speed_note_show else R.string.speed_note_book),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 14.dp)

@@ -70,8 +70,9 @@ class PlayerPanels {
     }
 }
 
+/** Closed again whenever [keys] change: a panel left open must not come back over a new connection. */
 @Composable
-fun rememberPlayerPanels(): PlayerPanels = remember { PlayerPanels() }
+fun rememberPlayerPanels(vararg keys: Any?): PlayerPanels = remember(*keys) { PlayerPanels() }
 
 /** Draws the open panel over the screen, and gives focus back to its chip when it closes. */
 @Composable

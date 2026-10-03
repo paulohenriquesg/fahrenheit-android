@@ -42,7 +42,7 @@ class ListeningPanelsTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private val note = "Remembered for this book. Times left on the player count at this speed."
+    private val note = "Remembered for this book. The time left in the book counts at this speed."
     private val chosen = mutableListOf<SleepChoice>()
 
     /** The chips and their panels, as the player lays them out. */
@@ -148,5 +148,36 @@ class ListeningPanelsTest {
         show()
         press("Sleep")
         compose.onNodeWithText("Off").assertIsFocused()
+    }
+
+    // Review: Up and Down at the panel's ends are the edges a listener hits.
+    @OptIn(ExperimentalTestApi::class)
+    @Test fun `focus stays in the panel at its top and bottom`() {
+        show(speedAt = 0.75f)
+        press("Speed 0.75×")
+        compose.onNodeWithText("0.75×").performKeyInput { pressKey(Key.DirectionUp) }
+        compose.waitForIdle()
+        compose.onNodeWithText("0.75×").assertIsFocused()
+    }
+
+    @Test fun `a show's speed is remembered for the show`() {
+        compose.setContent {
+            FahrenheitTheme { SpeedPanel(1f, forShow = true, onChoose = {}, onClose = {}) }
+        }
+        compose.onNodeWithText("Remembered for this show. The time left counts at this speed.").assertIsDisplayed()
+    }
+
+    // Review: a panel left open when the player went away came back over it.
+    @Test fun `panels start closed for a new connection`() {
+        var connection by mutableStateOf(1)
+        lateinit var panels: PlayerPanels
+        compose.setContent { panels = rememberPlayerPanels(connection) }
+        compose.runOnUiThread { panels.open(PlayerPanel.Speed) }
+        compose.waitForIdle()
+
+        connection = 2
+        compose.waitForIdle()
+
+        assertEquals(null, panels.open)
     }
 }
