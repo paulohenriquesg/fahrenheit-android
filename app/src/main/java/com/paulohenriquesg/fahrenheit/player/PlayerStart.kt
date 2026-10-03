@@ -85,8 +85,11 @@ class PlayerStart(
         }
         val saved = if (asked == null) progress() else null
         // Known as of the server's own copy, or, starting where asked, as of now.
-        (saved?.lastUpdate ?: now().takeIf { asked != null })
-            ?.let { knowledge.saw(nowPlaying.itemId, nowPlaying.episodeId, it) }
+        val read = saved?.lastUpdate
+        when {
+            read != null -> knowledge.read(nowPlaying.itemId, nowPlaying.episodeId, read)
+            asked != null -> knowledge.since(nowPlaying.itemId, nowPlaying.episodeId, now())
+        }
         val start = asked ?: ResumePoint.decide(saved, nowPlaying.trackTotal, nowPlaying.mediaDuration).positionSeconds
         val queue = PlaybackQueue.of(nowPlaying, start, resolveUrl, next, nextStartAt) ?: return false
         player.setMediaItems(queue.items, queue.index, queue.positionMs)

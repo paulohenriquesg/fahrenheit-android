@@ -68,9 +68,9 @@ class PlaybackService : MediaSessionService() {
             exo,
             scope,
             open = { ListeningSession(it, ApiClient::getApiService, PlaybackDevice.info(this)) },
-            // This device's clock: the server stamps its own time, which the
-            // app never sees (#90).
-            delivered = { file, _ -> ServerKnowledge.process.saw(file.itemId, file.episodeId, System.currentTimeMillis()) }
+            // Known by the position written, not the time: the server stamps
+            // its own clock, which the app never sees (#145).
+            delivered = { file, position -> ServerKnowledge.process.wrote(file.itemId, file.episodeId, position) }
         )
         exo.addListener(reporting)
         val watch = SleepWatch(exo, now = { SystemClock.elapsedRealtime() }, publish = { session?.setSessionExtras(it) })

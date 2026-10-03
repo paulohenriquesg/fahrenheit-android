@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
  * it unchanged.
  *
  * @param send the request for this item or episode; throwing is a failed send.
+ * @param reached each report the server took, as it was sent (#145).
  */
 class ProgressReporter(
     private val send: suspend (ListeningReport) -> Unit,
@@ -19,7 +20,8 @@ class ProgressReporter(
     private val pause: suspend () -> Unit = { delay(ProgressSync.INTERVAL_MS) },
     private val listened: () -> Double = { 0.0 },
     private val delivered: (Double) -> Unit = {},
-    private val close: suspend (ListeningReport?) -> Unit = { it?.let { r -> send(r) } }
+    private val close: suspend (ListeningReport?) -> Unit = { it?.let { r -> send(r) } },
+    private val reached: (ListeningReport) -> Unit = {}
 ) {
     private var lastSent: Double? = null
 
@@ -40,6 +42,7 @@ class ProgressReporter(
             if (runCatching { send(report) }.isSuccess) {
                 lastSent = report.currentTime
                 delivered(report.timeListened)
+                reached(report)
             }
         }
     }
@@ -58,6 +61,9 @@ class ProgressReporter(
         closed = true
         val report = ProgressSync.next(position(), total(), lastSent, listened())
         report?.let { lastSent = it.currentTime }
-        if (runCatching { close(report) }.isSuccess) report?.let { delivered(it.timeListened) }
+        if (runCatching { close(report) }.isSuccess) report?.let {
+            delivered(it.timeListened)
+            reached(it)
+        }
     }
 }
