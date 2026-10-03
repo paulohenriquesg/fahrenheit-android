@@ -157,16 +157,19 @@ class LoginReturningTest {
         assertEquals("http://abs.local:13378" to "abc123", apiKey)
     }
 
+    // "Different server" goes back to the address (#132); the username comes
+    // along, since it is often the same on the next server.
     @Test
-    fun `a different server opens the full form, still filled in`() {
+    fun `a different server asks for the address, and keeps the username`() {
         remember("http://abs.local:13378", "someone")
         show()
 
         press("login_different_server")
-
         assertEquals("http://abs.local:13378", editable("login_host_field"))
-        assertEquals("someone", editable("login_username_field"))
         compose.onNodeWithTag("login_account").assertDoesNotExist()
+        press("login_continue")
+
+        assertEquals("someone", editable("login_username_field"))
     }
 
     @Test
@@ -195,11 +198,10 @@ class LoginReturningTest {
     }
 
     @Test
-    fun `a remembered host without a username is a first run`() {
+    fun `a remembered host without a username is not a welcome back`() {
         remember("http://abs.local:13378", "")
         show()
 
-        compose.onNodeWithTag("login_host_field").assertExists()
         compose.onNodeWithTag("login_username_field").assertExists()
         compose.onNodeWithTag("login_account").assertDoesNotExist()
     }
@@ -267,7 +269,8 @@ class LoginReturningTest {
     }
 
     @Test
-    fun `the first-run Login button shows progress too`() {
+    fun `the first-run Sign in button shows progress too`() {
+        remember("http://abs.local:13378", "")
         loadingOnSubmit = true
         show()
 

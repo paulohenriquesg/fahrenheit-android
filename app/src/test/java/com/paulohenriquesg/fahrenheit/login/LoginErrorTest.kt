@@ -14,6 +14,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import com.paulohenriquesg.fahrenheit.R
+import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -37,7 +38,13 @@ class LoginErrorTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private fun show(error: LoginError?) {
+    /**
+     * @param host a remembered address puts the screen on the sign-in step
+     *   (#132); blank, it asks for the address first.
+     */
+    private fun show(error: LoginError?, host: String = "http://abs.local:13378") {
+        val prefs = SharedPreferencesHandler(compose.activity)
+        prefs.saveUserPreferences(prefs.getUserPreferences().copy(host = host, username = ""))
         compose.setContent {
             FahrenheitTheme {
                 LoginScreen({ _, _, _, _ -> }, { _, _, _ -> }, error = error)
@@ -71,12 +78,22 @@ class LoginErrorTest {
         assertDirectlyAbove("login_error", "login_password_field")
     }
 
+    // The address is a fact on the sign-in step, not a field, so a server that
+    // does not answer is reported at the top of the form.
     @Test
-    fun `an unreachable server is reported above the address`() {
+    fun `an unreachable server is reported at the top of the form`() {
         show(LoginError.Unreachable)
 
         compose.onNodeWithTag("login_error")
             .assertTextContains(string(R.string.login_error_unreachable))
+        assertDirectlyAbove("login_title", "login_error")
+        assertDirectlyAbove("login_error", "login_username_field")
+    }
+
+    @Test
+    fun `a bad address is reported above the address field`() {
+        show(LoginError.HostScheme, host = "")
+
         assertDirectlyAbove("login_error", "login_host_field")
     }
 
@@ -84,7 +101,7 @@ class LoginErrorTest {
     fun `a missing username is reported above the username field`() {
         show(LoginError.UsernameMissing)
 
-        assertDirectlyAbove("login_host_field", "login_error")
+        assertDirectlyAbove("login_title", "login_error")
         assertDirectlyAbove("login_error", "login_username_field")
     }
 
@@ -131,6 +148,6 @@ class LoginErrorTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag("login_password_field").assertDoesNotExist()
-        assertDirectlyAbove("login_error", "login_host_field")
+        assertDirectlyAbove("login_error", "login_api_key_field")
     }
 }

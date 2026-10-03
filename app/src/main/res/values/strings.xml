@@ -48,6 +48,10 @@
     <string name="loading_stats">Loading stats…</string>
     <string name="login">Login</string>
     <string name="login_welcome_back">Welcome back</string>
+    <string name="login_where_is_library">Where is your library?</string>
+    <string name="login_address_hint">The address of your Audiobookshelf server, starting with http:// or https://</string>
+    <string name="login_continue">Continue</string>
+    <string name="login_sign_in_to">Sign in to %1$s</string>
     <string name="login_sign_in">Sign in</string>
     <string name="login_signing_in">Signing in…</string>
     <string name="login_use_api_key">Use an API key</string>
