@@ -142,4 +142,38 @@ class PlayerStartTest {
 
         assertFalse(asked)
     }
+
+    // #105: the screen that opened the player asked for this place.
+    @Test
+    fun `a start position wins over the saved one`() {
+        assertTrue(runBlocking { PlayerStart(autoPlay = true, startAt = 3900.0).begin(player, book("b1"), { savedAt(100.0) }, resolve) })
+
+        assertEquals(1, player.currentMediaItemIndex)
+        assertEquals(300_000L, player.currentPosition)
+        assertTrue(player.playWhenReady)
+    }
+
+    // Review Focus 1: Home left it playing, then a chapter was chosen on its details screen.
+    @Test
+    fun `a book already queued moves to the start position, and plays`() {
+        runBlocking { PlayerStart(autoPlay = false).begin(player, book("b1"), { savedAt(100.0) }, resolve) }
+
+        runBlocking { PlayerStart(autoPlay = true, startAt = 3900.0).begin(player, book("b1"), { savedAt(100.0) }, resolve) }
+
+        assertEquals(1, player.currentMediaItemIndex)
+        assertEquals(300_000L, player.currentPosition)
+        assertTrue(player.playWhenReady)
+    }
+
+    @Test
+    fun `the start position is honoured once`() {
+        val start = PlayerStart(autoPlay = true, startAt = 3900.0)
+        runBlocking { start.begin(player, book("b1"), { savedAt(100.0) }, resolve) }
+        player.seekTo(0, 5_000L)
+
+        runBlocking { start.begin(player, book("b1"), { savedAt(100.0) }, resolve) }
+
+        assertEquals(0, player.currentMediaItemIndex)
+        assertEquals(5_000L, player.currentPosition)
+    }
 }

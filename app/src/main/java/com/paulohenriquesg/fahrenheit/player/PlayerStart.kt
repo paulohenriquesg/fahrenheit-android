@@ -10,8 +10,11 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
  * @param autoPlay whether the screen was opened to play. Honoured once: a
  *   screen coming back to a book that is no longer queued must not start it,
  *   or the first progress report writes over wherever it was listened to since.
+ * @param startAt where the screen that opened the player asked to start, in
+ *   whole-book seconds - a chapter chosen on the details screen (#105). It wins
+ *   over the saved position, and moves a book already queued. Honoured once.
  */
-class PlayerStart(private val autoPlay: Boolean) {
+class PlayerStart(private val autoPlay: Boolean, private val startAt: Double? = null) {
 
     private var started = false
 
@@ -32,9 +35,18 @@ class PlayerStart(private val autoPlay: Boolean) {
     ): Boolean {
         val firstTime = !started
         started = true
-        if (QueuedFile.of(player.currentMediaItem)?.isFor(nowPlaying.itemId, nowPlaying.episodeId) == true) return true
-        val start = ResumePoint.decide(progress(), nowPlaying.trackTotal, nowPlaying.mediaDuration)
-        val queue = PlaybackQueue.of(nowPlaying, start.positionSeconds, resolveUrl) ?: return false
+        val asked = startAt?.takeIf { firstTime }
+        if (QueuedFile.of(player.currentMediaItem)?.isFor(nowPlaying.itemId, nowPlaying.episodeId) == true) {
+            val timeline = nowPlaying.timeline
+            if (asked != null && timeline != null) {
+                val at = timeline.locate(asked)
+                player.seekTo(at.trackIndex, (at.positionInTrack * 1000).toLong())
+                if (autoPlay) player.play()
+            }
+            return true
+        }
+        val start = asked ?: ResumePoint.decide(progress(), nowPlaying.trackTotal, nowPlaying.mediaDuration).positionSeconds
+        val queue = PlaybackQueue.of(nowPlaying, start, resolveUrl) ?: return false
         player.setMediaItems(queue.items, queue.index, queue.positionMs)
         player.prepare()
         // Explicitly either way: the player keeps playWhenReady across a new

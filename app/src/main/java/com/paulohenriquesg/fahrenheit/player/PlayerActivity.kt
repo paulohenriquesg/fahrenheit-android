@@ -86,7 +86,10 @@ class PlayerActivity : ComponentActivity() {
         }
         // auto_play is a request to start, once: not again when this screen
         // comes back, and not after a configuration change recreates it.
-        start = PlayerStart(autoPlay = autoPlay && savedInstanceState == null)
+        start = PlayerStart(
+            autoPlay = autoPlay && savedInstanceState == null,
+            startAt = startAtOf(intent)?.takeIf { savedInstanceState == null }
+        )
 
         setContent {
             FahrenheitTheme {
@@ -303,15 +306,18 @@ class PlayerActivity : ComponentActivity() {
         private const val WASH_WAIT_MS = 1_500L
         private const val EXTRA_EPISODE_ID = "episode_id"
         private const val EXTRA_AUTO_PLAY = "auto_play"
+        private const val EXTRA_START_AT = "start_at"
 
         /**
          * @param episodeId the episode to play, for a podcast; null for a book.
+         * @param startAt where to start, in whole-book seconds, over the saved position (#105).
          */
-        fun createIntent(context: Context, itemId: String, episodeId: String? = null, autoPlay: Boolean = false): Intent =
+        fun createIntent(context: Context, itemId: String, episodeId: String? = null, autoPlay: Boolean = false, startAt: Double? = null): Intent =
             Intent(context, PlayerActivity::class.java).apply {
                 putExtra(EXTRA_ITEM_ID, itemId)
                 episodeId?.let { putExtra(EXTRA_EPISODE_ID, it) }
                 putExtra(EXTRA_AUTO_PLAY, autoPlay)
+                startAt?.let { putExtra(EXTRA_START_AT, it) }
             }
 
         /**
@@ -327,6 +333,10 @@ class PlayerActivity : ComponentActivity() {
          * must not stop playback again when it closes: by then the other book
          * may already be queued.
          */
+        /** The start position the intent asks for (see [PlayerStart]); null for the saved one. */
+        internal fun startAtOf(intent: Intent): Double? =
+            if (intent.hasExtra(EXTRA_START_AT)) intent.getDoubleExtra(EXTRA_START_AT, 0.0) else null
+
         internal fun switchTo(player: android.app.Activity, controller: androidx.media3.common.Player, itemId: String) {
             Playback.leave(controller, finishing = true)
             player.startActivity(createIntent(player, itemId, autoPlay = true))
