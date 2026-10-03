@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Book screen and About: one layout (#134)</title>
+<style>
+  :root { --bg:#121212; --surface:#1E1E1E; --variant:#2B2930; --on-bg:#E6E1E5; --on-surface:#E6E1E5; --on-variant:#CAC4D0; --primary:#D0BCFF; --on-primary:#381E72; --focus:3px; }
+  body { margin:0; background:#0B0B0D; color:var(--on-bg); font-family: Roboto, system-ui, sans-serif; padding:32px 16px; }
+  .page { max-width:1240px; margin:0 auto; }
+  h1 { font-size:28px; margin:0 0 8px; } h2 { font-size:22px; margin:40px 0 8px; }
+  p.why { color:var(--on-variant); font-size:15px; line-height:1.55; max-width:900px; margin:0 0 14px; }
+  .shell { width:100%; aspect-ratio:16/9; container-type:inline-size; border-radius:12px; overflow:hidden; box-shadow:0 0 0 1px #333; }
+  .tv { position:relative; width:1920px; height:1080px; transform-origin:0 0; transform:scale(calc(100cqw / 1920px)); background:var(--bg); }
+  .wash { position:absolute; inset:0; background: radial-gradient(circle at 18% 30%, #24406B 0, transparent 60%), linear-gradient(#1B2A44, var(--bg) 75%); }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.55); }
+  .cover { border-radius:14px; background:linear-gradient(150deg,#3E6FB0,#14233D); display:grid; place-items:center; color:#fff; font-weight:900; font-size:30px; text-align:center; line-height:1.1; }
+  .label { font-size:22px; font-weight:700; color:var(--on-variant); text-transform:uppercase; letter-spacing:.06em; margin:0 0 16px; }
+  .desc { font-size:30px; line-height:1.6; color:var(--on-surface); border-radius:16px; padding:22px 28px; outline:var(--focus) solid var(--primary); position:relative; overflow:hidden; }
+  .desc::after { content:""; position:absolute; left:0; right:0; bottom:0; height:80px; background:linear-gradient(transparent, var(--fade, var(--surface))); }
+  .books { display:flex; gap:22px; }
+  .book { width:150px; } .book .c { height:150px; border-radius:10px; background:linear-gradient(150deg,#3D4A6B,#1A1F30); opacity:.6; }
+  .book.now .c { opacity:1; outline:3px solid var(--primary); outline-offset:4px; }
+  .book .t { font-size:20px; color:var(--on-variant); margin-top:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .book.now .t { color:var(--on-surface); font-weight:600; }
+  .facts { display:grid; grid-template-columns:auto 1fr; gap:12px 28px; font-size:26px; }
+  .facts dt { color:var(--on-variant); } .facts dd { margin:0; color:var(--on-surface); }
+  .btn { display:inline-block; font-size:26px; font-weight:600; padding:18px 34px; border-radius:40px; border:2px solid #938F99; color:var(--on-surface); }
+  /* Option 1: its own screen */
+  .o1 { position:absolute; inset:0; display:grid; grid-template-columns:420px 1fr; gap:80px; padding:90px 120px; }
+  .o1 .side .cover { width:420px; height:420px; }
+  .o1 .side h3 { font-size:44px; margin:36px 0 10px; line-height:1.15; } .o1 .side .by { font-size:26px; color:var(--on-variant); margin-bottom:34px; }
+  .o1 .main { display:flex; flex-direction:column; gap:44px; min-width:0; }
+  .o1 .desc { --fade:#16202F; max-height:400px; background:rgba(255,255,255,.03); }
+  .o1 .lower { display:grid; grid-template-columns:1fr 520px; gap:60px; }
+  /* Option 2: wider panel, two columns */
+  .o2-player { position:absolute; left:120px; top:150px; display:flex; gap:56px; align-items:center; }
+  .o2-player .cover { width:420px; height:420px; }
+  .o2-player h3 { font-size:60px; margin:0; }
+  .o2 { position:absolute; right:0; top:0; bottom:0; width:1300px; background:var(--surface); border-left:2px solid var(--variant); padding:70px 72px; display:grid; grid-template-columns:1fr 440px; grid-template-rows:auto 1fr; gap:36px 64px; }
+  .o2 h4 { grid-column:1 / -1; font-size:44px; font-weight:800; margin:0; }
+  .o2 .desc { max-height:760px; }
+  .o2 .right { display:flex; flex-direction:column; gap:40px; }
+  .o2 .books { flex-wrap:wrap; gap:18px; } .o2 .book { width:130px; } .o2 .book .c { height:130px; }
+  .o2 .facts { grid-template-columns:auto 1fr; font-size:24px; }
+  .note { font-size:14px; color:var(--on-variant); margin-top:8px; }
+</style></head>
+<body><div class="page">
+<h1>Book screen and About: one layout (#134)</h1>
+<p class="why"><b>Option 1 was approved (#134)</b> and is built for both the book screen and the player's About; option 2 is kept for the record. Today's panel takes just under half the screen. Its description box is about five lines tall, and the facts run one per line underneath, so it reads cramped. Both options below give the description most of the space, show the series as real covers with titles, and set the facts out as a two-column list. Same content and order as the approved design: description, series, facts, Mark finished. Back closes it either way.</p>
+
+<h2>1. About as its own screen <em>(chosen, #134)</em></h2>
+<p class="why">About replaces the player while it is open, over the same cover wash. The cover and title stay on the left so you know which book this is. The description gets a wide box about ten lines tall; Down scrolls it. Under it, the series and the facts sit side by side. <b>Most room</b>; the cost is that you no longer see the bars and times while reading.</p>
+<div class="shell"><div class="tv">
+  <div class="wash"></div>
+  <div class="o1">
+    <div class="side">
+      <div class="cover">THE LONG<br>DRIFT</div>
+      <h3>The Long Drift</h3>
+      <div class="by">An Author · read by A Reader</div>
+      <div class="btn">Mark finished</div>
+    </div>
+    <div class="main">
+      <div class="desc">A survey ship drifts into a quiet sector at the edge of the charts, and the two people aboard disagree about everything except that they should not be there. One wants to turn back before the fuel runs low; the other has found a signal that repeats every nineteen minutes and will not be ignored. Meanwhile, three systems away, an old friend is hatching plans of his own, and a message meant for the crew arrives a day too late to warn them about what is waiting at the source of the signal.</div>
+      <div class="lower">
+        <div>
+          <div class="label">The Long Way · 38 books</div>
+          <div class="books">
+            <div class="book"><div class="c"></div><div class="t">The Quiet Signal</div></div>
+            <div class="book now"><div class="c"></div><div class="t">The Long Drift</div></div>
+            <div class="book"><div class="c"></div><div class="t">A Late Message</div></div>
+            <div class="book"><div class="c"></div><div class="t">Far Harbour</div></div>
+          </div>
+        </div>
+        <dl class="facts">
+          <dt>Read by</dt><dd>A Reader</dd>
+          <dt>Publisher</dt><dd>A Press</dd>
+          <dt>Published</dt><dd>2008</dd>
+          <dt>Length</dt><dd>11 h 57 min</dd>
+          <dt>Genres</dt><dd>Science fiction, Adventure</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<h2>2. A wider panel, two columns <em>(not chosen)</em></h2>
+<p class="why">Still a panel from the right like Speed, Sleep and Chapters, but two thirds of the screen instead of under half. The description gets the tall left column; series, facts and Mark finished stack on the right. The player's cover and title stay visible on the left edge. <b>Keeps the one-kind-of-panel rule</b>; a little less room than option 1.</p>
+<div class="shell"><div class="tv">
+  <div class="wash"></div>
+  <div class="o2-player"><div class="cover">THE LONG<br>DRIFT</div></div>
+  <div class="dim"></div>
+  <div class="o2">
+    <h4>About</h4>
+    <div class="desc">A survey ship drifts into a quiet sector at the edge of the charts, and the two people aboard disagree about everything except that they should not be there. One wants to turn back before the fuel runs low; the other has found a signal that repeats every nineteen minutes and will not be ignored. Meanwhile, three systems away, an old friend is hatching plans of his own, and a message meant for the crew arrives a day too late to warn them about what is waiting at the source of the signal.</div>
+    <div class="right">
+      <div>
+        <div class="label">The Long Way · 38 books</div>
+        <div class="books">
+          <div class="book"><div class="c"></div><div class="t">The Quiet Signal</div></div>
+          <div class="book now"><div class="c"></div><div class="t">The Long Drift</div></div>
+          <div class="book"><div class="c"></div><div class="t">A Late Message</div></div>
+        </div>
+      </div>
+      <dl class="facts">
+        <dt>Read by</dt><dd>A Reader</dd>
+        <dt>Publisher</dt><dd>A Press</dd>
+        <dt>Published</dt><dd>2008</dd>
+        <dt>Length</dt><dd>11 h 57 min</dd>
+        <dt>Genres</dt><dd>Science fiction, Adventure</dd>
+      </dl>
+      <div><div class="btn">Mark finished</div></div>
+    </div>
+  </div>
+</div></div>
+<p class="note">Covers are placeholders. The series row scrolls sideways when there are more books than fit; it opens with the current book in view.</p>
+</div></body></html>
