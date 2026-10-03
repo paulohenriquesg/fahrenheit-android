@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.media3.common.Player
 import androidx.media3.session.SessionCommand
 import kotlin.math.ceil
+import kotlin.math.floor
 
 /** What the sleep timer shows on the chip: the choice, and whole minutes of listening left. */
 data class SleepState(val choice: SleepChoice, val minutesLeft: Int)
@@ -130,13 +131,21 @@ class SleepWatch(
 
     private fun show() {
         val state = timer.secondsLeft(position(), player.playbackParameters.speed)?.let {
-            // Under a minute still reads "1 min": the timer has not gone off.
-            SleepState(timer.choice, ceil(it / 60).toInt().coerceAtLeast(1))
+            SleepState(timer.choice, minutesShown(it).coerceAtLeast(1))
         }
         if (state == shown) return
         shown = state
         publish(SleepCommand.extras(state))
     }
+
+    /**
+     * End of chapter drops the seconds, as the chapter row beside it does
+     * ("1 min 8 s left in chapter" with "Sleep 1 min"); a timer of minutes
+     * rounds up, so 15 chosen reads 15 until a whole minute has gone. Under
+     * a minute still reads "1 min": the timer has not gone off.
+     */
+    private fun minutesShown(seconds: Double): Int =
+        if (timer.choice == SleepChoice.EndOfChapter) floor(seconds / 60).toInt() else ceil(seconds / 60).toInt()
 
     private companion object {
         const val CHECK_MS = 1_000L
