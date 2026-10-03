@@ -34,7 +34,8 @@ class PlaybackReporting(
     private val open: (QueuedFile) -> ListeningDelivery,
     private val pause: suspend () -> Unit = { delay(ProgressSync.INTERVAL_MS) },
     private val now: () -> Long = { SystemClock.elapsedRealtime() },
-    private val closings: Closings = Closings.process
+    private val closings: Closings = Closings.process,
+    private val delivered: (QueuedFile) -> Unit = {}
 ) : Player.Listener {
 
     private var reportingFor: QueuedFile? = null

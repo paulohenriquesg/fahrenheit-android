@@ -62,11 +62,23 @@ class TransportTest {
     @After
     fun tearDown() = player.release()
 
-    private fun show(player: ExoPlayer, timeline: TrackTimeline = twoParts, chapters: List<Chapter>? = null) {
+    private fun show(
+        player: ExoPlayer,
+        timeline: TrackTimeline = twoParts,
+        chapters: List<Chapter>? = null,
+        onPlay: (() -> Unit)? = null
+    ) {
         this.player = player
         compose.setContent {
             FahrenheitTheme {
-                MediaPlayerController(player = player, playback = BookPlayback(player, timeline), totalTime = timeline.totalDuration, chapters = chapters)
+                if (onPlay == null) {
+                    MediaPlayerController(player = player, playback = BookPlayback(player, timeline), totalTime = timeline.totalDuration, chapters = chapters)
+                } else {
+                    MediaPlayerController(
+                        player = player, playback = BookPlayback(player, timeline), totalTime = timeline.totalDuration,
+                        chapters = chapters, onPlay = onPlay
+                    )
+                }
             }
         }
         compose.waitForIdle()
@@ -91,6 +103,31 @@ class TransportTest {
 
         compose.onNodeWithContentDescription("Pause").performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
+        assertFalse(player.playWhenReady)
+    }
+
+    // #90: Play from a pause asks first whether to continue from elsewhere.
+    @Test
+    fun `play from a pause goes through onPlay`() {
+        var asked = 0
+        show(queuedAt(0.0), onPlay = { asked++ })
+
+        compose.onNodeWithContentDescription("Play").performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+
+        assertEquals(1, asked)
+        assertFalse(player.playWhenReady)
+    }
+
+    @Test
+    fun `pausing does not go through onPlay`() {
+        var asked = 0
+        show(queuedAt(0.0).apply { play() }, onPlay = { asked++ })
+
+        compose.onNodeWithContentDescription("Pause").performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+
+        assertEquals(0, asked)
         assertFalse(player.playWhenReady)
     }
 

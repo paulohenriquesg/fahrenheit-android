@@ -16,7 +16,12 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
  * @param resumed the screen was recreated (a configuration change) rather
  *   than opened: it has started before, and follows what plays (see [follows]).
  */
-class PlayerStart(private val autoPlay: Boolean, private val startAt: Double? = null, resumed: Boolean = false) {
+class PlayerStart(
+    private val autoPlay: Boolean,
+    private val startAt: Double? = null,
+    resumed: Boolean = false,
+    private val knowledge: ServerKnowledge = ServerKnowledge.process
+) {
 
     private var started = resumed
 

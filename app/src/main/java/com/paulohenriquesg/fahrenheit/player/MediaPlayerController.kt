@@ -74,6 +74,7 @@ fun MediaPlayerController(
     episodes: EpisodeSkip? = null,
     skipBack: Int = 30,
     skipForward: Int = 30,
+    onPlay: () -> Unit = { player.play() },
     trailing: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {}
 ) {
     var isPlaying by remember(player) { mutableStateOf(player.playWhenReady) }

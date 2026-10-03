@@ -224,4 +224,20 @@
         <item quantity="one">%1$d new episode found. The server is downloading it.</item>
         <item quantity="other">%1$d new episodes found. The server is downloading them.</item>
     </plurals>
+    <string name="resume_question">You\'re at %1$s here. Continue from %2$s, listened to %3$s on another device?</string>
+    <string name="resume_continue_from">Continue from %1$s</string>
+    <string name="resume_stay_at">Stay at %1$s</string>
+    <string name="resume_just_now">just now</string>
+    <plurals name="resume_minutes_ago">
+        <item quantity="one">%d minute ago</item>
+        <item quantity="other">%d minutes ago</item>
+    </plurals>
+    <plurals name="resume_hours_ago">
+        <item quantity="one">%d hour ago</item>
+        <item quantity="other">%d hours ago</item>
+    </plurals>
+    <plurals name="resume_days_ago">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
 </resources>
