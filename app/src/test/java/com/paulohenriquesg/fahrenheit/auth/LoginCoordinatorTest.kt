@@ -1,7 +1,12 @@
 package com.paulohenriquesg.fahrenheit.auth
 
 import com.paulohenriquesg.fahrenheit.login.LoginCoordinator
+import com.paulohenriquesg.fahrenheit.login.LoginError
+import com.paulohenriquesg.fahrenheit.login.LoginField
 import com.paulohenriquesg.fahrenheit.login.LoginOutcome
+import okhttp3.ResponseBody.Companion.toResponseBody
+import retrofit2.HttpException
+import retrofit2.Response
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -47,7 +52,7 @@ class LoginCoordinatorTest {
 
         val outcome = c.login("http://abs.local", "", "hunter2")
 
-        assertTrue(outcome is LoginOutcome.Invalid)
+        assertEquals(LoginOutcome.Failed(LoginError.UsernameMissing), outcome)
         assertEquals(false, called)
     }
 
@@ -74,7 +79,7 @@ class LoginCoordinatorTest {
 
         val outcome = c.login("http://abs.local", "   ", "")
 
-        assertTrue(outcome is LoginOutcome.Invalid)
+        assertEquals(LoginOutcome.Failed(LoginError.UsernameMissing), outcome)
         assertEquals(false, called)
     }
 
@@ -85,7 +90,7 @@ class LoginCoordinatorTest {
 
         val outcome = c.login("abs.local:13378", "testuser", "hunter2")
 
-        assertTrue(outcome is LoginOutcome.Invalid)
+        assertEquals(LoginOutcome.Failed(LoginError.HostScheme), outcome)
         assertEquals(false, called)
     }
 
@@ -100,13 +105,52 @@ class LoginCoordinatorTest {
     }
 
     @Test
-    fun `a network failure is reported, not thrown`() = runBlocking {
+    fun `a blank host is pinned on the host field`() = runBlocking {
+        val outcome = coordinator().login("  ", "testuser", "hunter2")
+
+        assertEquals(LoginOutcome.Failed(LoginError.HostMissing), outcome)
+        assertEquals(LoginField.Host, LoginError.HostMissing.field)
+    }
+
+    // The screen used to quote the exception in a Toast under the keyboard;
+    // now it has to say what to do, so it needs to know what went wrong.
+    @Test
+    fun `a server that does not answer is reported as unreachable`() = runBlocking {
         val c = coordinator(login = { _, _, _ -> throw IOException("connection refused") })
 
         val outcome = c.login("http://abs.local", "testuser", "hunter2")
 
-        assertTrue(outcome is LoginOutcome.Failed)
-        assertTrue((outcome as LoginOutcome.Failed).message.contains("connection refused"))
+        assertEquals(LoginError.Unreachable, (outcome as LoginOutcome.Failed).error)
+        assertEquals("connection refused", outcome.detail)
+    }
+
+    @Test
+    fun `a 401 is a rejected password, pinned on the password field`() = runBlocking {
+        val c = coordinator(login = { _, _, _ -> throw httpError(401) })
+
+        val outcome = c.login("http://abs.local", "testuser", "wrong")
+
+        assertEquals(LoginError.PasswordRejected, (outcome as LoginOutcome.Failed).error)
+        assertEquals(LoginField.Password, LoginError.PasswordRejected.field)
+    }
+
+    @Test
+    fun `any other HTTP failure keeps its status code`() = runBlocking {
+        val c = coordinator(login = { _, _, _ -> throw httpError(500) })
+
+        val outcome = c.login("http://abs.local", "testuser", "hunter2")
+
+        assertEquals(LoginError.ServerError(500), (outcome as LoginOutcome.Failed).error)
+    }
+
+    @Test
+    fun `an unexpected failure is reported, not thrown`() = runBlocking {
+        val c = coordinator(login = { _, _, _ -> throw IllegalStateException("bad json") })
+
+        val outcome = c.login("http://abs.local", "testuser", "hunter2")
+
+        assertEquals(LoginError.Unexpected, (outcome as LoginOutcome.Failed).error)
+        assertEquals("bad json", outcome.detail)
     }
 
     @Test
@@ -115,7 +159,10 @@ class LoginCoordinatorTest {
         // with no explanation.
         val c = coordinator(activate = { SessionState.NeedsLogin })
 
-        assertEquals(LoginOutcome.UnusableSession, c.login("http://abs.local", "testuser", "hunter2"))
+        assertEquals(
+            LoginOutcome.Failed(LoginError.UnusableSession),
+            c.login("http://abs.local", "testuser", "hunter2")
+        )
     }
 
     @Test
@@ -142,7 +189,7 @@ class LoginCoordinatorTest {
 
         val outcome = c.loginWithApiKey("http://abs.local", "   ")
 
-        assertTrue(outcome is LoginOutcome.Invalid)
+        assertEquals(LoginOutcome.Failed(LoginError.ApiKeyMissing), outcome)
         assertEquals(false, called)
     }
 
@@ -151,7 +198,10 @@ class LoginCoordinatorTest {
         var called = false
         val c = coordinator(apiKeyLogin = { _, _ -> called = true; error("must not be called") })
 
-        assertTrue(c.loginWithApiKey("abs.local:13378", "my-api-key") is LoginOutcome.Invalid)
+        assertEquals(
+            LoginOutcome.Failed(LoginError.HostScheme),
+            c.loginWithApiKey("abs.local:13378", "my-api-key")
+        )
         assertEquals(false, called)
     }
 
@@ -180,11 +230,12 @@ class LoginCoordinatorTest {
 
     @Test
     fun `a rejected API key is reported, not thrown`() = runBlocking {
-        val c = coordinator(apiKeyLogin = { _, _ -> throw IOException("HTTP 401 Unauthorized") })
+        val c = coordinator(apiKeyLogin = { _, _ -> throw httpError(401) })
 
         val outcome = c.loginWithApiKey("http://abs.local", "revoked-key")
 
-        assertTrue(outcome is LoginOutcome.Failed)
+        assertEquals(LoginError.ApiKeyRejected, (outcome as LoginOutcome.Failed).error)
+        assertEquals(LoginField.ApiKey, LoginError.ApiKeyRejected.field)
         assertEquals(null, sessionManager.accessToken())
     }
 
@@ -193,8 +244,11 @@ class LoginCoordinatorTest {
         val c = coordinator(activate = { SessionState.NeedsLogin })
 
         assertEquals(
-            LoginOutcome.UnusableSession,
+            LoginOutcome.Failed(LoginError.UnusableSession),
             c.loginWithApiKey("http://abs.local", "my-api-key")
         )
     }
+
+    private fun httpError(code: Int) =
+        HttpException(Response.error<Any>(code, "".toResponseBody(null)))
 }

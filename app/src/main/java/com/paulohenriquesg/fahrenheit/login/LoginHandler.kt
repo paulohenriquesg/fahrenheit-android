@@ -6,6 +6,8 @@ import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.auth.AuthRepository
 import com.paulohenriquesg.fahrenheit.auth.SessionManager
@@ -22,23 +24,19 @@ import kotlinx.coroutines.withContext
  * Presents [LoginCoordinator]'s result. Deliberately thin: everything worth
  * testing lives in the coordinator, which needs no Context.
  */
-class LoginHandler(private val context: Context) {
+class LoginHandler(
+    private val context: Context,
+    private val coordinator: LoginCoordinator = defaultCoordinator(context)
+) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    private val coordinator = LoginCoordinator(
-        sessionManager = SessionManager(SharedPreferencesTokenStore(SharedPreferencesHandler(context))),
-        performLogin = { host, username, password ->
-            withContext(Dispatchers.IO) {
-                AuthRepository(ApiClient.createAuthApi(host)).login(username, password, host)
-            }
-        },
-        performApiKeyLogin = { host, apiKey ->
-            withContext(Dispatchers.IO) {
-                AuthRepository(ApiClient.createAuthApi(host)).signInWithApiKey(apiKey)
-            }
-        },
-        activateSession = { ApiClient.initialize(context) }
-    )
+    private val _error = mutableStateOf<LoginError?>(null)
+
+    /**
+     * Why the last attempt failed. The screen draws it beside the field it
+     * concerns; a Toast sat under the keyboard, where nobody saw it (#99).
+     */
+    val error: State<LoginError?> get() = _error
 
     fun handleLogin(
         host: String,
@@ -56,6 +54,7 @@ class LoginHandler(private val context: Context) {
 
     private fun run(isLoading: MutableState<Boolean>, attempt: suspend () -> LoginOutcome) {
         isLoading.value = true
+        _error.value = null
         scope.launch {
             try {
                 present(attempt())
@@ -73,24 +72,27 @@ class LoginHandler(private val context: Context) {
                 if (context is LoginActivity) context.finish()
             }
 
-            is LoginOutcome.Invalid ->
-                Toast.makeText(context, outcome.message, Toast.LENGTH_SHORT).show()
-
             is LoginOutcome.Failed -> {
-                Log.e("LoginHandler", "Login failed: ${outcome.message}")
-                Toast.makeText(
-                    context,
-                    "Login failed: ${outcome.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Log.e("LoginHandler", "Login failed: ${outcome.error} ${outcome.detail.orEmpty()}")
+                _error.value = outcome.error
             }
-
-            is LoginOutcome.UnusableSession ->
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.signed_in_but_host_missing),
-                    Toast.LENGTH_LONG
-                ).show()
         }
+    }
+
+    private companion object {
+        fun defaultCoordinator(context: Context) = LoginCoordinator(
+            sessionManager = SessionManager(SharedPreferencesTokenStore(SharedPreferencesHandler(context))),
+            performLogin = { host, username, password ->
+                withContext(Dispatchers.IO) {
+                    AuthRepository(ApiClient.createAuthApi(host)).login(username, password, host)
+                }
+            },
+            performApiKeyLogin = { host, apiKey ->
+                withContext(Dispatchers.IO) {
+                    AuthRepository(ApiClient.createAuthApi(host)).signInWithApiKey(apiKey)
+                }
+            },
+            activateSession = { ApiClient.initialize(context) }
+        )
     }
 }

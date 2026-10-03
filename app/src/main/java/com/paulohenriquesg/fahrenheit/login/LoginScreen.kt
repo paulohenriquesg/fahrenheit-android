@@ -1,11 +1,20 @@
 // LoginScreen.kt
 package com.paulohenriquesg.fahrenheit.login
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,7 +57,8 @@ import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 @Composable
 fun LoginScreen(
     handleLogin: (String, String, String, MutableState<Boolean>) -> Unit,
-    handleApiKeyLogin: (String, String, MutableState<Boolean>) -> Unit
+    handleApiKeyLogin: (String, String, MutableState<Boolean>) -> Unit,
+    error: LoginError? = null
 ) {
     val context = LocalContext.current
     val sharedPreferencesHandler = SharedPreferencesHandler(context)
@@ -71,6 +81,17 @@ fun LoginScreen(
     var isUsernameFocused by remember { mutableStateOf(false) }
     var isPasswordFocused by remember { mutableStateOf(false) }
 
+    // Beside the field that caused it - the band above the keyboard is the only
+    // part of the screen visible while typing. If that field is not on screen
+    // (a password error, then a switch to the API key), the top of the form.
+    val shownFields = if (useApiKey) setOf(LoginField.Host, LoginField.ApiKey)
+    else setOf(LoginField.Host, LoginField.Username, LoginField.Password)
+    val errorField = error?.field?.takeIf { it in shownFields } ?: LoginField.Host
+    @Composable
+    fun ErrorAbove(field: LoginField) {
+        if (error != null && errorField == field) LoginErrorBand(error)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -88,6 +109,7 @@ fun LoginScreen(
                 .padding(bottom = 16.dp)
         )
 
+        ErrorAbove(LoginField.Host)
         OutlinedTextField(
             value = host,
             onValueChange = { host = it },
@@ -121,6 +143,7 @@ fun LoginScreen(
         )
         Spacer(modifier = Modifier.height(8.dp))
         if (useApiKey) {
+            ErrorAbove(LoginField.ApiKey)
             OutlinedTextField(
                 value = apiKey,
                 onValueChange = { apiKey = it },
@@ -156,6 +179,7 @@ fun LoginScreen(
                 colors = fieldColors()
             )
         } else {
+            ErrorAbove(LoginField.Username)
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
@@ -188,6 +212,7 @@ fun LoginScreen(
                 colors = fieldColors()
             )
             Spacer(modifier = Modifier.height(8.dp))
+            ErrorAbove(LoginField.Password)
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -256,6 +281,28 @@ fun LoginScreen(
     }
 }
 
+@Composable
+private fun LoginErrorBand(error: LoginError) {
+    val danger = MaterialTheme.colorScheme.error
+    val text = if (error is LoginError.ServerError) stringResource(error.message, error.code)
+    else stringResource(error.message)
+    Row(
+        modifier = Modifier
+            .formWidth()
+            .padding(bottom = 8.dp)
+            .background(danger.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+            .border(1.dp, danger, RoundedCornerShape(12.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .testTag("login_error")
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(Icons.Filled.ErrorOutline, contentDescription = null, tint = danger)
+        Text(text, color = danger, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
 // A TV screen is 960dp wide. A field across all of it is a metre of empty box
 // behind an eight-character username.
 private val FormWidth = 720.dp
@@ -274,3 +321,19 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = MaterialTheme.colorScheme.primary,
     unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant
 )
+
+/** What the screen says for each [LoginError]: what to do, not what broke. */
+@get:StringRes
+val LoginError.message: Int
+    get() = when (this) {
+        LoginError.HostMissing -> R.string.login_error_host_missing
+        LoginError.HostScheme -> R.string.login_error_host_scheme
+        LoginError.UsernameMissing -> R.string.login_error_username_missing
+        LoginError.ApiKeyMissing -> R.string.login_error_api_key_missing
+        LoginError.PasswordRejected -> R.string.login_error_password_rejected
+        LoginError.ApiKeyRejected -> R.string.login_error_api_key_rejected
+        LoginError.Unreachable -> R.string.login_error_unreachable
+        is LoginError.ServerError -> R.string.login_error_server
+        LoginError.Unexpected -> R.string.login_error_unexpected
+        LoginError.UnusableSession -> R.string.login_error_unusable_session
+    }
