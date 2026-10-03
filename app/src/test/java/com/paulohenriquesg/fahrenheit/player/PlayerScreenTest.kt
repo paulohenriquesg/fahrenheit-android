@@ -144,4 +144,15 @@ class PlayerScreenTest {
         compose.onNodeWithText("Chapter 2").assertIsDisplayed()
         compose.onNodeWithText("TRANSPORT").assertIsDisplayed()
     }
+
+    @Test
+    fun `an open panel is drawn over the screen`() {
+        compose.setContent {
+            FahrenheitTheme {
+                PlayerScreen(nowPlaying = book, currentTime = 700.0, transport = { Text("TRANSPORT") }, overlay = { Text("PANEL") })
+            }
+        }
+        compose.onNodeWithText("PANEL").assertIsDisplayed()
+        compose.onNodeWithText("TRANSPORT").assertIsDisplayed()
+    }
 }

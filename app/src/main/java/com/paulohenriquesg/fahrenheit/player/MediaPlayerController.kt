@@ -17,6 +17,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.media3.common.PlaybackParameters
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,6 +73,8 @@ fun MediaPlayerController(
     var isPlaying by remember(player) { mutableStateOf(player.playWhenReady) }
     var failed by remember(player) { mutableStateOf(player.playerError != null) }
     var currentTime by remember(player) { mutableDoubleStateOf(playback.bookPosition()) }
+    // The book's time left counts at the speed; the service's player holds it.
+    val speed = rememberPlaybackSpeed(player)
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -122,14 +126,24 @@ fun MediaPlayerController(
             failed -> TimesRow(stringResource(R.string.playback_failed), null, error = true)
             chapter != null -> TimesRow(
                 PlaybackPosition.spoken(chapter.elapsed(currentTime)),
-                stringResource(R.string.time_left_in_chapter, PlaybackPosition.spoken(chapter.left(currentTime)))
+                // Real listening time at the speed, as the book's time left is.
+                stringResource(R.string.time_left_in_chapter, PlaybackPosition.spoken(chapter.left(currentTime) / speed))
             )
-            else -> TimesRow(
+            speed == ListeningSpeed.NORMAL -> TimesRow(
                 PlaybackPosition.spoken(currentTime),
                 stringResource(
                     R.string.time_left_of,
                     PlaybackPosition.spoken(PlaybackPosition.left(currentTime, totalTime)),
                     PlaybackPosition.spoken(totalTime)
+                )
+            )
+            else -> TimesRow(
+                PlaybackPosition.spoken(currentTime),
+                stringResource(
+                    R.string.time_left_of_at,
+                    PlaybackPosition.spoken(ListeningSpeed.left(currentTime, totalTime, speed)),
+                    PlaybackPosition.spoken(totalTime),
+                    ListeningSpeed.label(speed)
                 )
             )
         }
@@ -142,7 +156,15 @@ fun MediaPlayerController(
             )
             TimesRow(
                 stringResource(R.string.time_of, PlaybackPosition.spoken(currentTime), PlaybackPosition.spoken(totalTime)),
-                stringResource(R.string.time_left, PlaybackPosition.spoken(PlaybackPosition.left(currentTime, totalTime))),
+                if (speed == ListeningSpeed.NORMAL) {
+                    stringResource(R.string.time_left, PlaybackPosition.spoken(PlaybackPosition.left(currentTime, totalTime)))
+                } else {
+                    stringResource(
+                        R.string.time_left_at,
+                        PlaybackPosition.spoken(ListeningSpeed.left(currentTime, totalTime, speed)),
+                        ListeningSpeed.label(speed)
+                    )
+                },
                 small = true
             )
         }
@@ -214,6 +236,23 @@ fun MediaPlayerController(
             trailing()
         }
     }
+}
+
+/**
+ * The speed [player] plays at, following every change: the one source for the
+ * chip, the Speed panel and the times, whoever set it.
+ */
+@Composable
+fun rememberPlaybackSpeed(player: Player): Float {
+    var speed by remember(player) { mutableFloatStateOf(player.playbackParameters.speed) }
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onPlaybackParametersChanged(parameters: PlaybackParameters) { speed = parameters.speed }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+    return speed
 }
 
 /** A line of times under a bar: what has passed on the left, what is left on the right. */

@@ -50,17 +50,26 @@ import retrofit2.awaitResponse
 class PlayerActivity : ComponentActivity() {
     private var controller by mutableStateOf<MediaController?>(null)
     private var connectFailed by mutableStateOf(false)
+    /** The sleep timer as the service reports it; null when none runs. */
+    private var sleep by mutableStateOf<SleepState?>(null)
+    private val sleepReports = object : MediaController.Listener {
+        override fun onExtrasChanged(controller: MediaController, extras: Bundle) {
+            sleep = SleepCommand.state(extras)
+        }
+    }
     private val connection by lazy {
         ControllerSlot(
-            connect = { Playback.connect(this) },
+            connect = { Playback.connect(this, sleepReports) },
             release = { it.release() },
             executor = ContextCompat.getMainExecutor(this),
             onChange = {
                 controller = it
                 connectFailed = it == null
+                sleep = it?.let { connected -> SleepCommand.state(connected.sessionExtras) }
             }
         )
     }
+    private val speeds by lazy { SpeedMemory(this) }
     private lateinit var start: PlayerStart
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,13 +148,23 @@ class PlayerActivity : ComponentActivity() {
         val playing = nowPlaying
         val connected = controller
         var ready by remember(connected, playing) { mutableStateOf(false) }
+        val listening = remember(connected, playing) {
+            if (connected == null || playing == null) null
+            else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds) { command, args ->
+                connected.sendCustomCommand(command, args)
+            }
+        }
         LaunchedEffect(connected, playing) {
             if (connected == null || playing == null) return@LaunchedEffect
+            // Before anything plays, or the first moments play at the last book's speed.
+            listening?.applyRememberedSpeed()
             // The saved position is read when it is needed, not when the
             // screen opened: by then it may have been listened past elsewhere.
             ready = start.begin(connected, playing, { savedProgress(itemId, episodeId) }) { ApiClient.generateFullUrl(it) }
             if (!ready) failed = true
         }
+        // A panel left open when the screen went away does not come back over it.
+        val panels = rememberPlayerPanels(connected)
         when {
             failed || connectFailed -> Text(
                 text = stringResource(R.string.item_load_failed),
@@ -174,8 +193,28 @@ class PlayerActivity : ComponentActivity() {
                             onCurrentTimeUpdate = { currentTime = it },
                             trailing = {
                                 if (playing.goToPodcast) GoToPodcastButton { goToPodcast(itemId) }
+                                SpeedChip(rememberPlaybackSpeed(connected), panels)
+                                SleepChip(sleep, panels)
                             }
                         )
+                    }
+                },
+                overlay = {
+                    PlayerPanelHost(panels) { panel ->
+                        when (panel) {
+                            PlayerPanel.Speed -> SpeedPanel(
+                                current = rememberPlaybackSpeed(connected),
+                                onChoose = { listening?.chooseSpeed(it) },
+                                onClose = panels::close,
+                                forShow = playing.goToPodcast
+                            )
+                            PlayerPanel.Sleep -> SleepPanel(
+                                sleep = sleep,
+                                chapters = listening?.hasChapters == true,
+                                onChoose = { listening?.chooseSleep(it) },
+                                onClose = panels::close
+                            )
+                        }
                     }
                 }
             )

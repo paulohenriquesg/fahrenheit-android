@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,6 +46,7 @@ const val GO_TO_PODCAST_TAG = "player_go_to_podcast"
  * playing - and [transport] under them, across the full width.
  *
  * Behind it all, [wash]: the cover's colour (see [CoverWash]), or nothing.
+ * Over it all, [overlay]: an open panel ([SidePanel]).
  *
  * The description moves to the About panel (step 3 of #107).
  */
@@ -53,7 +55,8 @@ fun PlayerScreen(
     nowPlaying: NowPlaying,
     currentTime: Double,
     wash: Color? = null,
-    transport: @Composable () -> Unit
+    transport: @Composable () -> Unit,
+    overlay: @Composable () -> Unit = {}
 ) {
     var titleFocused by remember { mutableStateOf(false) }
     val spans = remember(nowPlaying.chapters, nowPlaying.trackTotal) {
@@ -81,58 +84,62 @@ fun PlayerScreen(
             drawRect(glow)
         }
     }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .then(washed)
-            .padding(horizontal = 60.dp, vertical = 32.dp),
-        verticalArrangement = Arrangement.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(36.dp)
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(washed)
+                .padding(horizontal = 60.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.Center
         ) {
-            CoverImage(itemId = nowPlaying.itemId, contentDescription = nowPlaying.title, size = 250.dp)
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                nowPlaying.kicker?.let {
-                    Text(
-                        text = it.uppercase(),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                MarqueeText(
-                    text = nowPlaying.title,
-                    isFocused = titleFocused,
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    modifier = Modifier.onFocusChanged { titleFocused = it.isFocused }
-                )
-                nowPlaying.byline?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                chapter?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.titleLarge,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(36.dp)
+            ) {
+                CoverImage(itemId = nowPlaying.itemId, contentDescription = nowPlaying.title, size = 250.dp)
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    nowPlaying.kicker?.let {
+                        Text(
+                            text = it.uppercase(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    MarqueeText(
+                        text = nowPlaying.title,
+                        isFocused = titleFocused,
+                        style = MaterialTheme.typography.headlineLarge,
                         color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = 2,
+                        modifier = Modifier.onFocusChanged { titleFocused = it.isFocused }
                     )
+                    nowPlaying.byline?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    chapter?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
+            Spacer(Modifier.height(28.dp))
+            transport()
         }
-        Spacer(Modifier.height(28.dp))
-        transport()
+        // An open panel, over everything (frame "A, with a panel open").
+        overlay()
     }
 }
 

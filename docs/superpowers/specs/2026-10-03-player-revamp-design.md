@@ -44,7 +44,7 @@ The details screen answers "should I play this, and from where?". The player ans
 ### Times
 
 All lengths use `PlaybackPosition.spoken` (#93).
-- **"Left in chapter"** is the chapter's end minus the current position, in book time.
+- **"Left in chapter"** is the chapter's end minus the current position, ÷ speed: real listening time, as for the book (decided on #120).
 - **"Left at <speed>"** is (total − position) ÷ speed. At 1× it reads just "left".
 
 ### Focus and keys

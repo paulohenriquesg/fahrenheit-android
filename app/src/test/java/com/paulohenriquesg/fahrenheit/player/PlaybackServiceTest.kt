@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.media3.session.SessionError
 import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
@@ -149,11 +150,42 @@ class PlaybackServiceTest {
             "com.example.stranger", 0, 0, 0, 0, false, Bundle.EMPTY, true
         )
 
-        val commands = PlaybackSessionCallback.onConnectAsync(session, stranger).get().availablePlayerCommands
+        val commands = PlaybackSessionCallback {}.onConnectAsync(session, stranger).get().availablePlayerCommands
 
         assertFalse(commands.contains(Player.COMMAND_SET_MEDIA_ITEM))
         assertFalse(commands.contains(Player.COMMAND_CHANGE_MEDIA_ITEMS))
         session.release()
+    }
+
+    // Review Focus 5: only the app sets a timer.
+    @Test
+    fun `an app that is not trusted cannot set a sleep timer`() {
+        val session = service.get().sessionPlayer!!.let { MediaSession.Builder(context, it).setId("pin-sleep").build() }
+        val stranger = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            "com.example.stranger", 0, 0, 0, 0, false, Bundle.EMPTY, true
+        )
+
+        val commands = PlaybackSessionCallback {}.onConnectAsync(session, stranger).get().availableSessionCommands
+
+        assertFalse(commands.contains(SleepCommand.COMMAND))
+        session.release()
+    }
+
+    @Test
+    fun `the app can set a sleep timer, and hears what is left`() {
+        val heard = mutableListOf<Bundle>()
+        val future = Playback.connect(context, object : MediaController.Listener {
+            override fun onExtrasChanged(controller: MediaController, extras: Bundle) { heard += extras }
+        })
+        runMainLooperUntil { future.isDone }
+        val controller = future.get().also { this.controller = it }
+        queued(controller, startAt = 0.0)
+
+        controller.sendCustomCommand(SleepCommand.COMMAND, SleepCommand.args(SleepChoice.Minutes(30)))
+
+        runMainLooperUntil { heard.isNotEmpty() }
+        assertEquals(SleepState(SleepChoice.Minutes(30), minutesLeft = 30), SleepCommand.state(heard.last()))
+        assertEquals(SleepState(SleepChoice.Minutes(30), minutesLeft = 30), SleepCommand.state(controller.sessionExtras))
     }
 
     @Test
@@ -163,9 +195,54 @@ class PlaybackServiceTest {
             context.packageName, 0, 0, 0, 0, true, Bundle.EMPTY, true
         )
 
-        val commands = PlaybackSessionCallback.onConnectAsync(session, own).get().availablePlayerCommands
+        val commands = PlaybackSessionCallback {}.onConnectAsync(session, own).get().availablePlayerCommands
 
         assertTrue(commands.contains(Player.COMMAND_SET_MEDIA_ITEM))
+        session.release()
+    }
+
+    // Review: the loop that runs the timer with no screen open.
+    @Test
+    fun `the service runs the timer on its own, and pauses when it is up`() {
+        val controller = connect()
+        queued(controller, startAt = 0.0)
+        controller.play()
+        runMainLooperUntil { service.get().sessionPlayer!!.playWhenReady }
+
+        controller.sendCustomCommand(SleepCommand.COMMAND, SleepCommand.args(SleepChoice.Minutes(0)))
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2))
+
+        runMainLooperUntil { !service.get().sessionPlayer!!.playWhenReady }
+        runMainLooperUntil { SleepCommand.state(controller.sessionExtras) == null }
+    }
+
+    @Test
+    fun `a new queue turns the timer off`() {
+        val controller = connect()
+        queued(controller, startAt = 0.0)
+        controller.sendCustomCommand(SleepCommand.COMMAND, SleepCommand.args(SleepChoice.Minutes(30)))
+        runMainLooperUntil { SleepCommand.state(controller.sessionExtras) != null }
+
+        val queue = PlaybackQueue.of(twoParts, 0.0) { "https://abs.test$it" }!!
+        controller.setMediaItems(queue.items, queue.index, queue.positionMs)
+
+        runMainLooperUntil { SleepCommand.state(controller.sessionExtras) == null }
+    }
+
+    // Review: defence in depth behind Media3's own check.
+    @Test
+    fun `a sleep command from an untrusted app is refused`() {
+        val session = service.get().sessionPlayer!!.let { MediaSession.Builder(context, it).setId("pin-sleep-cmd").build() }
+        val stranger = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            "com.example.stranger", 0, 0, 0, 0, false, Bundle.EMPTY, true
+        )
+        var set = 0
+
+        val result = PlaybackSessionCallback { set++ }
+            .onCustomCommand(session, stranger, SleepCommand.COMMAND, SleepCommand.args(SleepChoice.Minutes(15))).get()
+
+        assertEquals(SessionError.ERROR_PERMISSION_DENIED, result.resultCode)
+        assertEquals(0, set)
         session.release()
     }
 }

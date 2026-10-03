@@ -22,6 +22,17 @@
     <string name="previous_chapter">Previous chapter</string>
     <string name="next_chapter">Next chapter</string>
     <string name="time_left_of">%1$s left of %2$s</string>
+    <string name="time_left_at">%1$s left at %2$s</string>
+    <string name="time_left_of_at">%1$s left of %2$s at %3$s</string>
+    <string name="speed">Speed</string>
+    <string name="speed_chip">Speed %1$s</string>
+    <string name="speed_note_book">Remembered for this book. The time left in the book counts at this speed.</string>
+    <string name="speed_note_show">Remembered for this show. The time left counts at this speed.</string>
+    <string name="sleep">Sleep</string>
+    <string name="sleep_chip">Sleep %1$d min</string>
+    <string name="sleep_off">Off</string>
+    <string name="sleep_end_of_chapter">End of chapter</string>
+    <string name="sleep_minutes">%1$d min</string>
     <string name="progress_unreadable">Couldn\'t read where you left off. Starting from the beginning.</string>
     <string name="api_key_where_to_create">Create one in Audiobookshelf: Settings &gt; API Keys</string>
     <string name="current_version">Current Version</string>

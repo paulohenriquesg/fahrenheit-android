@@ -11,8 +11,10 @@ import com.google.common.util.concurrent.ListenableFuture
 /** The app's way to the [PlaybackService]. */
 object Playback {
 
-    fun connect(context: Context): ListenableFuture<MediaController> =
+    /** @param listener hears what the service reports beyond the player, such as the sleep timer. */
+    fun connect(context: Context, listener: MediaController.Listener? = null): ListenableFuture<MediaController> =
         MediaController.Builder(context, SessionToken(context, ComponentName(context, PlaybackService::class.java)))
+            .apply { listener?.let(::setListener) }
             .buildAsync()
 
     /**

@@ -260,4 +260,32 @@ class TransportTest {
 
         compose.onNodeWithTag(GO_TO_PODCAST_TAG).assertIsFocused()
     }
+
+    @Test
+    fun `at a speed, the book's time left counts at it`() {
+        val p = queuedAt(3900.0).apply { setPlaybackSpeed(1.25f) }
+        show(p, chapters = chapters)
+
+        // One meaning of "left": real listening time, in the chapter as in the book.
+        compose.onNodeWithText("20 min 0 s left in chapter").assertIsDisplayed()
+        compose.onNodeWithText("20 min 0 s left at 1.25×").assertIsDisplayed()
+    }
+
+    @Test
+    fun `without chapters, the one row counts at the speed too`() {
+        show(queuedAt(0.0).apply { setPlaybackSpeed(1.5f) })
+
+        compose.onNodeWithText("1 h 0 min left of 1 h 30 min at 1.5×").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a new speed changes the time left at once`() {
+        show(queuedAt(3900.0), chapters = chapters)
+
+        compose.runOnUiThread { player.setPlaybackSpeed(2f) }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("12 min 30 s left at 2×").assertIsDisplayed()
+        compose.onNodeWithText("12 min 30 s left in chapter").assertIsDisplayed()
+    }
 }
