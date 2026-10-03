@@ -27,7 +27,7 @@ class ResumeCheckTest {
 
     @Test
     fun `a newer position from elsewhere is offered`() {
-        knowledge.saw("b1", null, 1_000L)
+        knowledge.read("b1", null, lastUpdate = 1_000L)
 
         val offer = runBlocking { check.offer("b1", null, here = 3900.0, playing = false) }
 

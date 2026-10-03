@@ -24,7 +24,7 @@ class ResumeCheck(
     suspend fun offer(itemId: String, episodeId: String?, here: Double, playing: Boolean): ResumeOffer? {
         if (playing) return null
         val server = progress(itemId, episodeId)
-        val knownAt = knowledge.knownAt(itemId, episodeId)
+        val knownAt = knowledge.known(itemId, episodeId)
         // Unknown device asks; so this is the most that can be offered.
         ResumeOffer.of(here, server, knownAt, latestDevice = null, thisDevice) ?: return null
         return ResumeOffer.of(here, server, knownAt, latestDevice(itemId, episodeId), thisDevice)

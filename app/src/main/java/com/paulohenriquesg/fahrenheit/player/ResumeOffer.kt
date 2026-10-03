@@ -29,7 +29,7 @@ data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long
         fun of(
             here: Double,
             server: MediaProgressResponse?,
-            knownAt: Long?,
+            known: KnownProgress?,
             latestDevice: String?,
             thisDevice: String
         ): ResumeOffer? {
@@ -37,6 +37,7 @@ data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long
             if (server == null || server.isFinished == true) return null
             val there = server.currentTime ?: return null
             val listenedAt = server.lastUpdate ?: return null
+            val knownAt = (known as? KnownProgress.ServerCopy)?.lastUpdate
             if (knownAt != null && listenedAt <= knownAt) return null
             if (abs(there - here) <= THRESHOLD_SECONDS) return null
             if (latestDevice == thisDevice) return null

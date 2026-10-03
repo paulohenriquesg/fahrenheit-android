@@ -7,6 +7,12 @@ package com.paulohenriquesg.fahrenheit.player
  *
  * In memory, for the process: the queue it describes lives no longer.
  */
+sealed interface KnownProgress {
+    data class ServerCopy(val lastUpdate: Long) : KnownProgress
+    data class Wrote(val position: Double) : KnownProgress
+    data class Since(val deviceTime: Long) : KnownProgress
+}
+
 class ServerKnowledge {
     private val known = mutableMapOf<String, Long>()
 
@@ -19,6 +25,14 @@ class ServerKnowledge {
 
     @Synchronized
     fun knownAt(itemId: String, episodeId: String?): Long? = known[key(itemId, episodeId)]
+
+    fun read(itemId: String, episodeId: String?, lastUpdate: Long) {}
+
+    fun wrote(itemId: String, episodeId: String?, position: Double) {}
+
+    fun since(itemId: String, episodeId: String?, deviceTime: Long) {}
+
+    fun known(itemId: String, episodeId: String?): KnownProgress? = null
 
     private fun key(itemId: String, episodeId: String?) = "$itemId/${episodeId.orEmpty()}"
 
