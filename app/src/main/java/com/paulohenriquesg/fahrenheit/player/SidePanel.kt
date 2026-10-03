@@ -44,7 +44,7 @@ import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 
 /** The panels the player's action chips open (#107). */
-enum class PlayerPanel { Speed, Sleep }
+enum class PlayerPanel { Chapters, Speed, Sleep }
 
 /**
  * Which panel is open, and the chip each was opened from, so focus can go
@@ -122,14 +122,15 @@ fun SidePanel(title: String, onClose: () -> Unit, content: @Composable ColumnSco
     }
 }
 
-/** One choice in a panel, ticked when it is the current one. */
+/** One choice in a panel, ticked when it is the current one; [detail] under it, quieter. */
 @Composable
-fun PanelOption(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun PanelOption(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, detail: String? = null) {
     ListItem(
         selected = selected,
         onClick = onClick,
         modifier = modifier,
         headlineContent = { Text(label) },
+        supportingContent = detail?.let { { Text(it) } },
         trailingContent = if (selected) {
             { Icon(Icons.Filled.Check, contentDescription = null, tint = LocalContentColor.current) }
         } else null

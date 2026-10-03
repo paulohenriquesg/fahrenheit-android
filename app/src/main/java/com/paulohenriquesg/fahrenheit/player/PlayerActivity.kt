@@ -202,6 +202,8 @@ class PlayerActivity : ComponentActivity() {
                 overlay = {
                     PlayerPanelHost(panels) { panel ->
                         when (panel) {
+                            // No chip opens it yet: wired with About (step 4, Task 5).
+                            PlayerPanel.Chapters -> Unit
                             PlayerPanel.Speed -> SpeedPanel(
                                 current = rememberPlaybackSpeed(connected),
                                 onChoose = { listening?.chooseSpeed(it) },
