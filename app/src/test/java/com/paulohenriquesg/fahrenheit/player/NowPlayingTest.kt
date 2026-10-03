@@ -143,4 +143,36 @@ class NowPlayingTest {
         )
         assertEquals("Yesterday", NowPlaying.of(untitled, episodeId = "e1", now = now)!!.kicker)
     }
+
+    private fun inSeries(sequence: String?): LibraryItemResponse = Gson().fromJson(
+        """{"id":"b5","libraryId":"l1","mediaType":"book","media":{"duration":600.0,
+            "metadata":{"title":"A Book","explicit":false,
+              "series":[{"id":"s1","name":"The Long Way"${sequence?.let { ",\"sequence\":\"$it\"" } ?: ""}}]}}}""",
+        LibraryItemResponse::class.java
+    )
+
+    @Test
+    fun `a book knows its series and library, for About`() {
+        val playing = NowPlaying.of(inSeries("2"), episodeId = null, now = now)!!
+        assertEquals(SeriesRef(id = "s1", name = "The Long Way", sequence = "2"), playing.series)
+        assertEquals("l1", playing.libraryId)
+    }
+
+    @Test
+    fun `once the series is known the line says how many books it has`() =
+        assertEquals("The Long Way · Book 2 of 3", NowPlaying.of(inSeries("2"), episodeId = null, now = now)!!.withSeriesTotal(3).kicker)
+
+    @Test
+    fun `a fractional number reads as it is`() =
+        assertEquals("The Long Way · Book 1.5 of 4", NowPlaying.of(inSeries("1.5"), episodeId = null, now = now)!!.withSeriesTotal(4).kicker)
+
+    @Test
+    fun `a book with no number keeps the series name alone`() =
+        assertEquals("The Long Way", NowPlaying.of(inSeries(null), episodeId = null, now = now)!!.withSeriesTotal(4).kicker)
+
+    @Test
+    fun `a book in no series is not changed by a total`() {
+        val playing = NowPlaying.of(standalone, episodeId = null, now = now)!!
+        assertEquals(playing, playing.withSeriesTotal(4))
+    }
 }

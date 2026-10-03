@@ -36,7 +36,9 @@ interface LibraryApi {
         @Query("page") page: Int? = null,
         @Query("desc") desc: Boolean? = null,
         @Query("include", encoded = true) include: String = "rssfeed,numEpisodesIncomplete",
-        @Query("minified") minified: Int = 0
+        @Query("minified") minified: Int = 0,
+        /** "group.value", the value base64- then URL-encoded, as the server decodes it. */
+        @Query("filter", encoded = true) filter: String? = null
     ): LibraryItemsResponse
 
     @GET("api/libraries/{libraryId}/personalized")

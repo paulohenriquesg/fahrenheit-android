@@ -33,7 +33,16 @@ class LibraryRepository(private val api: LibraryApi) {
         api.getLibraryItems(libraryId).results
     }
 
+    /** A series' books, in series order (#107). */
+    suspend fun seriesBooks(libraryId: String, seriesId: String): Result<List<LibraryItem>> = runCatching {
+        api.getLibraryItems(libraryId, sort = "sequence", filter = seriesFilter(seriesId)).results
+    }
+
     suspend fun personalizedShelves(libraryId: String): Result<List<Shelf>> = runCatching {
         api.getPersonalizedView(libraryId)
     }
 }
+
+/** The items filter for one series: its id base64-encoded, then URL-encoded, as the web client sends it. */
+internal fun seriesFilter(seriesId: String): String =
+    "series." + java.net.URLEncoder.encode(java.util.Base64.getEncoder().encodeToString(seriesId.toByteArray()), "UTF-8")

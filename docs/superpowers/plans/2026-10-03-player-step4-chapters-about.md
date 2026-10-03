@@ -40,6 +40,12 @@
 
 ## Rulings (to confirm with the maintainer in the PR)
 
+0. **The series comes from the items list, filtered by series** (finding 1). Agreed with the coordinator; the spec's §Data is updated to match.
+5. **Sequences:**
+   - a fractional sequence (a novella at 1.5) reads as it is: "Book 1.5 of 4", where M counts every book in the series;
+   - a book with no sequence keeps the series name alone;
+   - books with no sequence sort last, as the server sorts them.
+
 1. **After Mark finished the player stays open, paused.** Playing on is listening again, and the server un-finishes the book by itself.
 2. **Mark unfinished** keeps the player where it is. The server resets its saved position to 0, and the next report sets it to where the listener is.
 3. **Switching to another book in the series** stops this one, then opens the player on the other, playing from its saved position.
@@ -113,7 +119,10 @@
 
 ### Task 6: The details screen's chapter list (#105)
 
-If the coordinator confirms it belongs in this step: the book details screen shows `ChapterList`, and choosing a chapter opens the player playing from that chapter's start. Otherwise it is listed as deferred.
+**Not in this PR** (the coordinator, 2026-10-03). It gets its own PR stacked on this one:
+- the details screen's chapter list, which opens the player at the chosen chapter;
+- the start-at extra the player needs for that;
+- Mark finished on the details screen.
 
 ### Task 7: Review, fixes, PR
 
