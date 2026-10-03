@@ -40,6 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.ui.Border
@@ -68,6 +69,8 @@ sealed interface UpdateCheck {
     }
 }
 
+const val PLAY_NEXT_EPISODE_TAG = "settings_play_next_episode"
+
 @Composable
 fun SettingsView(
     theme: ThemePreference,
@@ -84,7 +87,9 @@ fun SettingsView(
     deviceName: String,
     onDeviceName: (String) -> Unit,
     modifier: Modifier = Modifier,
-    deviceIsDark: Boolean = isSystemInDarkTheme()
+    deviceIsDark: Boolean = isSystemInDarkTheme(),
+    playNextEpisode: Boolean = false,
+    onPlayNextEpisode: (Boolean) -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -139,6 +144,19 @@ fun SettingsView(
                             onClick = { onLayout(false) }
                         ) { LayoutPreview(rows = false) }
                     }
+                }
+            }
+
+            Group(stringResource(R.string.settings_playback)) {
+                SettingRow(
+                    title = stringResource(R.string.play_next_episode),
+                    subtitle = stringResource(R.string.play_next_episode_subtitle)
+                ) {
+                    Switch(
+                        checked = playNextEpisode,
+                        onCheckedChange = onPlayNextEpisode,
+                        modifier = Modifier.testTag(PLAY_NEXT_EPISODE_TAG)
+                    )
                 }
             }
 

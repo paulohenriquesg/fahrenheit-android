@@ -1,5 +1,9 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.stringResource
+import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -114,13 +118,60 @@ fun PlayerScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
+                    EpisodeExtras(nowPlaying)
                 }
             }
             Spacer(Modifier.height(28.dp))
             transport()
+            // What Next plays, so the button is not a guess (#108).
+            nowPlaying.next?.let { next ->
+                Text(
+                    text = next.length?.let { stringResource(R.string.up_next, next.title, PlaybackPosition.spoken(it)) }
+                        ?: stringResource(R.string.up_next_title, next.title),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 14.dp)
+                )
+            }
         }
         // An open panel, over everything (frame "A, with a panel open").
         overlay()
+    }
+}
+
+/**
+ * Under an episode's title (#108): a badge when it is not a regular one, its
+ * details line, and the first three lines of its notes. A book has none.
+ */
+@Composable
+private fun EpisodeExtras(nowPlaying: NowPlaying) {
+    if (nowPlaying.badge != null || nowPlaying.details != null) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            nowPlaying.badge?.let {
+                Text(
+                    text = it.uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+            nowPlaying.details?.let {
+                Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            }
+        }
+    }
+    nowPlaying.notes?.let {
+        Text(
+            text = it,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

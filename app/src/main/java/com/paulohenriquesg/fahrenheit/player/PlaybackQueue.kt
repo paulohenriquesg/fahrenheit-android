@@ -20,11 +20,21 @@ object PlaybackQueue {
      * @param startAt where to begin, in whole-book seconds.
      * @param resolveUrl a track's server path to a full URL; null when there is
      *   no server to resolve against.
+     * @param next an episode to play after this one (#108), queued as itself.
      * @return null when there is nothing to play.
      */
-    fun of(nowPlaying: NowPlaying, startAt: Double, resolveUrl: (String) -> String?): QueueStart? {
+    fun of(nowPlaying: NowPlaying, startAt: Double, resolveUrl: (String) -> String?, next: NowPlaying? = null): QueueStart? {
         val timeline = nowPlaying.timeline ?: return null
-        val items = (0 until timeline.size).map { index ->
+        val items = itemsOf(nowPlaying, resolveUrl) ?: return null
+        val after = next?.let { itemsOf(it, resolveUrl) }.orEmpty()
+        val at = timeline.locate(startAt)
+        return QueueStart(items + after, at.trackIndex, (at.positionInTrack * 1000).toLong())
+    }
+
+    /** One item per file of [nowPlaying], each carrying its own [QueuedFile]; null when there is nothing to play. */
+    fun itemsOf(nowPlaying: NowPlaying, resolveUrl: (String) -> String?): List<MediaItem>? {
+        val timeline = nowPlaying.timeline ?: return null
+        return (0 until timeline.size).map { index ->
             val track = timeline.track(index)
             val url = resolveUrl(track.contentUrl) ?: return null
             val file = QueuedFile(
@@ -45,7 +55,5 @@ object PlaybackQueue {
                 .setMediaMetadata(MediaMetadata.Builder().setTitle(nowPlaying.title).build())
                 .build()
         }
-        val at = timeline.locate(startAt)
-        return QueueStart(items, at.trackIndex, (at.positionInTrack * 1000).toLong())
     }
 }
