@@ -266,7 +266,8 @@ class PlayerActivity : ComponentActivity() {
                                 playback = playback,
                                 totalTime = timeline.totalDuration,
                                 chapters = playing.chapters,
-                                // The lengths set in Settings (#107), as the remote's keys use them.
+                                // The lengths set in Settings (#107), as the remote's keys use them. A plain
+                                // read is enough: Settings is reached only by leaving the player.
                                 skipBack = playerSettings.skipBackSeconds,
                                 skipForward = playerSettings.skipForwardSeconds,
                                 onCurrentTimeUpdate = { currentTime = it },

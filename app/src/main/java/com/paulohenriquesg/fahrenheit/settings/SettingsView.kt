@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -344,15 +345,18 @@ private fun Choice(
     selected: Boolean,
     tag: String,
     onClick: () -> Unit,
-    preview: @Composable () -> Unit
+    modifier: Modifier = Modifier,
+    preview: (@Composable () -> Unit)? = null
 ) {
     Button(
         onClick = onClick,
-        modifier = Modifier.testTag(tag)
+        modifier = modifier.testTag(tag)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            preview()
-            Spacer(modifier = Modifier.height(4.dp))
+            preview?.let {
+                it()
+                Spacer(modifier = Modifier.height(4.dp))
+            }
             Text(
                 text = if (selected) "$label ✓" else label,
                 style = MaterialTheme.typography.labelMedium
@@ -371,8 +375,10 @@ private fun SkipRow(title: String, seconds: Int, tag: String, onChoose: (Int) ->
                     label = stringResource(R.string.settings_skip_length, length),
                     selected = length == seconds,
                     tag = "${tag}_$length",
-                    onClick = { onChoose(length) }
-                ) {}
+                    onClick = { onChoose(length) },
+                    // One width, so the columns line up from row to row for Up and Down.
+                    modifier = Modifier.widthIn(min = 76.dp)
+                )
             }
         }
     }
