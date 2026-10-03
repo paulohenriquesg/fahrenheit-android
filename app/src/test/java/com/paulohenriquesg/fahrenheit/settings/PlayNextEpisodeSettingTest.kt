@@ -32,8 +32,9 @@ class PlayNextEpisodeSettingTest {
             FahrenheitTheme {
                 SettingsView(
                     theme = ThemePreference.System, onTheme = {}, rowLayout = true, onLayout = {},
-                    version = "v0.0.10", update = UpdateCheck.Idle, onCheckUpdates = {},
+                    version = "v0.0.10", update = UpdateCheck.Idle, onCheckUpdates = {}, onInstall = {},
                     username = "a listener", server = "http://books.example:13378", onSignOut = {},
+                    deviceName = "Living room", onDeviceName = {},
                     playNextEpisode = on, onPlayNextEpisode = onChange
                 )
             }
