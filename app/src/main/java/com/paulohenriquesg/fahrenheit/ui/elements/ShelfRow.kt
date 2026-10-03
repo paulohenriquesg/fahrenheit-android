@@ -20,11 +20,7 @@ import com.paulohenriquesg.fahrenheit.api.Shelf
 @Composable
 fun ShelfRow(shelf: Shelf, progress: CoverProgress = CoverProgress.None, onItemClick: (LibraryItem) -> Unit) {
     Column {
-        Text(
-            text = shelf.label,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        ShelfHeading(shelf.label)
         Spacer(modifier = Modifier.height(8.dp))
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
