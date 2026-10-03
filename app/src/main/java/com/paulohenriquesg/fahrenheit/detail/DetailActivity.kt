@@ -48,6 +48,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.player.ChapterClock
+import com.paulohenriquesg.fahrenheit.player.Playback
 import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
@@ -92,6 +94,7 @@ class DetailActivity : ComponentActivity() {
         var me by remember { mutableStateOf<Me?>(null) }
 
         val context = LocalContext.current
+        val scope = rememberCoroutineScope()
 
         LaunchedEffect(itemId) {
             val api = ApiClient.getLibraryApi()
@@ -146,7 +149,25 @@ class DetailActivity : ComponentActivity() {
                 BookDetailView(
                     itemId = itemId,
                     content = DetailHeaderModel.book(item),
-                    onPrimary = { context.startActivity(playBookIntent(context, itemId)) }
+                    onPrimary = { context.startActivity(playBookIntent(context, itemId)) },
+                    chapters = remember(item) { ChapterClock.spans(item.media.chapters, item.media.duration ?: 0.0) },
+                    at = item.userMediaProgress?.currentTime ?: 0.0,
+                    onChapter = { start -> context.startActivity(playChapterIntent(context, itemId, start)) },
+                    finished = item.userMediaProgress?.isFinished == true,
+                    onMarkFinished = { done ->
+                        // Through the playback service, in case this book is the one playing (#105).
+                        Playback.markFinished(context, itemId, done) { worked ->
+                            if (!worked) {
+                                Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
+                                return@markFinished
+                            }
+                            // Read again, so the chips and Resume say what the server now holds.
+                            scope.launch {
+                                ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId) }
+                                    ?.onSuccess { itemDetail = it }
+                            }
+                        }
+                    }
                 )
             }
         }
@@ -313,5 +334,9 @@ class DetailActivity : ComponentActivity() {
         /** An episode chosen from the list, or the header's Play/Resume. Starts playing (#122). */
         fun playEpisodeIntent(context: Context, itemId: String, episodeId: String): Intent =
             PlayerActivity.createIntent(context, itemId, episodeId, autoPlay = true)
+
+        /** A chapter chosen from the book's Chapters: the player opens there and plays (#105). */
+        fun playChapterIntent(context: Context, itemId: String, start: Double): Intent =
+            PlayerActivity.createIntent(context, itemId, autoPlay = true, startAt = start)
     }
 }
