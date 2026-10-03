@@ -8,10 +8,12 @@ import com.paulohenriquesg.fahrenheit.navigation.MenuAction
  * holds more than the row shows, and leading to the screen that already lists
  * the same things.
  *
- * Only shelves with such a screen get one. The library screen has no sort or
- * filter yet, so Recently added (books), Continue listening and Listen again
- * would open a title-sorted list that does not match them; Discover is random
- * picks that nothing on the server reproduces.
+ * Only shelves whose screen exists today get one. The issue asks for Recently
+ * added (books) sorted by date added, and Continue listening and Listen again
+ * filtered to in progress and finished; the library screen has no sort or
+ * filter yet, so those wait for it. Newest episodes waits too: Latest Episodes
+ * loads at most 50 and does not page, so "See all 800" would stop at 50.
+ * Discover is random picks that nothing on the server reproduces.
  */
 object ShelfSeeAll {
 
@@ -26,7 +28,6 @@ object ShelfSeeAll {
     private fun destination(shelf: Shelf): MenuAction? = when {
         shelf.id == "recent-series" -> MenuAction.SERIES
         shelf.id == "newest-authors" -> MenuAction.AUTHORS
-        shelf.id == "newest-episodes" -> MenuAction.LATEST
         // A podcast library's own list is every podcast, which is what this
         // shelf is the start of; a book library's would need a date sort.
         shelf.id == "recently-added" && shelf.type == "podcast" -> MenuAction.LIBRARY

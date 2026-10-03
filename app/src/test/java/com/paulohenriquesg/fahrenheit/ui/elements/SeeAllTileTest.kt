@@ -48,6 +48,18 @@ class SeeAllTileTest {
 
     private fun shelf(type: String) = Shelf(id = "s", label = "A Shelf", labelStringKey = "", type = type)
 
+    /**
+     * Last in the row and the same size as the card before it. A card merges
+     * its texts into itself, so a text finds the whole card.
+     */
+    private fun assertLastAndSameSize(card: String) {
+        val cardBounds = compose.onNodeWithText(card).getUnclippedBoundsInRoot()
+        val tile = compose.onNodeWithText("See all 40").getUnclippedBoundsInRoot()
+        assertTrue("tile after the card", tile.left > cardBounds.right)
+        assertEquals("tile width", (cardBounds.right - cardBounds.left).value, (tile.right - tile.left).value, 0.5f)
+        assertEquals("tile height", (cardBounds.bottom - cardBounds.top).value, (tile.bottom - tile.top).value, 0.5f)
+    }
+
     /** Focusable like a cover, and pressing it does what it says. */
     private fun assertTileWorks(pressed: () -> Int) {
         val tile = compose.onNodeWithText("See all 40")
@@ -62,9 +74,7 @@ class SeeAllTileTest {
         var presses = 0
         render { ShelfRow(shelf("book").copy(bookEntities = listOf(book)), seeAllTotal = 40, onSeeAll = { presses++ }) {} }
 
-        val cover = compose.onNodeWithText("An Invented Book").getUnclippedBoundsInRoot()
-        val tile = compose.onNodeWithText("See all 40").getUnclippedBoundsInRoot()
-        assertTrue("tile after the cover", tile.left > cover.right)
+        assertLastAndSameSize("An Invented Book")
         assertTileWorks { presses }
     }
 
@@ -75,6 +85,7 @@ class SeeAllTileTest {
             AuthorShelfRow(shelf("authors"), listOf(Author(id = "a1", name = "A Writer")), seeAllTotal = 40, onSeeAll = { presses++ }) {}
         }
 
+        assertLastAndSameSize("A Writer")
         assertTileWorks { presses }
     }
 
@@ -85,6 +96,7 @@ class SeeAllTileTest {
             SeriesShelfRow(shelf("series"), listOf(Series(id = "s1", name = "A Series")), seeAllTotal = 40, onSeeAll = { presses++ }) {}
         }
 
+        assertLastAndSameSize("A Series")
         assertTileWorks { presses }
     }
 

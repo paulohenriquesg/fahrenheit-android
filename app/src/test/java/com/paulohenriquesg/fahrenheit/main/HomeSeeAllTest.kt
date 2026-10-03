@@ -58,4 +58,26 @@ class HomeSeeAllTest {
         compose.onNodeWithText("See all 12").performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(MenuAction.SERIES, opened)
     }
+
+    @Test
+    fun `a podcast library's recently added opens its podcasts, and newest episodes has none`() {
+        var opened: MenuAction? = null
+        val recentlyAdded = Shelf(
+            id = "recently-added", label = "Recently Added", labelStringKey = "", type = "podcast",
+            bookEntities = listOf(book), total = 30
+        )
+        val newestEpisodes = Shelf(
+            id = "newest-episodes", label = "Newest Episodes", labelStringKey = "", type = "episode",
+            bookEntities = listOf(book.copy(id = "b2")), total = 800
+        )
+
+        compose.setContent {
+            FahrenheitTheme { PersonalizedHomeView(listOf(recentlyAdded, newestEpisodes), "lib", onSeeAll = { opened = it }) }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("See all 800").assertDoesNotExist()
+        compose.onNodeWithText("See all 30").performSemanticsAction(SemanticsActions.OnClick)
+        assertEquals(MenuAction.LIBRARY, opened)
+    }
 }

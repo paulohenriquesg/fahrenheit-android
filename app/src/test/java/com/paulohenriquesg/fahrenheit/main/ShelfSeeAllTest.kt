@@ -49,9 +49,6 @@ class ShelfSeeAllTest {
         assertEquals(ShelfSeeAll.Tile(60, MenuAction.AUTHORS), ShelfSeeAll.of(shelf))
     }
 
-    @Test
-    fun `newest episodes opens Latest Episodes`() =
-        assertEquals(ShelfSeeAll.Tile(40, MenuAction.LATEST), ShelfSeeAll.of(books("newest-episodes", type = "episode")))
 
     @Test
     fun `recently added podcasts open the library's podcasts`() =
@@ -61,11 +58,11 @@ class ShelfSeeAllTest {
 
     @Test
     fun `a shelf showing everything it has gets no tile`() =
-        assertNull(ShelfSeeAll.of(books("newest-episodes", type = "episode", shown = 10, total = 10)))
+        assertNull(ShelfSeeAll.of(books("recently-added", type = "podcast", shown = 10, total = 10)))
 
     @Test
     fun `a shelf without a total gets no tile, as there is nothing to promise`() =
-        assertNull(ShelfSeeAll.of(books("newest-episodes", type = "episode", total = null)))
+        assertNull(ShelfSeeAll.of(books("recently-added", type = "podcast", total = null)))
 
     @Test
     fun `discover is random picks, so no tile`() =
@@ -88,6 +85,12 @@ class ShelfSeeAllTest {
     @Test
     fun `listen again waits for a finished filter`() =
         assertNull(ShelfSeeAll.of(books("listen-again")))
+
+    // Latest Episodes loads at most 50 and does not page, so "See all 800"
+    // would open a list that stops at 50.
+    @Test
+    fun `newest episodes waits for Latest Episodes to page`() =
+        assertNull(ShelfSeeAll.of(books("newest-episodes", type = "episode", shown = 10, total = 800)))
 
     @Test
     fun `podcast continue listening, a shelf of episodes, gets no tile either`() =
