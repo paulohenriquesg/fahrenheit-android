@@ -62,4 +62,40 @@ class SkipLengthsTest {
         player.seekBack()
         assertEquals(0L, exo.currentPosition)
     }
+
+    // Review (#107): a book in several files skips across them, as the
+    // on-screen buttons do.
+    private fun inTwoParts(bookSeconds: Double) {
+        val book = NowPlaying(
+            "b1", "b1",
+            TrackTimeline(listOf(TimelineTrack(1, 0.0, 3600.0, "/p1"), TimelineTrack(2, 3600.0, 1800.0, "/p2"))),
+            null, null, null, false, null
+        )
+        val queue = PlaybackQueue.of(book, bookSeconds) { "https://abs.test$it" }!!
+        exo.setMediaItems(queue.items, queue.index, queue.positionMs)
+    }
+
+    @Test
+    fun `back from early in a file crosses into the one before`() {
+        inTwoParts(3604.0)
+        player.seekBack()
+        assertEquals(0, exo.currentMediaItemIndex)
+        assertEquals(3_594_000L, exo.currentPosition)
+    }
+
+    @Test
+    fun `forward from late in a file crosses into the next`() {
+        inTwoParts(3595.0)
+        player.seekForward()
+        assertEquals(1, exo.currentMediaItemIndex)
+        assertEquals(55_000L, exo.currentPosition)
+    }
+
+    @Test
+    fun `forward near the end of the book stops at its end`() {
+        inTwoParts(5390.0)
+        player.seekForward()
+        assertEquals(1, exo.currentMediaItemIndex)
+        assertEquals(1_800_000L, exo.currentPosition)
+    }
 }
