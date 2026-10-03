@@ -109,7 +109,8 @@ class SleepWatchTest {
 
         assertTrue(player.playWhenReady)
         assertEquals(SleepChoice.EndOfChapter, shown!!.choice)
-        assertEquals(9, shown!!.minutesLeft)
+        // 500 s: the chapter row reads "8 min 20 s left in chapter", and the chip agrees.
+        assertEquals(8, shown!!.minutesLeft)
     }
 
     @Test
@@ -171,5 +172,27 @@ class SleepWatchTest {
         run(player).untilPendingCommandsAreFullyHandled()
 
         assertEquals(1_000L, watch.nextCheckMs())
+    }
+
+    // Device check: the chip read "Sleep 2 min" beside "1 min 8 s left in chapter".
+    @Test
+    fun `end of chapter's minutes agree with the chapter row`() {
+        watch.set(SleepCommand.args(SleepChoice.EndOfChapter, chapterEnds = listOf(68.0, 3600.0)))
+        assertEquals(SleepState(SleepChoice.EndOfChapter, minutesLeft = 1), shown)
+    }
+
+    @Test
+    fun `under a minute to the chapter's end still reads one minute`() {
+        watch.set(SleepCommand.args(SleepChoice.EndOfChapter, chapterEnds = listOf(30.0, 3600.0)))
+        assertEquals(1, shown!!.minutesLeft)
+    }
+
+    @Test
+    fun `a timer of minutes counts down from what was chosen`() {
+        watch.set(SleepCommand.args(SleepChoice.Minutes(15)))
+        player.play()
+        run(player).untilPositionAtLeast(1_000)
+        watch.check()
+        assertEquals(15, shown!!.minutesLeft)
     }
 }
