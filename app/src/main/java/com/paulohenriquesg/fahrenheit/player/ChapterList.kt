@@ -21,8 +21,9 @@ fun ChapterList(spans: List<ChapterSpan>, at: Double, onChoose: (ChapterSpan) ->
     val current = ChapterClock.at(spans, at)?.let(spans::indexOf)?.coerceAtLeast(0) ?: 0
     val state = rememberLazyListState(initialFirstVisibleItemIndex = current)
     val landing = rememberInitialFocus(enabled = true)
+    // A chapter is its place in the book: titles repeat, and so can starts.
     LazyColumn(modifier = modifier, state = state) {
-        itemsIndexed(spans) { index, span ->
+        itemsIndexed(spans, key = { index, _ -> index }) { index, span ->
             PanelOption(
                 label = span.title.ifBlank { stringResource(R.string.chapter_number, index + 1) },
                 detail = PlaybackPosition.spoken(span.start),

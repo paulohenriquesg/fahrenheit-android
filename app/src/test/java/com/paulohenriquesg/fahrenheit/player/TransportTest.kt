@@ -288,4 +288,15 @@ class TransportTest {
         compose.onNodeWithText("12 min 30 s left at 2×").assertIsDisplayed()
         compose.onNodeWithText("12 min 30 s left in chapter").assertIsDisplayed()
     }
+
+    // The Chapters panel seeks from outside the transport, often while paused.
+    @Test
+    fun `a seek from elsewhere moves the times at once, even paused`() {
+        show(queuedAt(0.0), chapters = chapters)
+
+        compose.runOnUiThread { BookPlayback(player, twoParts).seekToBookTime(3900.0) }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("25 min 0 s left in chapter").assertIsDisplayed()
+    }
 }

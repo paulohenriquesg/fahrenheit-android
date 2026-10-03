@@ -175,4 +175,31 @@ class NowPlayingTest {
         val playing = NowPlaying.of(standalone, episodeId = null, now = now)!!
         assertEquals(playing, playing.withSeriesTotal(4))
     }
+
+    @Test
+    fun `a book carries its facts and whether it is finished, for About`() {
+        val done: LibraryItemResponse = Gson().fromJson(
+            """{"id":"b6","mediaType":"book","media":{"duration":600.0,
+                "metadata":{"title":"A Book","explicit":false,"narrators":["A Reader"]}},
+                "userMediaProgress":{"isFinished":true}}""",
+            LibraryItemResponse::class.java
+        )
+        val playing = NowPlaying.of(done, episodeId = null, now = now)!!
+        assertEquals(listOf(AboutFact(AboutFact.Kind.ReadBy, "A Reader"), AboutFact(AboutFact.Kind.Length, "10 min 0 s")), playing.facts)
+        assertEquals(true, playing.finished)
+    }
+
+    @Test
+    fun `a book's length in About is what will play`() {
+        val playing = NowPlaying.of(book, episodeId = null, now = now)!!
+        assertEquals(AboutFact(AboutFact.Kind.Length, PlaybackPosition.spoken(playing.trackTotal!!)), playing.facts.last())
+        assertEquals(false, playing.finished)
+    }
+
+    @Test
+    fun `an episode's facts are its date and length, and it has no Mark finished`() {
+        val playing = NowPlaying.of(podcast, episodeId = "e295", now = now)!!
+        assertEquals(listOf(AboutFact(AboutFact.Kind.Published, "Yesterday"), AboutFact(AboutFact.Kind.Length, "30 min 0 s")), playing.facts)
+        assertEquals(null, playing.finished)
+    }
 }

@@ -41,6 +41,7 @@ import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.LibraryItemMetadata
 import com.paulohenriquesg.fahrenheit.detail.FullDescription
+import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
@@ -143,8 +144,9 @@ private fun SeriesRow(series: SeriesBooks, onPlayInstead: (SeriesBook) -> Unit) 
         }
         return
     }
+    val keys = remember(series) { StableKeys.of(series.books) { it.itemId } }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        itemsIndexed(series.books) { index, book ->
+        itemsIndexed(series.books, key = { index, _ -> keys[index] }) { index, book ->
             val isThis = index == series.current
             Surface(
                 onClick = { if (!isThis) asking = book },

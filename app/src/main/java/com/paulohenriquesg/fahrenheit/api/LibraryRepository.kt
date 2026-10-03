@@ -45,4 +45,4 @@ class LibraryRepository(private val api: LibraryApi) {
 
 /** The items filter for one series: its id base64-encoded, then URL-encoded, as the web client sends it. */
 internal fun seriesFilter(seriesId: String): String =
-    "series." + java.net.URLEncoder.encode(java.util.Base64.getEncoder().encodeToString(seriesId.toByteArray()), "UTF-8")
+    "series." + java.net.URLEncoder.encode(android.util.Base64.encodeToString(seriesId.toByteArray(), android.util.Base64.NO_WRAP), "UTF-8")
