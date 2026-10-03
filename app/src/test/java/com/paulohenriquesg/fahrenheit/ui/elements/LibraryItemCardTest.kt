@@ -65,6 +65,29 @@ class LibraryItemCardTest {
             .assertRangeInfoEquals(ProgressBarRangeInfo(5000f / 20120f, 0f..1f))
     }
 
+    // Seconds only where they matter: under ten minutes left (#119, #114).
+    @Test
+    fun `a cover keeps the seconds when under ten minutes are left`() {
+        val nearlyDone = CoverProgress.index(
+            listOf(MediaProgressResponse(libraryItemId = "book-1", currentTime = 20120.0 - 570, duration = 20120.0))
+        ).of(book)
+
+        compose.setContent { FahrenheitTheme { LibraryItemCard(book, progress = nearlyDone) {} } }
+
+        compose.onNodeWithText("9 min 30 s left").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a cover drops the seconds from ten minutes left, and a whole hour reads as hours`() {
+        val twoHours = CoverProgress.index(
+            listOf(MediaProgressResponse(libraryItemId = "book-1", currentTime = 20120.0 - 7215, duration = 20120.0))
+        ).of(book)
+
+        compose.setContent { FahrenheitTheme { LibraryItemCard(book, progress = twoHours) {} } }
+
+        compose.onNodeWithText("2 h left").assertIsDisplayed()
+    }
+
     private val book: LibraryItem = Gson().fromJson(
         """{"id":"book-1","ino":"1","libraryId":"lib","folderId":"f","path":"/p","relPath":"p",
             "isFile":false,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0,"addedAt":0,"updatedAt":0,

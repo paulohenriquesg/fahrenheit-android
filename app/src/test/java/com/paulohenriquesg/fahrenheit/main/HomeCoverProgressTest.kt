@@ -37,7 +37,7 @@ class HomeCoverProgressTest {
 
         compose.setContent { FahrenheitTheme { PersonalizedHomeView(listOf(shelf), "lib", fetchProgress = { progress }) } }
 
-        compose.onNodeWithText("48 min 0 s left").assertIsDisplayed()
+        compose.onNodeWithText("48 min left").assertIsDisplayed()
         compose.onNodeWithText("Second Writer").assertIsDisplayed()
         compose.onNodeWithText("First Writer").assertDoesNotExist()
     }
@@ -52,14 +52,14 @@ class HomeCoverProgressTest {
                 })
             }
         }
-        compose.onNodeWithText("48 min 0 s left").assertIsDisplayed()
+        compose.onNodeWithText("48 min left").assertIsDisplayed()
 
         position = 1200.0
         compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
         compose.waitForIdle()
 
-        compose.onNodeWithText("38 min 0 s left").assertIsDisplayed()
+        compose.onNodeWithText("38 min left").assertIsDisplayed()
     }
 
     @Test

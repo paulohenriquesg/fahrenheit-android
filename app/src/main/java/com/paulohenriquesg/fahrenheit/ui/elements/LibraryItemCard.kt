@@ -41,6 +41,7 @@ import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.player.PlaybackPosition
 import com.paulohenriquesg.fahrenheit.ui.CardFocus
+import com.paulohenriquesg.fahrenheit.utils.listeningLength
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -98,11 +99,11 @@ fun LibraryItemCard(item: LibraryItem, progress: CoverProgress.Started? = null, 
                     maxLines = 1
                 )
                 // One line under the title, so every card keeps its height: how
-                // long is left once started (#104), else the podcast's count
+                // long is left once started (#104), rounded as on Latest Episodes, else the podcast's count
                 // (#75), else the author.
                 val episodeCount = LibraryItemDisplay.episodeCount(item)
                 val secondLine = when {
-                    progress != null -> stringResource(R.string.time_left, PlaybackPosition.spoken(progress.secondsLeft))
+                    progress != null -> stringResource(R.string.time_left, listeningLength(progress.secondsLeft))
                     episodeCount != null -> episodeCount
                     else -> LibraryItemDisplay.author(item)
                 }
