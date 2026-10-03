@@ -7,6 +7,8 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -118,7 +120,8 @@ class BookOverviewTest {
 
     @Test fun `this book is marked in the series`() {
         show()
-        compose.onNodeWithContentDescription("The Long Drift").assertIsSelected()
+        // The big cover says the same; the series' cover is the one that can be chosen.
+        compose.onNode(hasContentDescription("The Long Drift") and hasClickAction()).assertIsSelected()
     }
 
     // Review Focus 2.
