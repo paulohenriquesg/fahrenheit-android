@@ -202,4 +202,19 @@ class PlayerStartTest {
         assertEquals(5_000L, player.currentPosition)
         assertEquals(QueuedFile("p1", "e3", 0.0, 1800.0), QueuedFile.of(player.getMediaItemAt(1)))
     }
+
+    // #108: the screen followed a move from e1 to e2; e1 has played, and e2
+    // should be first again so the screen's timeline maps onto the queue.
+    @Test
+    fun `reattaching after a move drops what has already played`() {
+        val queue = PlaybackQueue.of(episodeIn("e1"), 0.0, resolve, next = episodeIn("e2"))!!
+        player.setMediaItems(queue.items, 1, 5_000L)
+
+        runBlocking { PlayerStart(autoPlay = false).begin(player, episodeIn("e2"), { null }, resolve) }
+
+        assertEquals(1, player.mediaItemCount)
+        assertEquals(0, player.currentMediaItemIndex)
+        assertEquals(5_000L, player.currentPosition)
+        assertEquals(QueuedFile("p1", "e2", 0.0, 1800.0), QueuedFile.of(player.currentMediaItem))
+    }
 }
