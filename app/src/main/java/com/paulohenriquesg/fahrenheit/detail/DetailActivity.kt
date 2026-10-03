@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.tv.material3.Surface
@@ -146,12 +147,15 @@ class DetailActivity : ComponentActivity() {
             return
         }
 
+        val margin = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
+        // A book keeps the margin inside, so its Chapters panel reaches the edges.
+        val isBook = item.mediaType != "podcast"
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .then(if (isBook) Modifier else Modifier.padding(margin))
         ) {
-            if (item.mediaType == "podcast") {
+            if (!isBook) {
                 PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it })
             } else {
                 BookDetailView(
@@ -161,6 +165,7 @@ class DetailActivity : ComponentActivity() {
                     chapters = remember(item) { ChapterClock.spans(item.media.chapters, item.media.duration ?: 0.0) },
                     at = item.userMediaProgress?.currentTime ?: 0.0,
                     onChapter = { start -> context.startActivity(playChapterIntent(context, itemId, start)) },
+                    padding = margin,
                     finished = item.userMediaProgress?.isFinished == true,
                     marking = marking,
                     onMarkFinished = { done ->

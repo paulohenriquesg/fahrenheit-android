@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -81,6 +82,9 @@ const val DETAIL_SCROLL_TAG = "detail_scroll"
  * Beside Resume (#105, frame 3): Mark finished, when [finished] is known, and
  * Chapters, when there are any - the player's own panel, opening on the
  * chapter at [at]; choosing one calls [onChapter] with its start.
+ *
+ * [padding] is the screen's margin, kept inside: the Chapters panel covers the
+ * whole screen, edge to edge, as it does over the player.
  */
 @Composable
 fun BookDetailView(
@@ -92,7 +96,8 @@ fun BookDetailView(
     onChapter: (Double) -> Unit = {},
     finished: Boolean? = null,
     marking: Boolean = false,
-    onMarkFinished: (Boolean) -> Unit = {}
+    onMarkFinished: (Boolean) -> Unit = {},
+    padding: PaddingValues = PaddingValues()
 ) {
     val scroll = rememberScrollState()
     val panels = rememberPlayerPanels()
@@ -102,6 +107,7 @@ fun BookDetailView(
                 .fillMaxSize()
                 .verticalScroll(scroll)
                 .testTag(DETAIL_SCROLL_TAG)
+                .padding(padding)
         ) {
             DetailHeader(
                 itemId = itemId,
