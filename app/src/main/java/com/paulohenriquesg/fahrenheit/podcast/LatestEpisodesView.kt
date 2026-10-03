@@ -291,11 +291,11 @@ fun EpisodeCard(
                             episode.podcast?.metadata?.title?.takeIf { it.isNotBlank() },
                             published.takeIf { it.isNotBlank() },
                             // Once started, what is left matters more than the
-                            // length; both in the player's words (#93).
+                            // length; both without seconds from ten minutes on.
                             if (inProgress != null) {
-                                stringResource(R.string.time_left, PlaybackPosition.spoken(inProgress.secondsLeft))
+                                stringResource(R.string.time_left, EpisodeRowDisplay.length(inProgress.secondsLeft))
                             } else {
-                                episode.duration?.takeIf { it > 0 }?.let { PlaybackPosition.spoken(it) }
+                                episode.duration?.takeIf { it > 0 }?.let { EpisodeRowDisplay.length(it) }
                             }
                         ).joinToString("  ·  "),
                         style = MaterialTheme.typography.bodyMedium,

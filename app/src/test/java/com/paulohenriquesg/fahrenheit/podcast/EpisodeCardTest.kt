@@ -53,8 +53,8 @@ class EpisodeCardTest {
             EpisodeCard(episode = episode, onClick = {}, progress = EpisodeProgress.InProgress(0.4, 840.0))
         }
 
-        // The player's wording (#93).
-        compose.onNodeWithText("14 min 0 s left", substring = true).assertIsDisplayed()
+        // Ten minutes or more: no seconds.
+        compose.onNodeWithText("14 min left", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -71,10 +71,11 @@ class EpisodeCardTest {
     }
 
     @Test
-    fun `an episode shows how long it is, in the player's words`() {
-        compose.setContent { EpisodeCard(episode = episode.copy(duration = 1690.0), onClick = {}) }
+    fun `an episode shows how long it is, rounded to the minute when long`() {
+        compose.setContent { EpisodeCard(episode = episode.copy(duration = 1729.0), onClick = {}) }
 
-        compose.onNodeWithText("28 min 10 s", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("29 min", substring = true).assertIsDisplayed()
+        compose.onNodeWithText(" s", substring = true).assertDoesNotExist()
     }
 
     @Test
