@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -84,7 +85,8 @@ class BookOverviewTest {
 
     @Test fun `it shows the book, its actions, description, series and facts`() {
         show()
-        compose.onNodeWithText("The Long Drift", useUnmergedTree = true).assertExists()
+        // The title, and again under this book's cover in the series.
+        compose.onAllNodesWithText("The Long Drift")[0].assertIsDisplayed()
         compose.onNodeWithText("An Author · read by A Reader").assertIsDisplayed()
         compose.onNodeWithText("ACTION").assertIsDisplayed()
         compose.onNodeWithText("A survey ship drifts into a quiet sector.").assertIsDisplayed()

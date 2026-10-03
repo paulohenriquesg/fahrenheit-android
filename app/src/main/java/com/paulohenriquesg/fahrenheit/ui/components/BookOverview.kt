@@ -32,6 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
@@ -88,9 +93,20 @@ fun BookOverview(
     actions: @Composable ColumnScope.() -> Unit
 ) {
     val text = description?.takeIf { it.isNotBlank() }
-    val landing = rememberInitialFocus(enabled = landOnDescription && text != null)
+    val descriptionFocus = rememberInitialFocus(enabled = landOnDescription && text != null)
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(40.dp)) {
-        Column(Modifier.width(210.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            Modifier
+                .width(210.dp)
+                // Right from the actions goes to the description: they sit under
+                // the cover, below the description's box, where the remote's own
+                // search would find the series row instead.
+                .onPreviewKeyEvent { event ->
+                    val toDescription = text != null && event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight
+                    if (toDescription) runCatching { descriptionFocus.requestFocus() }.isSuccess else false
+                },
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             CoverImage(itemId = itemId, contentDescription = title, size = 210.dp)
             Text(
                 text = title,
@@ -119,7 +135,7 @@ fun BookOverview(
                 ) {
                     FullDescription(
                         it, scroll,
-                        modifier = if (landOnDescription) Modifier.focusRequester(landing) else Modifier,
+                        modifier = Modifier.focusRequester(descriptionFocus),
                         alwaysFocusable = true
                     )
                 }
