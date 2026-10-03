@@ -1,5 +1,9 @@
 package com.paulohenriquesg.fahrenheit.detail
 
+import androidx.compose.ui.test.onNodeWithContentDescription
+import com.paulohenriquesg.fahrenheit.player.SeriesBooks
+import com.paulohenriquesg.fahrenheit.player.SeriesBook
+import com.paulohenriquesg.fahrenheit.player.AboutFact
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -160,5 +164,46 @@ class DetailActionsTest {
         assertEquals(screen, scrim)
         // The book itself still sits inside the margin: its cover starts 24 dp in.
         compose.onNodeWithContentDescription("A Book").assertLeftPositionInRootIsEqualTo(24.dp)
+    }
+
+    private val series = SeriesBooks(
+        listOf(SeriesBook("b0", "The Quiet Signal"), SeriesBook("b1", "A Book"), SeriesBook("b2", "A Late Message")),
+        currentId = "b1"
+    )
+
+    private fun showOverview(onSeries: (String) -> Unit = {}) {
+        compose.setContent {
+            FahrenheitTheme {
+                BookDetailView(
+                    itemId = "b1",
+                    content = DetailHeaderContent("A Book", "An Author", emptyList(), "Resume at 11 min", "<p>A short blurb.</p>"),
+                    onPrimary = {},
+                    chapters = three,
+                    finished = false,
+                    facts = listOf(AboutFact(AboutFact.Kind.ReadBy, "A Reader"), AboutFact(AboutFact.Kind.Progress, "34% in")),
+                    series = series,
+                    seriesName = "The Long Way",
+                    onSeriesBook = { onSeries(it.itemId) }
+                )
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    // #134: the book screen is the one book layout.
+    @Test fun `the book screen shows the series and the facts, progress among them`() {
+        showOverview()
+        compose.onNodeWithText("THE LONG WAY · 3 BOOKS").assertIsDisplayed()
+        compose.onNodeWithText("Progress").assertIsDisplayed()
+        compose.onNodeWithText("34% in").assertIsDisplayed()
+        compose.onNodeWithTag(PRIMARY_ACTION_TAG).assertIsFocused()
+    }
+
+    @Test fun `choosing another book in the series opens it, without asking`() {
+        val opened = mutableListOf<String>()
+        showOverview { opened += it }
+        compose.onNodeWithContentDescription("A Late Message").performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        assertEquals(listOf("b2"), opened)
     }
 }
