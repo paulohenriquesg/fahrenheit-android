@@ -86,7 +86,10 @@ fun LibraryItemCard(
                 Box(modifier = Modifier.alpha(if (dimmed) DIMMED_ALPHA else 1f)) {
                     CoverImage(
                         itemId = item.id,
-                        contentDescription = item.media.metadata.title
+                        contentDescription = item.media.metadata.title,
+                        // Drawn on the placeholder when there is no cover (#149).
+                        title = LibraryItemDisplay.title(item),
+                        author = LibraryItemDisplay.author(item)
                     )
                     if (progress != null) {
                         CoverProgressBar(

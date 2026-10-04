@@ -25,7 +25,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The rail's Series and Collections sections (#73): a 160dp-tall card with the
+ * The rail's Series and Collections sections (#73): a 260dp-tall card with the
  * group's name and its book count, opening the group's screen. Their cards
  * lived inside the unreachable browse Activities; this pins them as they were.
  */
@@ -52,10 +52,10 @@ class BookGroupRailCardsTest {
         return intent!!
     }
 
-    /** 160dp tall; the grid's adaptive 200dp cells set the width. */
+    /** 260dp tall since its covers (#149); the grid's adaptive 200dp cells set the width. */
     private fun assertCardSize(name: String) {
         val bounds = compose.onNodeWithText(name).getUnclippedBoundsInRoot()
-        assertEquals(160f, (bounds.bottom - bounds.top).value, 0.5f)
+        assertEquals(260f, (bounds.bottom - bounds.top).value, 0.5f)
     }
 
     @Test
