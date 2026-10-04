@@ -134,4 +134,33 @@ class ResumeOfferTest {
     fun `this TV's session written with the copy excuses it`() {
         assertNull(offer(latestSession = LatestSession("tv-1", updatedAt = now - 60_000 - 10_000)))
     }
+
+    // #158: "You listened further on your iPhone".
+    @Test
+    fun `another device's session with the copy names that device`() {
+        val session = LatestSession("phone-1", updatedAt = now - 60_000, deviceName = "iPhone")
+
+        assertEquals("iPhone", offer(latestSession = session)!!.device)
+    }
+
+    // An edit with no session behind it: the latest session, however named,
+    // did not move it ("moved on elsewhere").
+    @Test
+    fun `a session older than the copy names nothing`() {
+        val older = LatestSession("phone-1", updatedAt = now - 60_000 - 10_001, deviceName = "iPhone")
+
+        assertNull(offer(latestSession = older)!!.device)
+    }
+
+    @Test
+    fun `this TV's own older session names nothing`() {
+        val olderHere = LatestSession("tv-1", updatedAt = now - 60_000 - 10_001, deviceName = "Fire TV")
+
+        assertNull(offer(latestSession = olderHere)!!.device)
+    }
+
+    @Test
+    fun `unreadable sessions name nothing`() {
+        assertNull(offer(latestSession = null)!!.device)
+    }
 }
