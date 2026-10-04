@@ -8,8 +8,4 @@ They use the app's own palette from `ui/theme/Theme.kt` and the constraints in
 `../ui-style-guide.md`, so what they show is what the device can render. Every
 frame marks which numbers are real and which are samples.
 
-- `login.html` — sign-in, built around the Fire TV keyboard owning the bottom
-  45% of the screen. Server discovery, a returning user, error states, light.
-- `screens.html` — the navigation rail (#58), Home, item detail (#57), the
-  player, search.
-- `stats.html` — the stats screen, before and after (#54, shipped in #60).
+Which mock covers which screen is listed in the style guide, under **Mocks**.

@@ -49,8 +49,18 @@ Nothing on a TV responds to the remote until something holds focus.
 
 ## Back
 
-Back walks up a level, it does not leave: `BackAction.decide(drawerOpen, view)`
-closes the drawer, else goes Home, else lets the system have it (#53).
+Back walks up one level at a time, and only leaves the app from Home's rail:
+content → the section's rail → Home → out. `BackAction.decide(view, railHasFocus)`
+is the table; `MainBackHandler` applies it and stands aside for the last step, so
+the system does the leaving (#53, #125/#128).
+
+In the player, Back keeps playing: it lets go of the controller and returns to the
+screen behind (`PlayerActivity`, #155/#157). Stopping is a choice, not a side
+effect of leaving — **Stop** sits under **Now playing** in the rail
+(`NowPlayingEntry`) and ends the session through `Playback.end`.
+
+Anything drawn over a screen — a panel, About — takes Back first and closes
+itself (`SidePanel`, `AboutScreen`).
 
 ## The sections are always on screen
 
@@ -60,7 +70,7 @@ invisible until opened and covered the screen when it was, so the left edge had 
 D-pad to reach (#58).
 
 The drawer widens itself when focus *enters* the sheet, which does not happen when focus starts
-there, so `NavigationRail` sets the state from `hasFocus` instead of relying on that.
+there, so `NavigationRail` sets the state from `railHasFocus` instead of relying on that.
 
 ## Focus does not move things
 
@@ -94,7 +104,10 @@ Anything a device script or a flow needs to reach gets a tag.
 - Body 16sp and up, secondary 14sp and up. Below that is unreadable at 3 metres.
 - Every string that came from the server gets `maxLines` and
   `TextOverflow.Ellipsis`. Titles run long and wrap into the next box otherwise.
-- Server descriptions may contain HTML; strip it before display (#57).
+- Server descriptions may contain HTML. Render it with `RichText.fromHtml`
+  rather than printing tags or stripping them: emphasis survives (#57).
+- Home's shelf headings are `ShelfHeading`: 16 sp bold (`titleMedium`). At the
+  24 sp headline they outweighed the covers they name (#121).
 
 ## Numbers and dates
 
@@ -102,9 +115,23 @@ Formatters pass an explicit `Locale` — `ROOT` where the suffix is English —
 because the default locale renders Latin digits in other numerals: a Persian
 device would show "۲ h ۱۱ min". `HouseStyleTest` enforces this.
 
-Durations: `shortDuration` for a tile ("181 h", "2 h 11 min"), `formatDuration`
-for inline text ("3h 5m"). A real listen shorter than a minute says "under a
-minute" rather than rounding to zero.
+Counts a viewer reads as a number are grouped as the device writes them,
+"4,966 hours": `NumberFormat.getIntegerInstance(locale)` into a plural string
+(`count` in `SwitchLibraryView`, #115). Grouping is the one thing the device
+locale decides; a count with an English unit beside it stays `ROOT`.
+
+Durations, by where they appear:
+
+- **A length or time left** on a card, a row or a cover: `listeningLength`.
+  From 10 minutes up it rounds to whole minutes ("29 min", "4 h 12 min", "1 h");
+  below 10 it keeps seconds ("9 min 59 s"). Past ten minutes seconds are noise
+  (#119, #114).
+- **The player's running counter**: `PlaybackPosition.spoken`, which keeps
+  seconds under an hour, so a short episode visibly moves. Never round it.
+- **A stats tile**: `shortDuration` ("181 h", "2 h 11 min"). A real listen
+  shorter than a minute says "under a minute" rather than rounding to zero.
+- `formatDuration` ("3h 5m") is what the book screen's facts, "Resume at" and
+  podcast episode rows still use; new text should use one of the above.
 
 ## Components
 
@@ -114,6 +141,83 @@ progress indicators, icons.
 
 Most screens predate this rule and still import the phone components; they are
 being moved over screen by screen rather than in one sweep.
+
+## Buttons
+
+One action on a screen is the one you most likely want. It is a **filled**
+button in `primary`; every other action is **outlined** (transparent, 1dp
+`onSurfaceVariant` border). The filled one **inverts on focus** — `onPrimary`
+fill, `primary` text — because the TV default turns any focused button white,
+and the dark theme's light primary to white barely changes (#117).
+
+`LoginButton` (`login/LoginScreen.kt`) is the implementation. Known gap: the
+book screen and About (#137) draw Resume and Mark finished as the default TV
+`Button` (`ActionChip`), not yet filled-and-outlined as
+`docs/mocks/book-screen.html` draws them.
+
+## Panels and screens over the player
+
+- **Speed, Sleep and Chapters slide in from the right** over a scrim, with the
+  player visible behind. They are one component, `SidePanel`; `PlayerPanels`
+  remembers which chip opened one, and focus goes back to it on close. Back
+  closes the panel, and focus cannot leave it for the controls behind (#107).
+  The book screen opens the same Chapters panel.
+- **About is its own screen**, not a panel: `AboutScreen` lays the book out as
+  the book screen does (`BookOverview`), over the same cover wash, drawn over
+  the player so the player keeps its state (#134, #137).
+
+## The player's look, on every full screen
+
+Every full screen should look like the player: a **cover or the cover wash
+behind it, not flat black**. The wash is `CoverWash`: the cover's most colourful
+colour, darkened until `onSurfaceVariant` text keeps 4.5:1; a grey cover gives no
+wash rather than a muddy one. It is **dark theme only** (`CoverWash.appliesOn`):
+under the light theme's dark text it would be a dark blob. Apply it with
+`Modifier.coverWash`.
+
+Known gaps — only the player and `AboutScreen` do this today. Login, Settings,
+the library lists (Library, Series, Collections, Authors, Narrators, Latest
+Episodes, Switch Library), Home,
+Stats, Search, the book, podcast, author and series/collection screens, and the
+Update screen are still a flat `background`.
+
+## Covers
+
+`CoverImage` draws a cover the way the server's web client does (#149):
+
+- **No cover, or one that failed to load**: a placeholder with the title in the
+  middle and the author near the bottom, never an empty box. An item that says it
+  has none is not asked for (`hasCover = false`); a 404 is not cached.
+- **A cover that is not square** is fitted whole inside the square over a
+  blurred, dimmed copy of itself, not cropped.
+- **Series and collections** (`BookGroupCard`) show their books' covers: a
+  collection its first two side by side, a series fanned up to three of the
+  books that have one.
+
+## Home shelves
+
+The server decides which shelves Home shows; `HomeShelves` decides what each one
+does. One table, by shelf id then type: how the row is drawn, what a press and a
+long press do, where "See all" leads. A shelf of a type this version does not know
+is drawn as plain covers if it holds items. **Adding a shelf is one row there**
+(#147).
+
+## Mocks
+
+`docs/mocks` holds the design of record for each screen; build to the mock, and
+change the mock when the design changes. Each is drawn at 1920x1080 in the app's
+palette (see `docs/mocks/README.md`).
+
+| mock | covers |
+|---|---|
+| `login.html` | sign-in above the Fire TV keyboard: server discovery, a returning user, errors, the filled/outlined buttons |
+| `screens.html` | the navigation rail, Home and its shelf headings, item detail, the first player, search |
+| `player.html` | the player (layout C is the one built), the Speed/Sleep/Chapters panel, About, episodes, Now playing in the rail |
+| `book-screen.html` | the book screen and About as one layout (option 1 is the one built) |
+| `podcast.html` | the podcast screen: every episode, downloads, admin and not, the header that scrolls away |
+| `latest-episodes.html` | Latest Episodes grouped by day, and its empty state |
+| `settings.html` | Settings and Switch Library as sections, the theme choice, checking for updates |
+| `stats.html` | the stats screen, before and after |
 
 ## Colour
 
