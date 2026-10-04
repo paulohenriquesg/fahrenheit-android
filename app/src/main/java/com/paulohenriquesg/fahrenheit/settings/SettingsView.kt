@@ -117,6 +117,23 @@ fun SettingsView(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Space.gap)
         ) {
+            // A waiting update comes first: with Playback second (#170) the
+            // Updates section is below the fold, and an update there went
+            // unnoticed (#138). Check for updates stays in its section.
+            if (update is UpdateCheck.Available) {
+                SettingRow(
+                    title = stringResource(R.string.settings_update_ready, update.update.versionName),
+                    subtitle = updateSummary(update.update)
+                ) {
+                    Button(
+                        onClick = { onInstall(update.update) },
+                        modifier = Modifier.testTag("install_update")
+                    ) {
+                        Text(stringResource(R.string.settings_install))
+                    }
+                }
+            }
+
             Group(stringResource(R.string.settings_appearance)) {
                 SettingRow(
                     title = stringResource(R.string.settings_theme),
@@ -154,34 +171,6 @@ fun SettingsView(
                             tag = "layout_grid",
                             onClick = { onLayout(false) }
                         ) { LayoutPreview(rows = false) }
-                    }
-                }
-            }
-
-            Group(stringResource(R.string.settings_updates)) {
-                SettingRow(
-                    title = stringResource(R.string.check_for_updates),
-                    subtitle = updateLine(update, version)
-                ) {
-                    Button(
-                        onClick = onCheckUpdates,
-                        enabled = update != UpdateCheck.Checking,
-                        modifier = Modifier.testTag("check_for_updates")
-                    ) {
-                        Text(stringResource(R.string.settings_check_now))
-                    }
-                }
-                if (update is UpdateCheck.Available) {
-                    SettingRow(
-                        title = stringResource(R.string.settings_update_ready, update.update.versionName),
-                        subtitle = updateSummary(update.update)
-                    ) {
-                        Button(
-                            onClick = { onInstall(update.update) },
-                            modifier = Modifier.testTag("install_update")
-                        ) {
-                            Text(stringResource(R.string.settings_install))
-                        }
                     }
                 }
             }
@@ -239,6 +228,21 @@ fun SettingsView(
                 }
             }
 
+            Group(stringResource(R.string.settings_updates)) {
+                SettingRow(
+                    title = stringResource(R.string.check_for_updates),
+                    subtitle = updateLine(update, version)
+                ) {
+                    Button(
+                        onClick = onCheckUpdates,
+                        enabled = update != UpdateCheck.Checking,
+                        modifier = Modifier.testTag("check_for_updates")
+                    ) {
+                        Text(stringResource(R.string.settings_check_now))
+                    }
+                }
+            }
+
             Group(stringResource(R.string.settings_account)) {
                 SettingRow(title = username, subtitle = server) {
                     Button(onClick = onSignOut, modifier = Modifier.testTag("sign_out")) {
@@ -256,7 +260,7 @@ private fun updateLine(update: UpdateCheck, version: String): String = when (upd
     UpdateCheck.Idle -> version
     UpdateCheck.Checking -> stringResource(R.string.settings_update_checking)
     UpdateCheck.UpToDate -> stringResource(R.string.settings_update_up_to_date, version)
-    // The row below carries the news; this one keeps saying what is installed.
+    // The row at the top carries the news; this one keeps saying what is installed.
     is UpdateCheck.Available -> version
     UpdateCheck.Failed -> stringResource(R.string.settings_update_failed)
 }

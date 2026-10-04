@@ -251,6 +251,9 @@ fun DetailHeader(
     }
 }
 
+/** Between the description's focus border and its text, so the border never sits on the words (#170). */
+private val DESCRIPTION_PADDING = 12.dp
+
 /**
  * The whole description. Text cannot hold focus, so a description longer than
  * the screen would be unreachable past its first page: when it overflows it
@@ -271,7 +274,7 @@ internal fun FullDescription(
     val step = with(LocalDensity.current) { 160.dp.toPx() }
     // Focus scrolls the box in with its own padding and border just out of
     // view; that much hidden is still "at the top".
-    val slack = with(LocalDensity.current) { 8.dp.toPx() }
+    val slack = with(LocalDensity.current) { (DESCRIPTION_PADDING + 4.dp).toPx() }
     var coordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     // How much of the description's top is scrolled out of view: its clipped
     // bounds start below where it really starts.
@@ -293,7 +296,7 @@ internal fun FullDescription(
                 ),
                 RoundedCornerShape(6.dp)
             )
-            .padding(4.dp)
+            .padding(DESCRIPTION_PADDING)
             .onFocusChanged { focused = it.isFocused }
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false

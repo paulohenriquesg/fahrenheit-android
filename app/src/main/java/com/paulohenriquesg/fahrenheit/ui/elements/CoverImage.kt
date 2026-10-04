@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.ColorScheme
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImagePainter
@@ -142,7 +144,7 @@ private fun CoverPlaceholder(title: String, author: String?, size: Dp) {
     Box(
         modifier = Modifier
             .size(size)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(CoverPlaceholderTone.of(MaterialTheme.colorScheme))
             // Decoration: the cover's image already says the title, and the
             // screen around it the author, so neither is read twice. Tests
             // read the lines from CoverPlaceholderLines instead.
@@ -188,6 +190,22 @@ private const val SQUARE_TOLERANCE = 0.15f
 
 /** What a cover placeholder shows, for tests: its title, then its author. */
 val CoverPlaceholderLines = SemanticsPropertyKey<List<String>>("CoverPlaceholderLines")
+
+/**
+ * The placeholder's own tone (#170): a darker `surfaceVariant`. It was that
+ * colour itself, which is a focused card's fill, so on a focused card the
+ * cover's edge disappeared. Darker still in a dark theme, where the steps
+ * between dark tones are small.
+ */
+object CoverPlaceholderTone {
+    fun of(scheme: ColorScheme): Color {
+        val from = scheme.surfaceVariant
+        // Each channel scaled as written, in sRGB: lerp works in Oklab, and
+        // there it went so dark it met an unfocused card's surface.
+        val keep = if (from.luminance() < 0.5f) 0.75f else 0.85f
+        return Color(from.red * keep, from.green * keep, from.blue * keep, from.alpha)
+    }
+}
 
 object CoverTags {
     const val PLACEHOLDER = "cover-placeholder"

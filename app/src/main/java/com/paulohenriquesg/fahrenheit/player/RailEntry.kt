@@ -85,7 +85,7 @@ fun rememberRailEntry(player: Player?, chaptersOf: suspend (String) -> List<Chap
     }
     LaunchedEffect(player, playing) {
         while (playing) {
-            delay(POLL_MS)
+            delay(RAIL_POLL_MS)
             changes++
         }
     }
@@ -111,7 +111,8 @@ fun rememberRailEntry(player: Player?, chaptersOf: suspend (String) -> List<Chap
     )
 }
 
-private const val POLL_MS = 5_000L
+/** How often a playing entry is read again; the equaliser runs this long on each one. */
+internal const val RAIL_POLL_MS = 5_000L
 
 /**
  * Books' chapters, once asked for: the main screen gets a new controller on
