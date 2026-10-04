@@ -92,27 +92,55 @@ class ScreensaverRulesTest {
     fun `the bouncing cover stays on the screen and turns at its edges`() {
         val area = 1000f to 600f
         val cover = 200f
-        val path = (0..2000L step 7).map { Bounce.at(it * 100L, area.first, area.second, cover) }
+        // Sampled every 0.1 s over half an hour: near each edge means within
+        // one sample's travel of it.
+        val path = (0..18_000L).map { Bounce.at(it * 100L, area.first, area.second, cover) }
+        val step = 10f
 
         assertTrue(path.all { it.first in 0f..(area.first - cover) && it.second in 0f..(area.second - cover) })
-        assertTrue("reaches the right edge", path.any { it.first >= area.first - cover - 1f })
-        assertTrue("reaches the left edge", path.any { it.first <= 1f })
-        assertTrue("reaches the bottom", path.any { it.second >= area.second - cover - 1f })
+        assertTrue("reaches the right edge", path.any { it.first >= area.first - cover - step })
+        assertTrue("comes back to the left edge", path.drop(1).any { it.first <= step })
+        assertTrue("reaches the bottom", path.any { it.second >= area.second - cover - step })
     }
 
+    // The wall itself (#168's CoverWall) repeats covers to fill the screen.
     @Test
-    fun `the wall shows the series being played first, then the library, filling every tile`() {
+    fun `the wall shows the series being played first, then the library, each once`() {
         val series = listOf(item("s1"), item("s2"))
         val library = listOf(item("l1"), item("s1"), item("l2"))
 
-        val wall = WallCovers.pick(series, library, tiles = 7)
+        val wall = WallCovers.pick(series, library) { it.id }
 
-        assertEquals(listOf("s1", "s2", "l1", "l2", "s1", "s2", "l1"), wall.map { it.id })
+        assertEquals(listOf("s1", "s2", "l1", "l2"), wall.map { it.id })
     }
 
     @Test
     fun `an empty wall stays empty rather than inventing covers`() =
-        assertTrue(WallCovers.pick(emptyList(), emptyList(), tiles = 7).isEmpty())
+        assertTrue(WallCovers.pick(emptyList<LibraryItem>(), emptyList()) { it.id }.isEmpty())
+
+    // --- one wait at a time: no timer that ticks for ever ---
+
+    @Test
+    fun `while playing, the next change is when it should show, then none`() {
+        assertEquals(3 * minute, ScreensaverPolicy.nextChangeMs(5, playing = true, idleMs = 2 * minute, notPlayingMs = null))
+        assertEquals(null, ScreensaverPolicy.nextChangeMs(5, playing = true, idleMs = 6 * minute, notPlayingMs = null))
+    }
+
+    @Test
+    fun `after a pause, the next change is the sooner of showing and letting go`() {
+        // 4 min idle, paused 2 min ago: it shows in 1 min, and lets go in 3.
+        assertEquals(minute, ScreensaverPolicy.nextChangeMs(5, playing = false, idleMs = 4 * minute, notPlayingMs = 2 * minute))
+        // Already showing: only letting go is left.
+        assertEquals(3 * minute, ScreensaverPolicy.nextChangeMs(5, playing = false, idleMs = 6 * minute, notPlayingMs = 2 * minute))
+        // Let go: nothing more.
+        assertEquals(null, ScreensaverPolicy.nextChangeMs(5, playing = false, idleMs = 6 * minute, notPlayingMs = 5 * minute))
+    }
+
+    @Test
+    fun `Off or nothing playing waits for nothing`() {
+        assertEquals(null, ScreensaverPolicy.nextChangeMs(null, playing = true, idleMs = 0, notPlayingMs = null))
+        assertEquals(null, ScreensaverPolicy.nextChangeMs(5, playing = false, idleMs = 0, notPlayingMs = null))
+    }
 
     private fun item(id: String): LibraryItem = Gson().fromJson(
         """{"id":"$id","ino":"1","libraryId":"lib","folderId":"f","path":"/p","relPath":"p",

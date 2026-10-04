@@ -38,6 +38,15 @@
     <string name="settings_skip_forward">Skip forward</string>
     <string name="settings_skip_subtitle">How far the player\'s skip buttons and the remote\'s rewind and fast-forward jump</string>
     <string name="settings_skip_length">%1$d s</string>
+    <string name="settings_screensaver">Screensaver while listening</string>
+    <string name="settings_screensaver_subtitle">Instead of the Fire TV one, only while something plays</string>
+    <string name="settings_screensaver_off">Off</string>
+    <string name="settings_screensaver_minutes">%1$d min</string>
+    <string name="settings_screensaver_style">Screensaver style</string>
+    <string name="settings_screensaver_style_subtitle">What shows while it runs</string>
+    <string name="settings_screensaver_wall">Wall of covers</string>
+    <string name="settings_screensaver_bouncing">Bouncing cover</string>
+    <string name="screensaver_chapter_left">%1$s · %2$s left in chapter</string>
     <string name="play_next_episode">Play the next episode automatically</string>
     <string name="play_next_episode_subtitle">When an episode ends, the next newer one plays</string>
     <string name="time_left_of">%1$s left of %2$s</string>

@@ -26,6 +26,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.shadows.ShadowLooper
+import java.util.concurrent.TimeUnit
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -50,6 +52,8 @@ class ScreensaverHostTest {
     private val line = NowPlayingLine(itemId = "b1", title = "An Invented Book", detail = "Chapter 3 · 12 min left in chapter")
 
     private fun install() {
+        // The screensaver moves while it shows; time here is moved by hand.
+        compose.mainClock.autoAdvance = false
         compose.setContent {
             FahrenheitTheme {
                 val focus = remember { FocusRequester() }
@@ -71,12 +75,24 @@ class ScreensaverHostTest {
                 clock = { now }
             )
         }
+        // The overlay's effects start with its first frame.
+        settle()
+    }
+
+    /**
+     * The overlay is a view of its own, not the test rule's content: it draws
+     * and waits on the main looper, so time moves for it there.
+     */
+    private fun settle(ms: Long = 50) {
+        compose.mainClock.advanceTimeBy(ms)
+        ShadowLooper.idleMainLooper(ms, TimeUnit.MILLISECONDS)
         compose.waitForIdle()
     }
 
-    private fun tick() {
-        compose.mainClock.advanceTimeBy(2_000)
-        compose.waitForIdle()
+    /** [ms] pass, on the screensaver's clock and on the one its wait runs on. */
+    private fun pass(ms: Long) {
+        now += ms
+        settle(ms)
     }
 
     private fun showing() =
@@ -84,12 +100,16 @@ class ScreensaverHostTest {
 
     private fun press(): Boolean {
         var eaten = false
+        // Through the window, as the remote's keys come: the decor view hands
+        // them to the window's callback, where the screensaver sits.
         compose.runOnUiThread {
-            val down = compose.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
-            val up = compose.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
+            val window = compose.activity.window.decorView
+            val down = window.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+            val up = window.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
             eaten = down && up && keysSeen == 0
         }
-        compose.waitForIdle()
+        // The overlay settles again on its next frame.
+        settle()
         return eaten
     }
 
@@ -104,18 +124,17 @@ class ScreensaverHostTest {
         install()
         assertFalse(showing())
 
-        now = 2 * 60_000L
-        tick()
+        pass(2 * 60_000L)
 
         assertTrue(showing())
-        compose.onNodeWithText("An Invented Book", substring = true).assertExists()
+        // The bouncing style: the chapter and time left under the cover.
+        compose.onNodeWithText("Chapter 3 · 12 min left in chapter", useUnmergedTree = true).assertExists()
     }
 
     @Test
     fun `the first key only wakes the screen and is not acted on`() {
         install()
-        now = 2 * 60_000L
-        tick()
+        pass(2 * 60_000L)
 
         assertTrue("eaten, not passed to the screen", press())
         assertFalse(showing())
@@ -128,13 +147,12 @@ class ScreensaverHostTest {
     @Test
     fun `a key before the delay starts the wait again`() {
         install()
-        now = 90_000L
-        tick()
+        pass(90_000L)
         press()
         assertTrue("it went through", keysSeen > 0)
 
-        now = 2 * 60_000L
-        tick()
+        // Two minutes from the start: the key was 30 s ago.
+        pass(30_000L)
         assertFalse("only 30 s since the key", showing())
     }
 
@@ -143,8 +161,9 @@ class ScreensaverHostTest {
         install()
         assertTrue(keptOn())
 
+        // The setting is read again at the next key.
         delayMinutes = null
-        tick()
+        press()
         assertFalse(keptOn())
     }
 
@@ -152,8 +171,7 @@ class ScreensaverHostTest {
     fun `nothing playing, nothing kept on, nothing shown`() {
         playing = false
         install()
-        now = 60 * 60_000L
-        tick()
+        pass(60 * 60_000L)
 
         assertFalse(keptOn())
         assertFalse(showing())
