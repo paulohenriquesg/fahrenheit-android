@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
@@ -51,7 +52,7 @@ import kotlin.math.roundToInt
 
 /**
  * What the now-playing line says: the title, then the chapter and time left
- * in it (a book), or nothing more (an episode, whose title says it all).
+ * in it (a book) or the time left (an episode), as [nowPlayingDetail] writes it.
  */
 data class NowPlayingLine(val itemId: String, val title: String, val detail: String?)
 
@@ -59,10 +60,10 @@ data class NowPlayingLine(val itemId: String, val title: String, val detail: Str
 data class Queued(val itemId: String, val playing: Boolean)
 
 /**
- * The wall's art.
+ * The screensaver's art.
  *
- * @property covers the series being played first, then the library's covers this device holds.
- * @property wash the playing cover's colour, as on the player; null for none.
+ * @property covers the wall's: the series being played first, then the library's covers this device holds.
+ * @property wash the playing cover's colour, glowing behind the bouncing cover; null for none.
  */
 data class WallArt(val covers: List<ImageBitmap>, val wash: Color?)
 
@@ -85,6 +86,8 @@ object ScreensaverTags {
     const val OVERLAY = "screensaver-overlay"
     const val WALL = "screensaver-wall"
     const val BOUNCING_COVER = "screensaver-bouncing-cover"
+    const val DIM = "screensaver-dim"
+    const val GLOW = "screensaver-glow"
 }
 
 /**
@@ -237,17 +240,10 @@ fun ScreensaverScreen(style: ScreensaverStyle, line: NowPlayingLine, art: WallAr
             ScreensaverStyle.Wall -> {
                 // #168's wall: drawn once, drifting by moving its layer.
                 CoverWall(art.covers, Modifier.fillMaxSize().testTag(ScreensaverTags.WALL), alpha = 0.38f)
-                // The playing cover's colour over the wall, as on the player.
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.radialGradient(
-                                listOf((art.wash ?: Color(0xFF24406B)).copy(alpha = 0.55f), Color.Transparent)
-                            )
-                        )
-                        .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.25f), Color.Black.copy(alpha = 0.7f))))
-                )
+                // An even dim, and no colour: the playing cover's wash over
+                // many covers reads as a stain (#172). It stays on the bouncing
+                // cover, behind one cover on a dark screen.
+                Box(Modifier.fillMaxSize().testTag(ScreensaverTags.DIM).background(Color.Black.copy(alpha = 0.45f)))
                 // The corner changes once a minute: so does this, not every frame.
                 val minutes = elapsedMs ?: produceState(0L) {
                     while (true) {
@@ -257,7 +253,7 @@ fun ScreensaverScreen(style: ScreensaverStyle, line: NowPlayingLine, art: WallAr
                 }.value
                 CornerLine(line, NowPlayingCorner.at(minutes))
             }
-            ScreensaverStyle.Bouncing -> BouncingCover(line, elapsedMs)
+            ScreensaverStyle.Bouncing -> BouncingCover(line, art.wash, elapsedMs)
         }
     }
 }
@@ -291,14 +287,15 @@ private fun CornerLine(line: NowPlayingLine, corner: NowPlayingCorner) {
 }
 
 private val BOUNCING_COVER = 160.dp
+private val BOUNCING_GLOW = 360.dp
 
 /**
  * The playing cover bouncing off the edges, its chapter and time left under
- * it. The time is read only where the block is placed, so a frame moves it
- * without composing anything again.
+ * it, and the cover's [wash] glowing behind it. The time is read only where
+ * the block is placed, so a frame moves it without composing anything again.
  */
 @Composable
-private fun BouncingCover(line: NowPlayingLine, elapsedMs: Long?) {
+private fun BouncingCover(line: NowPlayingLine, wash: Color?, elapsedMs: Long?) {
     val clock = remember { mutableLongStateOf(elapsedMs ?: 0L) }
     if (elapsedMs == null) {
         LaunchedEffect(Unit) {
@@ -311,6 +308,20 @@ private fun BouncingCover(line: NowPlayingLine, elapsedMs: Long?) {
         val height = constraints.maxHeight.toFloat()
         // The cover and its caption, as one block that bounces.
         val blockPx = with(LocalDensity.current) { (BOUNCING_COVER + 40.dp).toPx() }
+        if (wash != null) {
+            // Its own box round the cover, so nothing is drawn past a box's bounds.
+            val inset = with(LocalDensity.current) { ((BOUNCING_GLOW - BOUNCING_COVER) / 2).toPx() }
+            Box(
+                Modifier
+                    .offset {
+                        val (x, y) = Bounce.at(clock.longValue, width, height, blockPx)
+                        IntOffset((x - inset).roundToInt(), (y - inset).roundToInt())
+                    }
+                    .requiredSize(BOUNCING_GLOW)
+                    .testTag(ScreensaverTags.GLOW)
+                    .background(Brush.radialGradient(listOf(wash.copy(alpha = 0.45f), Color.Transparent)))
+            )
+        }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier

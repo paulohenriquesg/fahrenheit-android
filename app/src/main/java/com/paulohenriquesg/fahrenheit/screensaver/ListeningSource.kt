@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.screensaver
 
 import android.app.Activity
 import android.content.Context
+import android.content.res.Resources
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -12,7 +13,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
@@ -29,15 +29,16 @@ import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.player.Playback
 import com.paulohenriquesg.fahrenheit.player.PlayerSettings
 import com.paulohenriquesg.fahrenheit.player.QueuedFile
-import com.paulohenriquesg.fahrenheit.player.RailEntry
 import com.paulohenriquesg.fahrenheit.player.coverBitmap
 import com.paulohenriquesg.fahrenheit.player.coverWashOf
 import com.paulohenriquesg.fahrenheit.player.rememberRailEntry
 import com.paulohenriquesg.fahrenheit.ui.elements.RecentCovers
-import com.paulohenriquesg.fahrenheit.utils.listeningLength
+import com.paulohenriquesg.fahrenheit.utils.minutesLeft
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import java.util.Locale
+import kotlin.math.ceil
 
 /**
  * Puts the listening screensaver (#156) on a screen of the app: called as
@@ -113,7 +114,10 @@ private class PlaybackListening(private val context: Context) : ListeningSource 
     @Composable
     override fun line(): NowPlayingLine? {
         val entry = rememberRailEntry(controller, ::chaptersOf) ?: return null
-        return NowPlayingLine(entry.itemId, entry.title, detail(entry))
+        val detail = nowPlayingDetail(
+            context.resources, entry.chapter, entry.chapterNumber, entry.episodeId != null, entry.leftSeconds
+        )
+        return NowPlayingLine(entry.itemId, entry.title, detail)
     }
 
     override suspend fun art(itemId: String): WallArt =
@@ -127,20 +131,10 @@ private fun queuedOf(player: Player): Queued? =
 private suspend fun chaptersOf(itemId: String) =
     ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.media?.chapters
 
-/** "Chapter 12 · 18 min left in chapter"; "1 h 5 min left" without chapters; nothing for an episode. */
-@Composable
-private fun detail(entry: RailEntry): String? {
-    if (entry.episodeId != null) return null
-    val left = listeningLength(entry.leftSeconds)
-    val chapter = entry.chapter ?: entry.chapterNumber?.let { stringResource(R.string.chapter_number, it) }
-    return chapter?.let { stringResource(R.string.screensaver_chapter_left, it, left) }
-        ?: stringResource(R.string.time_left, left)
-}
-
 /**
  * The wall's covers: those of the series being played, then the covers of
  * this server this device has drawn lately (#168's [RecentCovers]), each once.
- * Nothing on any failure: the wall is then the wash alone.
+ * Nothing on any failure: the wall is then the dim alone.
  */
 private suspend fun wallCovers(context: Context, itemId: String): List<ImageBitmap> {
     val host = ApiClient.generateFullUrl("") ?: return emptyList()
@@ -171,3 +165,21 @@ private suspend fun coverAt(context: Context, url: String): ImageBitmap? {
 
 private const val WALL_COVERS = 40
 private const val WALL_COVER_PX = 240
+
+/**
+ * "Chapter 12 · 18 min left in chapter" for a book, "25 min left" for an
+ * episode or a book without chapters (#172), in [minutesLeft]'s whole minutes.
+ */
+internal fun nowPlayingDetail(
+    resources: Resources,
+    chapter: String?,
+    chapterNumber: Int?,
+    episode: Boolean,
+    leftSeconds: Double
+): String {
+    val minutes = minutesLeft(leftSeconds)
+    val left = resources.getString(R.string.time_left, minutes)
+    if (episode) return left
+    val name = chapter ?: chapterNumber?.let { resources.getString(R.string.chapter_number, it) } ?: return left
+    return resources.getString(R.string.screensaver_chapter_left, name, minutes)
+}
