@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.player
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.paulohenriquesg.fahrenheit.screensaver.ScreensaverStyle
 
 /**
  * The player's own settings, on this device: "Play the next episode
@@ -40,12 +41,35 @@ class PlayerSettings(context: Context) {
         return { prefs.unregisterOnSharedPreferenceChangeListener(watch) }
     }
 
+    /**
+     * Minutes without a key, while listening, before the app's own
+     * screensaver shows (#156): one of [SCREENSAVER_MINUTES], or null for Off.
+     */
+    var screensaverMinutes: Int?
+        get() = when (val stored = prefs.getInt(SCREENSAVER_MINUTES_KEY, DEFAULT_SCREENSAVER_MINUTES)) {
+            OFF -> null
+            in SCREENSAVER_MINUTES -> stored
+            // Not on offer, stored by an older build say: the default.
+            else -> DEFAULT_SCREENSAVER_MINUTES
+        }
+        set(value) = prefs.edit { putInt(SCREENSAVER_MINUTES_KEY, value ?: OFF) }
+
+    /** What the screensaver shows (#156). */
+    var screensaverStyle: ScreensaverStyle
+        get() = ScreensaverStyle.entries.find { it.name == prefs.getString(SCREENSAVER_STYLE_KEY, null) } ?: ScreensaverStyle.Wall
+        set(value) = prefs.edit { putString(SCREENSAVER_STYLE_KEY, value.name) }
+
     /** A length not on offer - stored by an older build, say - reads as the default. */
     private fun lengthOf(key: String): Int =
         prefs.getInt(key, DEFAULT_SKIP).takeIf { it in SKIP_LENGTHS } ?: DEFAULT_SKIP
 
     companion object {
         val SKIP_LENGTHS = listOf(10, 15, 30, 60)
+        val SCREENSAVER_MINUTES = listOf(2, 5, 10)
+        private const val DEFAULT_SCREENSAVER_MINUTES = 5
+        private const val OFF = 0
+        private const val SCREENSAVER_MINUTES_KEY = "screensaver_minutes"
+        private const val SCREENSAVER_STYLE_KEY = "screensaver_style"
         private const val DEFAULT_SKIP = 30
         private const val PLAY_NEXT_EPISODE = "play_next_episode"
         private const val SKIP_BACK = "skip_back_seconds"

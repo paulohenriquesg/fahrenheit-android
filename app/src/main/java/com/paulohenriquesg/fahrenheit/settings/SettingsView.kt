@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.settings
 
+import com.paulohenriquesg.fahrenheit.screensaver.ScreensaverStyle
 import com.paulohenriquesg.fahrenheit.player.PlayerSettings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -95,7 +96,11 @@ fun SettingsView(
     skipBack: Int = 30,
     onSkipBack: (Int) -> Unit = {},
     skipForward: Int = 30,
-    onSkipForward: (Int) -> Unit = {}
+    onSkipForward: (Int) -> Unit = {},
+    screensaverMinutes: Int? = 5,
+    onScreensaverMinutes: (Int?) -> Unit = {},
+    screensaverStyle: ScreensaverStyle = ScreensaverStyle.Wall,
+    onScreensaverStyle: (ScreensaverStyle) -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -194,6 +199,44 @@ fun SettingsView(
                 }
                 SkipRow(stringResource(R.string.settings_skip_back), skipBack, "skip_back", onSkipBack)
                 SkipRow(stringResource(R.string.settings_skip_forward), skipForward, "skip_forward", onSkipForward)
+                // Our own screensaver while something plays (#156; docs/mocks/screensaver.html).
+                SettingRow(
+                    title = stringResource(R.string.settings_screensaver),
+                    subtitle = stringResource(R.string.settings_screensaver_subtitle)
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        (listOf<Int?>(null) + PlayerSettings.SCREENSAVER_MINUTES).forEach { minutes ->
+                            Choice(
+                                label = if (minutes == null) stringResource(R.string.settings_screensaver_off)
+                                else stringResource(R.string.settings_screensaver_minutes, minutes),
+                                selected = minutes == screensaverMinutes,
+                                tag = "screensaver_${minutes ?: "off"}",
+                                onClick = { onScreensaverMinutes(minutes) },
+                                modifier = Modifier.widthIn(min = 76.dp)
+                            )
+                        }
+                    }
+                }
+                SettingRow(
+                    title = stringResource(R.string.settings_screensaver_style),
+                    subtitle = stringResource(R.string.settings_screensaver_style_subtitle)
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ScreensaverStyle.entries.forEach { style ->
+                            Choice(
+                                label = stringResource(
+                                    when (style) {
+                                        ScreensaverStyle.Wall -> R.string.settings_screensaver_wall
+                                        ScreensaverStyle.Bouncing -> R.string.settings_screensaver_bouncing
+                                    }
+                                ),
+                                selected = style == screensaverStyle,
+                                tag = "screensaver_style_${style.name}",
+                                onClick = { onScreensaverStyle(style) }
+                            )
+                        }
+                    }
+                }
             }
 
             Group(stringResource(R.string.settings_account)) {

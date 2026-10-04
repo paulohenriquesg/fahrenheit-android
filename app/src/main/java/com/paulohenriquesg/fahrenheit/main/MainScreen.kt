@@ -237,6 +237,8 @@ fun MainScreen(
     var updateCheck by remember { mutableStateOf<UpdateCheck>(UpdateCheck.Idle) }
     var deviceName by remember { mutableStateOf(PlaybackDevice.name(context)) }
     var playNextEpisode by remember { mutableStateOf(PlayerSettings(context).playNextEpisode) }
+    var screensaverMinutes by remember { mutableStateOf(PlayerSettings(context).screensaverMinutes) }
+    var screensaverStyle by remember { mutableStateOf(PlayerSettings(context).screensaverStyle) }
     var skipBack by remember { mutableStateOf(PlayerSettings(context).skipBackSeconds) }
     var skipForward by remember { mutableStateOf(PlayerSettings(context).skipForwardSeconds) }
 
@@ -450,6 +452,16 @@ fun MainScreen(
                         onSkipBack = {
                             PlayerSettings(context).skipBackSeconds = it
                             skipBack = it
+                        },
+                        screensaverMinutes = screensaverMinutes,
+                        onScreensaverMinutes = {
+                            PlayerSettings(context).screensaverMinutes = it
+                            screensaverMinutes = it
+                        },
+                        screensaverStyle = screensaverStyle,
+                        onScreensaverStyle = {
+                            PlayerSettings(context).screensaverStyle = it
+                            screensaverStyle = it
                         },
                         skipForward = skipForward,
                         onSkipForward = {
