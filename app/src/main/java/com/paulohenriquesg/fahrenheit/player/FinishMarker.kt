@@ -28,11 +28,14 @@ import com.paulohenriquesg.fahrenheit.api.ProgressMark
  * keeps playing.
  *
  * @param send one progress update for an item or episode; throwing is a failure.
+ * @param wrote told each position an un-finish leaves on the server, so the
+ *   continue-from-where check knows it as this player's own write (#145).
  */
 class FinishMarker(
     private val player: Player,
     private val closed: suspend () -> Unit,
     private val pending: suspend () -> Unit = {},
+    private val wrote: (itemId: String, episodeId: String?, position: Double) -> Unit = { _, _, _ -> },
     private val send: suspend (itemId: String, episodeId: String?, mark: ProgressMark) -> Unit
 ) {
     /** @param itemId the item to mark; null for whatever is queued. */
@@ -51,8 +54,11 @@ class FinishMarker(
                 send(file.itemId, file.episodeId, ProgressMark(isFinished = true))
             } else {
                 val at = file.bookTime(player.currentPosition / 1000.0)
+                // The server puts an un-finished item at 0; then the place goes back.
                 send(file.itemId, file.episodeId, ProgressMark(isFinished = false))
+                wrote(file.itemId, file.episodeId, 0.0)
                 send(file.itemId, file.episodeId, ProgressMark(currentTime = at))
+                wrote(file.itemId, file.episodeId, at)
             }
         }
     }
@@ -65,7 +71,12 @@ class FinishMarker(
     private suspend fun markElsewhere(finished: Boolean, itemId: String, episodeId: String?, keepAt: Double?) = attempt {
         pending()
         send(itemId, episodeId, ProgressMark(isFinished = finished))
-        if (!finished && keepAt != null) send(itemId, episodeId, ProgressMark(currentTime = keepAt))
+        if (finished) return@attempt
+        wrote(itemId, episodeId, 0.0)
+        if (keepAt != null) {
+            send(itemId, episodeId, ProgressMark(currentTime = keepAt))
+            wrote(itemId, episodeId, keepAt)
+        }
     }
 
     private suspend fun attempt(block: suspend () -> Unit): Result<Unit> = try {

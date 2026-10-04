@@ -49,7 +49,7 @@ class ResumeKnowledgeTest {
                 .begin(player, book("b1"), { MediaProgressResponse(currentTime = 900.0, lastUpdate = 5000L) }, resolve)
         }
 
-        assertEquals(5000L, knowledge.knownAt("b1", null))
+        assertEquals(KnownProgress.ServerCopy(5000L), knowledge.known("b1", null))
     }
 
     // A chapter chosen on the details screen starts where it was asked, not
@@ -61,7 +61,7 @@ class ResumeKnowledgeTest {
                 .begin(player, book("b1"), { error("not read") }, resolve)
         }
 
-        assertEquals(42L, knowledge.knownAt("b1", null))
+        assertEquals(KnownProgress.Since(42L), knowledge.known("b1", null))
     }
 
     @Test
@@ -75,17 +75,18 @@ class ResumeKnowledgeTest {
     }
 
     @Test
-    fun `a delivered report is known, at the time it was delivered`() {
+    fun `a delivered report is known by the position it wrote`() {
+        val written = mutableListOf<Double>()
         val reporting = PlaybackReporting(
             player,
             CoroutineScope(Dispatchers.Unconfined),
             open = { object : ListeningDelivery {
-                override suspend fun sync(report: ListeningReport) {}
-                override suspend fun close(report: ListeningReport?) {}
+                override suspend fun sync(report: ListeningReport) { written += report.currentTime }
+                override suspend fun close(report: ListeningReport?) { report?.let { written += it.currentTime } }
             } },
             pause = { awaitCancellation() },
             now = { player.clock.elapsedRealtime() },
-            delivered = { file -> knowledge.saw(file.itemId, file.episodeId, 7000L) }
+            delivered = { file, position -> knowledge.wrote(file.itemId, file.episodeId, position) }
         )
         player.addListener(reporting)
         // From 15:00: a report from the very start is never sent.
@@ -97,7 +98,8 @@ class ResumeKnowledgeTest {
         player.pause()
         run(player).untilPendingCommandsAreFullyHandled()
 
-        assertEquals(7000L, knowledge.knownAt("b1", null))
+        // Exactly what the server was sent last.
+        assertEquals(KnownProgress.Wrote(written.last()), knowledge.known("b1", null))
     }
 
     @Test
@@ -111,7 +113,7 @@ class ResumeKnowledgeTest {
             } },
             pause = { awaitCancellation() },
             now = { player.clock.elapsedRealtime() },
-            delivered = { file -> knowledge.saw(file.itemId, file.episodeId, 7000L) }
+            delivered = { file, position -> knowledge.wrote(file.itemId, file.episodeId, position) }
         )
         player.addListener(reporting)
         // From 15:00: a report from the very start is never sent.
@@ -123,6 +125,6 @@ class ResumeKnowledgeTest {
         player.pause()
         run(player).untilPendingCommandsAreFullyHandled()
 
-        assertTrue(knowledge.knownAt("b1", null) == null)
+        assertTrue(knowledge.known("b1", null) == null)
     }
 }

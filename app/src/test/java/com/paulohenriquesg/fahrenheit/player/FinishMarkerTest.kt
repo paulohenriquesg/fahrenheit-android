@@ -130,6 +130,36 @@ class FinishMarkerTest {
         assertEquals(300.0, server.currentTime, 0.001)
     }
 
+    // Review (#145): un-finishing writes 0, then the place; the check must know
+    // both, or a failed second write reads as someone else's 0:00.
+    @Test
+    fun `unfinishing knows the positions it wrote`() = runBlocking {
+        closing.complete(Unit)
+        server.isFinished = true
+        val written = mutableListOf<Double>()
+        val m = FinishMarker(player, reporting::closeAndWait, pending = closings::settled, wrote = { _, _, at -> written += at }) { _, _, mark ->
+            server.apply(mark)
+        }
+
+        assertTrue(m.mark(finished = false).isSuccess)
+
+        assertEquals(listOf(0.0, 300.0), written)
+    }
+
+    @Test
+    fun `a failed second write leaves the 0 known`() = runBlocking {
+        closing.complete(Unit)
+        val written = mutableListOf<Double>()
+        var sends = 0
+        val m = FinishMarker(player, reporting::closeAndWait, pending = closings::settled, wrote = { _, _, at -> written += at }) { _, _, _ ->
+            if (sends++ == 1) error("offline")
+        }
+
+        assertFalse(m.mark(finished = false).isSuccess)
+
+        assertEquals(listOf(0.0), written)
+    }
+
     @Test
     fun `nothing queued, nothing to mark`() = runBlocking {
         player.clearMediaItems()

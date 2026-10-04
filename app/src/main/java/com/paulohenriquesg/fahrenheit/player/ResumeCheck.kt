@@ -23,15 +23,17 @@ class ResumeCheck(
      */
     suspend fun offer(itemId: String, episodeId: String?, here: Double, playing: Boolean): ResumeOffer? {
         if (playing) return null
+        // Taken before the server is asked: a report landing meanwhile is
+        // newer than the copy that comes back, and must not be held against it.
+        val known = knowledge.known(itemId, episodeId)
         val server = progress(itemId, episodeId)
-        val knownAt = knowledge.knownAt(itemId, episodeId)
         // Unknown device asks; so this is the most that can be offered.
-        ResumeOffer.of(here, server, knownAt, latestDevice = null, thisDevice) ?: return null
-        return ResumeOffer.of(here, server, knownAt, latestDevice(itemId, episodeId), thisDevice)
+        ResumeOffer.of(here, server, known, latestDevice = null, thisDevice) ?: return null
+        return ResumeOffer.of(here, server, known, latestDevice(itemId, episodeId), thisDevice)
     }
 
     /** Either answer settles that server position: it is not asked about again. */
     fun answered(itemId: String, episodeId: String?, offer: ResumeOffer) {
-        knowledge.saw(itemId, episodeId, offer.listenedAt)
+        knowledge.read(itemId, episodeId, offer.listenedAt)
     }
 }
