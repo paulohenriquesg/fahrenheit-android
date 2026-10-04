@@ -76,12 +76,13 @@ class ResumeKnowledgeTest {
 
     @Test
     fun `a delivered report is known by the position it wrote`() {
+        val written = mutableListOf<Double>()
         val reporting = PlaybackReporting(
             player,
             CoroutineScope(Dispatchers.Unconfined),
             open = { object : ListeningDelivery {
-                override suspend fun sync(report: ListeningReport) {}
-                override suspend fun close(report: ListeningReport?) {}
+                override suspend fun sync(report: ListeningReport) { written += report.currentTime }
+                override suspend fun close(report: ListeningReport?) { report?.let { written += it.currentTime } }
             } },
             pause = { awaitCancellation() },
             now = { player.clock.elapsedRealtime() },
@@ -97,9 +98,8 @@ class ResumeKnowledgeTest {
         player.pause()
         run(player).untilPendingCommandsAreFullyHandled()
 
-        // From 15:00, a moment of playing, then the pause's closing report.
-        val wrote = knowledge.known("b1", null) as KnownProgress.Wrote
-        assertEquals(902.0, wrote.position, 1.0)
+        // Exactly what the server was sent last.
+        assertEquals(KnownProgress.Wrote(written.last()), knowledge.known("b1", null))
     }
 
     @Test

@@ -76,4 +76,20 @@ class ResumeCheckTest {
 
         assertEquals(6000.0, runBlocking { check.offer("b1", null, here = 3900.0, playing = false) }!!.there, 0.0)
     }
+
+    // Review (#145): a closing report landing while the server was being read
+    // made the TV's own older position look like someone else's.
+    @Test
+    fun `a report landing during the check does not make the TV's own position look newer`() {
+        knowledge.wrote("b1", null, position = 3900.0)
+        server = MediaProgressResponse(currentTime = 3900.0, lastUpdate = 9_000L)
+        val racing = ResumeCheck(
+            progress = { _, _ -> knowledge.wrote("b1", null, position = 4500.0); server },
+            latestDevice = { _, _ -> null },
+            thisDevice = "tv-1",
+            knowledge = knowledge
+        )
+
+        assertNull(runBlocking { racing.offer("b1", null, here = 4500.0, playing = false) })
+    }
 }

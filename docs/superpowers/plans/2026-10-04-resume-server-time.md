@@ -1,6 +1,6 @@
 # Continue-from-where: server time against server time - Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans. Steps use checkbox (`- [x]`) syntax.
 
 **Goal:** Decide "the server's position is newer" without comparing the TV's clock with the server's (#145, a follow-up to #90 / #142).
 
@@ -25,7 +25,9 @@ Nothing known still counts as newer. The latest event wins, whatever its kind: e
 
 ## Tasks
 
-- [ ] **1. `Known` and `ServerKnowledge`:** `read(item, episode, lastUpdate)`, `wrote(item, episode, position)`, `since(item, episode, deviceTime)`, `known(item, episode): Known?`. Tests: the latest event wins across kinds; items and episodes apart.
-- [ ] **2. `ResumeOffer.of(here, server, known, latestDevice, thisDevice)`:** the table above. Tests: at the position this player wrote, nothing is asked however the clocks stand; a different position is asked even when its `lastUpdate` reads older than the TV's clock (the #145 case); the `Since` margin both sides; `ServerCopy` as before.
-- [ ] **3. Recording:** `ProgressReporter` hands each delivered report on; `PlaybackReporting.delivered(file, position)`; the service records `wrote`; `PlayerStart` records `read` (queued from the server) or `since` (chosen start); `ResumeCheck.answered` records `read(offer.listenedAt)`. Tests: a delivered report records its position, a failed one nothing; queue and chosen start as listed.
-- [ ] **4. Gate, review, PR.**
+After review: `ResumeCheck` takes what is known before asking the server (a report landing during the read made the TV's own older position look newer), and an un-finish records the 0 and the place it writes.
+
+- [x] **1. `KnownProgress` and `ServerKnowledge`:** `read(item, episode, lastUpdate)`, `wrote(item, episode, position)`, `since(item, episode, deviceTime)`, `known(item, episode): Known?`. Tests: the latest event wins across kinds; items and episodes apart.
+- [x] **2. `ResumeOffer.of(here, server, known, latestDevice, thisDevice)`:** the table above. Tests: at the position this player wrote, nothing is asked however the clocks stand; a different position is asked even when its `lastUpdate` reads older than the TV's clock (the #145 case); the `Since` margin both sides; `ServerCopy` as before.
+- [x] **3. Recording:** `ProgressReporter` hands each delivered report on; `PlaybackReporting.delivered(file, position)`; the service records `wrote`; `PlayerStart` records `read` (queued from the server) or `since` (chosen start); `ResumeCheck.answered` records `read(offer.listenedAt)`. Tests: a delivered report records its position, a failed one nothing; queue and chosen start as listed.
+- [x] **4. Gate, review, PR.**

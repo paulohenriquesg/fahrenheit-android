@@ -217,4 +217,44 @@ class ProgressReporterTest {
         s.reporter.finish()
         assertEquals(emptyList<ListeningReport?>(), s.closed)
     }
+
+    // #145: what reached the server is known by the position it wrote.
+    @Test
+    fun `each report the server took is handed on, and only those`() = runBlocking {
+        val reached = mutableListOf<Double>()
+        val queue = ArrayDeque(listOf(0.0, 10.0, 20.0, 30.0))
+        var calls = 0
+        val reporter = ProgressReporter(
+            send = { if (calls++ == 1) throw IOException("offline") },
+            position = { queue.first() },
+            total = { 1000.0 },
+            pause = { queue.removeFirst() },
+            reached = { reached += it.currentTime }
+        )
+
+        reporter.run { queue.size > 1 }
+        reporter.finish()
+
+        // The send of 20 failed; 10 and 30 reached the server.
+        assertEquals(listOf(10.0, 30.0), reached)
+    }
+
+    @Test
+    fun `a close with nothing new hands nothing on`() = runBlocking {
+        val reached = mutableListOf<Double>()
+        val queue = ArrayDeque(listOf(0.0, 10.0, 10.0))
+        val reporter = ProgressReporter(
+            send = {},
+            position = { queue.first() },
+            total = { 1000.0 },
+            pause = { queue.removeFirst() },
+            close = {},
+            reached = { reached += it.currentTime }
+        )
+
+        reporter.run { queue.size > 1 }
+        reporter.finish()
+
+        assertEquals(listOf(10.0), reached)
+    }
 }

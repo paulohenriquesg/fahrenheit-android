@@ -90,7 +90,12 @@ class PlaybackService : MediaSessionService() {
             reporting.beforeLeaving()
             watch.beforeLeaving()
         }
-        val marker = FinishMarker(exo, reporting::closeAndWait, pending = Closings.process::settled) { itemId, episodeId, mark ->
+        val marker = FinishMarker(
+            exo,
+            reporting::closeAndWait,
+            pending = Closings.process::settled,
+            wrote = ServerKnowledge.process::wrote
+        ) { itemId, episodeId, mark ->
             val api = ApiClient.getLibraryApi() ?: error("signed out")
             if (episodeId != null) api.markFinished(itemId, episodeId, mark) else api.markFinished(itemId, mark)
         }

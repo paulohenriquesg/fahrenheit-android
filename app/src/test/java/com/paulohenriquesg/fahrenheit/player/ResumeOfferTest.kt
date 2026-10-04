@@ -113,4 +113,10 @@ class ResumeOfferTest {
         assertNull(offer(server = server(4800.0, lastUpdate = now + 60_000), known = since))
         assertEquals(4800.0, offer(server = server(4800.0, lastUpdate = now + 60_001), known = since)!!.there, 0.0)
     }
+
+    @Test
+    fun `exactly a second from what was written is still that write`() {
+        assertNull(offer(here = 3000.0, server = server(4801.0), known = KnownProgress.Wrote(4800.0)))
+        assertEquals(4801.01, offer(here = 3000.0, server = server(4801.01), known = KnownProgress.Wrote(4800.0))!!.there, 0.0)
+    }
 }

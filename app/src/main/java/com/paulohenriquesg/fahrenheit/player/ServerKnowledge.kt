@@ -21,9 +21,12 @@ sealed interface KnownProgress {
  * the server, or it started where it was asked. A server position written
  * after that was written by someone else.
  *
- * The latest event wins, whatever its kind: events arrive in order, and the
- * times of different kinds do not compare. In memory, for the process: the
- * queue it describes lives no longer.
+ * The latest recorded event wins, whatever its kind: the times of different
+ * kinds do not compare. The service and the screen record independently, so
+ * a read answered late can follow a report it predates; that errs towards a
+ * later lastUpdate looking newer, and the 30 s threshold and the device check
+ * still stand. In memory, for the process: the queue it describes lives no
+ * longer.
  */
 class ServerKnowledge {
     private val known = mutableMapOf<String, KnownProgress>()
