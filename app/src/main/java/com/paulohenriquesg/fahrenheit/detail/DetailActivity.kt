@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
@@ -23,6 +24,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -56,6 +59,11 @@ import com.paulohenriquesg.fahrenheit.player.AboutFacts
 import com.paulohenriquesg.fahrenheit.player.ChapterClock
 import com.paulohenriquesg.fahrenheit.player.SeriesBooks
 import com.paulohenriquesg.fahrenheit.player.Playback
+import com.paulohenriquesg.fahrenheit.player.ControllerSlot
+import com.paulohenriquesg.fahrenheit.main.NowPlayingBarSlot
+import com.paulohenriquesg.fahrenheit.main.queuedChapters
+import androidx.core.content.ContextCompat
+import androidx.media3.session.MediaController
 import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
@@ -63,6 +71,32 @@ import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 class DetailActivity : ComponentActivity() {
     /** Counts returns to this screen, so progress is read again after the player. */
     private var resumes by mutableIntStateOf(0)
+
+    /**
+     * The playback service's player while this screen is visible, for the
+     * Now playing bar (#159): this screen has no rail. As on the main screen.
+     */
+    private var playback by mutableStateOf<MediaController?>(null)
+    private val connection by lazy {
+        ControllerSlot(
+            connect = { Playback.connect(this) },
+            release = { it.release() },
+            executor = ContextCompat.getMainExecutor(this),
+            onChange = { playback = it }
+        )
+    }
+
+    override fun onStart() {
+        super.onStart()
+        connection.open()
+    }
+
+    override fun onStop() {
+        // Leaves playback alone: the bar's Stop ends it.
+        connection.close()
+        playback = null
+        super.onStop()
+    }
 
     override fun onResume() {
         super.onResume()
@@ -168,7 +202,13 @@ class DetailActivity : ComponentActivity() {
         }
 
         val isBook = item.mediaType != "podcast"
-        DetailBody(isBook) { margin ->
+        val nowPlaying: @Composable () -> Unit = {
+            NowPlayingBarSlot(playback, chaptersOf = ::queuedChapters) {
+                // The player reattaches to what is queued, where it is.
+                context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId))
+            }
+        }
+        DetailBody(isBook, nowPlaying) { margin ->
             if (!isBook) {
                 PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it })
             } else {
@@ -394,13 +434,28 @@ class DetailActivity : ComponentActivity() {
  * The details screen's body. A book keeps the screen's margin inside its
  * content (handed to [content]), so its Chapters panel reaches the screen's
  * edges; a podcast's screen is padded around, as before.
+ *
+ * @param nowPlaying drawn above the content: what plays, and Stop (#159).
  */
 @Composable
-internal fun DetailBody(isBook: Boolean, content: @Composable (PaddingValues) -> Unit) {
-    val margin = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
+internal fun DetailBody(isBook: Boolean, nowPlaying: @Composable () -> Unit = {}, content: @Composable (PaddingValues) -> Unit) {
     if (isBook) {
-        Box(Modifier.fillMaxSize()) { content(margin) }
+        // Now playing sits in the margin, above the book, which moves down
+        // by its height (#159). The book still fills the screen and is drawn
+        // over it, so its Chapters panel covers the bar too.
+        var barHeight by remember { mutableIntStateOf(0) }
+        val density = LocalDensity.current
+        val below = if (barHeight == 0) 0.dp else with(density) { barHeight.toDp() } + 12.dp
+        Box(Modifier.fillMaxSize()) {
+            Box(Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp)) {
+                Box(Modifier.onSizeChanged { barHeight = it.height }) { nowPlaying() }
+            }
+            content(PaddingValues(start = 24.dp, end = 24.dp, top = 16.dp + below, bottom = 16.dp))
+        }
     } else {
-        Column(Modifier.fillMaxSize().padding(margin)) { content(PaddingValues()) }
+        Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
+            nowPlaying()
+            Box(Modifier.fillMaxWidth().weight(1f)) { content(PaddingValues()) }
+        }
     }
 }
