@@ -1,6 +1,13 @@
 // LoginScreen.kt
 package com.paulohenriquesg.fahrenheit.login
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.unit.sp
+import androidx.tv.material3.ListItemDefaults
+import java.util.Locale
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.res.stringResource
@@ -88,7 +95,8 @@ fun LoginScreen(
     handleApiKeyLogin: (String, String, MutableState<Boolean>) -> Unit,
     error: LoginError? = null,
     onDismissError: () -> Unit = {},
-    findServers: (suspend ((FoundServer) -> Unit) -> Unit)? = null
+    findServers: (suspend ((FoundServer) -> Unit) -> Unit)? = null,
+    loadCovers: (suspend (host: String) -> List<ImageBitmap>)? = null
 ) {
     val context = LocalContext.current
     val sharedPreferencesHandler = SharedPreferencesHandler(context)
@@ -124,6 +132,12 @@ fun LoginScreen(
     }
     var differentServer by remember { mutableStateOf(false) }
     val returning = remembered && !differentServer
+    // Welcome back sits on this device's covers of that server (#161): only
+    // what is already here, nothing asked for before signing in.
+    var covers by remember { mutableStateOf<List<ImageBitmap>>(emptyList()) }
+    if (remembered && loadCovers != null) {
+        LaunchedEffect(Unit) { covers = loadCovers(userPreferences.host) }
+    }
 
     // Frame 1 (#101): before asking for an address, offer the servers that
     // answer on this network. Typing one is the fallback.
@@ -210,6 +224,8 @@ fun LoginScreen(
         }
     }
 
+    Box(Modifier.fillMaxSize()) {
+    LoginBackdrop(if (returning) covers else emptyList())
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -217,11 +233,18 @@ fun LoginScreen(
             .testTag("login_screen")
             // The Fire TV keyboard owns the bottom 45% while typing, so the
             // form starts at the top rather than centring its buttons under it.
-            .padding(start = 60.dp, end = 16.dp, top = 24.dp, bottom = 16.dp),
+            .padding(start = 72.dp, end = 16.dp, top = 10.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.Top,
         // The login mock reads from the left, like a page.
         horizontalAlignment = Alignment.Start
     ) {
+        // A mark above the title, as the mock sets it (#161).
+        Text(
+            text = stringResource(R.string.app_name).uppercase(Locale.ROOT),
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = 2.sp),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.testTag("login_brand")
+        )
         Text(
             text = when {
                 !addressConfirmed -> stringResource(R.string.login_where_is_library)
@@ -231,7 +254,7 @@ fun LoginScreen(
             style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold),
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
-                .padding(bottom = 8.dp)
+                .padding(bottom = 4.dp)
                 .testTag("login_title")
         )
 
@@ -500,6 +523,7 @@ fun LoginScreen(
             )
         }
     }
+    }
 }
 
 /**
@@ -543,8 +567,13 @@ private fun LoginButton(
                 focusedContentColor = scheme.primary
             )
         } else {
-            ButtonDefaults.colors(containerColor = Color.Transparent, contentColor = scheme.onSurface)
+            // Over the backdrop a bare outline loses its label; the mock gives
+            // it a dark glass instead.
+            ButtonDefaults.colors(containerColor = scheme.surface.copy(alpha = 0.6f), contentColor = scheme.onSurface)
         },
+        // Focus does not move things (docs/ui-style-guide.md): the TV button
+        // grows a tenth on focus, which "Different server" visibly did (#161).
+        scale = ButtonDefaults.scale(focusedScale = 1f),
         border = if (primary) ButtonDefaults.border() else ButtonDefaults.border(
             border = Border(BorderStroke(1.dp, scheme.onSurfaceVariant))
         )
@@ -601,9 +630,18 @@ private fun ServerRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val scheme = MaterialTheme.colorScheme
     ListItem(
         selected = false,
         onClick = onClick,
+        // Focus is the 3dp border, and nothing grows (docs/ui-style-guide.md).
+        scale = ListItemDefaults.scale(focusedScale = 1f),
+        border = ListItemDefaults.border(
+            border = Border(BorderStroke(1.dp, scheme.surfaceVariant), shape = RoundedCornerShape(12.dp)),
+            focusedBorder = Border(BorderStroke(3.dp, scheme.primary), shape = RoundedCornerShape(12.dp))
+        ),
+        colors = ListItemDefaults.colors(containerColor = scheme.surface.copy(alpha = 0.85f)),
+        shape = ListItemDefaults.shape(RoundedCornerShape(12.dp)),
         modifier = modifier
             .formWidth()
             .padding(bottom = 8.dp),
@@ -629,23 +667,28 @@ private fun RememberedAccount(username: String, host: String) {
             .formWidth()
             .testTag("login_account")
             .semantics(mergeDescendants = true) {}
-            .background(scheme.surface, shape)
+            .background(scheme.surface.copy(alpha = 0.85f), shape)
             .border(1.dp, scheme.onSurfaceVariant, shape)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // The account as a person (#161): a round avatar with the initial.
         Box(
             modifier = Modifier
-                .size(32.dp)
-                .background(scheme.surfaceVariant, RoundedCornerShape(6.dp)),
+                .size(40.dp)
+                .background(scheme.primary, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                Icons.Filled.Person,
-                contentDescription = null,
-                tint = scheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+            Text(
+                text = initialOf(username),
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                color = scheme.onPrimary,
+                // The name beside it already says who: not read out.
+                modifier = Modifier.clearAndSetSemantics {
+                    testTag = "login_account_avatar"
+                    this[AvatarInitial] = initialOf(username)
+                }
             )
         }
         Column {
@@ -665,6 +708,16 @@ private fun RememberedAccount(username: String, host: String) {
     }
 }
 
+/** The avatar's letter, for tests: it is kept from screen readers. */
+val AvatarInitial = androidx.compose.ui.semantics.SemanticsPropertyKey<String>("AvatarInitial")
+
+/** The first letter of [username], in capitals: a whole code point, not half of one. */
+internal fun initialOf(username: String): String {
+    val name = username.trim()
+    if (name.isEmpty()) return ""
+    return String(Character.toChars(name.codePointAt(0))).uppercase(Locale.ROOT)
+}
+
 /** The address as a person reads it: no scheme, no trailing slash. */
 private fun displayHost(host: String): String =
     host.substringAfter("://").trimEnd('/')
@@ -678,6 +731,7 @@ private fun LoginErrorBand(error: LoginError, addressShown: Boolean) {
         modifier = Modifier
             .formWidth()
             .padding(bottom = 4.dp)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
             .background(danger.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
             .border(1.dp, danger, RoundedCornerShape(12.dp))
             .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -707,7 +761,10 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
     cursorColor = MaterialTheme.colorScheme.primary,
     focusedBorderColor = MaterialTheme.colorScheme.primary,
-    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant
+    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    // Over the backdrop, the field keeps a fill of its own.
+    focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
 )
 
 /**

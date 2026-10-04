@@ -145,8 +145,9 @@ being moved over screen by screen rather than in one sweep.
 ## Buttons
 
 One action on a screen is the one you most likely want. It is a **filled**
-button in `primary`; every other action is **outlined** (transparent, 1dp
-`onSurfaceVariant` border). The filled one **inverts on focus** — `onPrimary`
+button in `primary`; every other action is **outlined** (1dp
+`onSurfaceVariant` border over a 60% `surface` glass, so the label holds over a
+backdrop). Neither grows on focus: `ButtonDefaults.scale(focusedScale = 1f)`. The filled one **inverts on focus** — `onPrimary`
 fill, `primary` text — because the TV default turns any focused button white,
 and the dark theme's light primary to white barely changes (#117).
 
@@ -175,11 +176,15 @@ wash rather than a muddy one. It is **dark theme only** (`CoverWash.appliesOn`):
 under the light theme's dark text it would be a dark blob. Apply it with
 `Modifier.coverWash`.
 
-Known gaps — only the player and `AboutScreen` do this today. Login, Settings,
+Login does it without a cover to wash from (`LoginBackdrop`, #161): Welcome
+back sits on a drifting `CoverWall` of the covers already on the device
+(`RecentCovers`, nothing fetched before sign-in); a first run, or no cached
+covers, gets a soft field in the theme's own colours.
+
+Known gaps — only the player, `AboutScreen` and Login do this today. Settings,
 the library lists (Library, Series, Collections, Authors, Narrators, Latest
-Episodes, Switch Library), Home,
-Stats, Search, the book, podcast, author and series/collection screens, and the
-Update screen are still a flat `background`.
+Episodes, Switch Library), Home, Stats, Search, the book, podcast, author and
+series/collection screens, and the Update screen are still a flat `background`.
 
 ## Covers
 
