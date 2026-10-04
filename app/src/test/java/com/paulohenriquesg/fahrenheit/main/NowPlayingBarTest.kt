@@ -40,12 +40,15 @@ class NowPlayingBarTest {
         compose.onNodeWithText("A Long Drift").assertIsDisplayed()
         compose.onNodeWithText("Chapter 12 · 20 min left").assertIsDisplayed()
         compose.onNodeWithContentDescription("Playing").assertExists()
+        // The state, as the rail shows it (#170): bars, not a play icon.
+        compose.onNodeWithTag(NOW_PLAYING_EQUALISER_TAG, useUnmergedTree = true).assertExists()
     }
 
     @Test fun `an episode says what is left of it, and paused says so`() {
         show(RailEntry("p1", "e1", "An Episode", playing = false, progress = 0.5f, chapter = null, chapterNumber = null, leftSeconds = 600.0))
         compose.onNodeWithText("10 min left").assertIsDisplayed()
         compose.onNodeWithContentDescription("Paused").assertExists()
+        compose.onNodeWithTag(NOW_PLAYING_PAUSED_TAG, useUnmergedTree = true).assertExists()
     }
 
     @Test fun `choosing the bar opens what is queued`() {

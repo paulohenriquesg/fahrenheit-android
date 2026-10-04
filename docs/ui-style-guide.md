@@ -122,7 +122,8 @@ locale decides; a count with an English unit beside it stays `ROOT`.
 
 Durations, by where they appear:
 
-- **A length or time left** on a card, a row or a cover: `listeningLength`.
+- **A length or time left** on a card, a row or a cover, and an episode's
+  details line and "Up next" in the player: `listeningLength`.
   From 10 minutes up it rounds to whole minutes ("29 min", "4 h 12 min", "1 h");
   below 10 it keeps seconds ("9 min 59 s"). Past ten minutes seconds are noise
   (#119, #114).
@@ -135,6 +136,27 @@ Durations, by where they appear:
   shorter than a minute says "under a minute" rather than rounding to zero.
 - `formatDuration` ("3h 5m") is what the book screen's facts, "Resume at" and
   podcast episode rows still use; new text should use one of the above.
+
+## Animation
+
+An animation that never ends keeps Compose from ever being idle: every UI test
+that waits for idle hangs and fails with `AppNotIdleException`, and on the stick
+it spends frames on a screen nobody may be watching. So no
+`rememberInfiniteTransition` and no `while (true) { delay() }` in composition;
+animate only while visible and needed, in runs that end.
+
+Now playing's equaliser (#170) is the pattern: each entry the slot hands over -
+one per poll while playing - runs the bars for one poll and no longer, so a
+paused or stalled entry comes to rest by itself. While playing it runs on
+continuously, by design; a test whose player position moves with the compose
+clock must move that clock by hand. Where a drift has to run
+for as long as it is shown (`CoverWall`), its tests move the clock by hand.
+
+## Now playing shows the state
+
+The rail entry and the bar on the book and podcast screens show what *is*:
+moving bars while playing, a still ⏸ while paused. The player's own button and
+the remote show the *action*, so a ▶ while playing read as the opposite (#170).
 
 ## Components
 
@@ -194,7 +216,9 @@ series/collection screens, and the Update screen are still a flat `background`.
 `CoverImage` draws a cover the way the server's web client does (#149):
 
 - **No cover, or one that failed to load**: a placeholder with the title in the
-  middle and the author near the bottom, never an empty box. An item that says it
+  middle and the author near the bottom, never an empty box. It is drawn in its
+  own tone, `CoverPlaceholderTone` (a darker `surfaceVariant`), not in a focused
+  card's fill, or the cover's edge disappears on a focused card (#170). An item that says it
   has none is not asked for (`hasCover = false`); a 404 is not cached.
 - **A cover that is not square** is fitted whole inside the square over a
   blurred, dimmed copy of itself, not cropped.

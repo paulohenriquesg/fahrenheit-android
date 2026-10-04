@@ -26,6 +26,8 @@ import com.paulohenriquesg.fahrenheit.player.SeriesBooks
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import androidx.compose.ui.unit.dp
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -181,5 +183,18 @@ class BookOverviewTest {
         compose.onNodeWithTag(DESCRIPTION_TAG).performKeyInput { pressKey(Key.DirectionDown) }
         compose.waitForIdle()
         compose.onNode(hasContentDescription("The Long Drift") and hasClickAction()).assertIsFocused()
+    }
+
+    // #170: the focus border sat on the text. The text keeps clear of the 3dp
+    // border by more than the border itself.
+    @Test fun `the description has room inside its focus border`() {
+        show()
+        val node = compose.onNodeWithTag(DESCRIPTION_TAG).fetchSemanticsNode()
+        val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        node.config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+        // Its padding is all round; above and below, the text's own height is exact.
+        val inset = (node.size.height - layouts.single().size.height) / 2f
+        val wanted = with(compose.density) { 11.dp.toPx() }
+        assertTrue("inset ${inset}px, wanted ${wanted}px", inset >= wanted)
     }
 }

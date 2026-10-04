@@ -184,6 +184,26 @@ class CoverImageTest {
             ((alpha * 255).toInt() shl 24) or ((red * 255).toInt() shl 16) or ((green * 255).toInt() shl 8) or (blue * 255).toInt()
         )
 
+    // #170: in its own tone, not the focused card's fill.
+    @Test
+    fun `the placeholder is drawn in its own tone`() {
+        var tone = Color.Unspecified
+        compose.setContent {
+            FahrenheitTheme {
+                tone = CoverPlaceholderTone.of(androidx.tv.material3.MaterialTheme.colorScheme)
+                Box(Modifier.testTag("cover")) {
+                    CoverImage(itemId = "b1", contentDescription = "An Invented Book", size = 100.dp, title = "An Invented Book", hasCover = false)
+                }
+            }
+        }
+        waitForPlaceholder(shown = true)
+
+        val node = compose.onNodeWithTag("cover").fetchSemanticsNode()
+        val at = node.positionInWindow
+        // A corner, clear of the title.
+        assertNear("the placeholder's corner", tone, snapshot()[at.x.toInt() + 2, at.y.toInt() + 2])
+    }
+
     // A screen reader hears the cover's description once, not the
     // placeholder's lines again on top of it.
     @Test

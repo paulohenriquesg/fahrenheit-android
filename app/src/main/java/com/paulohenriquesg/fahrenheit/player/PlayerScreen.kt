@@ -40,6 +40,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.ui.elements.MarqueeText
+import com.paulohenriquesg.fahrenheit.utils.listeningLength
 
 const val GO_TO_PODCAST_TAG = "player_go_to_podcast"
 
@@ -126,7 +127,7 @@ fun PlayerScreen(
             // What Next plays, so the button is not a guess (#108).
             nowPlaying.next?.let { next ->
                 Text(
-                    text = next.length?.let { stringResource(R.string.up_next, next.title, PlaybackPosition.spoken(it)) }
+                    text = next.length?.let { stringResource(R.string.up_next, next.title, listeningLength(it)) }
                         ?: stringResource(R.string.up_next_title, next.title),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

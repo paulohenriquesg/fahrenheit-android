@@ -197,6 +197,7 @@
     <string name="settings_update_up_to_date">Up to date on %1$s</string>
     <string name="settings_update_failed">Couldn\'t reach the update server. Check the connection and try again.</string>
     <string name="settings_update_ready">%1$s is ready</string>
+    <string name="settings_update_ready_above">%1$s is ready · Install is at the top</string>
     <string name="settings_update_size">%1$d MB</string>
     <string name="settings_install">Install</string>
     <string name="settings_sign_out">Sign out</string>

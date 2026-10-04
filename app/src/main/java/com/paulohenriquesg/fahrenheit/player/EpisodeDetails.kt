@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import androidx.core.text.HtmlCompat
+import com.paulohenriquesg.fahrenheit.utils.listeningLength
 
 /**
  * What an episode says about itself under its title (#108; frame "C,
@@ -16,11 +17,11 @@ object EpisodeDetails {
         else -> null
     }
 
-    /** "Season S · Episode E · <length>", a missing part left out; null when nothing is known. */
+    /** "Season S · Episode E · <length>" (a length as Latest Episodes writes it, #170), a missing part left out; null when nothing is known. */
     fun line(season: String?, episode: String?, length: Double?): String? = listOfNotNull(
         season?.takeIf { it.isNotBlank() }?.let { "Season ${it.trim()}" },
         episode?.takeIf { it.isNotBlank() }?.let { "Episode ${it.trim()}" },
-        length?.takeIf { it > 0 }?.let { PlaybackPosition.spoken(it) }
+        length?.takeIf { it > 0 }?.let { listeningLength(it) }
     ).joinToString(" · ").takeIf { it.isNotEmpty() }
 
     /** The feed's subtitle where there is one, else the description as plain text. */

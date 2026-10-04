@@ -158,7 +158,7 @@ class PlayerScreenTest {
 
     private val middleEpisode = episode.copy(
         badge = "Bonus",
-        details = "Season 2 · Episode 295 · 30 min 0 s",
+        details = "Season 2 · Episode 295 · 30 min",
         notes = "Dale has written a book, and the whole town is reading it.",
         next = EpisodeRef("e296", "296 - A Sad Song", 1680.0)
     )
@@ -167,14 +167,21 @@ class PlayerScreenTest {
     fun `an episode shows its badge, details and notes under the title`() {
         render(middleEpisode, currentTime = 0.0)
         compose.onNodeWithText("BONUS").assertIsDisplayed()
-        compose.onNodeWithText("Season 2 · Episode 295 · 30 min 0 s").assertIsDisplayed()
+        compose.onNodeWithText("Season 2 · Episode 295 · 30 min").assertIsDisplayed()
         compose.onNodeWithText("Dale has written a book, and the whole town is reading it.").assertIsDisplayed()
     }
 
     @Test
     fun `up next names what Next plays`() {
         render(middleEpisode, currentTime = 0.0)
-        compose.onNodeWithText("Up next · 296 - A Sad Song · 28 min 0 s").assertIsDisplayed()
+        compose.onNodeWithText("Up next · 296 - A Sad Song · 28 min").assertIsDisplayed()
+    }
+
+    // A short one keeps its seconds, as every length does under ten minutes (#170).
+    @Test
+    fun `up next under ten minutes keeps its seconds`() {
+        render(middleEpisode.copy(next = EpisodeRef("e296", "296 - A Sad Song", 545.0)), currentTime = 0.0)
+        compose.onNodeWithText("Up next · 296 - A Sad Song · 9 min 5 s").assertIsDisplayed()
     }
 
     @Test

@@ -18,11 +18,18 @@ class EpisodeDetailsTest {
     }
 
     @Test fun `season, number and length`() =
-        assertEquals("Season 2 · Episode 295 · 30 min 0 s", EpisodeDetails.line(season = "2", episode = "295", length = 1800.0))
+        assertEquals("Season 2 · Episode 295 · 30 min", EpisodeDetails.line(season = "2", episode = "295", length = 1800.0))
+
+    // #170: as Latest Episodes writes a length, seconds dropped from ten minutes up.
+    @Test fun `a length of ten minutes or more is whole minutes`() =
+        assertEquals("Episode 295 · 32 min", EpisodeDetails.line(season = null, episode = "295", length = 1938.0))
+
+    @Test fun `a short one keeps its seconds`() =
+        assertEquals("Episode 3 · 9 min 5 s", EpisodeDetails.line(season = null, episode = "3", length = 545.0))
 
     @Test fun `a missing part is left out`() {
-        assertEquals("Episode 295 · 30 min 0 s", EpisodeDetails.line(season = " ", episode = "295", length = 1800.0))
-        assertEquals("30 min 0 s", EpisodeDetails.line(season = null, episode = null, length = 1800.0))
+        assertEquals("Episode 295 · 30 min", EpisodeDetails.line(season = " ", episode = "295", length = 1800.0))
+        assertEquals("30 min", EpisodeDetails.line(season = null, episode = null, length = 1800.0))
         assertNull(EpisodeDetails.line(season = null, episode = null, length = null))
     }
 
