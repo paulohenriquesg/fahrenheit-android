@@ -19,6 +19,7 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
+import com.paulohenriquesg.fahrenheit.ui.elements.RecentCovers
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 
 class LoginActivity : ComponentActivity() {
@@ -61,7 +62,9 @@ class LoginActivity : ComponentActivity() {
                         loginHandler::handleApiKeyLogin,
                         error = loginHandler.error.value,
                         onDismissError = loginHandler::clearError,
-                        findServers = ::findServers
+                        findServers = ::findServers,
+                        // Welcome back over the covers this device already has (#161).
+                        loadCovers = { host -> RecentCovers.loadCached(this@LoginActivity, host) }
                     )
                 }
             }

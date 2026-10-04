@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,6 +93,12 @@ private fun FetchedCover(url: String?, contentDescription: String?, size: Dp, ti
     }
     // One painter drawn twice: two AsyncImages would fetch the cover twice.
     val painter = rememberAsyncImagePainter(request)
+
+    // Kept for the login screen's backdrop: what is drawn here is on the device.
+    val loaded = painter.state is AsyncImagePainter.State.Success
+    LaunchedEffect(loaded, url) {
+        if (loaded && url != null) RecentCovers.note(context, url)
+    }
 
     when (painter.state) {
         is AsyncImagePainter.State.Error ->

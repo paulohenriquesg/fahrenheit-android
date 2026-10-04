@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Login Restyle</title>
+<style>
+  :root { --surface:#1E1E1E; --on:#E6E1E5; --muted:#CAC4D0; --primary:#D0BCFF; --on-primary:#381E72; --error:#F2B8B5; }
+  body { margin:0; background:#050506; color:var(--on); font-family:Roboto, system-ui, sans-serif; padding:32px 16px; }
+  .page { max-width:1240px; margin:0 auto; }
+  h1 { font-size:28px; margin:0 0 8px; } h2 { font-size:22px; margin:40px 0 8px; }
+  p.why { color:var(--muted); font-size:15px; line-height:1.55; max-width:920px; margin:0 0 14px; }
+  .shell { width:100%; aspect-ratio:16/9; container-type:inline-size; border-radius:12px; overflow:hidden; box-shadow:0 0 0 1px #333; }
+  .tv { position:relative; width:1920px; height:1080px; transform-origin:0 0; transform:scale(calc(100cqw / 1920px)); overflow:hidden; background:#000; }
+  .wall { position:absolute; left:-260px; top:-240px; width:2700px; display:grid; grid-template-columns:repeat(13, 190px); gap:24px; transform:rotate(-8deg); animation: drift 70s linear infinite alternate; opacity:.32; }
+  .wall div { height:190px; border-radius:12px; }
+  @keyframes drift { from { transform:rotate(-8deg) translate(0,0);} to { transform:rotate(-8deg) translate(-240px,-160px);} }
+  .shade { position:absolute; inset:0; background: linear-gradient(90deg, rgba(10,10,12,.96) 0%, rgba(10,10,12,.88) 46%, rgba(10,10,12,.35) 100%); }
+  .brand { position:absolute; inset:0; background: radial-gradient(circle at 75% 35%, rgba(98,74,160,.55), transparent 55%), radial-gradient(circle at 90% 85%, rgba(36,64,107,.6), transparent 50%), #0E0D12; }
+  .col { position:absolute; left:150px; top:0; bottom:0; width:820px; display:flex; flex-direction:column; justify-content:center; gap:30px; }
+  .app { font-size:26px; letter-spacing:.14em; text-transform:uppercase; color:var(--primary); font-weight:700; }
+  .title { font-size:76px; font-weight:800; margin:0; letter-spacing:-.01em; }
+  .acct { display:flex; gap:26px; align-items:center; background:rgba(30,30,30,.85); border:2px solid #49454F; border-radius:22px; padding:24px 30px; }
+  .avatar { width:84px; height:84px; border-radius:50%; background:linear-gradient(150deg,#7E66C9,#3A2C6B); display:grid; place-items:center; font-size:40px; font-weight:800; }
+  .acct .n { font-size:34px; font-weight:700; } .acct .s { font-size:24px; color:var(--muted); margin-top:4px; }
+  .field { border:3px solid var(--primary); border-radius:18px; padding:22px 28px; font-size:32px; color:var(--muted); background:rgba(18,18,18,.9); position:relative; }
+  .field .lbl { position:absolute; top:-18px; left:22px; background:#121212; padding:0 10px; font-size:22px; color:var(--primary); }
+  .err { display:flex; gap:18px; align-items:center; border:2px solid var(--error); border-radius:18px; padding:18px 24px; font-size:24px; color:var(--error); background:rgba(60,20,20,.55); }
+  .btns { display:flex; gap:20px; }
+  .btn { border-radius:40px; padding:22px 40px; font-size:28px; font-weight:700; border:3px solid #938F99; color:var(--on); background:rgba(18,18,18,.6); }
+  .btn.pri { background:var(--primary); color:var(--on-primary); border-color:transparent; }
+  .btn.foc { outline:5px solid #fff; outline-offset:4px; }
+  .server { display:flex; gap:24px; align-items:center; background:rgba(30,30,30,.85); border:2px solid #49454F; border-radius:20px; padding:22px 28px; }
+  .server.foc { border:4px solid var(--primary); background:rgba(60,48,90,.7); }
+  .server .ic { width:64px; height:64px; border-radius:14px; background:#2B2930; display:grid; place-items:center; font-size:30px; }
+  .server .n { font-size:30px; font-weight:700; } .server .s { font-size:22px; color:var(--muted); }
+  .scan { font-size:24px; color:var(--muted); }
+  .note { font-size:14px; color:var(--muted); margin-top:8px; }
+</style></head>
+<body><div class="page">
+<h1>Login, in the player's style</h1>
+<p class="why">Today's login is correct but flat: small elements in the top-left of a black screen. This keeps every field, button, rule and focus order from #117/#135/#136 and changes only the look: a left column over a backdrop, larger type, the account as a person rather than a row, and the same filled-primary / outlined buttons as the rest of the app.</p>
+
+<h2>1. Welcome back: over a wall of your covers</h2>
+<p class="why">The device has been signed in before, so it knows the server and can show the covers it already loaded (cached; no request before sign-in). The wall is the screensaver's (#156), dimmed and shaded on the left so the form stays readable. Shown here with the wrong-password message.</p>
+<div class="shell"><div class="tv">
+  <div class="wall w1"></div><div class="shade"></div>
+  <div class="col">
+    <div class="app">Fahrenheit</div>
+    <h3 class="title">Welcome back</h3>
+    <div class="acct"><div class="avatar">R</div><div><div class="n">reader</div><div class="s">abs.example:13378</div></div></div>
+    <div class="err">⚠ That username and password were not accepted. Check the password and try again.</div>
+    <div class="field"><span class="lbl">Password</span>•••</div>
+    <div class="btns"><div class="btn pri foc">Sign in</div><div class="btn">Use an API key</div><div class="btn">Different server</div></div>
+  </div>
+</div></div>
+
+<h2>2. First run: finding the server</h2>
+<p class="why">Nothing is known yet, so no covers: the backdrop is the app's own soft colour field instead. The server list (#136) sits in the same left column; the found server is a large focusable row.</p>
+<div class="shell"><div class="tv">
+  <div class="brand"></div>
+  <div class="col">
+    <div class="app">Fahrenheit</div>
+    <h3 class="title">Where is your library?</h3>
+    <div class="scan">Looking for Audiobookshelf on this network…</div>
+    <div class="server foc"><div class="ic">📚</div><div><div class="n">abs.example:13378</div><div class="s">Audiobookshelf 2.x</div></div></div>
+    <div class="btns"><div class="btn">Enter an address instead</div><div class="btn">Look again</div></div>
+  </div>
+</div></div>
+
+<h2>3. First run: signing in to the server</h2>
+<p class="why">The address is a fact above the form, not a field; the form stays in the top half so the Fire TV keyboard never covers it (#135).</p>
+<div class="shell"><div class="tv">
+  <div class="brand"></div>
+  <div class="col" style="justify-content:flex-start; padding-top:110px">
+    <div class="app">Fahrenheit</div>
+    <h3 class="title">Sign in to abs.example</h3>
+    <div class="field"><span class="lbl">Username</span>reader</div>
+    <div class="field" style="border-color:#938F99"><span class="lbl" style="color:var(--muted)">Password</span>Password</div>
+    <div class="btns"><div class="btn pri">Sign in</div><div class="btn">Use an API key</div><div class="btn">Different server</div></div>
+  </div>
+</div></div>
+<p class="note">Covers are placeholders. The address and name are placeholders.</p>
+</div>
+<script>
+  const hues=[210,20,140,280,45,190,330,100,0,250,170,60,300];
+  document.querySelectorAll('.wall').forEach(w=>{for(let i=0;i<13*12;i++){const d=document.createElement('div');const h=hues[i%13]+(i*37)%40;d.style.background=`linear-gradient(150deg,hsl(${h} 45% 45%),hsl(${h} 50% 15%))`;w.appendChild(d);}});
+</script>
+</body></html>
