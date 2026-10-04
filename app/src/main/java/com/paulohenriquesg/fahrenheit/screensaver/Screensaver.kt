@@ -54,14 +54,30 @@ import kotlin.math.roundToInt
  */
 data class NowPlayingLine(val itemId: String, val title: String, val detail: String?)
 
+/** What the playback service has queued, and whether it plays. */
+data class Queued(val itemId: String, val playing: Boolean)
+
 /**
- * What is playing, as the screensaver needs it.
+ * The wall's art.
  *
- * @property covers for the wall: the series being played first, then the
- *   library's covers this device holds.
+ * @property covers the series being played first, then the library's covers this device holds.
  * @property wash the playing cover's colour, as on the player; null for none.
  */
-data class Listening(val playing: Boolean, val line: NowPlayingLine, val covers: List<ImageBitmap>, val wash: Color?)
+data class WallArt(val covers: List<ImageBitmap>, val wash: Color?)
+
+/** Where the screensaver learns what plays. */
+interface ListeningSource {
+    /** What is queued and whether it plays; null for nothing. */
+    @Composable
+    fun queued(): Queued?
+
+    /** The now-playing line. */
+    @Composable
+    fun line(): NowPlayingLine?
+
+    /** The wall's covers and the playing cover's colour. */
+    suspend fun art(itemId: String): WallArt
+}
 
 object ScreensaverTags {
     const val SCREEN = "screensaver"
@@ -85,11 +101,12 @@ object Screensaver {
 
     fun install(
         activity: ComponentActivity,
-        listening: @Composable () -> Listening?,
+        source: ListeningSource,
         settings: () -> ScreensaverSettings,
-        clock: () -> Long
+        lastKey: LastKey
     ) {
-        val gate = KeyGate(clock)
+        val clock = lastKey.clock
+        val gate = KeyGate(lastKey)
         val keys = KeyCount()
         val window = activity.window
         window.callback = GatedKeys(window.callback, gate, keys)
@@ -104,7 +121,7 @@ object Screensaver {
             descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
             // keepScreenOn on this view, which stays attached: Compose's own
             // inner view is not the one other code (and tests) look at.
-            setContent { FahrenheitTheme { Overlay(gate, keys, listening, settings, clock) { keepScreenOn = it } } }
+            setContent { FahrenheitTheme { Overlay(gate, keys, source, settings, clock) { keepScreenOn = it } } }
         }
         activity.addContentView(
             overlay,
@@ -116,14 +133,16 @@ object Screensaver {
     private fun Overlay(
         gate: KeyGate,
         keys: KeyCount,
-        listening: @Composable () -> Listening?,
+        source: ListeningSource,
         settings: () -> ScreensaverSettings,
         clock: () -> Long,
         keepOn: (Boolean) -> Unit
     ) {
-        val now = listening()
+        val now = source.queued()
         val playing = now?.playing == true
         val queued = now != null
+        var art by remember { mutableStateOf<WallArt?>(null) }
+        LaunchedEffect(now?.itemId) { art = now?.let { source.art(it.itemId) } }
         var notPlayingSince by remember { mutableStateOf<Long?>(null) }
         var decision by remember { mutableStateOf(ScreensaverPolicy.Decision(keepScreenOn = false, show = false)) }
 
@@ -150,7 +169,8 @@ object Screensaver {
         }
 
         if (decision.show && now != null) {
-            ScreensaverScreen(chosen.style, now)
+            val line = source.line()
+            if (line != null) ScreensaverScreen(chosen.style, line, art ?: WallArt(emptyList(), null))
         }
     }
 
@@ -166,7 +186,7 @@ object Screensaver {
         private val keys: KeyCount
     ) : Window.Callback by wrapped {
         override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-            val eaten = gate.key(down = event.action == KeyEvent.ACTION_DOWN)
+            val eaten = gate.key(down = event.action == KeyEvent.ACTION_DOWN, keyCode = event.keyCode)
             keys.count++
             // Written outside Compose: tell it now, so the overlay settles on
             // its next frame rather than whenever Compose next looks.
@@ -185,7 +205,7 @@ object Screensaver {
  *   which only happens while it is on screen. Tests pass a time.
  */
 @Composable
-fun ScreensaverScreen(style: ScreensaverStyle, listening: Listening, elapsedMs: Long? = null) {
+fun ScreensaverScreen(style: ScreensaverStyle, line: NowPlayingLine, art: WallArt, elapsedMs: Long? = null) {
     val shownFor = elapsedMs ?: produceState(0L) {
         val start = withFrameMillis { it }
         while (true) withFrameMillis { value = it - start }
@@ -200,21 +220,21 @@ fun ScreensaverScreen(style: ScreensaverStyle, listening: Listening, elapsedMs: 
         when (style) {
             ScreensaverStyle.Wall -> {
                 // #168's wall: drawn once, drifting by moving its layer.
-                CoverWall(listening.covers, Modifier.fillMaxSize().testTag(ScreensaverTags.WALL), alpha = 0.38f)
+                CoverWall(art.covers, Modifier.fillMaxSize().testTag(ScreensaverTags.WALL), alpha = 0.38f)
                 // The playing cover's colour over the wall, as on the player.
                 Box(
                     Modifier
                         .fillMaxSize()
                         .background(
                             Brush.radialGradient(
-                                listOf((listening.wash ?: Color(0xFF24406B)).copy(alpha = 0.55f), Color.Transparent)
+                                listOf((art.wash ?: Color(0xFF24406B)).copy(alpha = 0.55f), Color.Transparent)
                             )
                         )
                         .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.25f), Color.Black.copy(alpha = 0.7f))))
                 )
-                CornerLine(listening.line, NowPlayingCorner.at(shownFor))
+                CornerLine(line, NowPlayingCorner.at(shownFor))
             }
-            ScreensaverStyle.Bouncing -> BouncingCover(listening.line, shownFor)
+            ScreensaverStyle.Bouncing -> BouncingCover(line, shownFor)
         }
     }
 }

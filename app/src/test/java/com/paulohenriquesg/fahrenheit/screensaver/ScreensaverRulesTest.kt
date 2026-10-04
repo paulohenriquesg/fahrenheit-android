@@ -49,12 +49,14 @@ class ScreensaverRulesTest {
 
     // --- keys ---
 
+    private val center = 23 // KEYCODE_DPAD_CENTER
+
     @Test
     fun `any key resets the idle time`() {
         var now = 0L
-        val gate = KeyGate { now }
+        val gate = KeyGate(LastKey { now })
         now = 4 * minute
-        gate.key(down = true)
+        gate.key(down = true, keyCode = center)
 
         assertEquals(0L, gate.idleMs())
         now = 5 * minute
@@ -63,19 +65,48 @@ class ScreensaverRulesTest {
 
     @Test
     fun `a key while it shows only wakes the screen, and is not acted on`() {
-        var now = 0L
-        val gate = KeyGate { now }
+        val gate = KeyGate(LastKey { 0L })
         gate.showing = true
 
-        assertTrue("the press is eaten", gate.key(down = true))
+        assertTrue("the press is eaten", gate.key(down = true, keyCode = center))
         assertFalse(gate.showing)
-        assertTrue("and so is its release", gate.key(down = false))
-        assertFalse("the next press goes through", gate.key(down = true))
+        assertTrue("and so is its release", gate.key(down = false, keyCode = center))
+        assertFalse("the next press goes through", gate.key(down = true, keyCode = center))
     }
 
     @Test
     fun `a key while it does not show goes through`() =
-        assertFalse(KeyGate { 0L }.key(down = true))
+        assertFalse(KeyGate(LastKey { 0L }).key(down = true, keyCode = center))
+
+    // Held to wake, a key repeats: those presses were reaching the screen
+    // behind, which then never had the release (a long press, a fast seek).
+    @Test
+    fun `a key held to wake the screen is eaten until it is let go`() {
+        val gate = KeyGate(LastKey { 0L })
+        gate.showing = true
+
+        assertTrue(gate.key(down = true, keyCode = center))
+        repeat(5) { assertTrue("repeat $it", gate.key(down = true, keyCode = center)) }
+        assertTrue("the release", gate.key(down = false, keyCode = center))
+        assertFalse("then keys go through", gate.key(down = true, keyCode = center))
+    }
+
+    // One last key for the whole app: each screen kept its own, so keys
+    // pressed in the player left the screen behind it "idle" for minutes,
+    // and going Back showed the screensaver at once.
+    @Test
+    fun `a key on one screen counts on every screen`() {
+        var now = 0L
+        val shared = LastKey { now }
+        val player = KeyGate(shared)
+        val details = KeyGate(shared)
+
+        now = 6 * minute
+        player.key(down = true, keyCode = center)
+        now += 1_000
+
+        assertEquals(1_000L, details.idleMs())
+    }
 
     // --- what moves ---
 

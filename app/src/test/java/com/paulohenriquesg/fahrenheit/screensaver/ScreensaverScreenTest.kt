@@ -33,7 +33,7 @@ class ScreensaverScreenTest {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             FahrenheitTheme {
-                ScreensaverScreen(style = style, listening = Listening(playing = true, line = line, covers = covers, wash = null), elapsedMs = 0L)
+                ScreensaverScreen(style = style, line = line, art = WallArt(covers = covers, wash = null), elapsedMs = 0L)
             }
         }
         compose.mainClock.advanceTimeByFrame()

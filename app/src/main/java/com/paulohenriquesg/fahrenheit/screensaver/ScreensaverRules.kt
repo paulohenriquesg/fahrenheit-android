@@ -48,20 +48,30 @@ object ScreensaverPolicy {
     }
 }
 
+/** When someone last pressed a key, for the whole app (old behaviour: per gate). */
+class LastKey(val clock: () -> Long) {
+    var at: Long = clock()
+
+    companion object {
+        /** The app's. */
+        val app = LastKey { android.os.SystemClock.uptimeMillis() }
+    }
+}
+
 /**
  * The remote's keys and the screensaver (#156). Any key resets the idle time;
  * while the screensaver shows, the first key only wakes the screen - it and
  * its release are eaten, not acted on.
  */
-class KeyGate(private val clock: () -> Long) {
-    private var lastKey = clock()
+class KeyGate(private val lastKey: LastKey) {
+    private var ownLast = lastKey.clock()
     private var eatRelease = false
 
     var showing: Boolean = false
 
     /** @return true when the key is eaten. */
-    fun key(down: Boolean): Boolean {
-        lastKey = clock()
+    fun key(down: Boolean, keyCode: Int): Boolean {
+        ownLast = lastKey.clock()
         if (!down && eatRelease) {
             eatRelease = false
             return true
@@ -74,7 +84,7 @@ class KeyGate(private val clock: () -> Long) {
         return false
     }
 
-    fun idleMs(): Long = clock() - lastKey
+    fun idleMs(): Long = lastKey.clock() - ownLast
 }
 
 /** Where the now-playing line sits; it moves to the next corner every minute. */
