@@ -14,9 +14,8 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 
 /**
- * "Go to podcast" leaves the episode: the player closes, and a closing player
- * stops playback. Opened from the podcast's own screen this already happened;
- * opened from anywhere else the episode played on behind the podcast.
+ * Leaving the player for another screen: "Go to podcast" (the episode plays on,
+ * as after Back, #155), and switching to another book or episode.
  */
 @RunWith(AndroidJUnit4::class)
 class PlayerActivityTest {

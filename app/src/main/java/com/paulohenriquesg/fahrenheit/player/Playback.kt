@@ -29,12 +29,13 @@ object Playback {
             .buildAsync()
 
     /**
-     * The player screen is going away. Back ([finishing]) stops playback - the
-     * rail's Now playing entry leads back to the player, but is not a control
-     * (#107); Home leaves it playing. Either way the controller is released by the caller afterwards.
+     * Ends the listening session: stops, and empties the queue. The session's
+     * player sends the closing progress report first (see [LeavingGuard]).
+     *
+     * Leaving the player screen - Back or Home - does not end it (#155); Stop on
+     * the rail's Now playing entry does, as do a switch to another book and sign-out.
      */
-    fun leave(controller: Player, finishing: Boolean) {
-        if (!finishing) return
+    fun end(controller: Player) {
         controller.stop()
         controller.clearMediaItems()
     }
@@ -63,7 +64,7 @@ object Playback {
         val future = connect(context.applicationContext)
         future.addListener({
             val controller = runCatching { future.get() }.getOrNull() ?: return@addListener
-            leave(controller, finishing = true)
+            end(controller)
             controller.release()
         }, ContextCompat.getMainExecutor(context))
     }

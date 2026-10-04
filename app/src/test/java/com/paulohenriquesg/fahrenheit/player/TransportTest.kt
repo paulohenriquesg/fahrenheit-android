@@ -163,8 +163,8 @@ class TransportTest {
         compose.onNodeWithText("25 min 0 s left of 1 h 30 min").assertIsDisplayed()
     }
 
-    // Frame 4 has three focus stops. Stop only paused, as Play/Pause does,
-    // and Back is how playback stops (#93).
+    // Frame 4 has three focus stops. Stop only paused, as Play/Pause does;
+    // ending playback is Stop on the rail's Now playing entry (#93, #155).
     @Test
     fun `there is no stop button`() {
         show(queuedAt(0.0))

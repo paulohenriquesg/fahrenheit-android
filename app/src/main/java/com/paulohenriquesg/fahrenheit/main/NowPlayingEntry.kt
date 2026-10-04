@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,21 +36,24 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
+import com.paulohenriquesg.fahrenheit.player.Playback
 import com.paulohenriquesg.fahrenheit.player.PlaybackPosition
 import com.paulohenriquesg.fahrenheit.player.RailEntry
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 
 const val NOW_PLAYING_TAG = "rail_now_playing"
+const val NOW_PLAYING_STOP_TAG = "rail_now_playing_stop"
 
 /**
  * The rail's way back to the player (#107; the rail frames of
  * docs/mocks/player.html). Closed: the cover, a ring for how far through the
  * book or episode, and the play state. Open: the title, and the chapter with
- * its time left (or what is left of an episode). Choosing it opens the player;
- * it is not a second set of controls.
+ * its time left (or what is left of an episode), and Stop under it. Choosing
+ * the entry opens the player; Stop ends the listening session - Back from the
+ * player keeps playing (#155). It is not a second set of transport controls.
  */
 @Composable
-fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit, modifier: Modifier = Modifier) {
+fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit, onStop: (RailEntry) -> Unit, modifier: Modifier = Modifier) {
     // Widths of their own, as the sections have: the drawer gives its content
     // the whole screen to grow into, so nothing here may fill or wrap a width.
     val width = if (open) OPEN_WIDTH else CLOSED_WIDTH
@@ -82,6 +86,25 @@ fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit
                 }
             }
         }
+        // Only while open: a closed rail holds no focus, and has no room for it.
+        if (open) {
+            Surface(
+                onClick = { onStop(entry) },
+                modifier = Modifier.padding(start = 6.dp, top = 4.dp).testTag(NOW_PLAYING_STOP_TAG),
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // The label says it; the icon is decoration, not read out twice.
+                    Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.rail_stop), style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        }
         // The line between what is playing and the sections.
         Box(
             Modifier
@@ -96,16 +119,22 @@ fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit
 /**
  * The entry for what [player] has queued, or nothing. Reads the player
  * inside itself, so its changes redraw this entry and not the whole screen.
+ *
+ * @param onStopped after Stop has ended playback: the focused button is about to go.
  */
 @Composable
 fun NowPlayingSlot(
     player: Player,
     open: Boolean,
     chaptersOf: suspend (String) -> List<Chapter>?,
-    onOpen: (RailEntry) -> Unit
+    onOpen: (RailEntry) -> Unit,
+    onStopped: () -> Unit = {}
 ) {
     val entry = rememberRailEntry(player, chaptersOf) ?: return
-    NowPlayingEntry(entry, open, onOpen)
+    NowPlayingEntry(entry, open, onOpen, onStop = {
+        Playback.end(player)
+        onStopped()
+    })
 }
 
 /** Whole minutes, as the mock writes it - the seconds would jump with each poll - and seconds under one. */

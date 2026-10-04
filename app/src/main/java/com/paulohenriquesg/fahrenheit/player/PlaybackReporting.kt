@@ -125,7 +125,7 @@ class PlaybackReporting(
         time?.playing(false)
         val active = reporter ?: return
         // Undispatched, so the position is read now, before the queue changes.
-        // Not cancellable: on Back the service, and its scope, are gone
+        // Not cancellable: once playback ends the service, and its scope, are gone
         // within milliseconds, which would drop the report mid-send.
         val closing = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             withContext(NonCancellable) { active.finish() }
@@ -145,8 +145,8 @@ class PlaybackReporting(
 }
 
 /**
- * Closing reports still on their way, for the whole process: Back stops
- * playback and the service goes, but its last report is still being sent, and
+ * Closing reports still on their way, for the whole process: Stop on the
+ * rail's entry ends playback and the service goes, but its last report is still being sent, and
  * a Mark finished made meanwhile must wait for it (see [FinishMarker]).
  * Main thread only.
  */
