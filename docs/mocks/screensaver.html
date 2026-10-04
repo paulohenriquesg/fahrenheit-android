@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Listening Screensaver</title>
+<style>
+  :root { --bg:#0B0B0D; --surface:#1E1E1E; --on:#E6E1E5; --muted:#CAC4D0; --primary:#D0BCFF; }
+  body { margin:0; background:#050506; color:var(--on); font-family:Roboto, system-ui, sans-serif; padding:32px 16px; }
+  .page { max-width:1240px; margin:0 auto; }
+  h1 { font-size:28px; margin:0 0 8px; } h2 { font-size:22px; margin:40px 0 8px; }
+  p.why { color:var(--muted); font-size:15px; line-height:1.55; max-width:920px; margin:0 0 14px; }
+  .shell { width:100%; aspect-ratio:16/9; container-type:inline-size; border-radius:12px; overflow:hidden; box-shadow:0 0 0 1px #333; }
+  .tv { position:relative; width:1920px; height:1080px; transform-origin:0 0; transform:scale(calc(100cqw / 1920px)); background:#000; overflow:hidden; }
+
+  /* the moving now-playing line, shared */
+  .np { position:absolute; display:flex; gap:22px; align-items:center; opacity:.55; animation: hop 16s steps(1) infinite; }
+  .np .thumb { width:84px; height:84px; border-radius:10px; }
+  .np .t { font-size:30px; font-weight:600; } .np .s { font-size:22px; color:var(--muted); margin-top:4px; }
+  @keyframes hop { 0%{left:90px;top:80px} 25%{left:1290px;top:110px} 50%{left:1240px;top:880px} 75%{left:110px;top:900px} }
+
+  /* style 1: wall of covers */
+  .wall { position:absolute; left:-200px; top:-200px; width:2600px; display:grid; grid-template-columns:repeat(13, 180px); gap:22px; transform:rotate(-8deg); animation: drift 60s linear infinite alternate; opacity:.38; }
+  .wall div { height:180px; border-radius:12px; }
+  @keyframes drift { from { transform:rotate(-8deg) translate(0,0); } to { transform:rotate(-8deg) translate(-260px,-180px); } }
+  .tint { position:absolute; inset:0; background: radial-gradient(circle at 30% 40%, rgba(36,64,107,.55), transparent 65%), linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.7)); }
+
+  /* style 2: bouncing cover */
+  .bounce-x { position:absolute; animation: bx 11s linear infinite alternate; }
+  .bounce-y { animation: by 7s linear infinite alternate; }
+  .bounce-y .cover { width:320px; height:320px; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+  .bounce-y .cap { text-align:center; margin-top:16px; font-size:24px; color:var(--muted); opacity:.7; }
+  @keyframes bx { from { left:0 } to { left:1600px } }
+  @keyframes by { from { margin-top:0 } to { margin-top:690px } }
+
+  .cv { background:linear-gradient(150deg,#3E6FB0,#14233D); display:grid; place-items:center; color:#fff; font-weight:900; font-size:30px; text-align:center; line-height:1.1; }
+  .settings { background:var(--surface); border-radius:16px; padding:28px 32px; display:grid; grid-template-columns:1fr auto; gap:22px 40px; align-items:center; max-width:900px; font-size:17px; }
+  .settings .l b { display:block; font-size:19px; } .settings .l span { color:var(--muted); font-size:15px; }
+  .chips { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; } .chip { padding:8px 16px; border-radius:20px; background:#2B2930; font-size:15px; } .chip.on { background:var(--primary); color:#381E72; font-weight:700; }
+  .note { font-size:14px; color:var(--muted); margin-top:8px; }
+</style></head>
+<body><div class="page">
+<h1>Listening screensaver: two styles</h1>
+<p class="why">Shown only while something is playing, after a few minutes without a key press. Fire OS will not let an app turn its own screensaver off or replace it in system settings, but an app may keep the screen on while it plays; Fahrenheit then shows one of these instead. When nothing plays, the Fire TV screensaver runs as today. The first key press only wakes the screen. Everything moves and is dimmed, so nothing sits still long enough to mark a screen. Both frames below are animated.</p>
+
+<h2>1. A wall of covers (the default)</h2>
+<p class="why">A slowly drifting, tilted wall of covers from your library (the series you are in first), dimmed, with the playing book's colour washed over it as on the player. The now-playing line jumps to another corner every few seconds here (every minute on the TV).</p>
+<div class="shell"><div class="tv">
+  <div class="wall" id="wall"></div>
+  <div class="tint"></div>
+  <div class="np"><div class="thumb cv" style="font-size:14px">STAR<br>FALL</div><div><div class="t">The Long Way Home</div><div class="s">Chapter 12 · 18 min left in chapter</div></div></div>
+</div></div>
+
+<h2>2. The DVD logo: the cover bouncing</h2>
+<p class="why">Just the playing cover, mid-size, bouncing slowly off the edges of a dark screen, with the title and time left under it. Very little ever stays lit in one place.</p>
+<div class="shell"><div class="tv">
+  <div class="bounce-x"><div class="bounce-y"><div class="cover cv">THE LONG<br>WAY HOME</div><div class="cap">Chapter 12 · 18 min left</div></div></div>
+</div></div>
+
+<h2>Settings → Playback</h2>
+<div class="settings">
+  <div class="l"><b>Screensaver while listening</b><span>Instead of the Fire TV one, only while something plays</span></div>
+  <div class="chips"><div class="chip">Off</div><div class="chip">2 min</div><div class="chip on">5 min ✓</div><div class="chip">10 min</div></div>
+  <div class="l"><b>Screensaver style</b><span>What shows while it runs</span></div>
+  <div class="chips"><div class="chip on">Wall of covers ✓</div><div class="chip">Bouncing cover</div></div>
+</div>
+<p class="note">Covers are placeholders with invented titles. On the TV the wall uses real covers from your library; podcasts use show art.</p>
+</div>
+<script>
+  const hues=[210,20,140,280,45,190,330,100,0,250,170,60,300];
+  const w=document.getElementById('wall');
+  for(let i=0;i<13*12;i++){const d=document.createElement('div');const h=hues[i%13]+(i*37)%40;d.style.background=`linear-gradient(150deg,hsl(${h} 45% 45%),hsl(${h} 50% 15%))`;w.appendChild(d);}
+</script>
+</body></html>

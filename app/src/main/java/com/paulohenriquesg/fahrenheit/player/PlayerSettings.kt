@@ -40,6 +40,14 @@ class PlayerSettings(context: Context) {
         return { prefs.unregisterOnSharedPreferenceChangeListener(watch) }
     }
 
+    var screensaverMinutes: Int?
+        get() = 5
+        set(value) {}
+
+    var screensaverStyle: com.paulohenriquesg.fahrenheit.screensaver.ScreensaverStyle
+        get() = com.paulohenriquesg.fahrenheit.screensaver.ScreensaverStyle.Wall
+        set(value) {}
+
     /** A length not on offer - stored by an older build, say - reads as the default. */
     private fun lengthOf(key: String): Int =
         prefs.getInt(key, DEFAULT_SKIP).takeIf { it in SKIP_LENGTHS } ?: DEFAULT_SKIP

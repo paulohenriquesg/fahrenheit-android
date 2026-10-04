@@ -95,7 +95,11 @@ fun SettingsView(
     skipBack: Int = 30,
     onSkipBack: (Int) -> Unit = {},
     skipForward: Int = 30,
-    onSkipForward: (Int) -> Unit = {}
+    onSkipForward: (Int) -> Unit = {},
+    screensaverMinutes: Int? = 5,
+    onScreensaverMinutes: (Int?) -> Unit = {},
+    screensaverStyle: com.paulohenriquesg.fahrenheit.screensaver.ScreensaverStyle = com.paulohenriquesg.fahrenheit.screensaver.ScreensaverStyle.Wall,
+    onScreensaverStyle: (com.paulohenriquesg.fahrenheit.screensaver.ScreensaverStyle) -> Unit = {}
 ) {
     Column(
         modifier = modifier
