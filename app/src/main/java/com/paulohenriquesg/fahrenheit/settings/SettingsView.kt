@@ -260,8 +260,9 @@ private fun updateLine(update: UpdateCheck, version: String): String = when (upd
     UpdateCheck.Idle -> version
     UpdateCheck.Checking -> stringResource(R.string.settings_update_checking)
     UpdateCheck.UpToDate -> stringResource(R.string.settings_update_up_to_date, version)
-    // The row at the top carries the news; this one keeps saying what is installed.
-    is UpdateCheck.Available -> version
+    // Install sits at the top of Settings, out of view from here, so the row
+    // that asked says where to find it.
+    is UpdateCheck.Available -> stringResource(R.string.settings_update_ready_above, update.update.versionName)
     UpdateCheck.Failed -> stringResource(R.string.settings_update_failed)
 }
 

@@ -171,6 +171,15 @@ class SettingsViewTest {
         compose.onNodeWithTag("install_update").assertIsDisplayed()
     }
 
+    // The row that asked answers (review): Install is at the top, out of
+    // view from Check now, so the row says where to find it.
+    @Test
+    fun `a check that finds an update says so in its own row`() {
+        render(update = UpdateCheck.Available(waiting))
+
+        compose.onNodeWithText("v0.0.11 is ready · Install is at the top").performScrollTo().assertIsDisplayed()
+    }
+
     @Test
     fun `there is one Install, not two`() {
         render(update = UpdateCheck.Available(waiting))

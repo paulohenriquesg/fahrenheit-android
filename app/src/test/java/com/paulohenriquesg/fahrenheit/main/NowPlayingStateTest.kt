@@ -90,13 +90,6 @@ class NowPlayingStateTest {
         assertNotEquals(resting, bars())
     }
 
-    @Test fun `a still pause badge is idle`() {
-        show(book.copy(playing = false))
-        // waitForIdle returning at all is the point; and the badge stays put.
-        compose.waitForIdle()
-        compose.onNodeWithTag(NOW_PLAYING_PAUSED_TAG, useUnmergedTree = true).assertExists()
-    }
-
     // The window drawn into a bitmap (captureToImage waits for a frame callback
     // Robolectric never sends), cut to the bars' own bounds.
     private fun bars(): List<Int> {

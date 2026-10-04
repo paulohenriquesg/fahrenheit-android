@@ -147,7 +147,9 @@ animate only while visible and needed, in runs that end.
 
 Now playing's equaliser (#170) is the pattern: each entry the slot hands over -
 one per poll while playing - runs the bars for one poll and no longer, so a
-paused or stalled entry comes to rest by itself. Where a drift has to run
+paused or stalled entry comes to rest by itself. While playing it runs on
+continuously, by design; a test whose player position moves with the compose
+clock must move that clock by hand. Where a drift has to run
 for as long as it is shown (`CoverWall`), its tests move the clock by hand.
 
 ## Now playing shows the state

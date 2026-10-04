@@ -7,10 +7,10 @@
 ## Rulings
 
 1. **Now playing's state** (`CoverWithRing`, shared by the rail entry and the bar): playing draws **equaliser bars**, paused a still **⏸ badge**. The bars move on a *finite* run, restarted each time the entry changes - the slot recomputes it every poll (5 s) while playing - so nothing animates forever, a paused or idle entry is still, and an off-screen one is not composed at all. The run lasts one poll, so the bars keep moving while the poll keeps coming. Their heights are a pure function, `Equaliser.levels(phase)`, tested on its own.
-2. **The placeholder's tone** is `surfaceVariant` halfway to `surface`: a darker, greyer purple in the dark theme, so it reads as a cover inside a focused card (whose fill is `surfaceVariant`) and still apart from an unfocused one (`surface`). One function, `CoverPlaceholder.tone(scheme)`.
+2. **The placeholder's tone** is a darker `surfaceVariant`, each sRGB channel scaled by 0.75 in the dark theme and 0.85 in the light (compose's `lerp` works in Oklab and went too dark): it reads as a cover inside a focused card (whose fill is `surfaceVariant`) and still apart from an unfocused one (`surface`). In the dark theme those two are only 1.68:1 apart, so the tone is about 1.3:1 from each. One function, `CoverPlaceholderTone.of(scheme)`.
 3. **The description's inner padding** grows from 4 dp to 12 dp inside the 3 dp focus border (the book screen and About share `FullDescription`). The "still at the top" slack grows with it.
 4. **Episode lengths**: `EpisodeDetails.line` and the player's "Up next" use `listeningLength`. The running counters keep `PlaybackPosition.spoken`. About's Length fact is not in the issue and is left as it is.
-5. **Settings order**: Appearance, **Playback**, Updates, Account. A waiting update's "is ready / Install" row moves to the **top of Settings**, above Appearance, so it is the first thing seen; Updates keeps "Check for updates". There is one Install row, not two.
+5. **Settings order**: Appearance, **Playback**, Updates, Account. A waiting update's "is ready / Install" row moves to the **top of Settings**, above Appearance, so it is the first thing seen; Updates keeps "Check for updates". There is one Install row, not two. Check for updates, having found one, says "vX is ready · Install is at the top" in its own row (review).
 
 ## Tasks (each red first, then green)
 
@@ -27,4 +27,4 @@
 - A book without a cover, focused on Home/Library: the placeholder's edge shows inside the purple card.
 - About and the book screen: focus the description; the border clears the text.
 - An episode of 10 min or more: the details line and "Up next" say whole minutes.
-- Settings: Playback second; with an update waiting, its Install row is at the top.
+- Settings: Playback second; with an update waiting, its Install row is at the top; Check now that finds one says so in its row.
