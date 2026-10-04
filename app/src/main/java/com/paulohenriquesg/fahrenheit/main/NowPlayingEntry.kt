@@ -1,7 +1,9 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import com.paulohenriquesg.fahrenheit.player.rememberRailEntry
+import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.Chapter
+import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import androidx.media3.common.Player
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
@@ -73,11 +75,8 @@ fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit
                 if (open) {
                     Column(Modifier.weight(1f)) {
                         Text(entry.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        val left = leftWords(entry.leftSeconds)
-                        val chapter = entry.chapter ?: entry.chapterNumber?.let { stringResource(R.string.chapter_number, it) }
                         Text(
-                            chapter?.let { stringResource(R.string.rail_chapter_left, it, left) }
-                                ?: stringResource(R.string.time_left, left),
+                            leftLine(entry),
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -88,22 +87,7 @@ fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit
         }
         // Only while open: a closed rail holds no focus, and has no room for it.
         if (open) {
-            Surface(
-                onClick = { onStop(entry) },
-                modifier = Modifier.padding(start = 6.dp, top = 4.dp).testTag(NOW_PLAYING_STOP_TAG),
-                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // The label says it; the icon is decoration, not read out twice.
-                    Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text(stringResource(R.string.rail_stop), style = MaterialTheme.typography.labelLarge)
-                }
-            }
+            StopButton(onClick = { onStop(entry) }, modifier = Modifier.padding(start = 6.dp, top = 4.dp).testTag(NOW_PLAYING_STOP_TAG))
         }
         // The line between what is playing and the sections.
         Box(
@@ -137,6 +121,39 @@ fun NowPlayingSlot(
     })
 }
 
+/** Stop, beside or under Now playing: ends the listening session (#155, #159). */
+@Composable
+internal fun StopButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // The label says it; the icon is decoration, not read out twice.
+            Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(stringResource(R.string.rail_stop), style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+/** A book's chapters, for Now playing's time left; null when they could not be read. */
+suspend fun queuedChapters(itemId: String): List<Chapter>? =
+    ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.media?.chapters
+
+/** "Chapter · N min left", or what is left of an episode or an unchaptered book. */
+@Composable
+internal fun leftLine(entry: RailEntry): String {
+    val left = leftWords(entry.leftSeconds)
+    val chapter = entry.chapter ?: entry.chapterNumber?.let { stringResource(R.string.chapter_number, it) }
+    return chapter?.let { stringResource(R.string.rail_chapter_left, it, left) } ?: stringResource(R.string.time_left, left)
+}
+
 /** Whole minutes, as the mock writes it - the seconds would jump with each poll - and seconds under one. */
 private fun leftWords(seconds: Double): String =
     if (seconds in 60.0..3599.0) "${(seconds / 60).toInt()} min" else PlaybackPosition.spoken(seconds)
@@ -146,7 +163,7 @@ private val OPEN_WIDTH = 240.dp
 
 /** The cover inside a ring of progress, and the play state at its corner. */
 @Composable
-private fun CoverWithRing(entry: RailEntry) {
+internal fun CoverWithRing(entry: RailEntry) {
     val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
     val done = MaterialTheme.colorScheme.primary
     Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {

@@ -56,6 +56,11 @@ import com.paulohenriquesg.fahrenheit.player.AboutFacts
 import com.paulohenriquesg.fahrenheit.player.ChapterClock
 import com.paulohenriquesg.fahrenheit.player.SeriesBooks
 import com.paulohenriquesg.fahrenheit.player.Playback
+import com.paulohenriquesg.fahrenheit.player.ControllerSlot
+import com.paulohenriquesg.fahrenheit.main.NowPlayingBarSlot
+import com.paulohenriquesg.fahrenheit.main.queuedChapters
+import androidx.core.content.ContextCompat
+import androidx.media3.session.MediaController
 import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
@@ -63,6 +68,32 @@ import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 class DetailActivity : ComponentActivity() {
     /** Counts returns to this screen, so progress is read again after the player. */
     private var resumes by mutableIntStateOf(0)
+
+    /**
+     * The playback service's player while this screen is visible, for the
+     * Now playing bar (#159): this screen has no rail. As on the main screen.
+     */
+    private var playback by mutableStateOf<MediaController?>(null)
+    private val connection by lazy {
+        ControllerSlot(
+            connect = { Playback.connect(this) },
+            release = { it.release() },
+            executor = ContextCompat.getMainExecutor(this),
+            onChange = { playback = it }
+        )
+    }
+
+    override fun onStart() {
+        super.onStart()
+        connection.open()
+    }
+
+    override fun onStop() {
+        // Leaves playback alone: the bar's Stop ends it.
+        connection.close()
+        playback = null
+        super.onStop()
+    }
 
     override fun onResume() {
         super.onResume()
@@ -168,9 +199,15 @@ class DetailActivity : ComponentActivity() {
         }
 
         val isBook = item.mediaType != "podcast"
+        val nowPlaying: @Composable () -> Unit = {
+            NowPlayingBarSlot(playback, chaptersOf = ::queuedChapters) {
+                // The player reattaches to what is queued, where it is.
+                context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId))
+            }
+        }
         DetailBody(isBook) { margin ->
             if (!isBook) {
-                PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it })
+                PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it }, nowPlaying = nowPlaying)
             } else {
                 BookDetailView(
                     itemId = itemId,
@@ -187,6 +224,7 @@ class DetailActivity : ComponentActivity() {
                     series = seriesBooks,
                     seriesName = seriesRef?.name,
                     onSeriesBook = { context.startActivity(createIntent(context, it.itemId)) },
+                    nowPlaying = nowPlaying,
                     finished = item.userMediaProgress?.isFinished == true,
                     marking = marking,
                     onMarkFinished = { done ->
@@ -221,7 +259,8 @@ class DetailActivity : ComponentActivity() {
         itemId: String,
         item: LibraryItemResponse,
         me: Me?,
-        onReloaded: (LibraryItemResponse) -> Unit
+        onReloaded: (LibraryItemResponse) -> Unit,
+        nowPlaying: @Composable () -> Unit
     ) {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
@@ -325,6 +364,7 @@ class DetailActivity : ComponentActivity() {
                 DetailHeader(
                     itemId = itemId,
                     content = header,
+                    nowPlaying = nowPlaying,
                     onPrimary = {
                         (resumeEpisode ?: EpisodeOrder.newestFirst(media.episodes.orEmpty()).firstOrNull())?.let(play)
                     },

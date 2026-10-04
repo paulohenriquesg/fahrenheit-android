@@ -355,9 +355,7 @@ fun MainScreen(
                 NowPlayingSlot(
                     player = player,
                     open = open,
-                    chaptersOf = { itemId ->
-                        ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.media?.chapters
-                    },
+                    chaptersOf = ::queuedChapters,
                     // The player reattaches to what is queued, where it is.
                     onOpen = { context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId)) },
                     // Stop's button goes with the entry: focus to the section, or the remote has nothing (#53).
