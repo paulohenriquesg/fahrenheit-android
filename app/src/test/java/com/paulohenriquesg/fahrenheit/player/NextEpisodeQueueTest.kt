@@ -6,6 +6,7 @@ import androidx.media3.test.utils.TestExoPlayerBuilder
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper.run
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -42,13 +43,18 @@ class NextEpisodeQueueTest {
         player.release()
     }
 
+    /** Set to hold the answer back, as a slow server would. */
+    private var answer: CompletableDeferred<Unit>? = null
+
+    private lateinit var queue: NextEpisodeQueue
+
     private fun listen() {
-        player.addListener(
-            NextEpisodeQueue(player, scope, enabled = { enabled }) { file ->
-                asked += file.episodeId!!
-                after[file.episodeId]?.let(::itemsOf)
-            }
-        )
+        queue = NextEpisodeQueue(player, scope, enabled = { enabled }) { file ->
+            asked += file.episodeId!!
+            answer?.await()
+            after[file.episodeId]?.let(::itemsOf)
+        }
+        player.addListener(queue)
     }
 
     /** The screen queued e1 and e2, and closed; e1 is nearly over. */
@@ -131,5 +137,81 @@ class NextEpisodeQueueTest {
 
         assertEquals(2, player.mediaItemCount)
         assertEquals(emptyList<String>(), asked)
+    }
+
+    // Review: the setting turned off while an episode plays drops the next at
+    // once; before, it played anyway, and only the one after was dropped.
+    @Test
+    fun `turning the setting off drops the queued next at once`() {
+        listen()
+        playingNearTheEndOf("e1", "e2")
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        enabled = false
+        queue.settingChanged()
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        assertEquals(listOf("e1"), queued())
+    }
+
+    @Test
+    fun `turning the setting on queues the next at once`() {
+        enabled = false
+        listen()
+        playingNearTheEndOf("e1")
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        enabled = true
+        queue.settingChanged()
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        assertEquals(listOf("e1", "e2"), queued())
+    }
+
+    @Test
+    fun `turning it on with a book playing queues nothing`() {
+        enabled = false
+        listen()
+        player.setMediaItems(PlaybackQueue.itemsOf(NowPlaying("b1", "A Book", hour, null, null, null, false, null), resolve)!!)
+        player.prepare()
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        enabled = true
+        queue.settingChanged()
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        assertEquals(1, player.mediaItemCount)
+        assertEquals(emptyList<String>(), asked)
+    }
+
+    // Review: the player screen, open, queues the next too, through its own
+    // controller's view of the queue, which can lag: the second copy goes.
+    @Test
+    fun `a next episode queued twice is kept once`() {
+        listen()
+        playingNearTheEndOf("e1", "e2")
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        player.addMediaItems(itemsOf("e2"))
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        assertEquals(listOf("e1", "e2"), queued())
+    }
+
+    // Review: what the server says arrives later; by then the queue may be another.
+    @Test
+    fun `a queue replaced while asking gets nothing added`() {
+        answer = CompletableDeferred()
+        listen()
+        playingNearTheEndOf("e1", "e2")
+        moveOn(to = 1)
+        assertEquals(listOf("e2"), asked)
+
+        player.setMediaItems(itemsOf("e4"))
+        run(player).untilPendingCommandsAreFullyHandled()
+        answer!!.complete(Unit)
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        assertEquals(listOf("e4"), queued())
     }
 }

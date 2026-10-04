@@ -41,4 +41,18 @@ class PlayerSettingsTest {
     }
 
     @Test fun `the lengths on offer`() = assertEquals(listOf(10, 15, 30, 60), PlayerSettings.SKIP_LENGTHS)
+
+    // #160: the playback service acts on a change at once, not at the next move.
+    @Test fun `a change to play next episode is heard, until no longer listened for`() {
+        val heard = mutableListOf<Boolean>()
+        val settings = PlayerSettings(context)
+        val stop = settings.onPlayNextEpisodeChanged { heard += settings.playNextEpisode }
+
+        PlayerSettings(context).playNextEpisode = true
+        PlayerSettings(context).skipBackSeconds = 10
+        stop()
+        PlayerSettings(context).playNextEpisode = false
+
+        assertEquals(listOf(true), heard)
+    }
 }

@@ -90,7 +90,7 @@ For an episode, About is the show notes and the publish date. It has no series a
 
 A setting, **"Play the next episode automatically"**, off by default.
 
-**When on,** the next newer episode is queued after the current one in the player. Media3 then moves on without a gap, and its progress and listening session belong to it. The existing per-item reporting already sends each report to the item it measured. The player screen queues the first one; after that the **playback service** queues the next after each move, with or without a screen (#160), and drops a queued next once the setting is off.
+**When on,** the next newer episode is queued after the current one in the player. Media3 then moves on without a gap, and its progress and listening session belong to it. The existing per-item reporting already sends each report to the item it measured. The player screen queues the first one; after that the **playback service** queues the next after each move, with or without a screen (#160). Changing the setting acts at once: off drops the queued next, on queues it. When where the next was left cannot be read, nothing is queued rather than starting it from 0:00.
 
 **When off,** an episode that ends stops there.
 

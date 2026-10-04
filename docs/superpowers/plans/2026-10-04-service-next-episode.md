@@ -27,3 +27,14 @@ Reporting is untouched: each item reports as it plays, as today.
 
 Setting on, start an episode near its end, Back, wait through two moves: the
 server shows progress on each episode, and the third starts where it was left.
+
+## Review fix pass
+
+- The screen (through its controller's lagging view) and the service could both
+  queue the same next: the service drops a second copy behind what plays.
+- The setting changing acts at once (`PlayerSettings.onPlayNextEpisodeChanged` ->
+  `NextEpisodeQueue.settingChanged`), not one episode later.
+- An unreadable saved position queues nothing (`ResumeSources.saved`), and an
+  unreadable item is logged.
+- Not done: a Next from the system's controls (a seek, not an automatic move)
+  does not queue the one after; the service-level wiring is left to the device check.

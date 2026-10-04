@@ -12,13 +12,16 @@ import retrofit2.awaitResponse
 object ResumeSources {
 
     /** The server's progress for the item; null when it cannot be read or was never started. */
-    suspend fun progress(itemId: String, episodeId: String?): MediaProgressResponse? {
-        val api = ApiClient.getApiService() ?: return null
-        val saved = SavedProgress.read(episodeId) {
+    suspend fun progress(itemId: String, episodeId: String?): MediaProgressResponse? =
+        (saved(itemId, episodeId) as? SavedProgress.Found)?.progress
+
+    /** The same, telling "never started" from "could not tell"; signed out cannot tell. */
+    suspend fun saved(itemId: String, episodeId: String?): SavedProgress {
+        val api = ApiClient.getApiService() ?: return SavedProgress.Unreadable
+        return SavedProgress.read(episodeId) {
             val call = if (episodeId != null) api.userGetMediaProgress(itemId, episodeId) else api.userGetMediaProgress(itemId)
             call.awaitResponse()
         }
-        return (saved as? SavedProgress.Found)?.progress
     }
 
     /** The item's latest listening session; null when it cannot be read. */

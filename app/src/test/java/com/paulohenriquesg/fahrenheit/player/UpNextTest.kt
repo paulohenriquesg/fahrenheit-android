@@ -28,9 +28,10 @@ class UpNextTest {
 
     private val shows = podcast(episode("e3", 3_000), episode("e1", 1_000), episode("e2b", 2_500, audio = false), episode("e2", 2_000))
     private val asked = mutableListOf<String>()
-    private fun savedAt(seconds: Double?): suspend (String, String) -> MediaProgressResponse? = { _, episodeId ->
+    private fun savedAt(seconds: Double?): suspend (String, String) -> SavedProgress = { _, episodeId ->
         asked += episodeId
-        seconds?.let { Gson().fromJson("""{"currentTime":$it,"duration":1800.0,"progress":0.1,"isFinished":false}""", MediaProgressResponse::class.java) }
+        seconds?.let { SavedProgress.Found(Gson().fromJson("""{"currentTime":$it,"duration":1800.0,"progress":0.1,"isFinished":false}""", MediaProgressResponse::class.java)) }
+            ?: SavedProgress.NeverStarted
     }
     private val resolve: (String) -> String? = { "https://abs.test$it" }
 
@@ -55,5 +56,11 @@ class UpNextTest {
 
     @Test fun `an episode the podcast no longer has, nothing`() = runBlocking {
         assertNull(UpNext.after(shows, "gone", savedAt(600.0), resolve))
+    }
+
+    // Review: no one watches the service; starting from 0:00 would write over
+    // the saved position with the first report.
+    @Test fun `a saved position that could not be read queues nothing`() = runBlocking {
+        assertNull(UpNext.after(shows, "e2", { _, _ -> SavedProgress.Unreadable }, resolve))
     }
 }
