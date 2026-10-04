@@ -15,6 +15,7 @@
     <string name="check_for_updates">Check for Updates</string>
     <string name="close">Close</string>
     <string name="collection_no_books">No books found in this collection</string>
+    <string name="empty_collection">Empty collection</string>
     <string name="collections">Collections</string>
     <string name="recent_episodes_load_failed">Could not load recent episodes. Check the connection to your server.</string>
     <string name="item_load_failed">Could not load this item. Check the connection to your server.</string>

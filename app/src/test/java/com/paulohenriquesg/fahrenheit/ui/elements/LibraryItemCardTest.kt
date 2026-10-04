@@ -3,6 +3,9 @@ package com.paulohenriquesg.fahrenheit.ui.elements
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -96,4 +99,15 @@ class LibraryItemCardTest {
             "numTracks":0,"numAudioFiles":0,"numChapters":0,"duration":20120.0,"size":0}}""",
         LibraryItem::class.java
     )
+
+    // #149: a book without a cover is drawn as the web client draws it, its
+    // author near the bottom of the placeholder.
+    @Test
+    fun `a book's placeholder cover carries its author`() {
+        compose.setContent { FahrenheitTheme { LibraryItemCard(book) {} } }
+        compose.waitForIdle()
+
+        compose.onNode(hasTestTag(CoverTags.PLACEHOLDER), useUnmergedTree = true)
+            .assert(SemanticsMatcher.expectValue(CoverPlaceholderLines, listOf("An Invented Book", "An Invented Author")))
+    }
 }
