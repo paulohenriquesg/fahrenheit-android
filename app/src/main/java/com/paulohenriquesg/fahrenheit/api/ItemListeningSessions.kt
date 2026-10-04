@@ -10,11 +10,17 @@ import com.paulohenriquesg.fahrenheit.player.LatestSession
 data class ItemListeningSessions(
     @SerializedName("sessions") val sessions: List<ItemSession>? = null
 ) {
-    /** The most recently updated session, when it says which device wrote it, and when. */
+    /**
+     * The most recently updated session, when it says which device wrote it,
+     * and when; with the device's name for the question (#158), or its
+     * client's when it sends none (a browser).
+     */
     fun latest(): LatestSession? {
         val newest = sessions.orEmpty().maxByOrNull { it.updatedAt ?: 0L } ?: return null
-        val device = newest.deviceInfo?.deviceId ?: return null
-        return LatestSession(device, newest.updatedAt ?: return null)
+        val info = newest.deviceInfo ?: return null
+        val device = info.deviceId ?: return null
+        val name = listOf(info.deviceName, info.clientName).firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotEmpty) }
+        return LatestSession(device, newest.updatedAt ?: return null, name)
     }
 }
 
@@ -23,4 +29,8 @@ data class ItemSession(
     @SerializedName("deviceInfo") val deviceInfo: ItemSessionDevice? = null
 )
 
-data class ItemSessionDevice(@SerializedName("deviceId") val deviceId: String? = null)
+data class ItemSessionDevice(
+    @SerializedName("deviceId") val deviceId: String? = null,
+    @SerializedName("deviceName") val deviceName: String? = null,
+    @SerializedName("clientName") val clientName: String? = null
+)

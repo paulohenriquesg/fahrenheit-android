@@ -43,4 +43,35 @@ class ItemListeningSessionsTest {
     fun `a session that says no time is no latest session`() {
         assertNull(parse("""{"sessions": [{"id": "s1", "deviceInfo": {"deviceId": "tv-1"}}]}""").latest())
     }
+
+    // #158: the question says where it was heard: "on your iPhone".
+    @Test
+    fun `the latest session names its device`() {
+        val reply = parse(
+            """
+            {"sessions": [
+              {"id": "s1", "updatedAt": 3000, "deviceInfo": {"deviceId": "phone-1", "deviceName": "iPhone", "clientName": "Abs iOS"}}
+            ]}
+            """
+        )
+
+        assertEquals("iPhone", reply.latest()!!.deviceName)
+    }
+
+    // A browser sends no device name; its client is the closest thing to one.
+    @Test
+    fun `without a device name, the client names it`() {
+        val reply = parse(
+            """{"sessions": [{"updatedAt": 3000, "deviceInfo": {"deviceId": "web-1", "deviceName": " ", "clientName": "Abs Web"}}]}"""
+        )
+
+        assertEquals("Abs Web", reply.latest()!!.deviceName)
+    }
+
+    @Test
+    fun `a device with no name has none`() {
+        val reply = parse("""{"sessions": [{"updatedAt": 3000, "deviceInfo": {"deviceId": "web-1"}}]}""")
+
+        assertNull(reply.latest()!!.deviceName)
+    }
 }

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resume Question</title>
+<style>
+  :root { --surface:#1E1E1E; --on:#E6E1E5; --muted:#CAC4D0; --primary:#D0BCFF; --on-primary:#381E72; --variant:#2B2930; }
+  body { margin:0; background:#050506; color:var(--on); font-family:Roboto, system-ui, sans-serif; padding:32px 16px; }
+  .page { max-width:1240px; margin:0 auto; }
+  h1 { font-size:28px; margin:0 0 8px; } h2 { font-size:22px; margin:40px 0 8px; }
+  p.why { color:var(--muted); font-size:15px; line-height:1.55; max-width:920px; margin:0 0 14px; }
+  .shell { width:100%; aspect-ratio:16/9; container-type:inline-size; border-radius:12px; overflow:hidden; box-shadow:0 0 0 1px #333; }
+  .tv { position:relative; width:1920px; height:1080px; transform-origin:0 0; transform:scale(calc(100cqw / 1920px)); overflow:hidden; background:#121212; }
+  .wash { position:absolute; inset:0; background: radial-gradient(circle at 18% 30%, var(--w,#24406B) 0, transparent 60%), linear-gradient(var(--w2,#1B2A44), #121212 75%); }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.6); }
+  .bgplayer { position:absolute; left:140px; top:150px; display:flex; gap:56px; align-items:center; opacity:.35; }
+  .cv { border-radius:16px; display:grid; place-items:center; color:#fff; font-weight:900; text-align:center; line-height:1.1; }
+  .card { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:1180px; background:rgba(30,30,30,.92); border-radius:28px; padding:56px 64px; box-shadow:0 30px 90px rgba(0,0,0,.6); }
+  .head { display:flex; gap:32px; align-items:center; margin-bottom:40px; }
+  .head .cv { width:120px; height:120px; font-size:20px; flex:none; }
+  .head .q { font-size:40px; font-weight:700; line-height:1.25; }
+  .head .sub { font-size:26px; color:var(--muted); margin-top:8px; }
+  .line { position:relative; height:10px; background:#3a3640; border-radius:5px; margin:70px 8px 64px; }
+  .line .fill { position:absolute; left:0; top:0; bottom:0; border-radius:5px; background:#6b6475; }
+  .mark { position:absolute; top:-12px; width:34px; height:34px; border-radius:50%; transform:translateX(-50%); border:4px solid #121212; }
+  .mark.here { background:#938F99; } .mark.there { background:var(--primary); }
+  .tag { position:absolute; transform:translateX(-50%); white-space:nowrap; font-size:22px; }
+  .tag.up { bottom:30px; color:var(--primary); font-weight:700; } .tag.down { top:34px; color:var(--muted); }
+  .btns { display:flex; gap:24px; }
+  .btn { flex:1; border-radius:22px; padding:26px 32px; font-size:28px; font-weight:700; border:3px solid #938F99; color:var(--on); }
+  .btn small { display:block; font-size:22px; font-weight:400; margin-top:6px; color:var(--muted); }
+  .btn.pri { background:var(--primary); color:var(--on-primary); border-color:transparent; outline:5px solid #fff; outline-offset:4px; }
+  .btn.pri small { color:#4A3780; }
+  .note { font-size:14px; color:var(--muted); margin-top:8px; }
+</style></head>
+<body><div class="page">
+<h1>"Continue from where?": a roomier question</h1>
+<p class="why">Today's question is a plain dark box with one sentence. This version keeps the same rule (asked only when the server holds a newer position, more than 30 s away, that this TV did not write) and the same two answers, with focus on the newer position and Back meaning "stay". What changes: it names the device that played, shows both places on a small timeline, uses chapter names for books, and sits over the player in the player's own style.</p>
+
+<h2>1. A book, listened to on a phone</h2>
+<p class="why">The latest listening session names the device ("iPhone", "Audiobookshelf Web"…), so the question can say where. The timeline shows the gap at a glance; the buttons carry the chapter as well as the time.</p>
+<div class="shell"><div class="tv" style="--w:#24406B; --w2:#1B2A44">
+  <div class="wash"></div>
+  <div class="bgplayer"><div class="cv" style="width:420px;height:420px;font-size:40px;background:linear-gradient(150deg,#3E6FB0,#14233D)">THE LONG<br>WAY HOME</div><div style="font-size:60px;font-weight:700">The Long Way Home</div></div>
+  <div class="dim"></div>
+  <div class="card">
+    <div class="head">
+      <div class="cv" style="background:linear-gradient(150deg,#3E6FB0,#14233D)">THE LONG<br>WAY HOME</div>
+      <div><div class="q">You listened further on your iPhone</div><div class="sub">10 minutes ago · 1 h 20 min there, 1 h 05 min here</div></div>
+    </div>
+    <div class="line"><div class="fill" style="width:62%"></div>
+      <div class="mark here" style="left:51%"></div><div class="tag down" style="left:51%">here · Chapter 8</div>
+      <div class="mark there" style="left:62%"></div><div class="tag up" style="left:62%">iPhone · Chapter 12</div>
+    </div>
+    <div class="btns">
+      <div class="btn pri">Continue from Chapter 12<small>1 h 20 min · where the iPhone left off</small></div>
+      <div class="btn">Stay at Chapter 8<small>1 h 05 min · where this TV left off</small></div>
+    </div>
+  </div>
+</div></div>
+
+<h2>2. An episode, changed elsewhere with no session</h2>
+<p class="why">When the newer position came without a listening session (an edit in the web app, or an app that only saves progress), there is no device to name, so it says "elsewhere". Episodes have no chapters, so the buttons carry times.</p>
+<div class="shell"><div class="tv" style="--w:#7A1530; --w2:#4A0E20">
+  <div class="wash"></div>
+  <div class="bgplayer"><div class="cv" style="width:420px;height:420px;font-size:56px;background:linear-gradient(150deg,#E8174A,#7A0A26)">SHOW</div><div style="font-size:60px;font-weight:700">Episode 120 · The River</div></div>
+  <div class="dim"></div>
+  <div class="card">
+    <div class="head">
+      <div class="cv" style="background:linear-gradient(150deg,#E8174A,#7A0A26);font-size:30px">SHOW</div>
+      <div><div class="q">This episode moved on elsewhere</div><div class="sub">Just now · 25 min there, 15 min here</div></div>
+    </div>
+    <div class="line"><div class="fill" style="width:77%"></div>
+      <div class="mark here" style="left:47%"></div><div class="tag down" style="left:47%">here · 15 min</div>
+      <div class="mark there" style="left:77%"></div><div class="tag up" style="left:77%">elsewhere · 25 min</div>
+    </div>
+    <div class="btns">
+      <div class="btn pri">Continue from 25 min<small>the newer position</small></div>
+      <div class="btn">Stay at 15 min<small>where this TV left off</small></div>
+    </div>
+  </div>
+</div></div>
+<p class="note">Invented titles. The focused button has the white ring; Back answers "Stay"; nothing plays until a choice is made.</p>
+</div></body></html>

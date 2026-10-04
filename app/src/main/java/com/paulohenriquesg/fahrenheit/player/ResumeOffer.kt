@@ -4,13 +4,17 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import kotlin.math.abs
 
 /**
+ * An item's latest listening session: who wrote it, and when (server clock,
+ * ms); [deviceName] is what the question calls that device (#158).
+ */
+data class LatestSession(val deviceId: String, val updatedAt: Long, val deviceName: String? = null)
+
+/**
  * A question worth asking (#90): this player is at [here], and the server
  * holds [there], heard elsewhere at [listenedAt] (the server's clock, ms).
+ * [device] names where, when a session says so; null is "elsewhere" (#158).
  */
-/** An item's latest listening session: who wrote it, and when (server clock, ms). */
-data class LatestSession(val deviceId: String, val updatedAt: Long)
-
-data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long) {
+data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long, val device: String? = null) {
     companion object {
         /** Decided on #90: a flat 30 seconds, whatever the length of the book. */
         private const val THRESHOLD_SECONDS = 30.0
@@ -52,7 +56,13 @@ data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long
             if (!writtenSince(known, there, listenedAt)) return null
             if (abs(there - here) <= THRESHOLD_SECONDS) return null
             if (writtenHere(latestSession, thisDevice, listenedAt)) return null
-            return ResumeOffer(here, there, listenedAt)
+            // Named only when that session moved it: one older than the copy
+            // did not, whoever's it is. Within the sync slack, an edit just
+            // after another device's sync is credited to that device.
+            val device = latestSession
+                ?.takeIf { it.deviceId != thisDevice && wroteCopy(it, listenedAt) }
+                ?.deviceName
+            return ResumeOffer(here, there, listenedAt, device)
         }
 
         /**
@@ -62,7 +72,11 @@ data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long
          * TV's older session the latest, and is someone else's (#144).
          */
         private fun writtenHere(latest: LatestSession?, thisDevice: String, listenedAt: Long): Boolean =
-            latest != null && latest.deviceId == thisDevice && latest.updatedAt >= listenedAt - SESSION_SLACK_MS
+            latest != null && latest.deviceId == thisDevice && wroteCopy(latest, listenedAt)
+
+        /** Whether [session] is as recent as the copy, so wrote it. */
+        private fun wroteCopy(session: LatestSession, listenedAt: Long): Boolean =
+            session.updatedAt >= listenedAt - SESSION_SLACK_MS
 
         /**
          * Whether the server's copy was written after what this player knows

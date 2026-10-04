@@ -346,6 +346,13 @@ class PlayerActivity : ComponentActivity() {
                         prompt?.offer?.let { asked ->
                             ResumeChoice(
                                 asked,
+                                item = ResumeItem(
+                                    itemId = playing.itemId,
+                                    title = playing.title,
+                                    length = playing.trackTotal ?: 0.0,
+                                    chapters = spans,
+                                    episode = playing.episodeId != null
+                                ),
                                 now = System.currentTimeMillis(),
                                 onContinue = { prompt.answer(moveThere = true) },
                                 onStay = { prompt.answer(moveThere = false) }
