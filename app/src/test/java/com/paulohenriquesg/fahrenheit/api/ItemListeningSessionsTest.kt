@@ -37,4 +37,10 @@ class ItemListeningSessionsTest {
     fun `a session that names no device names none`() {
         assertNull(parse("""{"sessions": [{"id": "s1", "updatedAt": 1000}]}""").latest())
     }
+
+    // Without a time it cannot excuse anything: the check then asks.
+    @Test
+    fun `a session that says no time is no latest session`() {
+        assertNull(parse("""{"sessions": [{"id": "s1", "deviceInfo": {"deviceId": "tv-1"}}]}""").latest())
+    }
 }

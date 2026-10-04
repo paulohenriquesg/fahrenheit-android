@@ -7,15 +7,21 @@ package com.paulohenriquesg.fahrenheit.player
  */
 class AppVisibility {
     private var started = 0
+    private var players = 0
 
     val visible: Boolean get() = started > 0
 
-    fun started() {
+    /** The player screen is up: it asks for itself (#142). */
+    val playerVisible: Boolean get() = players > 0
+
+    fun started(player: Boolean = false) {
         started++
+        if (player) players++
     }
 
-    fun stopped() {
+    fun stopped(player: Boolean = false) {
         started = (started - 1).coerceAtLeast(0)
+        if (player) players = (players - 1).coerceAtLeast(0)
     }
 
     companion object {

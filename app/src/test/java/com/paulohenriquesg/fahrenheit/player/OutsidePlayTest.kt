@@ -48,7 +48,23 @@ class OutsidePlayTest {
     fun `when the screen cannot be opened, it plays as before`() {
         outside({ offer }, canOpen = false).request()
 
+        assertEquals(1, opened)
         assertEquals(1, plays)
+    }
+
+    // Review (#144): two quick presses during the check opened the screen twice.
+    @Test
+    fun `one check at a time`() {
+        val answer = kotlinx.coroutines.CompletableDeferred<ResumeOffer?>()
+        var checks = 0
+        val o = outside({ checks++; answer.await() })
+
+        o.request()
+        o.request()
+        answer.complete(offer)
+
+        assertEquals(1, checks)
+        assertEquals(1, opened)
     }
 
     @Test

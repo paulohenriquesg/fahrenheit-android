@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.os.Bundle
 import com.paulohenriquesg.fahrenheit.player.AppVisibility
+import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemeManager
@@ -18,8 +19,8 @@ class FahrenheitApplication : Application() {
         LayoutManager.initialize(this)
         // Whether a screen shows: the playback service opens the player only then (#144).
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
-            override fun onActivityStarted(activity: Activity) = AppVisibility.process.started()
-            override fun onActivityStopped(activity: Activity) = AppVisibility.process.stopped()
+            override fun onActivityStarted(activity: Activity) = AppVisibility.process.started(player = activity is PlayerActivity)
+            override fun onActivityStopped(activity: Activity) = AppVisibility.process.stopped(player = activity is PlayerActivity)
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
             override fun onActivityResumed(activity: Activity) {}
             override fun onActivityPaused(activity: Activity) {}

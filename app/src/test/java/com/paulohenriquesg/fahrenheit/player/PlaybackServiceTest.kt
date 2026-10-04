@@ -167,23 +167,49 @@ class PlaybackServiceTest {
             "com.example.launcher", 0, 0, 0, 0, true, Bundle.EMPTY, true
         )
         var held = 0
-        val callback = PlaybackSessionCallback(onSleep = {}, ownPackage = context.packageName, outsidePlay = { held++; true })
+        val callback = PlaybackSessionCallback(outsidePlay = { held++; true }, onSleep = {})
 
         val result = callback.onPlayerCommandRequest(session, system, Player.COMMAND_PLAY_PAUSE)
 
         assertEquals(1, held)
-        assertTrue(result != SessionResult.RESULT_SUCCESS)
+        assertEquals(SessionResult.RESULT_INFO_SKIPPED, result)
         session.release()
+    }
+
+    // Review (#144): the remote's Play key, and the system's controls, reach the
+    // session through Media3's notification controller, which carries this
+    // app's own package. Only the app's screens say who they are.
+    @Test
+    fun `the remote's key, through the notification controller, is held too`() {
+        val session = service.get().sessionPlayer!!.let { MediaSession.Builder(context, it).setId("pin-notification").build() }
+        val notification = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            context.packageName, 0, 0, 0, 0, true,
+            Bundle().apply { putBoolean("androidx.media3.session.MediaNotificationManager", true) }, true
+        )
+        var held = 0
+        val callback = PlaybackSessionCallback(outsidePlay = { held++; true }, onSleep = {})
+
+        val result = callback.onPlayerCommandRequest(session, notification, Player.COMMAND_PLAY_PAUSE)
+
+        assertEquals(1, held)
+        assertEquals(SessionResult.RESULT_INFO_SKIPPED, result)
+        session.release()
+    }
+
+    @Test
+    fun `the app's controller says it is one of the app's screens`() {
+        assertTrue(Playback.connectionHints().getBoolean(Playback.APP_SCREEN_HINT))
     }
 
     @Test
     fun `the app's own play passes`() {
         val session = service.get().sessionPlayer!!.let { MediaSession.Builder(context, it).setId("pin-own-play").build() }
+        // The player screen's controller, as Playback.connect builds it.
         val own = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
-            context.packageName, 0, 0, 0, 0, true, Bundle.EMPTY, true
+            context.packageName, 0, 0, 0, 0, true, Playback.connectionHints(), true
         )
         var held = 0
-        val callback = PlaybackSessionCallback(onSleep = {}, ownPackage = context.packageName, outsidePlay = { held++; true })
+        val callback = PlaybackSessionCallback(outsidePlay = { held++; true }, onSleep = {})
 
         val result = callback.onPlayerCommandRequest(session, own, Player.COMMAND_PLAY_PAUSE)
 
@@ -201,7 +227,7 @@ class PlaybackServiceTest {
             "com.example.launcher", 0, 0, 0, 0, true, Bundle.EMPTY, true
         )
         var held = 0
-        val callback = PlaybackSessionCallback(onSleep = {}, ownPackage = context.packageName, outsidePlay = { held++; true })
+        val callback = PlaybackSessionCallback(outsidePlay = { held++; true }, onSleep = {})
 
         val result = callback.onPlayerCommandRequest(session, system, Player.COMMAND_PLAY_PAUSE)
 

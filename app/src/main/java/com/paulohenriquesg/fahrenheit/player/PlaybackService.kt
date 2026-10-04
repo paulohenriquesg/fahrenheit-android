@@ -105,38 +105,53 @@ class PlaybackService : MediaSessionService() {
                 PlaybackSessionCallback(
                     onFinish = { args -> markFinished(marker, args) },
                     onSleep = ::setSleep,
-                    ownPackage = packageName,
-                    outsidePlay = { checkOutsidePlay(exo) }
+                    outsidePlay = { holdOutsidePlay(exo) }
                 )
             )
             .build()
     }
 
-    /**
-     * Holds a Play from outside the app and checks it as the player screen
-     * would (#144); false when nothing of ours is queued, so it plays as it is.
-     */
-    private fun checkOutsidePlay(player: Player): Boolean {
-        val file = QueuedFile.of(player.currentMediaItem) ?: return false
-        val check = ResumeCheck(
+    /** One at a time: presses during a check are the same press (#144). */
+    private val outsidePlay by lazy {
+        OutsidePlay(
+            scope = scope,
+            check = {
+                val player = session?.player
+                val file = QueuedFile.of(player?.currentMediaItem)
+                if (player == null || file == null) null
+                else outsideCheck.offer(file.itemId, file.episodeId, file.bookTime(player.currentPosition / 1000.0), playing = false)
+            },
+            play = { session?.player?.play() },
+            openPlayer = openPlayer@{
+                val file = QueuedFile.of(session?.player?.currentMediaItem) ?: return@openPlayer false
+                if (!AppVisibility.process.visible) return@openPlayer false
+                // It asks as it comes back to the item, and plays after the answer.
+                startActivity(
+                    PlayerActivity.createIntent(this, file.itemId, file.episodeId, askThenPlay = true)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+                true
+            }
+        )
+    }
+
+    private val outsideCheck by lazy {
+        ResumeCheck(
             progress = ResumeSources::progress,
             latestSession = ResumeSources::latestSession,
             thisDevice = PlaybackDevice.info(this).deviceId.orEmpty()
         )
-        OutsidePlay(
-            scope = scope,
-            check = { check.offer(file.itemId, file.episodeId, file.bookTime(player.currentPosition / 1000.0), playing = false) },
-            play = { player.play() },
-            openPlayer = {
-                AppVisibility.process.visible.also { visible ->
-                    if (visible) {
-                        startActivity(
-                            PlayerActivity.createIntent(this, file.itemId, file.episodeId).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        )
-                    }
-                }
-            }
-        ).request()
+    }
+
+    /**
+     * Holds a Play from outside the app's screens for the check (#144); false
+     * lets it play as it is: nothing of ours queued, or the player screen
+     * showing, which asks for itself rather than open over itself.
+     */
+    private fun holdOutsidePlay(player: Player): Boolean {
+        QueuedFile.of(player.currentMediaItem) ?: return false
+        if (AppVisibility.process.playerVisible) return false
+        outsidePlay.request()
         return true
     }
 
@@ -197,7 +212,6 @@ internal class PlaybackSessionCallback(
     private val onFinish: (Bundle) -> ListenableFuture<SessionResult> = {
         Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
     },
-    private val ownPackage: String? = null,
     private val outsidePlay: () -> Boolean = { false },
     // Last, so `PlaybackSessionCallback { ... }` still names the sleep timer.
     private val onSleep: (Bundle) -> Unit
@@ -224,11 +238,16 @@ internal class PlaybackSessionCallback(
         return Futures.immediateFuture(accepted.build())
     }
 
-    // Play from anything but this app - the remote on Home, the system - is
-    // held and checked first (#144); the player screen checks its own (#142).
+    // Play from anything but the app's screens - the remote's keys and the
+    // system's controls, which arrive through the notification controller
+    // under this app's own package, launcher cards - is held and checked
+    // first (#144); the player screen checks its own (#142). Deprecated in
+    // 1.11 but still called; its successor needs a forwarding player.
+    @Suppress("DEPRECATION")
     override fun onPlayerCommandRequest(session: MediaSession, controller: MediaSession.ControllerInfo, playerCommand: Int): Int {
         val play = playerCommand == Player.COMMAND_PLAY_PAUSE && !session.player.playWhenReady
-        if (play && controller.packageName != ownPackage && outsidePlay()) return SessionResult.RESULT_INFO_SKIPPED
+        val appScreen = controller.connectionHints.getBoolean(Playback.APP_SCREEN_HINT)
+        if (play && !appScreen && outsidePlay()) return SessionResult.RESULT_INFO_SKIPPED
         return super.onPlayerCommandRequest(session, controller, playerCommand)
     }
 

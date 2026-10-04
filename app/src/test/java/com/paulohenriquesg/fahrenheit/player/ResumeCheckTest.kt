@@ -85,7 +85,7 @@ class ResumeCheckTest {
         server = MediaProgressResponse(currentTime = 3900.0, lastUpdate = 9_000L)
         val racing = ResumeCheck(
             progress = { _, _ -> knowledge.wrote("b1", null, position = 4500.0); server },
-            latestDevice = { _, _ -> null },
+            latestSession = { _, _ -> null },
             thisDevice = "tv-1",
             knowledge = knowledge
         )

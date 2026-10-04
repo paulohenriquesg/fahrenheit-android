@@ -187,4 +187,25 @@ class ResumePromptTest {
         assertTrue(p.onKey(down = false))
         assertEquals(0, plays)
     }
+
+    // Review (#144): opened by a Play from outside, the screen asks and then
+    // plays: the press is not lost.
+    @Test
+    fun `asked on coming back for a Play, the answer plays`() {
+        val p = prompt()
+
+        p.onReattach(playAfter = true)
+        p.answer(moveThere = false)
+
+        assertEquals(1, plays)
+    }
+
+    @Test
+    fun `opened for a Play with nothing left to ask, it plays`() {
+        result = { null }
+
+        prompt().onReattach(playAfter = true)
+
+        assertEquals(1, plays)
+    }
 }

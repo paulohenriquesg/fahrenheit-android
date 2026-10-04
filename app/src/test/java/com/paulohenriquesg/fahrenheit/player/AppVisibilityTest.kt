@@ -20,4 +20,20 @@ class AppVisibilityTest {
         visibility.stopped()
         assertFalse(visibility.visible)
     }
+
+    // Review (#144): with the player screen up, a Play it let through must not
+    // open a second one on top.
+    @Test
+    fun `the player screen is counted apart`() {
+        val visibility = AppVisibility()
+
+        visibility.started(player = false)
+        assertFalse(visibility.playerVisible)
+        visibility.started(player = true)
+        assertTrue(visibility.playerVisible)
+        visibility.stopped(player = true)
+
+        assertFalse(visibility.playerVisible)
+        assertTrue(visibility.visible)
+    }
 }

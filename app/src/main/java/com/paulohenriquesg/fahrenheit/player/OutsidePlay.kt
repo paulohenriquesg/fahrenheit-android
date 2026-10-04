@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -22,8 +23,12 @@ class OutsidePlay(
     private val openPlayer: () -> Boolean,
     private val timeoutMs: Long = 1_500
 ) {
+    private var checking: Job? = null
+
+    /** Presses while a check is out are the same press. */
     fun request() {
-        scope.launch {
+        if (checking?.isActive == true) return
+        checking = scope.launch {
             val asked = withTimeoutOrNull(timeoutMs) { check() }
             // Asked where it can be; otherwise Play does what it always did.
             if (asked == null || !openPlayer()) play()

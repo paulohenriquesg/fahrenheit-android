@@ -38,10 +38,15 @@ class ResumePrompt(
     /** Whether the remote's last Play down was taken here, so its up is too. */
     private var tookDown = false
 
-    /** The screen came back to this item, queued already. */
-    fun onReattach() {
+    /**
+     * The screen came back to this item, queued already.
+     *
+     * @param playAfter opened by a Play from outside the player (#144): the
+     *   press is kept, and plays once answered, or at once with nothing to ask.
+     */
+    fun onReattach(playAfter: Boolean = false) {
         if (playWhenReady() || offer != null) return
-        ask(playAfter = false)
+        ask(playAfter)
     }
 
     /** Play from a pause. */

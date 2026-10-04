@@ -50,4 +50,11 @@ class PlayerIntentTest {
         assertEquals(3900.0, PlayerActivity.startAtOf(PlayerActivity.createIntent(context, "b1", autoPlay = true, startAt = 3900.0))!!, 0.0)
         assertNull(PlayerActivity.startAtOf(PlayerActivity.createIntent(context, "b1")))
     }
+
+    // #144: opened by a Play from outside, to ask and then play.
+    @Test
+    fun `a Play from outside travels with the intent`() {
+        assertTrue(PlayerActivity.asksThenPlays(PlayerActivity.createIntent(context, "b1", askThenPlay = true)))
+        assertFalse(PlayerActivity.asksThenPlays(PlayerActivity.createIntent(context, "b1")))
+    }
 }
