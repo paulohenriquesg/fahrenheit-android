@@ -53,7 +53,7 @@ All lengths use `PlaybackPosition.spoken` (#93).
 - **Up** from the transport reaches the **chapter bar**. Left and Right there seek in 10 s steps; holding a key speeds up. **Down** returns to the transport.
 - **Right from the last transport button** moves into the actions on the same line.
 - **Back** closes an open panel first. Otherwise it leaves the player and **keeps playing** (#155, reversing #96): the screen it was opened from shows, and Home's rail carries Now playing. "Go to podcast" keeps playing too.
-  - *Known limits of #155, for follow-ups:* the book and podcast screens have no rail, so landing there shows nothing playing and offers no Stop (Back again reaches Home). With "Play next episode" on, only the player screen queues the episode after next, so after Back playback stops at the end of the episode already queued behind the current one.
+  - *Known limits of #155, since followed up:* the book and podcast screens had no rail, so nothing there showed what plays or stopped it (#159: a Now playing bar with Stop). With "Play next episode" on, only the player screen queued the episode after next (#160: the playback service queues it after each move).
 
 ### Chapter skip
 
@@ -90,7 +90,7 @@ For an episode, About is the show notes and the publish date. It has no series a
 
 A setting, **"Play the next episode automatically"**, off by default.
 
-**When on,** the next newer episode is queued after the current one in the player. Media3 then moves on without a gap, and its progress and listening session belong to it. The existing per-item reporting already sends each report to the item it measured.
+**When on,** the next newer episode is queued after the current one in the player. Media3 then moves on without a gap, and its progress and listening session belong to it. The existing per-item reporting already sends each report to the item it measured. The player screen queues the first one; after that the **playback service** queues the next after each move, with or without a screen (#160). Changing the setting acts at once: off drops the queued next, on queues it. When where the next was left cannot be read, nothing is queued rather than starting it from 0:00.
 
 **When off,** an episode that ends stops there.
 

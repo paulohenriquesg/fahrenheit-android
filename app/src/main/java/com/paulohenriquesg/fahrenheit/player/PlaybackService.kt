@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.player
 
 import androidx.annotation.OptIn
 import android.os.Bundle
+import android.util.Log
 import android.os.SystemClock
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -21,6 +22,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,6 +45,7 @@ class PlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
     private var sleep: SleepWatch? = null
     private var sleeping: Job? = null
+    private var stopWatchingSettings: () -> Unit = {}
 
     /** The player the session drives; for tests. */
     internal val sessionPlayer: Player? get() = session?.player
@@ -78,6 +81,17 @@ class PlaybackService : MediaSessionService() {
         exo.addListener(watch)
         // The next episode starts where it was left, with or without a screen (#108).
         exo.addListener(ResumeOnArrival(exo))
+        val settings = PlayerSettings(this)
+        // And the one after it is queued, with or without a screen (#160).
+        val nextEpisode = NextEpisodeQueue(exo, scope, enabled = { settings.playNextEpisode }) { file ->
+            val episodeId = file.episodeId ?: return@NextEpisodeQueue null
+            val item = ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(file.itemId).getOrNull() }
+            // Said in the log: with no screen, playback simply stops after this episode.
+            if (item == null) Log.w(TAG, "Couldn't read ${file.itemId} for the next episode")
+            item?.let { UpNext.after(it, episodeId, ResumeSources::saved, ApiClient::generateFullUrl) }
+        }
+        exo.addListener(nextEpisode)
+        stopWatchingSettings = settings.onPlayNextEpisodeChanged(nextEpisode::settingChanged)
         sleep = watch
         exo.addListener(object : Player.Listener {
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -85,7 +99,6 @@ class PlaybackService : MediaSessionService() {
                 if (timeline.isEmpty) stopSelf()
             }
         })
-        val settings = PlayerSettings(this)
         val skipping = SkipLengths(exo, { settings.skipBackSeconds }, { settings.skipForwardSeconds })
         val guarded = LeavingGuard(skipping) {
             reporting.beforeLeaving()
@@ -180,9 +193,14 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
+    private companion object {
+        const val TAG = "PlaybackService"
+    }
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
     override fun onDestroy() {
+        stopWatchingSettings()
         session?.run {
             player.release()
             release()

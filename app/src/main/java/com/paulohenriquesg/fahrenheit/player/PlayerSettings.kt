@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.core.content.edit
 
 /**
@@ -25,6 +26,19 @@ class PlayerSettings(context: Context) {
     var skipForwardSeconds: Int
         get() = lengthOf(SKIP_FORWARD)
         set(value) = prefs.edit { putInt(SKIP_FORWARD, value) }
+
+    /**
+     * Calls [listener] when "Play the next episode automatically" changes, until
+     * the returned function is called. The preferences hold their listeners
+     * weakly: this one is held by the returned function.
+     */
+    fun onPlayNextEpisodeChanged(listener: () -> Unit): () -> Unit {
+        val watch = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == PLAY_NEXT_EPISODE) listener()
+        }
+        prefs.registerOnSharedPreferenceChangeListener(watch)
+        return { prefs.unregisterOnSharedPreferenceChangeListener(watch) }
+    }
 
     /** A length not on offer - stored by an older build, say - reads as the default. */
     private fun lengthOf(key: String): Int =
