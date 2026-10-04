@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.screensaver
 
 import android.app.Activity
 import android.content.Context
+import android.content.res.Resources
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -38,6 +39,8 @@ import com.paulohenriquesg.fahrenheit.utils.listeningLength
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import java.util.Locale
+import kotlin.math.ceil
 
 /**
  * Puts the listening screensaver (#156) on a screen of the app: called as
@@ -113,7 +116,10 @@ private class PlaybackListening(private val context: Context) : ListeningSource 
     @Composable
     override fun line(): NowPlayingLine? {
         val entry = rememberRailEntry(controller, ::chaptersOf) ?: return null
-        return NowPlayingLine(entry.itemId, entry.title, detail(entry))
+        val detail = nowPlayingDetail(
+            context.resources, entry.chapter, entry.chapterNumber, entry.episodeId != null, entry.leftSeconds
+        )
+        return NowPlayingLine(entry.itemId, entry.title, detail)
     }
 
     override suspend fun art(itemId: String): WallArt =
@@ -126,16 +132,6 @@ private fun queuedOf(player: Player): Queued? =
 
 private suspend fun chaptersOf(itemId: String) =
     ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.media?.chapters
-
-/** "Chapter 12 · 18 min left in chapter"; "1 h 5 min left" without chapters; nothing for an episode. */
-@Composable
-private fun detail(entry: RailEntry): String? {
-    if (entry.episodeId != null) return null
-    val left = listeningLength(entry.leftSeconds)
-    val chapter = entry.chapter ?: entry.chapterNumber?.let { stringResource(R.string.chapter_number, it) }
-    return chapter?.let { stringResource(R.string.screensaver_chapter_left, it, left) }
-        ?: stringResource(R.string.time_left, left)
-}
 
 /**
  * The wall's covers: those of the series being played, then the covers of
@@ -171,3 +167,33 @@ private suspend fun coverAt(context: Context, url: String): ImageBitmap? {
 
 private const val WALL_COVERS = 40
 private const val WALL_COVER_PX = 240
+
+/**
+ * "Chapter 12 · 18 min left in chapter" for a book, "25 min left" for an
+ * episode or a book without chapters (#172). Whole minutes, rounded up and
+ * never under one, so it does not say "0 min" while something plays.
+ */
+internal fun nowPlayingDetail(
+    resources: Resources,
+    chapter: String?,
+    chapterNumber: Int?,
+    episode: Boolean,
+    leftSeconds: Double
+): String {
+    val left = resources.getString(R.string.time_left, wholeMinutes(leftSeconds))
+    if (episode) return left
+    val name = chapter ?: chapterNumber?.let { resources.getString(R.string.chapter_number, it) } ?: return left
+    return resources.getString(R.string.screensaver_chapter_left, name, wholeMinutes(leftSeconds))
+}
+
+/** "18 min", "1 h 5 min", "2 h": as listeningLength writes it, in whole minutes. */
+private fun wholeMinutes(seconds: Double): String {
+    val minutes = ceil(seconds / 60).toLong().coerceAtLeast(1)
+    val h = minutes / 60
+    val m = minutes % 60
+    return when {
+        h == 0L -> String.format(Locale.ROOT, "%d min", m)
+        m == 0L -> String.format(Locale.ROOT, "%d h", h)
+        else -> String.format(Locale.ROOT, "%d h %d min", h, m)
+    }
+}

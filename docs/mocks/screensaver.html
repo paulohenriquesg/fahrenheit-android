@@ -20,13 +20,15 @@
   .wall { position:absolute; left:-200px; top:-200px; width:2600px; display:grid; grid-template-columns:repeat(13, 180px); gap:22px; transform:rotate(-8deg); animation: drift 60s linear infinite alternate; opacity:.38; }
   .wall div { height:180px; border-radius:12px; }
   @keyframes drift { from { transform:rotate(-8deg) translate(0,0); } to { transform:rotate(-8deg) translate(-260px,-180px); } }
-  .tint { position:absolute; inset:0; background: radial-gradient(circle at 30% 40%, rgba(36,64,107,.55), transparent 65%), linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.7)); }
+  .tint { position:absolute; inset:0; background: rgba(0,0,0,.45); } /* an even dim, no colour (#172) */
 
   /* style 2: bouncing cover */
   .bounce-x { position:absolute; animation: bx 11s linear infinite alternate; }
   .bounce-y { animation: by 7s linear infinite alternate; }
-  .bounce-y .cover { width:320px; height:320px; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
-  .bounce-y .cap { text-align:center; margin-top:16px; font-size:24px; color:var(--muted); opacity:.7; }
+  .bounce-y { position:relative; }
+  .bounce-y .glow { position:absolute; left:-200px; top:-200px; width:720px; height:720px; background: radial-gradient(circle, rgba(36,64,107,.45), transparent 70%); } /* the cover's colour, behind it */
+  .bounce-y .cover { position:relative; width:320px; height:320px; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+  .bounce-y .cap { position:relative; text-align:center; margin-top:16px; font-size:24px; color:var(--muted); opacity:.7; }
   @keyframes bx { from { left:0 } to { left:1600px } }
   @keyframes by { from { margin-top:0 } to { margin-top:690px } }
 
@@ -41,7 +43,7 @@
 <p class="why">Shown only while something is playing, after a few minutes without a key press. Fire OS will not let an app turn its own screensaver off or replace it in system settings, but an app may keep the screen on while it plays; Fahrenheit then shows one of these instead. When nothing plays, the Fire TV screensaver runs as today. The first key press only wakes the screen. Everything moves and is dimmed, so nothing sits still long enough to mark a screen. Both frames below are animated.</p>
 
 <h2>1. A wall of covers (the default)</h2>
-<p class="why">A slowly drifting, tilted wall of covers from your library (the series you are in first), dimmed, with the playing book's colour washed over it as on the player. The now-playing line jumps to another corner every few seconds here (every minute on the TV).</p>
+<p class="why">A slowly drifting, tilted wall of covers from your library (the series you are in first), evenly dimmed, with no colour over it: over many covers a colour reads as a stain. The now-playing line jumps to another corner every few seconds here (every minute on the TV).</p>
 <div class="shell"><div class="tv">
   <div class="wall" id="wall"></div>
   <div class="tint"></div>
@@ -49,9 +51,9 @@
 </div></div>
 
 <h2>2. The DVD logo: the cover bouncing</h2>
-<p class="why">Just the playing cover, mid-size, bouncing slowly off the edges of a dark screen, with the title and time left under it. Very little ever stays lit in one place.</p>
+<p class="why">Just the playing cover, mid-size, its colour glowing softly behind it, bouncing slowly off the edges of a dark screen, with the title and time left under it. Very little ever stays lit in one place.</p>
 <div class="shell"><div class="tv">
-  <div class="bounce-x"><div class="bounce-y"><div class="cover cv">THE LONG<br>WAY HOME</div><div class="cap">Chapter 12 · 18 min left</div></div></div>
+  <div class="bounce-x"><div class="bounce-y"><div class="glow"></div><div class="cover cv">THE LONG<br>WAY HOME</div><div class="cap">Chapter 12 · 18 min left</div></div></div>
 </div></div>
 
 <h2>Settings → Playback</h2>
