@@ -120,7 +120,7 @@ The client logs at BASIC in debug builds, which does not buffer bodies.
 | Open the player, nothing playing | Load the queue at the `ResumePoint` position; play only when opened with `auto_play`. |
 | Open the player for what is already playing (same `itemId` and `episodeId` in the current item's extras) | Reattach: no reload; the saved position and `auto_play` are ignored. |
 | Open the player for something else while one plays | Replace the queue, after the final report for the previous item. |
-| Back (the player screen is finishing) | `Playback.stop`: final report, stop, clear the queue, leave the foreground. With nothing queued the service stops itself. |
+| Back (the player screen is finishing) | Superseded by #155: Back releases the controller only, as Home does. Stop on the rail's Now playing entry (`Playback.end`) does the final report, stop and clear; with nothing queued the service stops itself. |
 | Home, or another app on top | Release the controller only. The service keeps playing in the foreground; the remote's media keys and system controls reach its session. |
 | Paused in the background | Media3 drops the foreground state; the system may stop the service. The position was already reported on pause. |
 | App task removed | Media3's default: stop if paused, keep going if playing. |
@@ -190,7 +190,7 @@ Device, on an Android TV emulator and then a Fire TV stick:
 
 - a multi-file book plays across the file boundary; resumes past the first
   file; a chapter past the first file jumps there;
-- Home keeps playing; Back stops; the remote's play/pause works in both;
+- Home keeps playing; Back stops (since #155 Back keeps playing too, and Stop is on the rail's entry); the remote's play/pause works in both;
 - progress is checked by reading it back from the server
   (`GET /api/me/progress/:id`), not from the screen.
 

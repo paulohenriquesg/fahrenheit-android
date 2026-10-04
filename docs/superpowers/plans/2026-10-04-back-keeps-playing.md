@@ -30,3 +30,10 @@ Now playing entry (#140). Stopping moves to a **Stop** action on that entry.
 Play a book, Back: Home with Now playing, audio on. Open the entry: player where it
 was. Stop from the entry: audio stops, server session closed at the right position,
 entry gone, focus on a section. Same for a podcast episode, and Go to podcast.
+
+## Review fix pass
+
+Known limits recorded in the spec, left for follow-ups: no rail (so no Now playing
+or Stop) on the book and podcast screens; with "Play next episode" on, after Back
+only the one episode already queued behind plays on. Stale "Back stops" comments
+updated.

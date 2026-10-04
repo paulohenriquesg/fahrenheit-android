@@ -64,8 +64,8 @@ class FinishMarker(
     }
 
     /**
-     * An item not queued. It may have been playing a moment ago - Back, then
-     * Mark finished on its details screen - with its closing report still on
+     * An item not queued. It may have been playing a moment ago - Stop on the
+     * rail's entry, then Mark finished on its details screen - with its closing report still on
      * the way, which would un-finish it: so that goes first ([pending]).
      */
     private suspend fun markElsewhere(finished: Boolean, itemId: String, episodeId: String?, keepAt: Double?) = attempt {

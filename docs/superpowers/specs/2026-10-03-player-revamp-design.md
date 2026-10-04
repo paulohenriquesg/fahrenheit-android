@@ -53,6 +53,7 @@ All lengths use `PlaybackPosition.spoken` (#93).
 - **Up** from the transport reaches the **chapter bar**. Left and Right there seek in 10 s steps; holding a key speeds up. **Down** returns to the transport.
 - **Right from the last transport button** moves into the actions on the same line.
 - **Back** closes an open panel first. Otherwise it leaves the player and **keeps playing** (#155, reversing #96): the screen it was opened from shows, and Home's rail carries Now playing. "Go to podcast" keeps playing too.
+  - *Known limits of #155, for follow-ups:* the book and podcast screens have no rail, so landing there shows nothing playing and offers no Stop (Back again reaches Home). With "Play next episode" on, only the player screen queues the episode after next, so after Back playback stops at the end of the episode already queued behind the current one.
 
 ### Chapter skip
 

@@ -216,7 +216,7 @@ class FinishMarkerTest {
         assertEquals(null, FinishCommand.itemOf(FinishCommand.args(false)))
     }
 
-    // Review: Back stopped b1 and its close was still on its way when the
+    // Review: Back stopped b1 (Stop on the rail's entry, since #155) and its close was still on its way when the
     // details screen marked it; the close then un-finished it.
     @Test
     fun `a book just stopped is marked only once its closing report is in`() = runBlocking {
