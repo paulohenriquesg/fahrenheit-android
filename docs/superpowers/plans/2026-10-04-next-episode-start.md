@@ -31,6 +31,15 @@ works. No pause at the end, no seek after arrival. `ResumeOnArrival` goes.
 2. **StartWhereLeft** in `player/`; **PlaybackService** wraps its
    `DefaultMediaSourceFactory` in it and drops `ResumeOnArrival` (and its test).
 
+## Review
+
+The saved place outlived the arrival: Play after the end, Previous, or
+playing on from an earlier file jumped to it again. `SavedPlaceSpent` (a
+listener in the service) replaces the episode's items with `startAt = 0` on
+reaching the file that holds it; `StartWhereLeft`'s source takes that update
+in place (only the carried facts change), so playback goes on undisturbed.
+Next from the episode before still lands at the saved place, pinned by a test.
+
 ## Device check (in the PR)
 
 Setting on, an episode near its end with the next one saved part-way: the next

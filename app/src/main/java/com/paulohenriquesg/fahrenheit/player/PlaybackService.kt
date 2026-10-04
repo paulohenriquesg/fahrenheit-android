@@ -82,6 +82,8 @@ class PlaybackService : MediaSessionService() {
         exo.addListener(reporting)
         val watch = SleepWatch(exo, now = { SystemClock.elapsedRealtime() }, publish = { session?.setSessionExtras(it) })
         exo.addListener(watch)
+        // Where the next episode was left is for arriving once (#171).
+        exo.addListener(SavedPlaceSpent(exo))
         val settings = PlayerSettings(this)
         // And the one after it is queued, with or without a screen (#160).
         val nextEpisode = NextEpisodeQueue(exo, scope, enabled = { settings.playNextEpisode }) { file ->
