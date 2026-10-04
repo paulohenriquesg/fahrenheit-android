@@ -43,6 +43,7 @@ class WallFrameTest {
     fun `all four screen corners lie inside the turned wall over the drift's full range`() =
         assertTrue(covers(WallFrame.size(width, height, driftX, driftY, tilt)))
 
+    // Tight for this tilt's sign: at +8 degrees the height has a little slack.
     @Test
     fun `the wall is no bigger than it needs to be`() {
         val wall = WallFrame.size(width, height, driftX, driftY, tilt)

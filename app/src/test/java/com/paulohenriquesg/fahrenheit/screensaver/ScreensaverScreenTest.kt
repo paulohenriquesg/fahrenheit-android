@@ -75,6 +75,8 @@ class ScreensaverScreenTest {
     fun `over the wall, an even dim and no glow of the playing cover's colour`() {
         render(ScreensaverStyle.Wall, covers = List(3) { cover() }, wash = Color.Red)
 
+        // Structural: the wall has the dim, and the one glow the screen draws is not there.
+
         compose.onNodeWithTag(ScreensaverTags.DIM, useUnmergedTree = true).assertExists()
         compose.onNodeWithTag(ScreensaverTags.GLOW, useUnmergedTree = true).assertDoesNotExist()
     }

@@ -8,17 +8,17 @@
 - **`WallFrame`** (pure, in `CoverWall.kt`): the wall's size for a screen, a drift and a tilt, and where its centre sits at each point of the drift. The drift is centred on the screen (half each way), and the wall turns round its own centre.
 - **`CoverWall`** draws the covers into a layer that *is* the wall: sized by `WallFrame`, centred, turned and moved as layer properties (`rotationZ`, translation). Today the layer is screen-sized and the covers are drawn past its bounds, and the strips on the device are as wide as the drift (120 x 80 dp of 960 x 540). The likely cause is that the TV drops what a layer draws outside its own bounds. This fix does not rely on drawing outside a layer. The login screen's wall gets the same fix.
 - **Wall style:** an even dim over the wall, and no radial wash. **Bouncing style:** the wash as a soft glow behind the one cover, moving with it.
-- **`nowPlayingDetail`** (pure, given `Resources`): "Chapter · M min left in chapter" for a book, "M min left" for an episode or for a book without chapters. The minutes are whole, rounded up, at least 1, with hours past 60 ("1 h 5 min"). The screensaver's source uses it.
+- **`nowPlayingDetail`** (pure, given `Resources`): "Chapter · M min left in chapter" for a book, "M min left" for an episode or for a book without chapters. The minutes are whole (`minutesLeft`), with hours past 60 ("1 h 5 min"). The screensaver's source uses it.
 
 ## Rulings
 
 1. **Coverage test:** for 101 points over the drift's full range, all four screen corners lie inside the turned wall.
-2. **Time left rounds up** to whole minutes, and is never under 1 min: an hour-long countdown that reads "0 min" while something still plays would be wrong.
+2. **Time left drops the part minute**, as the main screen's rail does, so the two never disagree (review). Below one minute it reads "under a minute" rather than "0 min" or seconds that tick. The helper is `minutesLeft`, named in the style guide.
 3. **The bouncing style's caption** keeps `detail ?: title`, so it now also reads "M min left" on an episode.
 
 ## Tasks
 
-1. **Red:** `WallFrameTest` (corners covered across the drift; a smaller wall would not cover them). A `ScreensaverScreenTest` case: the wall's layer is at least the frame's size. Wall style with a wash: no glow node, a dim node. Bouncing style with a wash: a glow node. `NowPlayingDetailTest`: book with a chapter title, book with only a number, book without chapters, episode, under a minute, over an hour.
+1. **Red:** `WallFrameTest` (corners covered across the drift; a smaller wall would not cover them). A `ScreensaverScreenTest` case: the wall's layer is at least the frame's size. Wall style with a wash: no glow node, a dim node. Bouncing style with a wash: a glow node. `NowPlayingDetailTest`: book with a chapter title, book with only a number, book without chapters, episode, a part minute, under a minute, over an hour.
 2. **Green:** `WallFrame` and `CoverWall`'s layer; the wall's dim and the bouncing glow; `nowPlayingDetail`, used by `PlaybackListening.line()`. Update the mock's wall tint.
 3. **Gate, review, PR** (Closes #172).
 

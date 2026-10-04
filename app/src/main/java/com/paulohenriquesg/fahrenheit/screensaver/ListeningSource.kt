@@ -13,7 +13,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
@@ -30,12 +29,11 @@ import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.player.Playback
 import com.paulohenriquesg.fahrenheit.player.PlayerSettings
 import com.paulohenriquesg.fahrenheit.player.QueuedFile
-import com.paulohenriquesg.fahrenheit.player.RailEntry
 import com.paulohenriquesg.fahrenheit.player.coverBitmap
 import com.paulohenriquesg.fahrenheit.player.coverWashOf
 import com.paulohenriquesg.fahrenheit.player.rememberRailEntry
 import com.paulohenriquesg.fahrenheit.ui.elements.RecentCovers
-import com.paulohenriquesg.fahrenheit.utils.listeningLength
+import com.paulohenriquesg.fahrenheit.utils.minutesLeft
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -136,7 +134,7 @@ private suspend fun chaptersOf(itemId: String) =
 /**
  * The wall's covers: those of the series being played, then the covers of
  * this server this device has drawn lately (#168's [RecentCovers]), each once.
- * Nothing on any failure: the wall is then the wash alone.
+ * Nothing on any failure: the wall is then the dim alone.
  */
 private suspend fun wallCovers(context: Context, itemId: String): List<ImageBitmap> {
     val host = ApiClient.generateFullUrl("") ?: return emptyList()
@@ -170,8 +168,7 @@ private const val WALL_COVER_PX = 240
 
 /**
  * "Chapter 12 · 18 min left in chapter" for a book, "25 min left" for an
- * episode or a book without chapters (#172). Whole minutes, rounded up and
- * never under one, so it does not say "0 min" while something plays.
+ * episode or a book without chapters (#172), in [minutesLeft]'s whole minutes.
  */
 internal fun nowPlayingDetail(
     resources: Resources,
@@ -180,20 +177,9 @@ internal fun nowPlayingDetail(
     episode: Boolean,
     leftSeconds: Double
 ): String {
-    val left = resources.getString(R.string.time_left, wholeMinutes(leftSeconds))
+    val minutes = minutesLeft(leftSeconds)
+    val left = resources.getString(R.string.time_left, minutes)
     if (episode) return left
     val name = chapter ?: chapterNumber?.let { resources.getString(R.string.chapter_number, it) } ?: return left
-    return resources.getString(R.string.screensaver_chapter_left, name, wholeMinutes(leftSeconds))
-}
-
-/** "18 min", "1 h 5 min", "2 h": as listeningLength writes it, in whole minutes. */
-private fun wholeMinutes(seconds: Double): String {
-    val minutes = ceil(seconds / 60).toLong().coerceAtLeast(1)
-    val h = minutes / 60
-    val m = minutes % 60
-    return when {
-        h == 0L -> String.format(Locale.ROOT, "%d min", m)
-        m == 0L -> String.format(Locale.ROOT, "%d h", h)
-        else -> String.format(Locale.ROOT, "%d h %d min", h, m)
-    }
+    return resources.getString(R.string.screensaver_chapter_left, name, minutes)
 }

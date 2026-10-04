@@ -33,15 +33,21 @@ class NowPlayingDetailTest {
         assertEquals("25 min left", detail(left = 25 * 60.0))
 
     @Test
-    fun `minutes are whole, rounded up, so a part minute still counts`() {
-        assertEquals("5 min left", detail(episode = true, left = 4 * 60.0 + 59))
-        assertEquals("1 min left", detail(episode = true, left = 20.0))
-        assertEquals("1 min left", detail(episode = true, left = 0.0))
+    fun `minutes are whole and counted down as the main screen's rail counts them`() {
+        // The rail drops the part minute: 18:59 left reads "18 min" on both.
+        assertEquals("18 min left", detail(episode = true, left = 18 * 60.0 + 59))
+        assertEquals("1 min left", detail(episode = true, left = 60.0))
+    }
+
+    @Test
+    fun `under a minute says so, rather than "0 min" or seconds that tick`() {
+        assertEquals("under a minute left", detail(episode = true, left = 20.0))
+        assertEquals("Chapter 2 · under a minute left in chapter", detail(number = 2, left = 59.0))
     }
 
     @Test
     fun `past an hour, hours and minutes`() {
-        assertEquals("1 h 5 min left", detail(episode = true, left = 65 * 60.0))
+        assertEquals("1 h 5 min left", detail(episode = true, left = 65 * 60.0 + 59))
         assertEquals("2 h left", detail(episode = true, left = 120 * 60.0))
     }
 }

@@ -126,6 +126,9 @@ Durations, by where they appear:
   From 10 minutes up it rounds to whole minutes ("29 min", "4 h 12 min", "1 h");
   below 10 it keeps seconds ("9 min 59 s"). Past ten minutes seconds are noise
   (#119, #114).
+- **Time left on the screensaver**, glanced at and never ticking: `minutesLeft`.
+  Whole minutes with the part minute dropped, as the main screen's rail counts
+  them ("18 min", "1 h 5 min"), and "under a minute" below one (#172).
 - **The player's running counter**: `PlaybackPosition.spoken`, which keeps
   seconds under an hour, so a short episode visibly moves. Never round it.
 - **A stats tile**: `shortDuration` ("181 h", "2 h 11 min"). A real listen

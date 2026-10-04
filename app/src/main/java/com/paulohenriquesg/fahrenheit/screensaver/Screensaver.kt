@@ -309,7 +309,7 @@ private fun BouncingCover(line: NowPlayingLine, wash: Color?, elapsedMs: Long?) 
         // The cover and its caption, as one block that bounces.
         val blockPx = with(LocalDensity.current) { (BOUNCING_COVER + 40.dp).toPx() }
         if (wash != null) {
-            // Its own box round the cover, not drawn past the cover's bounds.
+            // Its own box round the cover, so nothing is drawn past a box's bounds.
             val inset = with(LocalDensity.current) { ((BOUNCING_GLOW - BOUNCING_COVER) / 2).toPx() }
             Box(
                 Modifier
