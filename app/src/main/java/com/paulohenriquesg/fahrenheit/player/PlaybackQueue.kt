@@ -45,7 +45,7 @@ object PlaybackQueue {
      * One item per file of [nowPlaying], each carrying its own [QueuedFile];
      * null when there is nothing to play.
      *
-     * @param startAt where to start when playback moves on to it by itself (see [ResumeOnArrival]).
+     * @param startAt where to start when playback moves on to it by itself (see [StartWhereLeft]).
      */
     fun itemsOf(nowPlaying: NowPlaying, resolveUrl: (String) -> String?, startAt: Double = 0.0): List<MediaItem>? {
         val timeline = nowPlaying.timeline ?: return null

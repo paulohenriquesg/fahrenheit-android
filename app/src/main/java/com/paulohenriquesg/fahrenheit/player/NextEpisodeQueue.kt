@@ -82,8 +82,8 @@ class NextEpisodeQueue(
 object UpNext {
     /**
      * The next newer episode the server has audio for ([EpisodeNeighbours]),
-     * as queue items starting where it was left ([ResumeOnArrival] seeks
-     * there on arrival); null at the newest, for an episode the podcast no
+     * as queue items starting where it was left ([StartWhereLeft] starts
+     * it there); null at the newest, for an episode the podcast no
      * longer has, and when where it was left could not be read.
      */
     suspend fun after(

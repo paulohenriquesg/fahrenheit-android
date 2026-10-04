@@ -53,9 +53,12 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         val exo = ExoPlayer.Builder(this)
+            // The next episode starts where it was left, with or without a screen (#108, #171).
             .setMediaSourceFactory(
-                DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(AudioHttp.dataSourceFactory { ApiClient.audioHttpClient() })
+                StartWhereLeft(
+                    DefaultMediaSourceFactory(this)
+                        .setDataSourceFactory(AudioHttp.dataSourceFactory { ApiClient.audioHttpClient() })
+                )
             )
             // Speech, and audio focus handled: another app taking the audio pauses this one.
             .setAudioAttributes(
@@ -79,8 +82,8 @@ class PlaybackService : MediaSessionService() {
         exo.addListener(reporting)
         val watch = SleepWatch(exo, now = { SystemClock.elapsedRealtime() }, publish = { session?.setSessionExtras(it) })
         exo.addListener(watch)
-        // The next episode starts where it was left, with or without a screen (#108).
-        exo.addListener(ResumeOnArrival(exo))
+        // Where the next episode was left is for arriving once (#171).
+        exo.addListener(SavedPlaceSpent(exo))
         val settings = PlayerSettings(this)
         // And the one after it is queued, with or without a screen (#160).
         val nextEpisode = NextEpisodeQueue(exo, scope, enabled = { settings.playNextEpisode }) { file ->
