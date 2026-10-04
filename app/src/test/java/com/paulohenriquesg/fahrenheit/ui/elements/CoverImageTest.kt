@@ -14,6 +14,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
@@ -89,8 +91,8 @@ class CoverImageTest {
         compose.waitForIdle()
 
         waitForPlaceholder(shown = true)
-        compose.onNodeWithText("An Invented Book", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("An Invented Writer", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(CoverTags.PLACEHOLDER, useUnmergedTree = true)
+            .assert(SemanticsMatcher.expectValue(CoverPlaceholderLines, listOf("An Invented Book", "An Invented Writer")))
     }
 
     @Test
@@ -101,7 +103,8 @@ class CoverImageTest {
         compose.waitForIdle()
 
         waitForPlaceholder(shown = true)
-        compose.onNodeWithText("An Invented Writer", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(CoverTags.PLACEHOLDER, useUnmergedTree = true)
+            .assert(SemanticsMatcher.expectValue(CoverPlaceholderLines, listOf("An Invented Book", "An Invented Writer")))
     }
 
     @Test
@@ -163,4 +166,16 @@ class CoverImageTest {
         "%08X".format(
             ((alpha * 255).toInt() shl 24) or ((red * 255).toInt() shl 16) or ((green * 255).toInt() shl 8) or (blue * 255).toInt()
         )
+
+    // A screen reader hears the cover's description once, not the
+    // placeholder's lines again on top of it.
+    @Test
+    fun `the placeholder's lines are not read out`() {
+        server.enqueue(MockResponse().setResponseCode(404))
+
+        render()
+        waitForPlaceholder(shown = true)
+
+        compose.onNodeWithText("An Invented Writer", useUnmergedTree = true).assertDoesNotExist()
+    }
 }

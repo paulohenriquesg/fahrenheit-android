@@ -18,6 +18,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -106,7 +109,13 @@ private fun CoverPlaceholder(title: String, author: String?, size: Dp) {
         modifier = Modifier
             .size(size)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .testTag(CoverTags.PLACEHOLDER)
+            // Decoration: the cover's image already says the title, and the
+            // screen around it the author, so neither is read twice. Tests
+            // read the lines from CoverPlaceholderLines instead.
+            .clearAndSetSemantics {
+                testTag = CoverTags.PLACEHOLDER
+                this[CoverPlaceholderLines] = listOfNotNull(title, author)
+            }
             .padding(size / 12)
     ) {
         Text(
@@ -119,6 +128,7 @@ private fun CoverPlaceholder(title: String, author: String?, size: Dp) {
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth()
+                .clearAndSetSemantics {}
         )
         if (author != null) {
             Text(
@@ -131,6 +141,7 @@ private fun CoverPlaceholder(title: String, author: String?, size: Dp) {
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
+                    .clearAndSetSemantics {}
             )
         }
     }
@@ -138,6 +149,9 @@ private fun CoverPlaceholder(title: String, author: String?, size: Dp) {
 
 /** How far the copy behind a fitted cover is darkened. */
 private const val BACKDROP_DIM = 0.45f
+
+/** What a cover placeholder shows, for tests: its title, then its author. */
+val CoverPlaceholderLines = SemanticsPropertyKey<List<String>>("CoverPlaceholderLines")
 
 object CoverTags {
     const val PLACEHOLDER = "cover-placeholder"
