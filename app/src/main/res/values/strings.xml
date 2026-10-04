@@ -229,8 +229,8 @@
         <item quantity="one">%1$d new episode found. The server is downloading it.</item>
         <item quantity="other">%1$d new episodes found. The server is downloading them.</item>
     </plurals>
-    <string name="resume_further_on">You listened further on your %1$s</string>
-    <string name="resume_back_on">You went back on your %1$s</string>
+    <string name="resume_further_on">You listened further on %1$s</string>
+    <string name="resume_back_on">You went back on %1$s</string>
     <string name="resume_book_further_elsewhere">This book moved on elsewhere</string>
     <string name="resume_book_back_elsewhere">This book went back elsewhere</string>
     <string name="resume_episode_further_elsewhere">This episode moved on elsewhere</string>
@@ -240,7 +240,7 @@
     <string name="resume_mark_here">here · %1$s</string>
     <string name="resume_mark_there">%1$s · %2$s</string>
     <string name="resume_detail">%1$s · %2$s</string>
-    <string name="resume_left_off_there">where the %1$s left off</string>
+    <string name="resume_left_off_there">where %1$s left off</string>
     <string name="resume_newer_position">the newer position</string>
     <string name="resume_left_off_here">where this TV left off</string>
     <string name="resume_continue_from">Continue from %1$s</string>

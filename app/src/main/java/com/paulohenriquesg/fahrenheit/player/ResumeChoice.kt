@@ -72,11 +72,12 @@ data class ResumeWording(
 )
 
 /**
- * "You listened further on your iPhone · 10 minutes ago · 1 h 20 min there,
+ * "You listened further on iPhone · 10 minutes ago · 1 h 20 min there,
  * 1 h 05 min here", and the buttons' words (#158, after #90).
  *
  * A book's places are its chapters, when both have a name and they differ;
- * otherwise, and for an episode, times.
+ * otherwise, and for an episode, times. The device's name goes in bare: Audiobookshelf
+ * names an Android device "manufacturer model", so "your" would not always fit.
  *
  * @param now the time [ResumeOffer.listenedAt] is measured against, in ms.
  */
@@ -88,8 +89,7 @@ fun resumeWording(resources: Resources, offer: ResumeOffer, item: ResumeItem, no
         item.episode -> resources.getString(if (further) R.string.resume_episode_further_elsewhere else R.string.resume_episode_back_elsewhere)
         else -> resources.getString(if (further) R.string.resume_book_further_elsewhere else R.string.resume_book_back_elsewhere)
     }
-    val hereTime = positionLabel(offer.here)
-    val thereTime = positionLabel(offer.there)
+    val (hereTime, thereTime) = positionLabels(offer.here, offer.there)
     val chapters = if (item.episode) null else chapterNames(item.chapters, offer)
     val herePlace = chapters?.first ?: hereTime
     val therePlace = chapters?.second ?: thereTime
@@ -131,6 +131,19 @@ internal fun positionLabel(seconds: Double): String {
     else String.format(Locale.ROOT, "%d min", minutes)
 }
 
+/**
+ * Both places, apart: to the minute, or to the second when the minutes match
+ * (more than 30 s apart, yet in one minute).
+ */
+private fun positionLabels(here: Double, there: Double): Pair<String, String> {
+    val minutes = positionLabel(here) to positionLabel(there)
+    if (minutes.first != minutes.second) return minutes
+    return withSeconds(here) to withSeconds(there)
+}
+
+private fun withSeconds(seconds: Double): String =
+    String.format(Locale.ROOT, "%s %02d s", positionLabel(seconds), seconds.coerceAtLeast(0.0).toInt() % 60)
+
 private fun heardAgo(resources: Resources, millis: Long): String {
     val minutes = (millis / 60_000).toInt()
     val hours = minutes / 60
@@ -149,8 +162,8 @@ private fun share(position: Double, length: Double): Float =
 
 private val MARK = 18.dp
 
-/** As tall as the transport's Play (60 dp), as the card is the player's own. */
-private val BUTTON_HEIGHT = 64.dp
+/** As tall as the transport's Play, as the card is the player's own. */
+private val BUTTON_HEIGHT = 60.dp
 
 /**
  * The question, as a card over the dimmed player (#158;
@@ -312,6 +325,7 @@ private fun Label(text: String, share: Float, color: Color, bold: Boolean, tag: 
         fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
         color = color,
         maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = Modifier
             .fillMaxWidth()
             .wrapAt(share)

@@ -77,12 +77,12 @@ class ResumeChoiceTest {
     fun `a book heard further on a phone names the phone, the chapters and both times`() {
         assertEquals(
             ResumeWording(
-                headline = "You listened further on your iPhone",
+                headline = "You listened further on iPhone",
                 heard = "10 minutes ago · 1 h 20 min there, 1 h 05 min here",
                 hereMark = "here · Chapter 8",
                 thereMark = "iPhone · Chapter 12",
                 continueLabel = "Continue from Chapter 12",
-                continueDetail = "1 h 20 min · where the iPhone left off",
+                continueDetail = "1 h 20 min · where iPhone left off",
                 stayLabel = "Stay at Chapter 8",
                 stayDetail = "1 h 05 min · where this TV left off"
             ),
@@ -121,7 +121,7 @@ class ResumeChoiceTest {
     // The newer position can be behind this one: it was not "further".
     @Test
     fun `a newer position behind this one went back`() {
-        assertEquals("You went back on your iPhone", words(offer(here = 4800.0, there = 3900.0)).headline)
+        assertEquals("You went back on iPhone", words(offer(here = 4800.0, there = 3900.0)).headline)
         assertEquals("This book went back elsewhere", words(offer(here = 4800.0, there = 3900.0, device = null)).headline)
         assertEquals("This episode went back elsewhere", words(offer(here = 1500.0, there = 900.0, device = null), episode).headline)
     }
@@ -131,7 +131,7 @@ class ResumeChoiceTest {
         val words = words(item = book.copy(chapters = emptyList()))
 
         assertEquals("Continue from 1 h 20 min", words.continueLabel)
-        assertEquals("where the iPhone left off", words.continueDetail)
+        assertEquals("where iPhone left off", words.continueDetail)
         assertEquals("Stay at 1 h 05 min", words.stayLabel)
         assertEquals("here · 1 h 05 min", words.hereMark)
     }
@@ -144,6 +144,26 @@ class ResumeChoiceTest {
         assertEquals("Continue from 1 h 08 min", words.continueLabel)
         assertEquals("Stay at 1 h 00 min", words.stayLabel)
         assertEquals("iPhone · 1 h 08 min", words.thereMark)
+    }
+
+    // Audiobookshelf names an Android device "manufacturer model": no "your"
+    // or "the" around a name of unknown shape.
+    @Test
+    fun `a device named by maker and model reads as it is`() {
+        val words = words(offer(device = "Google Pixel 8"))
+
+        assertEquals("You listened further on Google Pixel 8", words.headline)
+        assertEquals("1 h 20 min · where Google Pixel 8 left off", words.continueDetail)
+    }
+
+    // More than 30 s apart, yet in one minute: the minutes alone would match.
+    @Test
+    fun `two places in one minute say the seconds`() {
+        val words = words(offer(here = 3601.0, there = 3635.0))
+
+        assertEquals("Continue from 1 h 00 min 35 s", words.continueLabel)
+        assertEquals("Stay at 1 h 00 min 01 s", words.stayLabel)
+        assertEquals("Just now · 15 min 50 s there, 15 min 10 s here", words(offer(here = 910.0, there = 950.0, ago = 0), episode).heard)
     }
 
     @Test

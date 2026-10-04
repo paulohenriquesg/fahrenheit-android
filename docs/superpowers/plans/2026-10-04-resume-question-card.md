@@ -17,11 +17,11 @@ wiring in `PlayerActivity` keep their behaviour.
    sessions unreadable). (`ResumeOfferTest`)
 3. **The wording**, as a plain function of the offer, the item (`ResumeItem`:
    title, length, chapter spans, book or episode) and now (`ResumeWording`):
-   - headline: "You listened further on your iPhone" / "This book|episode
+   - headline: "You listened further on iPhone" (the name bare: Audiobookshelf names an Android device "manufacturer model") / "This book|episode
      moved on elsewhere", and "went back" when the newer position is behind;
    - under it: "10 minutes ago · 1 h 20 min there, 1 h 05 min here";
    - books name chapters on the buttons and marks ("Continue from Chapter 12",
-     detail "1 h 20 min · where the iPhone left off"); episodes, books without
+     detail "1 h 20 min · where iPhone left off"); episodes, books without
      chapters, and two positions in one chapter use times.
    (`ResumeChoiceTest`)
 4. **The card**: cover, headline, a timeline with "here" and "there" marks

@@ -57,7 +57,8 @@ data class ResumeOffer(val here: Double, val there: Double, val listenedAt: Long
             if (abs(there - here) <= THRESHOLD_SECONDS) return null
             if (writtenHere(latestSession, thisDevice, listenedAt)) return null
             // Named only when that session moved it: one older than the copy
-            // did not, whoever's it is.
+            // did not, whoever's it is. Within the sync slack, an edit just
+            // after another device's sync is credited to that device.
             val device = latestSession
                 ?.takeIf { it.deviceId != thisDevice && wroteCopy(it, listenedAt) }
                 ?.deviceName
