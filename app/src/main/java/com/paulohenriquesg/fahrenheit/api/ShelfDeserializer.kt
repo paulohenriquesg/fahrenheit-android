@@ -4,7 +4,7 @@ import com.google.gson.*
 import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
 
-class ShelfDeserializer : JsonDeserializer<Shelf> {
+class ShelfDeserializer(private val log: (String) -> Unit = {}) : JsonDeserializer<Shelf> {
     override fun deserialize(
         json: JsonElement,
         typeOfT: Type,

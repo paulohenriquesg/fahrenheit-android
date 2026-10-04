@@ -7,11 +7,12 @@ import org.junit.Test
 
 class ShelfDeserializerTest {
     private lateinit var gson: com.google.gson.Gson
+    private val logged = mutableListOf<String>()
 
     @Before
     fun setup() {
         gson = GsonBuilder()
-            .registerTypeAdapter(Shelf::class.java, ShelfDeserializer())
+            .registerTypeAdapter(Shelf::class.java, ShelfDeserializer(log = { logged += it }))
             .create()
     }
 
@@ -468,5 +469,37 @@ class ShelfDeserializerTest {
         val shelf = gson.fromJson(json, Shelf::class.java)
 
         assertEquals("A Long Saga", shelf.bookEntities!!.single().media.metadata.series!!.single().name)
+    }
+
+    // #147: a shelf type the server adds is read, not emptied.
+    @Test
+    fun `a shelf of an unknown type holding library items keeps them`() {
+        val json = """
+            {"id": "continue-reading", "label": "Continue Reading", "labelStringKey": "LabelContinueReading",
+             "type": "some-future-type", "total": 1,
+             "entities": [{"id": "b1", "mediaType": "book", "media": {"metadata": {"title": "An Invented Book"}}}]}
+        """.trimIndent()
+
+        val shelf = gson.fromJson(json, Shelf::class.java)
+
+        assertEquals("some-future-type", shelf.type)
+        assertEquals(listOf("b1"), shelf.bookEntities?.map { it.id })
+        assertEquals("An Invented Book", shelf.bookEntities?.single()?.media?.metadata?.title)
+        assertTrue(logged.isEmpty())
+    }
+
+    @Test
+    fun `a shelf of an unknown type holding something else is skipped and logged`() {
+        val json = """
+            {"id": "mystery", "label": "Mystery", "labelStringKey": "LabelMystery",
+             "type": "some-future-type", "total": 1,
+             "entities": [{"name": "not a library item"}]}
+        """.trimIndent()
+
+        val shelf = gson.fromJson(json, Shelf::class.java)
+
+        assertNull(shelf.bookEntities)
+        assertEquals(1, logged.size)
+        assertTrue(logged.single(), logged.single().contains("mystery"))
     }
 }

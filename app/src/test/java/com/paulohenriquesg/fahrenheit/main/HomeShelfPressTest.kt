@@ -18,7 +18,6 @@ import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -143,14 +142,12 @@ class HomeShelfPressTest {
         assertEquals("SERIES", started.getStringExtra("kind"))
     }
 
+    // #147: a shelf the server adds is drawn, not dropped.
     @Test
-    fun `a shelf of a type nothing draws today shows nothing`() {
-        val shelf = books("continue-reading", "some-future-type", item("b1", "An Invented Book"))
+    fun `a shelf of a type Home does not know is drawn as covers that open details`() {
+        val started = press(books("continue-reading", "some-future-type", item("b1", "An Invented Book")), "An Invented Book")
 
-        compose.setContent { FahrenheitTheme { PersonalizedHomeView(listOf(shelf), "lib") } }
-        compose.waitForIdle()
-
-        compose.onNodeWithText("An Invented Book").assertDoesNotExist()
-        assertNull(shadowOf(compose.activity).nextStartedActivity)
+        assertEquals(DetailActivity::class.java.name, started.component?.className)
+        assertEquals("b1", started.getStringExtra("item_id"))
     }
 }
