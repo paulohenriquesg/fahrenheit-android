@@ -21,6 +21,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -78,6 +79,16 @@ class PlaybackService : MediaSessionService() {
         exo.addListener(watch)
         // The next episode starts where it was left, with or without a screen (#108).
         exo.addListener(ResumeOnArrival(exo))
+        val settings = PlayerSettings(this)
+        // And the one after it is queued, with or without a screen (#160).
+        exo.addListener(
+            NextEpisodeQueue(exo, scope, enabled = { settings.playNextEpisode }) { file ->
+                val episodeId = file.episodeId ?: return@NextEpisodeQueue null
+                val item = ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(file.itemId).getOrNull() }
+                    ?: return@NextEpisodeQueue null
+                UpNext.after(item, episodeId, ResumeSources::progress, ApiClient::generateFullUrl)
+            }
+        )
         sleep = watch
         exo.addListener(object : Player.Listener {
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -85,7 +96,6 @@ class PlaybackService : MediaSessionService() {
                 if (timeline.isEmpty) stopSelf()
             }
         })
-        val settings = PlayerSettings(this)
         val skipping = SkipLengths(exo, { settings.skipBackSeconds }, { settings.skipForwardSeconds })
         val guarded = LeavingGuard(skipping) {
             reporting.beforeLeaving()
