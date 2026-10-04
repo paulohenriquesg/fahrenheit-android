@@ -233,7 +233,7 @@ class NowPlayingTest {
             episodeId = "e2", now = now
         )!!
         assertEquals("Bonus", playing.badge)
-        assertEquals("Season 2 · Episode 295 · 30 min 0 s", playing.details)
+        assertEquals("Season 2 · Episode 295 · 30 min", playing.details)
         assertEquals("A short subtitle", playing.notes)
     }
 

@@ -22,6 +22,8 @@ import com.paulohenriquesg.fahrenheit.update.AvailableUpdate
 import com.paulohenriquesg.fahrenheit.update.CheckResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
+import androidx.compose.ui.test.onAllNodesWithTag
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -124,18 +126,19 @@ class SettingsViewTest {
         assertEquals(false, chosen)
     }
 
+    // Updates sits below Playback (#170): the D-pad scrolls to it as these do.
     @Test
     fun `an update check answers in the row that asked, not in a Toast`() {
         render(update = UpdateCheck.UpToDate)
 
-        compose.onNodeWithText("Up to date", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Up to date", substring = true).performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun `a check in progress says so`() {
         render(update = UpdateCheck.Checking)
 
-        compose.onNodeWithText("Checking", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Checking", substring = true).performScrollTo().assertIsDisplayed()
     }
 
     private val waiting = AvailableUpdate(
@@ -146,6 +149,34 @@ class SettingsViewTest {
         sha256 = "abc",
         sizeBytes = 18L * 1024 * 1024
     )
+
+    private fun top(text: String) = compose.onNodeWithText(text).fetchSemanticsNode().positionInRoot.y
+
+    // #170: Playback second, right after Appearance.
+    @Test
+    fun `the sections are Appearance, Playback, Updates, Account`() {
+        render()
+
+        val tops = listOf("Appearance", "Playback", "Updates", "Account").map(::top)
+        assertEquals(tops.sorted(), tops)
+    }
+
+    // With Playback above Updates a waiting update would fall below the fold
+    // (#138), so it is at the top of Settings, the first thing seen.
+    @Test
+    fun `a waiting update sits above every section`() {
+        render(update = UpdateCheck.Available(waiting))
+
+        assertTrue(compose.onNodeWithTag("install_update").fetchSemanticsNode().positionInRoot.y < top("Appearance"))
+        compose.onNodeWithTag("install_update").assertIsDisplayed()
+    }
+
+    @Test
+    fun `there is one Install, not two`() {
+        render(update = UpdateCheck.Available(waiting))
+
+        assertEquals(1, compose.onAllNodesWithTag("install_update").fetchSemanticsNodes().size)
+    }
 
     @Test
     fun `a waiting update says what it is`() {
@@ -192,7 +223,7 @@ class SettingsViewTest {
     fun `a failed check says it failed, not that all is well`() {
         render(update = UpdateCheck.Failed)
 
-        compose.onNodeWithText("Couldn't reach the update server", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Couldn't reach the update server", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Up to date", substring = true).assertDoesNotExist()
     }
 
