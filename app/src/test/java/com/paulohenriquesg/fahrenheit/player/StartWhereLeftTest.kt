@@ -36,6 +36,7 @@ class StartWhereLeftTest {
     private val seeks = mutableListOf<Long>()
 
     init {
+        player.addListener(SavedPlaceSpent(player))
         player.addListener(object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
                 if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
@@ -139,5 +140,57 @@ class StartWhereLeftTest {
         assertEquals("e2: $second", 605.0, second.single().currentTime, 1.0)
         val heard = second.single().timeListened
         assertTrue("heard $heard s", heard in 4.0..6.5)
+    }
+
+    // Review: the saved place is for arriving once. Play after the end, or
+    // Previous back into it, starts the episode from its beginning.
+    @Test
+    fun `after arriving, the episode's default start is its beginning again`() {
+        queueWithNext(startAt = 600.0)
+        run(player).untilPositionAtLeast(1, 601_000)
+
+        player.seekTo(1, 3_599_000)
+        run(player).untilState(Player.STATE_ENDED)
+        player.seekToDefaultPosition()
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        assertEquals(1, player.currentMediaItemIndex)
+        assertTrue("at ${player.currentPosition}", player.currentPosition < 1_000L)
+    }
+
+    @Test
+    fun `back in an earlier file of the episode, playing on enters the next at its start`() {
+        queueWithNext(next = twoHours, startAt = 4200.0)
+        run(player).untilPositionAtLeast(2, 601_000)
+
+        player.seekTo(1, 3_598_000)
+        run(player).untilPositionAtLeast(2, 1)
+
+        val (index, at) = arrivals.last()
+        assertEquals(2, index)
+        assertTrue("arrived at $at", at < 1_000L)
+    }
+
+    @Test
+    fun `spending the saved place does not interrupt the episode`() {
+        queueWithNext(startAt = 600.0)
+        run(player).untilPositionAtLeast(1, 610_000)
+
+        assertEquals("arrivals $arrivals", 1, arrivals.size)
+        assertTrue("seeks $seeks", seeks.isEmpty())
+        assertTrue("at ${player.currentPosition}", player.currentPosition >= 610_000L)
+    }
+
+    // A deliberate choice: Next from the finished episode lands where the next was left.
+    @Test
+    fun `Next to the queued episode starts it at its saved place`() {
+        queueWithNext(startAt = 600.0)
+        run(player).untilPositionAtLeast(0, 3_596_000)
+
+        player.seekToNextMediaItem()
+        run(player).untilPendingCommandsAreFullyHandled()
+
+        assertEquals(1, player.currentMediaItemIndex)
+        assertTrue("at ${player.currentPosition}", player.currentPosition >= 600_000L)
     }
 }
