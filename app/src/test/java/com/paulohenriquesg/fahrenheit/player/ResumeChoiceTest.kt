@@ -5,6 +5,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.platform.testTag
@@ -13,7 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
-import com.paulohenriquesg.fahrenheit.R
+import androidx.compose.ui.unit.dp
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -23,9 +24,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The question (#90): "You're at 1 h 05 min here. Continue from 1 h 20 min,
- * listened to 10 minutes ago on another device?" - two buttons, focus on the
- * server's position.
+ * The question (#90), as the card of #158 (docs/mocks/resume-question.html):
+ * who moved it and when, both places on a small timeline, chapters on a
+ * book's buttons, and focus on the newer position.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -39,12 +40,22 @@ class ResumeChoiceTest {
     private val minute = 60_000L
     private var chosen: String? = null
 
-    private fun offer(here: Double = 3900.0, there: Double = 4800.0, ago: Long = 10 * minute) =
-        ResumeOffer(here = here, there = there, listenedAt = now - ago)
+    private val chapters = listOf(
+        ChapterSpan("Chapter 8", 3600.0, 4200.0),
+        ChapterSpan("Chapter 9", 4200.0, 4500.0),
+        ChapterSpan("Chapter 12", 4500.0, 5400.0),
+        ChapterSpan("Chapter 13", 5400.0, 7200.0)
+    )
+    private val book = ResumeItem(itemId = "b1", title = "A Made-Up Book", length = 7200.0, chapters = chapters, episode = false)
+    private val episode = ResumeItem(itemId = "p1", title = "Episode 1", length = 3200.0, chapters = emptyList(), episode = true)
 
-    private fun question(offer: ResumeOffer) = resumeQuestion(compose.activity.resources, offer, now)
+    private fun offer(here: Double = 3900.0, there: Double = 4800.0, ago: Long = 10 * minute, device: String? = "iPhone") =
+        ResumeOffer(here = here, there = there, listenedAt = now - ago, device = device)
 
-    private fun show(offer: ResumeOffer = offer()) {
+    private fun words(offer: ResumeOffer = offer(), item: ResumeItem = book) =
+        resumeWording(compose.activity.resources, offer, item, now)
+
+    private fun show(offer: ResumeOffer = offer(), item: ResumeItem = book) {
         compose.setContent {
             FahrenheitTheme {
                 // Something behind the question, as the transport is.
@@ -52,7 +63,7 @@ class ResumeChoiceTest {
                     androidx.tv.material3.Button(onClick = {}, modifier = androidx.compose.ui.Modifier.testTag("behind")) {
                         androidx.tv.material3.Text("behind")
                     }
-                    ResumeChoice(offer, now, onContinue = { chosen = "there" }, onStay = { chosen = "here" })
+                    ResumeChoice(offer, item, now, onContinue = { chosen = "there" }, onStay = { chosen = "here" })
                 }
             }
         }
@@ -63,26 +74,88 @@ class ResumeChoiceTest {
         .config[SemanticsProperties.Text].joinToString(" ") { it.text }
 
     @Test
-    fun `the question names both positions and when the other was heard`() {
+    fun `a book heard further on a phone names the phone, the chapters and both times`() {
         assertEquals(
-            "You're at 1 h 05 min here. Continue from 1 h 20 min, listened to 10 minutes ago on another device?",
-            question(offer())
+            ResumeWording(
+                headline = "You listened further on your iPhone",
+                heard = "10 minutes ago · 1 h 20 min there, 1 h 05 min here",
+                hereMark = "here · Chapter 8",
+                thereMark = "iPhone · Chapter 12",
+                continueLabel = "Continue from Chapter 12",
+                continueDetail = "1 h 20 min · where the iPhone left off",
+                stayLabel = "Stay at Chapter 8",
+                stayDetail = "1 h 05 min · where this TV left off"
+            ),
+            words()
         )
+    }
+
+    // No session behind the newer position: no device to name. Episodes have
+    // no chapters, so times.
+    @Test
+    fun `an episode moved with no session says elsewhere, in times`() {
+        assertEquals(
+            ResumeWording(
+                headline = "This episode moved on elsewhere",
+                heard = "Just now · 25 min there, 15 min here",
+                hereMark = "here · 15 min",
+                thereMark = "elsewhere · 25 min",
+                continueLabel = "Continue from 25 min",
+                continueDetail = "the newer position",
+                stayLabel = "Stay at 15 min",
+                stayDetail = "where this TV left off"
+            ),
+            words(offer(here = 900.0, there = 1500.0, ago = 20_000, device = null), episode)
+        )
+    }
+
+    @Test
+    fun `a book moved with no session says elsewhere, and keeps its chapters`() {
+        val words = words(offer(device = null))
+
+        assertEquals("This book moved on elsewhere", words.headline)
+        assertEquals("elsewhere · Chapter 12", words.thereMark)
+        assertEquals("1 h 20 min · the newer position", words.continueDetail)
+    }
+
+    // The newer position can be behind this one: it was not "further".
+    @Test
+    fun `a newer position behind this one went back`() {
+        assertEquals("You went back on your iPhone", words(offer(here = 4800.0, there = 3900.0)).headline)
+        assertEquals("This book went back elsewhere", words(offer(here = 4800.0, there = 3900.0, device = null)).headline)
+        assertEquals("This episode went back elsewhere", words(offer(here = 1500.0, there = 900.0, device = null), episode).headline)
+    }
+
+    @Test
+    fun `a book without chapters uses times`() {
+        val words = words(item = book.copy(chapters = emptyList()))
+
+        assertEquals("Continue from 1 h 20 min", words.continueLabel)
+        assertEquals("where the iPhone left off", words.continueDetail)
+        assertEquals("Stay at 1 h 05 min", words.stayLabel)
+        assertEquals("here · 1 h 05 min", words.hereMark)
+    }
+
+    // "Continue from Chapter 8" and "Stay at Chapter 8" would not say which is which.
+    @Test
+    fun `two places in one chapter use times`() {
+        val words = words(offer(here = 3650.0, there = 4100.0))
+
+        assertEquals("Continue from 1 h 08 min", words.continueLabel)
+        assertEquals("Stay at 1 h 00 min", words.stayLabel)
+        assertEquals("iPhone · 1 h 08 min", words.thereMark)
     }
 
     @Test
     fun `under an hour, minutes only`() {
-        assertEquals(
-            "You're at 45 min here. Continue from 52 min, listened to 10 minutes ago on another device?",
-            question(offer(here = 2700.0, there = 3120.0))
-        )
+        assertEquals("10 minutes ago · 52 min there, 45 min here", words(offer(here = 2700.0, there = 3120.0), episode).heard)
     }
 
     @Test
     fun `when it was heard reads naturally`() {
-        val ago = { millis: Long -> question(offer(ago = millis)).substringAfter("listened to ").substringBefore(" on another") }
+        val ago = { millis: Long -> words(offer(ago = millis)).heard.substringBefore(" · ") }
 
-        assertEquals("just now", ago(20_000))
+        assertEquals("Just now", ago(20_000))
         assertEquals("1 minute ago", ago(minute))
         assertEquals("1 hour ago", ago(61 * minute))
         assertEquals("3 hours ago", ago(3 * 60 * minute + 5 * minute))
@@ -90,12 +163,44 @@ class ResumeChoiceTest {
     }
 
     @Test
-    fun `the screen asks the question, with a button for each position`() {
+    fun `the card says it, with a button for each place`() {
+        show()
+        val words = words()
+
+        assertEquals(words.headline, text("resume_headline"))
+        assertEquals(words.heard, text("resume_heard"))
+        assertEquals(words.hereMark, text("resume_here_label"))
+        assertEquals(words.thereMark, text("resume_there_label"))
+        assertEquals("${words.continueLabel} ${words.continueDetail}", text("resume_continue"))
+        assertEquals("${words.stayLabel} ${words.stayDetail}", text("resume_stay"))
+    }
+
+    // Centre of each mark over the line, as a share of the item's length.
+    @Test
+    fun `both marks sit on the timeline by position`() {
+        show(offer(here = 1800.0, there = 5400.0))
+        val line = compose.onNodeWithTag("resume_line").fetchSemanticsNode().boundsInRoot
+        val centre = { tag: String -> compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot.center.x }
+
+        assertEquals(line.left + line.width * 0.25f, centre("resume_mark_here"), 1.5f)
+        assertEquals(line.left + line.width * 0.75f, centre("resume_mark_there"), 1.5f)
+    }
+
+    @Test
+    fun `a place past the end sits at the end`() {
+        show(offer(here = 1800.0, there = 9000.0))
+        val line = compose.onNodeWithTag("resume_line").fetchSemanticsNode().boundsInRoot
+
+        assertEquals(line.right, compose.onNodeWithTag("resume_mark_there").fetchSemanticsNode().boundsInRoot.center.x, 1.5f)
+    }
+
+    // Sized like the transport: its Play is 60 dp.
+    @Test
+    fun `the buttons are as tall as the transport's Play`() {
         show()
 
-        assertEquals(question(offer()), text("resume_question"))
-        assertEquals(compose.activity.getString(R.string.resume_continue_from, "1 h 20 min"), text("resume_continue"))
-        assertEquals(compose.activity.getString(R.string.resume_stay_at, "1 h 05 min"), text("resume_stay"))
+        compose.onNodeWithTag("resume_continue").assertHeightIsAtLeast(60.dp)
+        compose.onNodeWithTag("resume_stay").assertHeightIsAtLeast(60.dp)
     }
 
     @Test
