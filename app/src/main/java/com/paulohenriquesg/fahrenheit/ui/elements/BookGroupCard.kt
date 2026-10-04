@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.zIndex
 import com.paulohenriquesg.fahrenheit.R
+import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -35,18 +36,20 @@ import com.paulohenriquesg.fahrenheit.ui.CardFocus
  * books' covers, its name and how many books it holds (#73, #149).
  *
  * The covers follow the server's web client: a collection shows its first two
- * side by side ("Empty collection" with none), a series up to three fanned
- * (just its name with none). The books come with each group; no new requests.
+ * side by side, each with its own placeholder when it has no cover ("Empty
+ * collection" with no books); a series fans up to three of the books that have
+ * a cover (just its name when none has). The books come with each group, and
+ * a book without a cover is not asked for.
  *
  * @param bookCount null when the server sent no book list: no count is drawn.
- * @param coverIds the group's books, in order; the first few are drawn.
+ * @param books the group's books, in order; the first few are drawn.
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun BookGroupCard(
     name: String,
     bookCount: Int?,
-    coverIds: List<String> = emptyList(),
+    books: List<LibraryItem> = emptyList(),
     look: BookGroupLook = BookGroupLook.Series,
     onClick: () -> Unit
 ) {
@@ -73,7 +76,8 @@ fun BookGroupCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            val showsCovers = coverIds.isNotEmpty() || look == BookGroupLook.Collection
+            val fanned = books.filter { it.media.coverPath != null }.take(FAN_SIZE)
+            val showsCovers = look == BookGroupLook.Collection || fanned.isNotEmpty()
             if (showsCovers) {
                 Box(
                     modifier = Modifier
@@ -81,7 +85,10 @@ fun BookGroupCard(
                         .height(COVERS_HEIGHT),
                     contentAlignment = Alignment.Center
                 ) {
-                    GroupCovers(name, coverIds, look)
+                    when (look) {
+                        BookGroupLook.Collection -> SideBySide(books.take(2))
+                        BookGroupLook.Series -> Fan(fanned)
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -110,42 +117,53 @@ fun BookGroupCard(
 
 enum class BookGroupLook { Collection, Series }
 
-/** The first covers of a group, laid out as the web client does. */
+/**
+ * A collection's first two books side by side, as the web client's
+ * CollectionCover draws them: each its own cover, or its own placeholder.
+ * The covers say nothing to a screen reader; the card says the name.
+ */
 @Composable
-private fun GroupCovers(name: String, coverIds: List<String>, look: BookGroupLook) {
-    when (look) {
-        BookGroupLook.Collection -> {
-            if (coverIds.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.empty_collection),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+private fun SideBySide(books: List<LibraryItem>) {
+    if (books.isEmpty()) {
+        Text(
+            text = stringResource(R.string.empty_collection),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        return
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        books.forEach { book ->
+            Box(Modifier.testTag(CoverTags.GROUP_COVER)) {
+                CoverImage(
+                    itemId = book.id,
+                    contentDescription = null,
+                    size = SIDE_BY_SIDE_COVER,
+                    title = book.media.metadata.title,
+                    author = LibraryItemDisplay.author(book),
+                    hasCover = book.media.coverPath != null
                 )
-                return
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                coverIds.take(2).forEach { id ->
-                    Box(Modifier.testTag(CoverTags.GROUP_COVER)) {
-                        CoverImage(itemId = id, contentDescription = name, size = SIDE_BY_SIDE_COVER)
-                    }
-                }
             }
         }
-        BookGroupLook.Series -> {
-            // A fan: the first book in front, each next one further right
-            // and behind it.
-            val fanned = coverIds.take(3)
-            Box {
-                fanned.forEachIndexed { index, id ->
-                    Box(
-                        Modifier
-                            .offset(x = FAN_STEP * index)
-                            .zIndex((fanned.size - index).toFloat())
-                            .testTag(CoverTags.GROUP_COVER)
-                    ) {
-                        CoverImage(itemId = id, contentDescription = name, size = FANNED_COVER)
-                    }
-                }
+    }
+}
+
+/**
+ * A series' covers fanned, the first in front and each next one further right
+ * and behind it. The box is as wide as the fan, so it centres and nothing
+ * runs past the card.
+ */
+@Composable
+private fun Fan(books: List<LibraryItem>) {
+    Box(Modifier.width(FANNED_COVER + FAN_STEP * (books.size - 1))) {
+        books.forEachIndexed { index, book ->
+            Box(
+                Modifier
+                    .offset(x = FAN_STEP * index)
+                    .zIndex((books.size - index).toFloat())
+                    .testTag(CoverTags.GROUP_COVER)
+            ) {
+                CoverImage(itemId = book.id, contentDescription = null, size = FANNED_COVER)
             }
         }
     }
@@ -156,3 +174,4 @@ private val COVERS_HEIGHT = 150.dp
 private val SIDE_BY_SIDE_COVER = 84.dp
 private val FANNED_COVER = 120.dp
 private val FAN_STEP = 24.dp
+private const val FAN_SIZE = 3

@@ -160,7 +160,7 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
                     com.paulohenriquesg.fahrenheit.ui.elements.BookGroupCard(
                         name = series.name,
                         bookCount = series.books?.size,
-                        coverIds = series.books.orEmpty().map { it.id },
+                        books = series.books.orEmpty(),
                         look = com.paulohenriquesg.fahrenheit.ui.elements.BookGroupLook.Series,
                         onClick = {
                             val intent = com.paulohenriquesg.fahrenheit.group.BookGroupActivity.forSeries(context, series)
@@ -301,7 +301,7 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
                     com.paulohenriquesg.fahrenheit.ui.elements.BookGroupCard(
                         name = collection.name,
                         bookCount = collection.books?.size,
-                        coverIds = collection.books.orEmpty().map { it.id },
+                        books = collection.books.orEmpty(),
                         look = com.paulohenriquesg.fahrenheit.ui.elements.BookGroupLook.Collection,
                         onClick = {
                             val intent = com.paulohenriquesg.fahrenheit.group.BookGroupActivity.forCollection(context, collection)

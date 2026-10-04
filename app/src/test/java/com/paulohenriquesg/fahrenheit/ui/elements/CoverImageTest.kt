@@ -24,7 +24,8 @@ import okhttp3.mockwebserver.MockWebServer
 import okio.Buffer
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,13 +54,14 @@ class CoverImageTest {
     @After
     fun tearDown() = server.shutdown()
 
-    private fun render() {
+    private fun render(hasCover: Boolean = true, expectRequest: Boolean = true) {
         compose.setContent {
             FahrenheitTheme {
                 Box(Modifier.testTag("cover")) {
                     CoverImage(
                         itemId = "b1", contentDescription = "An Invented Book", size = 100.dp,
                         title = "An Invented Book", author = "An Invented Writer",
+                        hasCover = hasCover,
                         url = server.url("/api/items/b1/cover").toString()
                     )
                 }
@@ -68,8 +70,11 @@ class CoverImageTest {
         // The cover is asked for when first drawn; wait for that request, and
         // for the answer, before anything is asserted.
         compose.waitForIdle()
-        server.takeRequest(5, TimeUnit.SECONDS)!!
+        if (expectRequest) server.takeRequest(5, TimeUnit.SECONDS)!!
     }
+
+    private fun exists(tag: String) =
+        compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
     private fun waitForPlaceholder(shown: Boolean) =
         compose.waitUntil(10_000) {
@@ -113,7 +118,8 @@ class CoverImageTest {
 
         render()
 
-        waitForPlaceholder(shown = false)
+        compose.waitUntil(10_000) { exists(CoverTags.LOADED) }
+        assertFalse(exists(CoverTags.PLACEHOLDER))
     }
 
     // A podcast's cover is often not square. Cropped, its left edge was cut
@@ -127,7 +133,7 @@ class CoverImageTest {
         server.enqueue(MockResponse().setBody(wide).setHeader("Content-Type", "image/png"))
 
         render()
-        waitForPlaceholder(shown = false)
+        compose.waitUntil(10_000) { exists(CoverTags.LOADED) }
         // Past the cover's crossfade, on both the compose and system clocks.
         compose.mainClock.advanceTimeBy(1_000)
         org.robolectric.shadows.ShadowLooper.idleMainLooper(1, TimeUnit.SECONDS)
@@ -143,10 +149,11 @@ class CoverImageTest {
         val middleLeft = window[at.x.toInt() + 2, at.y.toInt() + node.size.height / 2]
         val topLeft = window[at.x.toInt() + 2, at.y.toInt() + 2]
         // The image's own left quarter, red, is on screen in full...
-        assertEquals("middle left $middleLeft", Color.Red.toArgbHex(), middleLeft.toArgbHex())
+        assertNear("middle left", Color.Red, middleLeft)
         // ...and the top-left corner is not the image itself but what lies
         // behind the fitted band. Cropped, this pixel would be the same red.
-        assertNotEquals("top left $topLeft", Color.Red.toArgbHex(), topLeft.toArgbHex())
+        assertFar("top left", Color.Red, topLeft)
+        assertTrue("a wide cover has its backdrop", exists(CoverTags.BACKDROP))
     }
 
     // captureToImage waits for a frame callback Robolectric never sends (as
@@ -161,6 +168,16 @@ class CoverImageTest {
         }
         return map!!
     }
+
+    // Within a few levels: blending and colour spaces move the last bits.
+    private fun distance(a: Color, b: Color) =
+        maxOf(kotlin.math.abs(a.red - b.red), kotlin.math.abs(a.green - b.green), kotlin.math.abs(a.blue - b.blue))
+
+    private fun assertNear(what: String, expected: Color, actual: Color) =
+        assertTrue("$what was $actual", distance(expected, actual) < 0.05f)
+
+    private fun assertFar(what: String, unexpected: Color, actual: Color) =
+        assertTrue("$what was $actual", distance(unexpected, actual) > 0.2f)
 
     private fun Color.toArgbHex(): String =
         "%08X".format(
@@ -177,5 +194,39 @@ class CoverImageTest {
         waitForPlaceholder(shown = true)
 
         compose.onNodeWithText("An Invented Writer", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    // The placeholder says "no cover"; while one may still come, the square
+    // is plain, so a cached cover never flashes a title first (#149).
+    @Test
+    fun `while the cover is on its way there is no placeholder yet`() {
+        // Nothing enqueued: the server holds the request open.
+        render(expectRequest = false)
+        server.takeRequest(5, TimeUnit.SECONDS)!!
+        compose.waitForIdle()
+
+        assertFalse(exists(CoverTags.PLACEHOLDER))
+    }
+
+    // The web client does not ask for a cover the item says it lacks; asking
+    // anyway is a 404 every time the card is drawn, never cached.
+    @Test
+    fun `an item known to have no cover is not asked for, and shows its placeholder`() {
+        render(hasCover = false, expectRequest = false)
+
+        waitForPlaceholder(shown = true)
+        assertEquals(0, server.requestCount)
+    }
+
+    // A square cover fills the square: nothing behind it to draw.
+    @Test
+    fun `a square cover draws no backdrop`() {
+        server.enqueue(MockResponse().setBody(png(40, 40) { it.drawColor(android.graphics.Color.RED) }).setHeader("Content-Type", "image/png"))
+
+        render()
+        waitForPlaceholder(shown = false)
+        compose.waitUntil(10_000) { exists(CoverTags.LOADED) }
+
+        assertFalse(exists(CoverTags.BACKDROP))
     }
 }
