@@ -75,6 +75,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
@@ -383,7 +384,7 @@ fun LoginScreen(
                     .focusProperties { down = submitFocus }
                     .remoteKeys(focusManager, onPlay = submit)
                     .onFocusChanged { isApiKeyFocused = it.isFocused },
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+                keyboardOptions = SecretKeyboard,
                 keyboardActions = KeyboardActions(
                     onDone = { submit() }
                 ),
@@ -455,9 +456,7 @@ fun LoginScreen(
                     .onFocusChanged {
                         isPasswordFocused = it.isFocused
                     },
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    imeAction = ImeAction.Done
-                ),
+                keyboardOptions = SecretKeyboard,
                 keyboardActions = KeyboardActions(
                     onDone = { submit() }
                 ),
@@ -502,6 +501,18 @@ fun LoginScreen(
         }
     }
 }
+
+/**
+ * The password and the API key. Hiding the text on screen is not enough: the
+ * Fire TV keyboard shows what is typed in its own preview line, in clear,
+ * unless the field says it is a password, and may learn it for suggestions
+ * (#163). Done still signs in.
+ */
+private val SecretKeyboard = KeyboardOptions(
+    keyboardType = KeyboardType.Password,
+    autoCorrectEnabled = false,
+    imeAction = ImeAction.Done
+)
 
 /**
  * Frame 3's buttons: the one that signs in filled with the primary colour,

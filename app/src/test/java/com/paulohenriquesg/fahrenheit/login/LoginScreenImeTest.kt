@@ -1,5 +1,9 @@
 package com.paulohenriquesg.fahrenheit.login
 
+import android.text.InputType
+import android.view.View
+import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.Key
@@ -109,5 +113,62 @@ class LoginScreenImeTest {
         compose.onNodeWithTag("login_username_field").performKeyInput { pressKey(Key.Enter) }
 
         assertTrue(!textOf("login_username_field").contains("\n"))
+    }
+
+    private fun showApiKey() {
+        compose.onNodeWithTag("login_mode_toggle")
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.onNodeWithTag("login_mode_toggle")
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+    }
+
+    // What the field asks the keyboard for, read where the keyboard reads it.
+    private fun editorInfoOf(tag: String): EditorInfo {
+        compose.onNodeWithTag(tag).performTextInput("x")
+        val info = EditorInfo()
+        compose.runOnUiThread {
+            val root = compose.activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+            val editor = generateSequence<View>(root) { (it as? ViewGroup)?.getChildAt(0) }
+                .first { it.onCheckIsTextEditor() }
+            editor.onCreateInputConnection(info)
+        }
+        return info
+    }
+
+    // Masking the field on screen is not enough (#163): the Fire TV keyboard
+    // draws what is typed in its own preview line, in clear, unless the field
+    // says it is a password - and may keep it for its suggestions.
+    private fun assertSecret(info: EditorInfo) {
+        assertEquals(InputType.TYPE_CLASS_TEXT, info.inputType and InputType.TYPE_MASK_CLASS)
+        assertEquals(
+            InputType.TYPE_TEXT_VARIATION_PASSWORD,
+            info.inputType and InputType.TYPE_MASK_VARIATION
+        )
+        assertEquals(0, info.inputType and InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
+        assertEquals(0, info.inputType and InputType.TYPE_TEXT_FLAG_AUTO_COMPLETE)
+    }
+
+    @Test
+    fun `the password field tells the keyboard it is a password`() {
+        compose.setContent { LoginScreen({ _, _, _, _ -> }, { _, _, _ -> }) }
+        enterAddress()
+
+        val info = editorInfoOf("login_password_field")
+
+        assertSecret(info)
+        assertEquals(EditorInfo.IME_ACTION_DONE, info.imeOptions and EditorInfo.IME_MASK_ACTION)
+    }
+
+    @Test
+    fun `the api key field tells the keyboard it is a password`() {
+        compose.setContent { LoginScreen({ _, _, _, _ -> }, { _, _, _ -> }) }
+        enterAddress()
+        showApiKey()
+
+        val info = editorInfoOf("login_api_key_field")
+
+        assertSecret(info)
+        assertEquals(EditorInfo.IME_ACTION_DONE, info.imeOptions and EditorInfo.IME_MASK_ACTION)
     }
 }
