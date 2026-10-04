@@ -33,7 +33,7 @@ class LibraryRepositoryTest {
 
         override suspend fun getLibraryItems(
             libraryId: String, sort: String, limit: Int?, page: Int?,
-            desc: Boolean?, include: String, minified: Int, filter: String?
+            desc: Int?, include: String, minified: Int, filter: String?
         ): LibraryItemsResponse {
             lastLibraryId = libraryId
             return items?.invoke() ?: error("no items response configured")

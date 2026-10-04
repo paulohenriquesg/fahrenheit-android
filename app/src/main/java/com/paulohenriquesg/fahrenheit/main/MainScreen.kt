@@ -66,6 +66,7 @@ import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.Library
 import com.paulohenriquesg.fahrenheit.api.LibraryStats
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
+import com.paulohenriquesg.fahrenheit.api.LibraryQuery
 import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
@@ -89,7 +90,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun MainScreen(
-    fetchLibraryItems: suspend (String) -> List<LibraryItem>,
+    fetchLibraryItems: suspend (String, LibraryQuery) -> List<LibraryItem>,
     fetchPersonalizedView: suspend (String) -> List<Shelf>,
     fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() },
     /** The playback service's player, while this screen is visible; null when not connected (#107). */
@@ -103,7 +104,9 @@ fun MainScreen(
     val username = userPreferences.username
     var libraries by remember { mutableStateOf(listOf<Library>()) }
     var libraryStats by remember { mutableStateOf(mapOf<String, LibraryStats>()) }
-    var libraryItems by remember { mutableStateOf(listOf<LibraryItem>()) }
+    // The library list, and which view of it: the whole library from the
+    // rail, or the one a Home shelf's "See all" stands for (#146).
+    val library = remember { LibraryList(scope, fetchLibraryItems) }
     var shelves by remember { mutableStateOf(listOf<Shelf>()) }
     var currentLibrary by remember { mutableStateOf<Library?>(null) }
     val listState = rememberLazyListState()
@@ -167,11 +170,11 @@ fun MainScreen(
                 // Drop what belongs to the library being left: Home showed its
                 // shelves for the second or two the fetch took.
                 shelves = emptyList()
-                libraryItems = emptyList()
+                library.clear()
                 isLoadingHome = true
                 newLibrary.id?.let { libraryId ->
                     shelves = fetchPersonalizedView(libraryId)
-                    libraryItems = fetchLibraryItems(libraryId)
+                    library.open(libraryId, LibraryQuery.Everything)
                 }
                 isLoadingHome = false
             }
@@ -192,7 +195,7 @@ fun MainScreen(
                         currentLibrary?.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
                         currentLibrary?.id?.let { libraryId ->
                             shelves = fetchPersonalizedView(libraryId)
-                            libraryItems = fetchLibraryItems(libraryId)
+                            library.open(libraryId, LibraryQuery.Everything)
                         }
                     }
                 }
@@ -228,7 +231,7 @@ fun MainScreen(
     // have, and RIGHT goes from there into the content.
     val initialFocus = rememberInitialFocus(
         enabled = true,
-        view, shelves, libraryItems, seriesList, collectionsList, listeningStats
+        view, shelves, library.items, seriesList, collectionsList, listeningStats
     )
 
     var updateCheck by remember { mutableStateOf<UpdateCheck>(UpdateCheck.Idle) }
@@ -264,7 +267,7 @@ fun MainScreen(
         (context as? Activity)?.finish()
     }
 
-    fun handleMenuAction(action: MenuAction, libraryId: String?) {
+    fun handleMenuAction(action: MenuAction, libraryId: String?, query: LibraryQuery = LibraryQuery.Everything) {
         when (action) {
             MenuAction.HOME -> {
                 view = MainView.HOME
@@ -274,9 +277,9 @@ fun MainScreen(
             }
             MenuAction.LIBRARY -> {
                 view = MainView.LIBRARY
-                libraryId?.let { id ->
-                    scope.launch { libraryItems = fetchLibraryItems(id) }
-                }
+                // A different view opens at its top, not where the last one was.
+                if (query != library.query) scope.launch { listState.scrollToItem(0) }
+                libraryId?.let { id -> library.open(id, query) }
             }
             MenuAction.SERIES -> {
                 view = MainView.SERIES
@@ -390,18 +393,20 @@ fun MainScreen(
                     )
                 }
                 when (view) {
-                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, isLoadingHome, fetchProgress, onSeeAll = { action ->
+                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, isLoadingHome, fetchProgress, onSeeAll = { tile ->
                         // As though the rail's row had been chosen, so the rail
                         // highlights the screen the tile opened.
-                        MainView.forMenuAction(action)?.let { highlightedMenuItemId = it.menuItemId }
-                        handleMenuAction(action, currentLibrary?.id)
+                        MainView.forMenuAction(tile.opens)?.let { highlightedMenuItemId = it.menuItemId }
+                        handleMenuAction(tile.opens, currentLibrary?.id, tile.query)
                     })
                     MainView.LIBRARY -> LibraryBrowseView(
                         name = currentLibrary?.name,
                         itemLabel = if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts",
-                        items = libraryItems,
+                        items = library.items,
                         rowLayout = isRowLayout,
-                        listState = listState
+                        listState = listState,
+                        query = library.query,
+                        loading = library.loading
                     )
                     MainView.SERIES -> SeriesBrowseView(seriesList, isLoadingSeries)
                     MainView.AUTHORS -> AuthorsBrowseView(currentLibrary?.id)
@@ -497,7 +502,7 @@ fun PersonalizedHomeView(
     libraryId: String?,
     isLoading: Boolean = false,
     fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() },
-    onSeeAll: (com.paulohenriquesg.fahrenheit.navigation.MenuAction) -> Unit = {}
+    onSeeAll: (ShelfSeeAll.Tile) -> Unit = {}
 ) {
     val context = LocalContext.current
     // The shelves carry no progress, so it comes from GET /api/me: read again
@@ -552,7 +557,7 @@ fun PersonalizedHomeView(
                 when (shelf.type) {
                     "episode" -> {
                         shelf.bookEntities?.let { books ->
-                            ShelfRow(shelf = shelf, progress = progress, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it.opens) } }) { item ->
+                            ShelfRow(shelf = shelf, progress = progress, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { item ->
                                 val episodeId = item.recentEpisode?.id
                                 val podcastId = item.recentEpisode?.libraryItemId ?: item.id
 
@@ -583,7 +588,7 @@ fun PersonalizedHomeView(
                                 shelf = shelf,
                                 progress = progress,
                                 seeAllTotal = seeAll?.total,
-                                onSeeAll = { seeAll?.let { onSeeAll(it.opens) } },
+                                onSeeAll = { seeAll?.let { onSeeAll(it) } },
                                 onItemLongClick = if (playsOnPress) ::openDetails else null
                             ) { item ->
                                 // A book whose audio has gone would only reach a
@@ -598,7 +603,7 @@ fun PersonalizedHomeView(
                     }
                     "authors" -> {
                         shelf.authorEntities?.let { authors ->
-                            AuthorShelfRow(shelf = shelf, authors = authors, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it.opens) } }) { author ->
+                            AuthorShelfRow(shelf = shelf, authors = authors, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { author ->
                                 val intent = com.paulohenriquesg.fahrenheit.author.AuthorDetailActivity.createIntent(context, author.id)
                                 context.startActivity(intent)
                             }
@@ -606,7 +611,7 @@ fun PersonalizedHomeView(
                     }
                     "series" -> {
                         shelf.seriesEntities?.let { series ->
-                            SeriesShelfRow(shelf = shelf, series = series, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it.opens) } }) { seriesItem ->
+                            SeriesShelfRow(shelf = shelf, series = series, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { seriesItem ->
                                 val intent = com.paulohenriquesg.fahrenheit.group.BookGroupActivity.forSeries(context, seriesItem)
                                 context.startActivity(intent)
                             }

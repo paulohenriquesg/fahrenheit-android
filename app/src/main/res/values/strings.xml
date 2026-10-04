@@ -8,6 +8,9 @@
     <string name="authors">Authors</string>
     <string name="books">Books</string>
     <string name="library">Library</string>
+    <string name="library_recently_added">Recently added</string>
+    <string name="library_in_progress">In progress</string>
+    <string name="library_finished">Finished</string>
     <string name="cancel">Cancel</string>
     <string name="check_for_updates">Check for Updates</string>
     <string name="close">Close</string>

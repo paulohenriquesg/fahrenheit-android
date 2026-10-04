@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.main
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.Author
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
+import com.paulohenriquesg.fahrenheit.api.LibraryQuery
 import com.paulohenriquesg.fahrenheit.api.Series
 import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.navigation.MenuAction
@@ -51,8 +52,11 @@ class ShelfSeeAllTest {
 
 
     @Test
-    fun `recently added podcasts open the library's podcasts`() =
-        assertEquals(ShelfSeeAll.Tile(40, MenuAction.LIBRARY), ShelfSeeAll.of(books("recently-added", type = "podcast")))
+    fun `recently added podcasts open the library's podcasts, newest first`() =
+        assertEquals(
+            ShelfSeeAll.Tile(40, MenuAction.LIBRARY, LibraryQuery.RecentlyAdded),
+            ShelfSeeAll.of(books("recently-added", type = "podcast"))
+        )
 
     // --- when there is no tile ---
 
@@ -72,19 +76,24 @@ class ShelfSeeAllTest {
     fun `an unknown shelf gets no tile`() =
         assertNull(ShelfSeeAll.of(books("some-future-shelf")))
 
-    // The library screen has no sort or filter yet: a tile there would open a
-    // title-sorted list that does not match the shelf.
+    // #146: the library screen opens sorted and filtered to match.
     @Test
-    fun `recently added books wait for a date-added sort`() =
-        assertNull(ShelfSeeAll.of(books("recently-added")))
+    fun `recently added books open the library newest first`() =
+        assertEquals(ShelfSeeAll.Tile(40, MenuAction.LIBRARY, LibraryQuery.RecentlyAdded), ShelfSeeAll.of(books("recently-added")))
 
     @Test
-    fun `continue listening waits for an in-progress filter`() =
-        assertNull(ShelfSeeAll.of(books("continue-listening")))
+    fun `continue listening opens the library filtered to in progress`() =
+        assertEquals(ShelfSeeAll.Tile(40, MenuAction.LIBRARY, LibraryQuery.InProgress), ShelfSeeAll.of(books("continue-listening")))
 
     @Test
-    fun `listen again waits for a finished filter`() =
-        assertNull(ShelfSeeAll.of(books("listen-again")))
+    fun `listen again opens the library filtered to finished`() =
+        assertEquals(ShelfSeeAll.Tile(40, MenuAction.LIBRARY, LibraryQuery.Finished), ShelfSeeAll.of(books("listen-again")))
+
+    // In a podcast library these shelves are episodes; a list of podcasts
+    // filtered by progress is not the same list.
+    @Test
+    fun `podcast listen again, a shelf of episodes, gets no tile`() =
+        assertNull(ShelfSeeAll.of(books("listen-again", type = "episode")))
 
     // Latest Episodes loads at most 50 and does not page, so "See all 800"
     // would open a list that stops at 50.

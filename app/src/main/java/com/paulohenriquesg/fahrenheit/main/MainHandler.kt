@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Toast
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
+import com.paulohenriquesg.fahrenheit.api.LibraryQuery
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.api.Shelf
@@ -24,8 +25,8 @@ class MainHandler(private val context: Context) {
     private fun repository(): LibraryRepository? =
         ApiClient.getLibraryApi()?.let { LibraryRepository(it) }
 
-    suspend fun fetchLibraryItems(libraryId: String): List<LibraryItem> =
-        fetch("Failed to load library items") { it.items(libraryId) }
+    suspend fun fetchLibraryItems(libraryId: String, query: LibraryQuery): List<LibraryItem> =
+        fetch("Failed to load library items") { it.items(libraryId, query) }
 
     suspend fun fetchPersonalizedView(libraryId: String): List<Shelf> =
         fetch("Failed to load personalized view") { it.personalizedShelves(libraryId) }

@@ -117,7 +117,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreenPreview() {
     FahrenheitTheme {
         MainScreen(
-            { emptyList() },
+            { _, _ -> emptyList() },
             { emptyList() }
         )
     }

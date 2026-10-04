@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.main
 
+import com.paulohenriquesg.fahrenheit.api.LibraryQuery
 import android.app.Activity
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.ui.Space
@@ -342,7 +343,9 @@ fun LibraryBrowseView(
     itemLabel: String,
     items: List<LibraryItem>,
     rowLayout: Boolean,
-    listState: androidx.compose.foundation.lazy.LazyListState
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    query: LibraryQuery = LibraryQuery.Everything,
+    loading: Boolean = false
 ) {
     Column(
         modifier = Modifier
@@ -353,8 +356,20 @@ fun LibraryBrowseView(
             text = name ?: stringResource(R.string.library),
             modifier = Modifier.padding(bottom = Space.gap)
         ) {
+            // Opened from a Home shelf, the list is narrower than the
+            // library and says which view it is (#146).
+            val view = when (query) {
+                LibraryQuery.Everything -> null
+                LibraryQuery.RecentlyAdded -> stringResource(R.string.library_recently_added)
+                LibraryQuery.InProgress -> stringResource(R.string.library_in_progress)
+                LibraryQuery.Finished -> stringResource(R.string.library_finished)
+            }
             Text(
-                text = "(${items.size} $itemLabel)",
+                // Loading, the count would be "0" and read as an answer.
+                text = listOfNotNull(
+                    view,
+                    if (loading && items.isEmpty()) stringResource(R.string.loading) else "(${items.size} $itemLabel)"
+                ).joinToString("  "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
