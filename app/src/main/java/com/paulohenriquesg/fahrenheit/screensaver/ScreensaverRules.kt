@@ -48,7 +48,12 @@ object ScreensaverPolicy {
     }
 }
 
-/** When someone last pressed a key, for the whole app (old behaviour: per gate). */
+/**
+ * When someone last pressed a key, for the whole app (#156). One for all
+ * screens: each screen keeping its own left the screen behind the player
+ * "idle" for as long as keys were pressed in the player, and going Back
+ * showed the screensaver at once.
+ */
 class LastKey(val clock: () -> Long) {
     var at: Long = clock()
 
@@ -60,31 +65,36 @@ class LastKey(val clock: () -> Long) {
 
 /**
  * The remote's keys and the screensaver (#156). Any key resets the idle time;
- * while the screensaver shows, the first key only wakes the screen - it and
- * its release are eaten, not acted on.
+ * while the screensaver shows, the key that wakes the screen is eaten until
+ * it is let go - its press, any repeats while held, and its release - so the
+ * screen behind never sees half of it.
  */
 class KeyGate(private val lastKey: LastKey) {
-    private var ownLast = lastKey.clock()
-    private var eatRelease = false
+    private var waking: Int? = null
 
     var showing: Boolean = false
 
     /** @return true when the key is eaten. */
     fun key(down: Boolean, keyCode: Int): Boolean {
-        ownLast = lastKey.clock()
-        if (!down && eatRelease) {
-            eatRelease = false
+        activity()
+        if (keyCode == waking) {
+            if (!down) waking = null
             return true
         }
         if (down && showing) {
             showing = false
-            eatRelease = true
+            waking = keyCode
             return true
         }
         return false
     }
 
-    fun idleMs(): Long = lastKey.clock() - ownLast
+    /** Someone is there, without a key: a controller's stick, say. */
+    fun activity() {
+        lastKey.at = lastKey.clock()
+    }
+
+    fun idleMs(): Long = lastKey.clock() - lastKey.at
 }
 
 /** Where the now-playing line sits; it moves to the next corner every minute. */

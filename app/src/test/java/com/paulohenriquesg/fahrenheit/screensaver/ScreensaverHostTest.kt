@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -231,7 +232,9 @@ class ScreensaverHostTest {
     fun `a pause seen here keeps the screen on for the same delay, then lets go`() {
         install()
         pass(60_000L)
+        // As the player's listener does, from outside Compose: told at once.
         playing = false
+        Snapshot.sendApplyNotifications()
         settle()
         assertTrue("still within the delay", keptOn())
 

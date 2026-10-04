@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.screensaver
 
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.Window
 import androidx.activity.ComponentActivity
@@ -105,10 +106,12 @@ object Screensaver {
         settings: () -> ScreensaverSettings,
         lastKey: LastKey
     ) {
+        val window = activity.window
+        // Once per screen: a second wrapper would count every key twice.
+        if (window.decorView.findViewWithTag<android.view.View>(ScreensaverTags.OVERLAY) != null) return
         val clock = lastKey.clock
         val gate = KeyGate(lastKey)
         val keys = KeyCount()
-        val window = activity.window
         window.callback = GatedKeys(window.callback, gate, keys)
         val overlay = ComposeView(activity).apply {
             tag = ScreensaverTags.OVERLAY
@@ -138,23 +141,30 @@ object Screensaver {
         clock: () -> Long,
         keepOn: (Boolean) -> Unit
     ) {
-        val now = source.queued()
+        // The setting, read again at every key. Off: the player is not even
+        // asked what plays, and nothing here runs.
+        val chosen = remember(keys.count) { settings() }
+        val now = if (chosen.delayMinutes != null) source.queued() else null
         val playing = now?.playing == true
         val queued = now != null
-        var art by remember { mutableStateOf<WallArt?>(null) }
-        LaunchedEffect(now?.itemId) { art = now?.let { source.art(it.itemId) } }
+        var wasPlaying by remember { mutableStateOf<Boolean?>(null) }
         var notPlayingSince by remember { mutableStateOf<Long?>(null) }
         var decision by remember { mutableStateOf(ScreensaverPolicy.Decision(keepScreenOn = false, show = false)) }
 
         LaunchedEffect(playing, queued) {
-            // Counted from a pause or stop of something that was queued.
-            notPlayingSince = if (playing || !queued) null else clock()
+            // Counted only from a pause seen here: a screen opened onto
+            // something paused an hour ago has no reason to hold the screen.
+            notPlayingSince = when {
+                playing || !queued -> null
+                wasPlaying == true -> clock()
+                else -> notPlayingSince
+            }
+            wasPlaying = if (queued) playing else null
         }
 
         // Settled again after every key, change of play, or change of setting
         // seen on the way: decide now, wait once for the next change, decide
         // again. At most two waits, then it rests until something happens.
-        val chosen = remember(keys.count, playing, queued) { settings() }
         LaunchedEffect(keys.count, playing, queued, chosen, notPlayingSince) {
             while (true) {
                 val idle = gate.idleMs()
@@ -169,6 +179,9 @@ object Screensaver {
         }
 
         if (decision.show && now != null) {
+            // Only now: the line polls the position, and the art is fetches
+            // and a decode. Gone again when it hides.
+            val art by produceState<WallArt?>(null, now.itemId) { value = source.art(now.itemId) }
             val line = source.line()
             if (line != null) ScreensaverScreen(chosen.style, line, art ?: WallArt(emptyList(), null))
         }
@@ -185,6 +198,13 @@ object Screensaver {
         private val gate: KeyGate,
         private val keys: KeyCount
     ) : Window.Callback by wrapped {
+        override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+            gate.activity()
+            keys.count++
+            Snapshot.sendApplyNotifications()
+            return wrapped.dispatchGenericMotionEvent(event)
+        }
+
         override fun dispatchKeyEvent(event: KeyEvent): Boolean {
             val eaten = gate.key(down = event.action == KeyEvent.ACTION_DOWN, keyCode = event.keyCode)
             keys.count++
@@ -206,10 +226,6 @@ object Screensaver {
  */
 @Composable
 fun ScreensaverScreen(style: ScreensaverStyle, line: NowPlayingLine, art: WallArt, elapsedMs: Long? = null) {
-    val shownFor = elapsedMs ?: produceState(0L) {
-        val start = withFrameMillis { it }
-        while (true) withFrameMillis { value = it - start }
-    }.value
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -232,12 +248,21 @@ fun ScreensaverScreen(style: ScreensaverStyle, line: NowPlayingLine, art: WallAr
                         )
                         .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.25f), Color.Black.copy(alpha = 0.7f))))
                 )
-                CornerLine(line, NowPlayingCorner.at(shownFor))
+                // The corner changes once a minute: so does this, not every frame.
+                val minutes = elapsedMs ?: produceState(0L) {
+                    while (true) {
+                        delay(CORNER_MS)
+                        value += CORNER_MS
+                    }
+                }.value
+                CornerLine(line, NowPlayingCorner.at(minutes))
             }
-            ScreensaverStyle.Bouncing -> BouncingCover(line, shownFor)
+            ScreensaverStyle.Bouncing -> BouncingCover(line, elapsedMs)
         }
     }
 }
+
+private const val CORNER_MS = 60_000L
 
 /** The thumb, title and chapter line, small and dim, in one corner. */
 @Composable
@@ -267,19 +292,32 @@ private fun CornerLine(line: NowPlayingLine, corner: NowPlayingCorner) {
 
 private val BOUNCING_COVER = 160.dp
 
-/** The playing cover bouncing off the edges, its chapter and time left under it. */
+/**
+ * The playing cover bouncing off the edges, its chapter and time left under
+ * it. The time is read only where the block is placed, so a frame moves it
+ * without composing anything again.
+ */
 @Composable
-private fun BouncingCover(line: NowPlayingLine, shownForMs: Long) {
+private fun BouncingCover(line: NowPlayingLine, elapsedMs: Long?) {
+    val clock = remember { mutableLongStateOf(elapsedMs ?: 0L) }
+    if (elapsedMs == null) {
+        LaunchedEffect(Unit) {
+            val start = withFrameMillis { it }
+            while (true) withFrameMillis { clock.longValue = it - start }
+        }
+    }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val width = constraints.maxWidth.toFloat()
         val height = constraints.maxHeight.toFloat()
         // The cover and its caption, as one block that bounces.
         val blockPx = with(LocalDensity.current) { (BOUNCING_COVER + 40.dp).toPx() }
-        val (x, y) = Bounce.at(shownForMs, width, height, blockPx)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
+                .offset {
+                    val (x, y) = Bounce.at(clock.longValue, width, height, blockPx)
+                    IntOffset(x.roundToInt(), y.roundToInt())
+                }
                 .width(BOUNCING_COVER)
                 .alpha(0.8f)
         ) {
