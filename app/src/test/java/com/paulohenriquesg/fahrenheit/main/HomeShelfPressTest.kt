@@ -145,7 +145,7 @@ class HomeShelfPressTest {
     // #147: a shelf the server adds is drawn, not dropped.
     @Test
     fun `a shelf of a type Home does not know is drawn as covers that open details`() {
-        val started = press(books("continue-reading", "some-future-type", item("b1", "An Invented Book")), "An Invented Book")
+        val started = press(books("a-future-shelf", "some-future-type", item("b1", "An Invented Book")), "An Invented Book")
 
         assertEquals(DetailActivity::class.java.name, started.component?.className)
         assertEquals("b1", started.getStringExtra("item_id"))

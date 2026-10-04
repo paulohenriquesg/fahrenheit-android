@@ -79,7 +79,12 @@ class ShelfDeserializer(
         entities: JsonElement?,
         context: JsonDeserializationContext
     ): List<LibraryItem>? {
-        if (entities == null || !entities.isJsonArray || entities.asJsonArray.isEmpty) return null
+        if (entities == null || entities.isJsonNull) return null
+        if (!entities.isJsonArray) {
+            log("Skipped shelf \"$id\" of unknown type \"$type\": its entities are not a list")
+            return null
+        }
+        if (entities.asJsonArray.isEmpty) return null
         val readable = entities.asJsonArray.all { it.isLibraryItem() }
         if (!readable) {
             log("Skipped shelf \"$id\" of unknown type \"$type\": its entities are not library items")
@@ -93,8 +98,10 @@ class ShelfDeserializer(
         val item = asJsonObject
         val itemId = item.get("id")
         val media = item.get("media")
+        val metadata = media?.takeIf { it.isJsonObject }?.asJsonObject?.get("metadata")
+        // The card writes the title, which Gson would leave null if absent.
+        val title = metadata?.takeIf { it.isJsonObject }?.asJsonObject?.get("title")
         return itemId != null && itemId.isJsonPrimitive &&
-            media != null && media.isJsonObject &&
-            media.asJsonObject.get("metadata")?.isJsonObject == true
+            title != null && title.isJsonPrimitive && title.asJsonPrimitive.isString
     }
 }

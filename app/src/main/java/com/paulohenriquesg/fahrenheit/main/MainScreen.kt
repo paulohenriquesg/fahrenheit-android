@@ -521,13 +521,12 @@ fun PersonalizedHomeView(
     LaunchedEffect(shelves, resumes) {
         runCatching { fetchProgress() }.onSuccess { progress = CoverProgress.index(it) }
     }
-    // Filter out empty shelves, and any Home cannot draw (#147)
-    val nonEmptyShelves = shelves.filter {
-        HomeShelves.of(it) != null && (
-        (it.bookEntities != null && it.bookEntities.isNotEmpty()) ||
-        (it.authorEntities != null && it.authorEntities.isNotEmpty()) ||
-        (it.seriesEntities != null && it.seriesEntities.isNotEmpty()))
-    }
+    // The shelves Home draws, each with what it does (#147); empty ones and
+    // ones it cannot draw are left out.
+    val drawn = shelves
+        .filter { !it.bookEntities.isNullOrEmpty() || !it.authorEntities.isNullOrEmpty() || !it.seriesEntities.isNullOrEmpty() }
+        .mapNotNull { shelf -> HomeShelves.of(shelf)?.let { shelf to it } }
+    val nonEmptyShelves = drawn.map { it.first }
 
     Column(
         modifier = Modifier
@@ -553,10 +552,8 @@ fun PersonalizedHomeView(
         androidx.compose.foundation.lazy.LazyColumn {
             val shelfKeys = StableKeys.of(nonEmptyShelves) { s -> s.id }
             items(nonEmptyShelves.size, key = { shelfKeys[it] }) { index ->
-                val shelf = nonEmptyShelves[index]
+                val (shelf, behaviour) = drawn[index]
                 val seeAll = ShelfSeeAll.of(shelf)
-                // What this shelf is and what its cards do: one table (#147).
-                val behaviour = HomeShelves.of(shelf) ?: return@items
                 when (behaviour.style) {
                     HomeShelves.Style.Episodes -> {
                         shelf.bookEntities?.let { books ->

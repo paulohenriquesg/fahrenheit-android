@@ -79,12 +79,24 @@ class HomeShelvesTest {
         assertEquals(Behaviour(Style.Authors, seeAll = MenuAction.AUTHORS to LibraryQuery.Everything), HomeShelves.of(shelf))
     }
 
-    // The server adds and renames shelves (Continue reading, Read again...).
+    // A shelf type a later server may add: drawn, not dropped.
     @Test
     fun `a shelf of a type Home does not know, holding library items, is a plain cover row`() =
-        assertEquals(Behaviour(Style.Covers), HomeShelves.of(books("continue-reading", "some-future-type")))
+        assertEquals(Behaviour(Style.Covers), HomeShelves.of(books("a-future-shelf", "some-future-type")))
 
     @Test
     fun `a shelf of a type Home does not know, holding nothing it can read, is not drawn`() =
         assertNull(HomeShelves.of(Shelf(id = "x", label = "", labelStringKey = "", type = "some-future-type")))
+
+    // Matched by their type, not their id: the rows an id table could break.
+    @Test
+    fun `continue series, continue reading and read again are covers opening details, with no See all`() {
+        for (id in listOf("continue-series", "continue-reading", "read-again")) {
+            assertEquals(id, Behaviour(Style.Covers), HomeShelves.of(books(id, "book")))
+        }
+    }
+
+    @Test
+    fun `a podcast library's listen again is episodes, with no See all`() =
+        assertEquals(Behaviour(Style.Episodes), HomeShelves.of(books("listen-again", "episode")))
 }

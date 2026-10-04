@@ -30,6 +30,9 @@ object HomeShelves {
 
     // By id, for the shelves that behave differently from others of their type.
     private val byId = listOf(
+        // Continue listening and Listen again are books only: in a podcast
+        // library they are episodes, and podcasts filtered by progress are not
+        // the same list. They fall to the episode row below.
         // Plays from where it was, as an episode there does; details a long press away (#124).
         Row("continue-listening", setOf("book"), Behaviour(Style.Covers, Action.Play, Action.Details, MenuAction.LIBRARY to LibraryQuery.InProgress)),
         Row("listen-again", setOf("book"), Behaviour(Style.Covers, seeAll = MenuAction.LIBRARY to LibraryQuery.Finished)),

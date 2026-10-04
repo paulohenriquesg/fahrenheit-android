@@ -475,7 +475,7 @@ class ShelfDeserializerTest {
     @Test
     fun `a shelf of an unknown type holding library items keeps them`() {
         val json = """
-            {"id": "continue-reading", "label": "Continue Reading", "labelStringKey": "LabelContinueReading",
+            {"id": "a-future-shelf", "label": "A Future Shelf", "labelStringKey": "LabelFutureShelf",
              "type": "some-future-type", "total": 1,
              "entities": [{"id": "b1", "mediaType": "book", "media": {"metadata": {"title": "An Invented Book"}}}]}
         """.trimIndent()
@@ -501,5 +501,34 @@ class ShelfDeserializerTest {
         assertNull(shelf.bookEntities)
         assertEquals(1, logged.size)
         assertTrue(logged.single(), logged.single().contains("mystery"))
+    }
+
+    // Gson leaves a missing non-null title null, and the card would crash on it.
+    @Test
+    fun `an unknown-type entity without a title is not a library item`() {
+        val json = """
+            {"id": "a-future-shelf", "label": "A Future Shelf", "labelStringKey": "LabelFutureShelf",
+             "type": "some-future-type", "total": 1,
+             "entities": [{"id": "b1", "media": {"metadata": {}}}]}
+        """.trimIndent()
+
+        val shelf = gson.fromJson(json, Shelf::class.java)
+
+        assertNull(shelf.bookEntities)
+        assertEquals(1, logged.size)
+    }
+
+    @Test
+    fun `an unknown-type shelf whose entities are not a list is skipped and logged`() {
+        val json = """
+            {"id": "a-future-shelf", "label": "A Future Shelf", "labelStringKey": "LabelFutureShelf",
+             "type": "some-future-type", "total": 1,
+             "entities": {"id": "b1"}}
+        """.trimIndent()
+
+        val shelf = gson.fromJson(json, Shelf::class.java)
+
+        assertNull(shelf.bookEntities)
+        assertEquals(1, logged.size)
     }
 }
