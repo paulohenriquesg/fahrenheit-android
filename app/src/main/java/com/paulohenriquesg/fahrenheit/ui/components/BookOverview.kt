@@ -75,6 +75,7 @@ const val DESCRIPTION_BOX_TAG = "book_description_box"
  *   series asks "Play <title> instead?" first; from the book screen it opens it.
  * @param landOnDescription focus lands on the description (About); otherwise
  *   the caller lands it on an action (the book screen's Resume).
+ * @param top above the description: the book screen's Now playing (#159).
  */
 @Composable
 fun BookOverview(
@@ -89,6 +90,7 @@ fun BookOverview(
     askBeforeSwitching: Boolean,
     landOnDescription: Boolean,
     modifier: Modifier = Modifier,
+    top: @Composable () -> Unit = {},
     actions: @Composable ColumnScope.() -> Unit
 ) {
     val text = description?.takeIf { it.isNotBlank() }
@@ -130,11 +132,14 @@ fun BookOverview(
             actions()
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+            top()
             text?.let {
                 val scroll = rememberScrollState()
                 Box(
                     Modifier
                         .fillMaxWidth()
+                        // Gives way to what is above and below it: it scrolls.
+                        .weight(1f, fill = false)
                         .heightIn(max = 230.dp)
                         .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), RoundedCornerShape(12.dp))
                         // Down past the end of the description goes to this book in

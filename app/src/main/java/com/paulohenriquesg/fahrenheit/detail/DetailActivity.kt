@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
@@ -24,8 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -208,9 +205,9 @@ class DetailActivity : ComponentActivity() {
                 context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId))
             }
         }
-        DetailBody(isBook, nowPlaying) { margin ->
+        DetailBody(isBook) { margin ->
             if (!isBook) {
-                PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it })
+                PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it }, nowPlaying = nowPlaying)
             } else {
                 BookDetailView(
                     itemId = itemId,
@@ -227,6 +224,7 @@ class DetailActivity : ComponentActivity() {
                     series = seriesBooks,
                     seriesName = seriesRef?.name,
                     onSeriesBook = { context.startActivity(createIntent(context, it.itemId)) },
+                    nowPlaying = nowPlaying,
                     finished = item.userMediaProgress?.isFinished == true,
                     marking = marking,
                     onMarkFinished = { done ->
@@ -261,7 +259,8 @@ class DetailActivity : ComponentActivity() {
         itemId: String,
         item: LibraryItemResponse,
         me: Me?,
-        onReloaded: (LibraryItemResponse) -> Unit
+        onReloaded: (LibraryItemResponse) -> Unit,
+        nowPlaying: @Composable () -> Unit
     ) {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
@@ -365,6 +364,7 @@ class DetailActivity : ComponentActivity() {
                 DetailHeader(
                     itemId = itemId,
                     content = header,
+                    nowPlaying = nowPlaying,
                     onPrimary = {
                         (resumeEpisode ?: EpisodeOrder.newestFirst(media.episodes.orEmpty()).firstOrNull())?.let(play)
                     },
@@ -434,28 +434,13 @@ class DetailActivity : ComponentActivity() {
  * The details screen's body. A book keeps the screen's margin inside its
  * content (handed to [content]), so its Chapters panel reaches the screen's
  * edges; a podcast's screen is padded around, as before.
- *
- * @param nowPlaying drawn above the content: what plays, and Stop (#159).
  */
 @Composable
-internal fun DetailBody(isBook: Boolean, nowPlaying: @Composable () -> Unit = {}, content: @Composable (PaddingValues) -> Unit) {
+internal fun DetailBody(isBook: Boolean, content: @Composable (PaddingValues) -> Unit) {
+    val margin = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
     if (isBook) {
-        // Now playing sits in the margin, above the book, which moves down
-        // by its height (#159). The book still fills the screen and is drawn
-        // over it, so its Chapters panel covers the bar too.
-        var barHeight by remember { mutableIntStateOf(0) }
-        val density = LocalDensity.current
-        val below = if (barHeight == 0) 0.dp else with(density) { barHeight.toDp() } + 12.dp
-        Box(Modifier.fillMaxSize()) {
-            Box(Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp)) {
-                Box(Modifier.onSizeChanged { barHeight = it.height }) { nowPlaying() }
-            }
-            content(PaddingValues(start = 24.dp, end = 24.dp, top = 16.dp + below, bottom = 16.dp))
-        }
+        Box(Modifier.fillMaxSize()) { content(margin) }
     } else {
-        Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
-            nowPlaying()
-            Box(Modifier.fillMaxWidth().weight(1f)) { content(PaddingValues()) }
-        }
+        Column(Modifier.fillMaxSize().padding(margin)) { content(PaddingValues()) }
     }
 }

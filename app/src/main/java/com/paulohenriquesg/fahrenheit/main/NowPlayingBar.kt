@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -59,39 +60,35 @@ fun NowPlayingBar(entry: RailEntry, onOpen: (RailEntry) -> Unit, onStop: (RailEn
                 }
             }
         }
-        Surface(
-            onClick = { onStop(entry) },
-            modifier = Modifier.testTag(NOW_PLAYING_BAR_STOP_TAG),
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // The label says it; the icon is decoration, not read out twice.
-                Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text(stringResource(R.string.rail_stop), style = MaterialTheme.typography.labelLarge)
-            }
-        }
+        StopButton(onClick = { onStop(entry) }, modifier = Modifier.testTag(NOW_PLAYING_BAR_STOP_TAG))
     }
 }
 
 /**
  * The bar for what [player] - the screen's controller - has queued; nothing
- * when nothing is, or there is no controller yet. Stop moves focus down into
- * the screen first: the focused button goes with the bar, and a TV with
- * nothing focused ignores the remote (#53).
+ * when nothing is. Between leaving the screen and connecting again there is no
+ * controller: the bar stays as it was rather than going and coming back, which
+ * moved the screen and took focus with it.
+ *
+ * Stop moves focus down into the screen first: the focused button goes with
+ * the bar, and a TV with nothing focused ignores the remote (#53).
  */
 @Composable
 fun NowPlayingBarSlot(player: Player?, chaptersOf: suspend (String) -> List<Chapter>?, onOpen: (RailEntry) -> Unit) {
-    val entry = rememberRailEntry(player, chaptersOf) ?: return
+    val live = rememberRailEntry(player, chaptersOf)
+    val kept = remember { KeptEntry() }
+    if (player != null) kept.entry = live
+    val entry = kept.entry ?: return
     val focus = LocalFocusManager.current
     NowPlayingBar(entry, onOpen, onStop = {
         focus.moveFocus(FocusDirection.Down)
         player?.let(Playback::end)
     })
+}
+
+/** The last entry a controller gave; not state, so keeping it redraws nothing. */
+private class KeptEntry {
+    var entry: RailEntry? = null
 }
 
 private val BAR_WIDTH = 320.dp

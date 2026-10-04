@@ -88,6 +88,9 @@ const val DESCRIPTION_TAG = "detail_full_description"
  *
  * [padding] is the screen's margin, kept inside: the Chapters panel covers the
  * whole screen, edge to edge, as it does over the player.
+ *
+ * @param nowPlaying what plays, and Stop (#159): beside the cover, above the
+ *   description, where it costs the actions under the cover no height.
  */
 @Composable
 fun BookDetailView(
@@ -104,7 +107,8 @@ fun BookDetailView(
     facts: List<AboutFact> = emptyList(),
     series: SeriesBooks? = null,
     seriesName: String? = null,
-    onSeriesBook: (SeriesBook) -> Unit = {}
+    onSeriesBook: (SeriesBook) -> Unit = {},
+    nowPlaying: @Composable () -> Unit = {}
 ) {
     val panels = rememberPlayerPanels()
     // Keyed on whether there is a primary action, not its label: the label
@@ -123,7 +127,8 @@ fun BookDetailView(
             onSeriesBook = onSeriesBook,
             askBeforeSwitching = false,
             landOnDescription = false,
-            modifier = Modifier.padding(padding)
+            modifier = Modifier.padding(padding),
+            top = nowPlaying
         ) {
             content.primary?.let { label ->
                 Button(
@@ -160,13 +165,16 @@ fun BookDetailView(
  * nothing on a TV responds to the remote until something holds focus.
  *
  * @param actions drawn after the primary action, e.g. the admin's feed check.
+ * @param nowPlaying what plays, and Stop (#159): above the title, scrolling away
+ *   with the header rather than fixed over the episodes.
  */
 @Composable
 fun DetailHeader(
     itemId: String,
     content: DetailHeaderContent,
     onPrimary: () -> Unit,
-    actions: @Composable () -> Unit = {}
+    actions: @Composable () -> Unit = {},
+    nowPlaying: @Composable () -> Unit = {}
 ) {
     // Keyed on whether there is a primary action, not its label: the label
     // changes after Mark finished ("Resume at…" to "Play"), and focus must not
@@ -176,6 +184,7 @@ fun DetailHeader(
         CoverImage(itemId = itemId, contentDescription = content.title)
         Spacer(Modifier.width(Space.gap * 2))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            nowPlaying()
             Text(
                 text = content.title,
                 style = MaterialTheme.typography.headlineMedium,

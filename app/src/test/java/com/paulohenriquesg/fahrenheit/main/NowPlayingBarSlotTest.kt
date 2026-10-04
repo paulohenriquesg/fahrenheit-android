@@ -11,6 +11,10 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.test.utils.TestExoPlayerBuilder
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper.run
@@ -37,30 +41,36 @@ class NowPlayingBarSlotTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private lateinit var player: ExoPlayer
+    private var player: ExoPlayer? = null
 
     @After
-    fun tearDown() = player.release()
+    fun tearDown() { player?.release() }
+
+    /** The screen's controller: null between leaving the screen and connecting again. */
+    private var connected by mutableStateOf<Player?>(null)
 
     private fun show() {
+        connected = player
         compose.setContent {
             FahrenheitTheme {
                 Column {
-                    NowPlayingBarSlot(player, chaptersOf = { null }, onOpen = {})
+                    NowPlayingBarSlot(connected, chaptersOf = { null }, onOpen = {})
                     BasicText("the screen", Modifier.testTag("content").focusable())
                 }
             }
         }
-        run(player).untilPendingCommandsAreFullyHandled()
+        run(player!!).untilPendingCommandsAreFullyHandled()
         compose.waitForIdle()
     }
 
     private fun queue() {
         val book = NowPlaying("b1", "A Book", TrackTimeline(listOf(TimelineTrack(1, 0.0, 3600.0, "/b1"))), null, null, null, false, null)
         val queue = PlaybackQueue.of(book, 600.0) { "https://abs.test$it" }!!
-        player.setMediaItems(queue.items, queue.index, queue.positionMs)
-        player.prepare()
-        player.play()
+        player!!.run {
+            setMediaItems(queue.items, queue.index, queue.positionMs)
+            prepare()
+            play()
+        }
     }
 
     @Test
@@ -72,7 +82,6 @@ class NowPlayingBarSlotTest {
 
     @Test
     fun `no controller, no bar`() {
-        player = TestExoPlayerBuilder(compose.activity).build()
         compose.setContent { FahrenheitTheme { NowPlayingBarSlot(null, chaptersOf = { null }, onOpen = {}) } }
         compose.waitForIdle()
         compose.onNodeWithTag(NOW_PLAYING_BAR_TAG).assertDoesNotExist()
@@ -88,11 +97,30 @@ class NowPlayingBarSlotTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag(NOW_PLAYING_BAR_STOP_TAG).performSemanticsAction(SemanticsActions.OnClick)
-        run(player).untilPendingCommandsAreFullyHandled()
+        run(player!!).untilPendingCommandsAreFullyHandled()
         compose.waitForIdle()
 
-        assertEquals(0, player.mediaItemCount)
+        assertEquals(0, player!!.mediaItemCount)
         compose.onNodeWithTag(NOW_PLAYING_BAR_TAG).assertDoesNotExist()
         compose.onNodeWithTag("content").assertIsFocused()
+    }
+
+    // Review: back from the player the screen has no controller until it
+    // connects again. The bar went and came back, taking focus with it.
+    @Test
+    fun `the bar stays, focused, while the screen connects again`() {
+        player = TestExoPlayerBuilder(compose.activity).setMediaSourceFactory(hourLongFiles()).build()
+        queue()
+        show()
+        compose.onNodeWithTag(NOW_PLAYING_BAR_TAG).performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+
+        connected = null
+        compose.waitForIdle()
+        compose.onNodeWithTag(NOW_PLAYING_BAR_TAG).assertIsFocused()
+
+        connected = player
+        compose.waitForIdle()
+        compose.onNodeWithTag(NOW_PLAYING_BAR_TAG).assertIsFocused()
     }
 }

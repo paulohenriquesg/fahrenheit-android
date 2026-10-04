@@ -87,22 +87,7 @@ fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit
         }
         // Only while open: a closed rail holds no focus, and has no room for it.
         if (open) {
-            Surface(
-                onClick = { onStop(entry) },
-                modifier = Modifier.padding(start = 6.dp, top = 4.dp).testTag(NOW_PLAYING_STOP_TAG),
-                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // The label says it; the icon is decoration, not read out twice.
-                    Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text(stringResource(R.string.rail_stop), style = MaterialTheme.typography.labelLarge)
-                }
-            }
+            StopButton(onClick = { onStop(entry) }, modifier = Modifier.padding(start = 6.dp, top = 4.dp).testTag(NOW_PLAYING_STOP_TAG))
         }
         // The line between what is playing and the sections.
         Box(
@@ -134,6 +119,27 @@ fun NowPlayingSlot(
         Playback.end(player)
         onStopped()
     })
+}
+
+/** Stop, beside or under Now playing: ends the listening session (#155, #159). */
+@Composable
+internal fun StopButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // The label says it; the icon is decoration, not read out twice.
+            Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(stringResource(R.string.rail_stop), style = MaterialTheme.typography.labelLarge)
+        }
+    }
 }
 
 /** A book's chapters, for Now playing's time left; null when they could not be read. */
