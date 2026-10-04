@@ -104,10 +104,9 @@ fun MainScreen(
     val username = userPreferences.username
     var libraries by remember { mutableStateOf(listOf<Library>()) }
     var libraryStats by remember { mutableStateOf(mapOf<String, LibraryStats>()) }
-    var libraryItems by remember { mutableStateOf(listOf<LibraryItem>()) }
-    // Which view of the library is showing: the whole of it from the rail, or
-    // the one a Home shelf's "See all" stands for (#146).
-    var libraryQuery by remember { mutableStateOf(LibraryQuery.Everything) }
+    // The library list, and which view of it: the whole library from the
+    // rail, or the one a Home shelf's "See all" stands for (#146).
+    val library = remember { LibraryList(scope, fetchLibraryItems) }
     var shelves by remember { mutableStateOf(listOf<Shelf>()) }
     var currentLibrary by remember { mutableStateOf<Library?>(null) }
     val listState = rememberLazyListState()
@@ -171,12 +170,11 @@ fun MainScreen(
                 // Drop what belongs to the library being left: Home showed its
                 // shelves for the second or two the fetch took.
                 shelves = emptyList()
-                libraryItems = emptyList()
-                libraryQuery = LibraryQuery.Everything
+                library.clear()
                 isLoadingHome = true
                 newLibrary.id?.let { libraryId ->
                     shelves = fetchPersonalizedView(libraryId)
-                    libraryItems = fetchLibraryItems(libraryId, LibraryQuery.Everything)
+                    library.open(libraryId, LibraryQuery.Everything)
                 }
                 isLoadingHome = false
             }
@@ -197,7 +195,7 @@ fun MainScreen(
                         currentLibrary?.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
                         currentLibrary?.id?.let { libraryId ->
                             shelves = fetchPersonalizedView(libraryId)
-                            libraryItems = fetchLibraryItems(libraryId, LibraryQuery.Everything)
+                            library.open(libraryId, LibraryQuery.Everything)
                         }
                     }
                 }
@@ -233,7 +231,7 @@ fun MainScreen(
     // have, and RIGHT goes from there into the content.
     val initialFocus = rememberInitialFocus(
         enabled = true,
-        view, shelves, libraryItems, seriesList, collectionsList, listeningStats
+        view, shelves, library.items, seriesList, collectionsList, listeningStats
     )
 
     var updateCheck by remember { mutableStateOf<UpdateCheck>(UpdateCheck.Idle) }
@@ -279,13 +277,9 @@ fun MainScreen(
             }
             MenuAction.LIBRARY -> {
                 view = MainView.LIBRARY
-                // Cleared first, so a list of one view never shows under the
-                // other's label while the fetch is in flight.
-                if (query != libraryQuery) libraryItems = emptyList()
-                libraryQuery = query
-                libraryId?.let { id ->
-                    scope.launch { libraryItems = fetchLibraryItems(id, query) }
-                }
+                // A different view opens at its top, not where the last one was.
+                if (query != library.query) scope.launch { listState.scrollToItem(0) }
+                libraryId?.let { id -> library.open(id, query) }
             }
             MenuAction.SERIES -> {
                 view = MainView.SERIES
@@ -408,10 +402,11 @@ fun MainScreen(
                     MainView.LIBRARY -> LibraryBrowseView(
                         name = currentLibrary?.name,
                         itemLabel = if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts",
-                        items = libraryItems,
+                        items = library.items,
                         rowLayout = isRowLayout,
                         listState = listState,
-                        query = libraryQuery
+                        query = library.query,
+                        loading = library.loading
                     )
                     MainView.SERIES -> SeriesBrowseView(seriesList, isLoadingSeries)
                     MainView.AUTHORS -> AuthorsBrowseView(currentLibrary?.id)

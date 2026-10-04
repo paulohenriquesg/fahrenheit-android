@@ -45,12 +45,14 @@ class LibraryQueryRequestTest {
     }
 
     @Test
-    fun `recently added is newest first by date added`() {
+    fun `recently added is the server's recent items, newest first by date added`() {
         val sent = request(LibraryQuery.RecentlyAdded)
 
         assertEquals("addedAt", sent.requestUrl!!.queryParameter("sort"))
         assertEquals("1", sent.requestUrl!!.queryParameter("desc"))
-        assertNull(sent.requestUrl!!.queryParameter("filter"))
+        // The shelf counts the last 60 days, the server's "recent"; so must
+        // the list its "See all N" opens, or N would not match.
+        assertEquals("recent", sent.requestUrl!!.queryParameter("filter"))
     }
 
     @Test

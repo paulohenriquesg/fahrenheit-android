@@ -27,12 +27,12 @@ class LibraryBrowseQueryTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private fun render(query: LibraryQuery) {
+    private fun render(query: LibraryQuery, loading: Boolean = false) {
         compose.setContent {
             FahrenheitTheme {
                 LibraryBrowseView(
                     name = "An Invented Library", itemLabel = "books", items = emptyList(),
-                    rowLayout = true, listState = rememberLazyListState(), query = query
+                    rowLayout = true, listState = rememberLazyListState(), query = query, loading = loading
                 )
             }
         }
@@ -68,5 +68,14 @@ class LibraryBrowseQueryTest {
         compose.onNodeWithText("Recently added", substring = true).assertDoesNotExist()
         compose.onNodeWithText("In progress", substring = true).assertDoesNotExist()
         compose.onNodeWithText("Finished", substring = true).assertDoesNotExist()
+    }
+
+    // An empty list while the fetch runs read as "nothing in progress".
+    @Test
+    fun `a view still loading says so rather than counting nothing`() {
+        render(LibraryQuery.InProgress, loading = true)
+
+        compose.onNodeWithText("Loading…", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("0 books", substring = true).assertDoesNotExist()
     }
 }

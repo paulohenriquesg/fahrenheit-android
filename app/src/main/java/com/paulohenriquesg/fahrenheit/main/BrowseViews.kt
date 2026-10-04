@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.main
 
+import com.paulohenriquesg.fahrenheit.api.LibraryQuery
 import android.app.Activity
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.ui.Space
@@ -343,7 +344,8 @@ fun LibraryBrowseView(
     items: List<LibraryItem>,
     rowLayout: Boolean,
     listState: androidx.compose.foundation.lazy.LazyListState,
-    query: com.paulohenriquesg.fahrenheit.api.LibraryQuery = com.paulohenriquesg.fahrenheit.api.LibraryQuery.Everything
+    query: LibraryQuery = LibraryQuery.Everything,
+    loading: Boolean = false
 ) {
     Column(
         modifier = Modifier
@@ -357,13 +359,17 @@ fun LibraryBrowseView(
             // Opened from a Home shelf, the list is narrower than the
             // library and says which view it is (#146).
             val view = when (query) {
-                com.paulohenriquesg.fahrenheit.api.LibraryQuery.Everything -> null
-                com.paulohenriquesg.fahrenheit.api.LibraryQuery.RecentlyAdded -> stringResource(R.string.library_recently_added)
-                com.paulohenriquesg.fahrenheit.api.LibraryQuery.InProgress -> stringResource(R.string.library_in_progress)
-                com.paulohenriquesg.fahrenheit.api.LibraryQuery.Finished -> stringResource(R.string.library_finished)
+                LibraryQuery.Everything -> null
+                LibraryQuery.RecentlyAdded -> stringResource(R.string.library_recently_added)
+                LibraryQuery.InProgress -> stringResource(R.string.library_in_progress)
+                LibraryQuery.Finished -> stringResource(R.string.library_finished)
             }
             Text(
-                text = listOfNotNull(view, "(${items.size} $itemLabel)").joinToString("  "),
+                // Loading, the count would be "0" and read as an answer.
+                text = listOfNotNull(
+                    view,
+                    if (loading && items.isEmpty()) stringResource(R.string.loading) else "(${items.size} $itemLabel)"
+                ).joinToString("  "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
