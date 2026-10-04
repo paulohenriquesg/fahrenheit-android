@@ -521,12 +521,12 @@ fun PersonalizedHomeView(
     LaunchedEffect(shelves, resumes) {
         runCatching { fetchProgress() }.onSuccess { progress = CoverProgress.index(it) }
     }
-    // Filter out empty shelves
-    val nonEmptyShelves = shelves.filter {
-        (it.bookEntities != null && it.bookEntities.isNotEmpty()) ||
-        (it.authorEntities != null && it.authorEntities.isNotEmpty()) ||
-        (it.seriesEntities != null && it.seriesEntities.isNotEmpty())
-    }
+    // The shelves Home draws, each with what it does (#147); empty ones and
+    // ones it cannot draw are left out.
+    val drawn = shelves
+        .filter { !it.bookEntities.isNullOrEmpty() || !it.authorEntities.isNullOrEmpty() || !it.seriesEntities.isNullOrEmpty() }
+        .mapNotNull { shelf -> HomeShelves.of(shelf)?.let { shelf to it } }
+    val nonEmptyShelves = drawn.map { it.first }
 
     Column(
         modifier = Modifier
@@ -552,19 +552,14 @@ fun PersonalizedHomeView(
         androidx.compose.foundation.lazy.LazyColumn {
             val shelfKeys = StableKeys.of(nonEmptyShelves) { s -> s.id }
             items(nonEmptyShelves.size, key = { shelfKeys[it] }) { index ->
-                val shelf = nonEmptyShelves[index]
+                val (shelf, behaviour) = drawn[index]
                 val seeAll = ShelfSeeAll.of(shelf)
-                when (shelf.type) {
-                    "episode" -> {
+                when (behaviour.style) {
+                    HomeShelves.Style.Episodes -> {
                         shelf.bookEntities?.let { books ->
                             ShelfRow(shelf = shelf, progress = progress, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { item ->
                                 val episodeId = item.recentEpisode?.id
                                 val podcastId = item.recentEpisode?.libraryItemId ?: item.id
-
-                                android.util.Log.d("MainScreen", "Episode clicked - episodeId: $episodeId, podcastId: $podcastId")
-                                android.util.Log.d("MainScreen", "Item data - id: ${item.id}, mediaType: ${item.mediaType}")
-                                android.util.Log.d("MainScreen", "RecentEpisode data - ${item.recentEpisode}")
-
                                 if (episodeId != null) {
                                     val intent = PlayerActivity.createIntent(context, podcastId, episodeId, autoPlay = true)
                                     context.startActivity(intent)
@@ -575,33 +570,28 @@ fun PersonalizedHomeView(
                             }
                         }
                     }
-                    "book", "podcast" -> {
+                    HomeShelves.Style.Covers -> {
                         shelf.bookEntities?.let { books ->
-                            fun openDetails(item: LibraryItem) =
-                                context.startActivity(com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(context, item.id))
-                            // A book in Continue listening plays from where it
-                            // was, as an episode there already does; its details
-                            // are a long press away (#124). Other shelves open
-                            // details, as before.
-                            val playsOnPress = shelf.id == CONTINUE_LISTENING && shelf.type == "book"
+                            fun act(action: HomeShelves.Action, item: LibraryItem) {
+                                when {
+                                    // A book whose audio has gone would only reach
+                                    // a player that cannot start; its details say why.
+                                    action == HomeShelves.Action.Play && item.media.numAudioFiles > 0 ->
+                                        context.startActivity(PlayerActivity.createIntent(context, item.id, autoPlay = true))
+                                    else ->
+                                        context.startActivity(com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(context, item.id))
+                                }
+                            }
                             ShelfRow(
                                 shelf = shelf,
                                 progress = progress,
                                 seeAllTotal = seeAll?.total,
                                 onSeeAll = { seeAll?.let { onSeeAll(it) } },
-                                onItemLongClick = if (playsOnPress) ::openDetails else null
-                            ) { item ->
-                                // A book whose audio has gone would only reach a
-                                // player that cannot start; its details say why.
-                                if (playsOnPress && item.media.numAudioFiles > 0) {
-                                    context.startActivity(PlayerActivity.createIntent(context, item.id, autoPlay = true))
-                                } else {
-                                    openDetails(item)
-                                }
-                            }
+                                onItemLongClick = behaviour.longPress?.let { longPress -> { item -> act(longPress, item) } }
+                            ) { item -> act(behaviour.press, item) }
                         }
                     }
-                    "authors" -> {
+                    HomeShelves.Style.Authors -> {
                         shelf.authorEntities?.let { authors ->
                             AuthorShelfRow(shelf = shelf, authors = authors, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { author ->
                                 val intent = com.paulohenriquesg.fahrenheit.author.AuthorDetailActivity.createIntent(context, author.id)
@@ -609,7 +599,7 @@ fun PersonalizedHomeView(
                             }
                         }
                     }
-                    "series" -> {
+                    HomeShelves.Style.Series -> {
                         shelf.seriesEntities?.let { series ->
                             SeriesShelfRow(shelf = shelf, series = series, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { seriesItem ->
                                 val intent = com.paulohenriquesg.fahrenheit.group.BookGroupActivity.forSeries(context, seriesItem)
@@ -623,6 +613,3 @@ fun PersonalizedHomeView(
         }
     }
 }
-
-/** The server's id for the shelf of things the user has started. */
-private const val CONTINUE_LISTENING = "continue-listening"
