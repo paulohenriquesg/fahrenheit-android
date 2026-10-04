@@ -183,7 +183,7 @@ private fun EpisodeExtras(nowPlaying: NowPlaying) {
 
 /**
  * "Go to podcast", for an episode: it sits beside the transport, where frame C
- * puts the actions. Leaving for the podcast stops playback (see
+ * puts the actions. The episode plays on, as after Back (see
  * [PlayerActivity.leaveForPodcast]).
  */
 @Composable

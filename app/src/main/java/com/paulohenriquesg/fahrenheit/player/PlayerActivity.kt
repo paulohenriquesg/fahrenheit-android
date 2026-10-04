@@ -51,8 +51,8 @@ import retrofit2.awaitResponse
  * fix had to be made twice, and the second copy was nearly missed each time.
  *
  * Playback lives in [PlaybackService]; this screen drives it through a
- * MediaController, connected while it is visible. Back stops playback, Home
- * leaves it playing.
+ * MediaController, connected while it is visible. Back and Home both leave
+ * it playing (#155); Stop on the rail's Now playing entry ends it.
  */
 class PlayerActivity : ComponentActivity() {
     private var controller by mutableStateOf<MediaController?>(null)
@@ -120,11 +120,9 @@ class PlayerActivity : ComponentActivity() {
         connection.open()
     }
 
-    /** Set when About switched to another book: that one may already be queued, so this one must not stop it. */
-    private var handedOver = false
-
+    // Leaving, by Back or Home, keeps playing (#155): the controller only lets go.
     override fun onStop() {
-        connection.close { Playback.leave(it, finishing = isFinishing && !handedOver) }
+        connection.close()
         controller = null
         super.onStop()
     }
@@ -363,7 +361,6 @@ class PlayerActivity : ComponentActivity() {
                                 )
                                 PlayerPanel.About -> {
                                     val playInstead: (SeriesBook) -> Unit = { other ->
-                                        handedOver = true
                                         switchTo(this@PlayerActivity, connected, other.itemId)
                                     }
                                     val mark: (Boolean) -> Unit = { done ->
@@ -432,7 +429,6 @@ class PlayerActivity : ComponentActivity() {
 
     /** Previous or Next episode: this one stops, and the other opens, playing (see [switchTo]). */
     private fun goToEpisode(controller: androidx.media3.common.Player, episodeId: String) {
-        handedOver = true
         val itemId = intent.getStringExtra(EXTRA_ITEM_ID) ?: return
         switchTo(this, controller, itemId, episodeId)
     }
@@ -500,20 +496,17 @@ class PlayerActivity : ComponentActivity() {
         /**
          * About's "Play <title> instead?", or Previous and Next episode
          * (#108): this book or episode stops - its closing
-         * report going to it - before the other opens and plays. The caller
-         * must not stop playback again when it closes: by then the other book
-         * may already be queued.
+         * report going to it - before the other opens and plays.
          */
         internal fun switchTo(player: android.app.Activity, controller: androidx.media3.common.Player, itemId: String, episodeId: String? = null) {
-            Playback.leave(controller, finishing = true)
+            Playback.end(controller)
             player.startActivity(createIntent(player, itemId, episodeId, autoPlay = true))
             player.finish()
         }
 
         /**
-         * "Go to podcast" leaves the episode: closing the player stops it, as
-         * Back does. Opened from the podcast's screen the clear-top closed it
-         * anyway; opened from anywhere else the episode played on behind it.
+         * "Go to podcast" leaves the player for the podcast's screen; the
+         * episode plays on, as it does after Back (#155).
          */
         internal fun leaveForPodcast(player: android.app.Activity, podcastId: String) {
             player.startActivity(podcastIntent(player, podcastId))

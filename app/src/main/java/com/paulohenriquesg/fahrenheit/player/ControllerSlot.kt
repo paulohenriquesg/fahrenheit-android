@@ -38,13 +38,10 @@ class ControllerSlot<C : Any>(
         }, executor)
     }
 
-    /** @param beforeRelease runs on the connected controller first, e.g. to stop playback on Back. */
-    fun close(beforeRelease: (C) -> Unit) {
+    /** Lets go of the controller; what it was playing plays on (#155). */
+    fun close() {
         pending = null
-        current?.let {
-            beforeRelease(it)
-            release(it)
-        }
+        current?.let(release)
         current = null
     }
 }

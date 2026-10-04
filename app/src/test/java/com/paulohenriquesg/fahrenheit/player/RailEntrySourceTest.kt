@@ -71,7 +71,7 @@ class RailEntrySourceTest {
         assertEquals(listOf("b1"), asked)
     }
 
-    // Review Focus 1: Back in the player clears the queue.
+    // Stop on the entry clears the queue (#155).
     @Test fun `the entry goes when the queue is cleared`() {
         show()
         queue(startAt = 0.0)

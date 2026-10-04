@@ -184,7 +184,7 @@ class NavigationRailTest {
             FahrenheitTheme {
                 NavigationRail(
                     items = items, selectedId = "home", onSelect = {},
-                    nowPlaying = { open -> NowPlayingEntry(longTitle, open, onOpen = {}) }
+                    nowPlaying = { open -> NowPlayingEntry(longTitle, open, onOpen = {}, onStop = {}) }
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         BasicText("a book", Modifier.testTag("content_item").focusable())

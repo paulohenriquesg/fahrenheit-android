@@ -59,8 +59,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        // Leaves playback alone: only the player screen's Back stops it.
-        connection.close {}
+        // Leaves playback alone: Stop on the rail's entry ends it (#155).
+        connection.close()
         playback = null
         super.onStop()
     }

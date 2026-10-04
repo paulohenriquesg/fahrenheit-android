@@ -359,7 +359,9 @@ fun MainScreen(
                         ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.media?.chapters
                     },
                     // The player reattaches to what is queued, where it is.
-                    onOpen = { context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId)) }
+                    onOpen = { context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId)) },
+                    // Stop's button goes with the entry: focus to the section, or the remote has nothing (#53).
+                    onStopped = { runCatching { initialFocus.requestFocus() } }
                 )
             }
         },

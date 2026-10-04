@@ -145,8 +145,8 @@ class PlaybackReporting(
 }
 
 /**
- * Closing reports still on their way, for the whole process: Back stops
- * playback and the service goes, but its last report is still being sent, and
+ * Closing reports still on their way, for the whole process: Stop on the
+ * rail's entry ends playback and the service goes, but its last report is still being sent, and
  * a Mark finished made meanwhile must wait for it (see [FinishMarker]).
  * Main thread only.
  */

@@ -27,10 +27,11 @@ class NowPlayingEntryTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val opened = mutableListOf<RailEntry>()
+    private val stopped = mutableListOf<RailEntry>()
     private val book = RailEntry("b1", null, "A Long Drift", playing = true, progress = 0.4f, chapter = "Chapter 12", chapterNumber = 12, leftSeconds = 1210.0)
 
     private fun show(entry: RailEntry, open: Boolean) {
-        compose.setContent { FahrenheitTheme { NowPlayingEntry(entry, open = open, onOpen = { opened += it }) } }
+        compose.setContent { FahrenheitTheme { NowPlayingEntry(entry, open = open, onOpen = { opened += it }, onStop = { stopped += it }) } }
         compose.waitForIdle()
     }
 
@@ -74,5 +75,26 @@ class NowPlayingEntryTest {
     @Test fun `under a minute left says the seconds`() {
         show(book.copy(leftSeconds = 42.0), open = true)
         compose.onNodeWithText("Chapter 12 · 42 s left").assertIsDisplayed()
+    }
+
+    // #155: Back from the player keeps playing; stopping is here.
+    @Test fun `open, it offers Stop`() {
+        show(book, open = true)
+        compose.onNodeWithTag(NOW_PLAYING_STOP_TAG).assertIsDisplayed()
+        compose.onNodeWithText("Stop").assertIsDisplayed()
+    }
+
+    @Test fun `choosing Stop stops what is queued, and does not open it`() {
+        show(book, open = true)
+        compose.onNodeWithTag(NOW_PLAYING_STOP_TAG).performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        assertEquals(listOf(book), stopped)
+        assertEquals(emptyList<RailEntry>(), opened)
+    }
+
+    // A closed rail holds no focus: nothing there could reach it.
+    @Test fun `closed, no Stop`() {
+        show(book, open = false)
+        compose.onNodeWithTag(NOW_PLAYING_STOP_TAG).assertDoesNotExist()
     }
 }

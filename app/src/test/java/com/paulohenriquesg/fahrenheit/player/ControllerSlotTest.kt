@@ -19,7 +19,6 @@ class ControllerSlotTest {
     private class Fake(val name: String)
 
     private val released = mutableListOf<String>()
-    private val left = mutableListOf<String>()
     private val handed = mutableListOf<String?>()
     private val pending = ArrayDeque<SettableFuture<Fake>>()
 
@@ -44,20 +43,19 @@ class ControllerSlotTest {
     fun `a connection that arrives after the screen stopped is released, not handed over`() {
         slot.open()
         val late = pending.removeFirst()
-        slot.close { left += it.name }
+        slot.close()
 
         late.set(Fake("late"))
 
         assertEquals(emptyList<String?>(), handed)
         assertEquals(listOf("late"), released)
-        assertEquals(emptyList<String>(), left)
     }
 
     @Test
     fun `a failure that arrives after the screen stopped is not reported`() {
         slot.open()
         val late = pending.removeFirst()
-        slot.close { left += it.name }
+        slot.close()
 
         late.setException(IllegalStateException("no service"))
 
@@ -73,14 +71,14 @@ class ControllerSlotTest {
         assertEquals(listOf<String?>(null), handed)
     }
 
+    // #155: leaving the screen lets go of the controller, and does nothing to playback.
     @Test
-    fun `stopping lets the screen leave first, then releases`() {
+    fun `stopping releases the controller`() {
         slot.open()
         pending.removeFirst().set(Fake("a"))
 
-        slot.close { left += it.name; assertEquals(emptyList<String>(), released) }
+        slot.close()
 
-        assertEquals(listOf("a"), left)
         assertEquals(listOf("a"), released)
         assertNull(slot.current)
     }
@@ -89,7 +87,7 @@ class ControllerSlotTest {
     fun `coming back connects again, and only the new connection counts`() {
         slot.open()
         val first = pending.removeFirst()
-        slot.close { }
+        slot.close()
         slot.open()
 
         first.set(Fake("old"))

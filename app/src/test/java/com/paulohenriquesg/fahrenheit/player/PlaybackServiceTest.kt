@@ -94,26 +94,34 @@ class PlaybackServiceTest {
         assertTrue(QueuedFile.of(controller.currentMediaItem)!!.isFor("b1", null))
     }
 
+    // Stop on the rail's Now playing entry, a switch to another book, sign-out (#155).
     @Test
-    fun `leaving the screen by Back empties the queue`() {
+    fun `ending playback empties the queue`() {
         val controller = connect()
         queued(controller, startAt = 0.0)
 
-        Playback.leave(controller, finishing = true)
+        Playback.end(controller)
 
         runMainLooperUntil { service.get().sessionPlayer!!.mediaItemCount == 0 }
     }
 
+    // #155: Back, like Home, leaves the player and keeps playing. The screen
+    // lets go of its controller and nothing more.
     @Test
-    fun `leaving the screen for Home keeps the queue`() {
+    fun `the player screen letting go of its controller keeps playing`() {
         val controller = connect()
         queued(controller, startAt = 0.0)
+        controller.play()
+        runMainLooperUntil { service.get().sessionPlayer!!.playWhenReady }
 
-        Playback.leave(controller, finishing = false)
+        controller.release()
+        this.controller = null
         // Let anything that would have been sent arrive.
         shadowOf(android.os.Looper.getMainLooper()).idle()
 
-        assertEquals(2, service.get().sessionPlayer!!.mediaItemCount)
+        val player = service.get().sessionPlayer!!
+        assertEquals(2, player.mediaItemCount)
+        assertTrue(player.playWhenReady)
     }
 
     @Test
