@@ -92,6 +92,7 @@ class PlayerActivity : ComponentActivity() {
         }
         // auto_play is a request to start, once: not again when this screen
         // comes back, and not after a configuration change recreates it.
+        askThenPlay = asksThenPlays(intent) && savedInstanceState == null
         start = PlayerStart(
             autoPlay = autoPlay && savedInstanceState == null,
             startAt = startAtOf(intent)?.takeIf { savedInstanceState == null },
@@ -195,8 +196,8 @@ class PlayerActivity : ComponentActivity() {
         var focusPlayAgain by remember { mutableIntStateOf(0) }
         val resumeCheck = remember {
             ResumeCheck(
-                progress = ::progressQuietly,
-                latestDevice = ::latestSessionDevice,
+                progress = ResumeSources::progress,
+                latestSession = ResumeSources::latestSession,
                 thisDevice = PlaybackDevice.info(this).deviceId.orEmpty()
             )
         }
@@ -283,7 +284,9 @@ class PlayerActivity : ComponentActivity() {
         LaunchedEffect(prompt, reattached) {
             if (!reattached) return@LaunchedEffect
             reattached = false
-            prompt?.onReattach()
+            prompt?.onReattach(playAfter = askThenPlay)
+            // The press it was opened for is spent.
+            askThenPlay = false
         }
         // The remote's Play reaches the screen before the media session: from a
         // pause it asks first too, and while the question shows it waits.
@@ -406,6 +409,9 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    /** Opened by a Play from outside the player: ask, then play (#144). Once. */
+    private var askThenPlay = false
+
     /** Set while the player screen shows: takes the remote's Play from a pause (#90). */
     private var remotePlay: ((down: Boolean) -> Boolean)? = null
 
@@ -419,23 +425,6 @@ class PlayerActivity : ComponentActivity() {
 
     private fun isPlayKey(keyCode: Int) =
         keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
-
-    /** The server's progress, or null - quietly: the check is a question, not a load (#90). */
-    private suspend fun progressQuietly(itemId: String, episodeId: String?): MediaProgressResponse? {
-        val api = ApiClient.getApiService() ?: return null
-        val saved = SavedProgress.read(episodeId) {
-            val call = if (episodeId != null) api.userGetMediaProgress(itemId, episodeId) else api.userGetMediaProgress(itemId)
-            call.awaitResponse()
-        }
-        return (saved as? SavedProgress.Found)?.progress
-    }
-
-    /** The device behind the item's latest listening session; null when it cannot be read. */
-    private suspend fun latestSessionDevice(itemId: String, episodeId: String?): String? {
-        val api = ApiClient.getApiService() ?: return null
-        val call = if (episodeId != null) api.itemListeningSessions(itemId, episodeId) else api.itemListeningSessions(itemId)
-        return runCatching { call.awaitResponse().body()?.latestDeviceId() }.getOrNull()
-    }
 
     private fun goToPodcast(podcastId: String) = leaveForPodcast(this, podcastId)
 
@@ -472,17 +461,29 @@ class PlayerActivity : ComponentActivity() {
         private const val EXTRA_EPISODE_ID = "episode_id"
         private const val EXTRA_AUTO_PLAY = "auto_play"
         private const val EXTRA_START_AT = "start_at"
+        private const val EXTRA_ASK_THEN_PLAY = "ask_then_play"
 
         /**
          * @param episodeId the episode to play, for a podcast; null for a book.
          * @param startAt where to start, in whole-book seconds, over the saved position (#105).
          */
-        fun createIntent(context: Context, itemId: String, episodeId: String? = null, autoPlay: Boolean = false, startAt: Double? = null): Intent =
+        /** Opened by a Play from outside the player (#144): ask, then play. */
+        fun asksThenPlays(intent: Intent): Boolean = intent.getBooleanExtra(EXTRA_ASK_THEN_PLAY, false)
+
+        fun createIntent(
+            context: Context,
+            itemId: String,
+            episodeId: String? = null,
+            autoPlay: Boolean = false,
+            startAt: Double? = null,
+            askThenPlay: Boolean = false
+        ): Intent =
             Intent(context, PlayerActivity::class.java).apply {
                 putExtra(EXTRA_ITEM_ID, itemId)
                 episodeId?.let { putExtra(EXTRA_EPISODE_ID, it) }
                 putExtra(EXTRA_AUTO_PLAY, autoPlay)
                 startAt?.let { putExtra(EXTRA_START_AT, it) }
+                if (askThenPlay) putExtra(EXTRA_ASK_THEN_PLAY, true)
             }
 
         /**

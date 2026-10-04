@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.Bundle
 import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -11,10 +12,19 @@ import com.google.common.util.concurrent.ListenableFuture
 
 /** The app's way to the [PlaybackService]. */
 object Playback {
+    /**
+     * Carried by the app's own controllers. The remote's media keys and the
+     * system's controls reach the session through Media3's notification
+     * controller, which has the app's package too; this tells them apart (#144).
+     */
+    const val APP_SCREEN_HINT = "com.paulohenriquesg.fahrenheit.APP_SCREEN"
+
+    fun connectionHints(): Bundle = Bundle().apply { putBoolean(APP_SCREEN_HINT, true) }
 
     /** @param listener hears what the service reports beyond the player, such as the sleep timer. */
     fun connect(context: Context, listener: MediaController.Listener? = null): ListenableFuture<MediaController> =
         MediaController.Builder(context, SessionToken(context, ComponentName(context, PlaybackService::class.java)))
+            .setConnectionHints(connectionHints())
             .apply { listener?.let(::setListener) }
             .buildAsync()
 

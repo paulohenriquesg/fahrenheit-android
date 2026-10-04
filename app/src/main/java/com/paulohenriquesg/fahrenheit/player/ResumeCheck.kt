@@ -7,12 +7,12 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
  * far as needed: the sessions are read only when everything else says ask.
  *
  * @param progress the server's progress for an item; null when unreadable.
- * @param latestDevice the device behind its latest listening session.
+ * @param latestSession its latest listening session.
  * @param thisDevice this install's device id ([PlaybackDevice]).
  */
 class ResumeCheck(
     private val progress: suspend (itemId: String, episodeId: String?) -> MediaProgressResponse?,
-    private val latestDevice: suspend (itemId: String, episodeId: String?) -> String?,
+    private val latestSession: suspend (itemId: String, episodeId: String?) -> LatestSession?,
     private val thisDevice: String,
     private val knowledge: ServerKnowledge = ServerKnowledge.process
 ) {
@@ -28,8 +28,8 @@ class ResumeCheck(
         val known = knowledge.known(itemId, episodeId)
         val server = progress(itemId, episodeId)
         // Unknown device asks; so this is the most that can be offered.
-        ResumeOffer.of(here, server, known, latestDevice = null, thisDevice) ?: return null
-        return ResumeOffer.of(here, server, known, latestDevice(itemId, episodeId), thisDevice)
+        ResumeOffer.of(here, server, known, latestSession = null, thisDevice) ?: return null
+        return ResumeOffer.of(here, server, known, latestSession(itemId, episodeId), thisDevice)
     }
 
     /** Either answer settles that server position: it is not asked about again. */
