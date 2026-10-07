@@ -8,6 +8,8 @@ import com.paulohenriquesg.fahrenheit.api.MediaUpdate
 import com.paulohenriquesg.fahrenheit.api.Me
 import com.paulohenriquesg.fahrenheit.api.PodcastSettingsApi
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 enum class ScheduleChoice { Hourly, Daily, Weekly, Custom }
 
@@ -85,11 +87,11 @@ data class DownloadSettings(val enabled: Boolean, val schedule: String?, val kee
         fun perCheckLabel(value: Int): String = if (value == 0) "All" else "$value"
 
         /**
-         * Whether the server would take a change: it answers 403 to anyone
-         * without update rights. Admins and root have them.
+         * Whether the server would take a change: it checks the update right
+         * alone (`canUpdate`), whatever the account type, and answers 403
+         * without it. An admin has it unless it was turned off.
          */
-        fun mayChange(me: Me?): Boolean =
-            me?.type == "admin" || me?.type == "root" || me?.permissions?.update == true
+        fun mayChange(me: Me?): Boolean = me?.permissions?.update == true
     }
 }
 
@@ -103,33 +105,53 @@ sealed interface DownloadChange {
 /**
  * The panel's settings, saved as each is chosen: the choice shows at once,
  * only its own field is sent, and a refusal puts that field back and says so.
+ *
+ * Saves go one at a time, in the order chosen, so two quick presses on one
+ * setting reach the server in that order (review).
  */
 class PodcastDownloads(private val itemId: String, initial: DownloadSettings, private val api: PodcastSettingsApi) {
     var settings by mutableStateOf(initial)
         private set
 
-    /** The last save failed; the next change clears it. */
+    /** The last save failed; the next change, or [seen], clears it. */
     var failed by mutableStateOf(false)
         private set
+
+    // What the server last took, and the newest change asked of each field.
+    private var saved = initial
+    private val newest = mutableMapOf<Class<out DownloadChange>, DownloadChange>()
+    private val saving = Mutex()
 
     /** @return whether it was saved, or there was nothing to save. */
     suspend fun change(change: DownloadChange): Boolean {
         val next = settings.with(change)
         if (next == settings) return true
-        val before = settings
         failed = false
         settings = next
-        return try {
-            api.updateMedia(itemId, update(change, next))
-            true
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            // Only this field: another change may have been saved meanwhile.
-            settings = settings.restore(change, before)
-            failed = true
-            false
+        newest[change::class.java] = change
+        val update = update(change, next)
+        return saving.withLock {
+            try {
+                api.updateMedia(itemId, update)
+                saved = saved.restore(change, next)
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Only this field, and only if nothing newer was asked of it:
+                // a newer choice is on its way and will say for itself.
+                if (newest[change::class.java] === change) {
+                    settings = settings.restore(change, saved)
+                    failed = true
+                }
+                false
+            }
         }
+    }
+
+    /** The panel was closed: an old failure is not news when it opens again. */
+    fun seen() {
+        failed = false
     }
 
     private fun update(change: DownloadChange, next: DownloadSettings): MediaUpdate = when (change) {
@@ -139,10 +161,11 @@ class PodcastDownloads(private val itemId: String, initial: DownloadSettings, pr
         is DownloadChange.PerCheck -> MediaUpdate(maxNewEpisodesToDownload = next.perCheck)
     }
 
-    private fun DownloadSettings.restore(change: DownloadChange, before: DownloadSettings) = when (change) {
-        is DownloadChange.Enabled -> copy(enabled = before.enabled)
-        is DownloadChange.Schedule -> copy(schedule = before.schedule)
-        is DownloadChange.Keep -> copy(keep = before.keep)
-        is DownloadChange.PerCheck -> copy(perCheck = before.perCheck)
+    /** This settings with [change]'s field taken from [from]. */
+    private fun DownloadSettings.restore(change: DownloadChange, from: DownloadSettings) = when (change) {
+        is DownloadChange.Enabled -> copy(enabled = from.enabled)
+        is DownloadChange.Schedule -> copy(schedule = from.schedule)
+        is DownloadChange.Keep -> copy(keep = from.keep)
+        is DownloadChange.PerCheck -> copy(perCheck = from.perCheck)
     }
 }

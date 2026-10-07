@@ -96,13 +96,62 @@ class PodcastDownloadsTest {
         val keep = async { downloads.change(DownloadChange.Keep(25)) }
         yield()
         refuse = false
-        downloads.change(DownloadChange.Enabled(true))
+        val enabled = async { downloads.change(DownloadChange.Enabled(true)) }
+        yield()
         keepAnswer.complete(Unit)
         keep.await()
+        enabled.await()
 
         assertEquals(start.copy(enabled = true), downloads.settings)
         assertTrue(downloads.failed)
         downloads.change(DownloadChange.PerCheck(10))
+        assertFalse(downloads.failed)
+    }
+
+    // Review: two quick presses on one setting. Saves go one at a time, in
+    // order, and a failure the newer choice has replaced undoes nothing.
+    @Test
+    fun `saves go in order, and a superseded failure leaves the newer choice`() = runBlocking {
+        val first = CompletableDeferred<Unit>()
+        var calls = 0
+        val api = Api { if (++calls == 1) { first.await(); throw IOException("offline") } }
+        val downloads = PodcastDownloads("p1", start, api)
+
+        val five = async { downloads.change(DownloadChange.Keep(5)) }
+        yield()
+        val ten = async { downloads.change(DownloadChange.Keep(10)) }
+        yield()
+        assertEquals(1, api.sent.size)
+
+        first.complete(Unit)
+        five.await()
+        assertTrue(ten.await())
+
+        assertEquals(listOf("""{"maxEpisodesToKeep":5}""", """{"maxEpisodesToKeep":10}"""), api.sent.map { it.second })
+        assertEquals(10, downloads.settings.keep)
+        assertFalse(downloads.failed)
+    }
+
+    @Test
+    fun `a failure goes back to what the server last took`() = runBlocking {
+        var calls = 0
+        val downloads = PodcastDownloads("p1", start, Api { if (++calls == 2) throw IOException("offline") })
+
+        downloads.change(DownloadChange.Keep(5))
+        downloads.change(DownloadChange.Keep(10))
+
+        assertEquals(5, downloads.settings.keep)
+        assertTrue(downloads.failed)
+    }
+
+    // Review: reopening the panel should not show an old failure.
+    @Test
+    fun `the message is let go once seen`() = runBlocking {
+        val downloads = PodcastDownloads("p1", start, Api { throw IOException("offline") })
+        downloads.change(DownloadChange.Keep(5))
+
+        downloads.seen()
+
         assertFalse(downloads.failed)
     }
 }

@@ -44,12 +44,14 @@ class DownloadSettingsTest {
         assertEquals("3", DownloadSettings.perCheckLabel(3))
     }
 
-    // The server answers 403 to a change from anyone without update rights.
+    // The server answers 403 to a change from anyone without update rights,
+    // whatever the account type: an admin's right can be turned off (review).
     @Test
     fun `only a user the server lets update may change them`() {
-        assertTrue(DownloadSettings.mayChange(Me(type = "admin")))
-        assertTrue(DownloadSettings.mayChange(Me(type = "root")))
+        assertTrue(DownloadSettings.mayChange(Me(type = "admin", permissions = MePermissions(update = true))))
         assertTrue(DownloadSettings.mayChange(Me(type = "user", permissions = MePermissions(update = true))))
+        assertFalse(DownloadSettings.mayChange(Me(type = "admin", permissions = MePermissions(update = false))))
+        assertFalse(DownloadSettings.mayChange(Me(type = "root")))
         assertFalse(DownloadSettings.mayChange(Me(type = "user", permissions = MePermissions(update = false))))
         assertFalse(DownloadSettings.mayChange(Me(type = "user")))
         assertFalse(DownloadSettings.mayChange(Me(type = "guest")))

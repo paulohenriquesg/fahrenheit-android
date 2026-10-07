@@ -374,93 +374,96 @@ class DetailActivity : ComponentActivity() {
         }
 
         Box(Modifier.fillMaxSize().padding(margin)) {
-        PodcastEpisodesView(
-            screen = screen,
-            tab = tab,
-            onTab = { tab = it },
-            downloads = downloads,
-            onPlay = play,
-            progress = heard,
-            onMark = { episode, finished ->
-                val keepAt = if (finished) null else EpisodeMarks.keepAt(
-                    me?.mediaProgress?.firstOrNull { it.libraryItemId == itemId && it.episodeId == episode.id }
-                )
-                scope.launch {
-                    val worked = marking.mark(episode.id, finished) {
-                        // Through the playback service, in case this episode is the one playing.
-                        suspendCancellableCoroutine { done ->
-                            Playback.markFinished(context, itemId, finished, episode.id, keepAt) { done.resume(it) }
+            PodcastEpisodesView(
+                screen = screen,
+                tab = tab,
+                onTab = { tab = it },
+                downloads = downloads,
+                onPlay = play,
+                progress = heard,
+                onMark = { episode, finished ->
+                    val keepAt = if (finished) null else EpisodeMarks.keepAt(
+                        me?.mediaProgress?.firstOrNull { it.libraryItemId == itemId && it.episodeId == episode.id }
+                    )
+                    scope.launch {
+                        val worked = marking.mark(episode.id, finished) {
+                            // Through the playback service, in case this episode is the one playing.
+                            suspendCancellableCoroutine { done ->
+                                Playback.markFinished(context, itemId, finished, episode.id, keepAt) { done.resume(it) }
+                            }
+                        }
+                        when (worked) {
+                            // Read again, so the rows and Resume say what the server now holds.
+                            true -> onMarked()
+                            false -> Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
+                            null -> Unit
                         }
                     }
-                    when (worked) {
-                        // Read again, so the rows and Resume say what the server now holds.
-                        true -> onMarked()
-                        false -> Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
-                        null -> Unit
+                },
+                onDownload = { row ->
+                    val episode = row.feed ?: return@PodcastEpisodesView
+                    if (watch == null) return@PodcastEpisodesView
+                    misses = misses + (row.key to 0)
+                    scope.launch {
+                        if (watch.request(row.key, episode)) {
+                            startWatch()
+                        } else {
+                            misses = misses + (row.key to DownloadProgress.MISSES_BEFORE_FAILED)
+                        }
                     }
+                },
+                coverItemId = itemId,
+                date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
+                focusFirstRow = header.primary == null,
+                title = media.metadata.title,
+                header = {
+                    DetailHeader(
+                        itemId = itemId,
+                        content = header,
+                        nowPlaying = nowPlaying,
+                        onPrimary = {
+                            (resumeEpisode ?: EpisodeOrder.newestFirst(media.episodes.orEmpty()).firstOrNull())?.let(play)
+                        },
+                        actions = {
+                            if (mayChangeDownloads) {
+                                ActionChip(
+                                    text = "Downloads",
+                                    icon = Icons.Outlined.Settings,
+                                    onClick = { downloadsOpen = true; downloadsOpened = true },
+                                    modifier = Modifier.focusRequester(downloadsButton).testTag("podcast_downloads")
+                                )
+                            }
+                            if (isAdmin) {
+                                FeedCheckRow(state = feedCheck, onCheck = {
+                                    val podcastApi = ApiClient.getPodcastApi() ?: return@FeedCheckRow
+                                    scope.launch {
+                                        FeedCheck(podcastApi).run(
+                                            podcastId = itemId,
+                                            episodesBefore = media.episodes?.size ?: 0,
+                                            onState = {
+                                                feedCheck = it
+                                                // What it found is queued; watch it arrive in the list.
+                                                if (it is FeedCheckState.Found && it.count > 0) startWatch()
+                                            },
+                                            reload = { reload()?.media?.episodes?.size }
+                                        )
+                                    }
+                                })
+                            }
+                        }
+                    )
                 }
-            },
-            onDownload = { row ->
-                val episode = row.feed ?: return@PodcastEpisodesView
-                if (watch == null) return@PodcastEpisodesView
-                misses = misses + (row.key to 0)
-                scope.launch {
-                    if (watch.request(row.key, episode)) {
-                        startWatch()
-                    } else {
-                        misses = misses + (row.key to DownloadProgress.MISSES_BEFORE_FAILED)
-                    }
-                }
-            },
-            coverItemId = itemId,
-            date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
-            focusFirstRow = header.primary == null,
-            title = media.metadata.title,
-            header = {
-                DetailHeader(
-                    itemId = itemId,
-                    content = header,
-                    nowPlaying = nowPlaying,
-                    onPrimary = {
-                        (resumeEpisode ?: EpisodeOrder.newestFirst(media.episodes.orEmpty()).firstOrNull())?.let(play)
-                    },
-                    actions = {
-                        if (mayChangeDownloads) {
-                            ActionChip(
-                                text = "Downloads",
-                                icon = Icons.Outlined.Settings,
-                                onClick = { downloadsOpen = true; downloadsOpened = true },
-                                modifier = Modifier.focusRequester(downloadsButton).testTag("podcast_downloads")
-                            )
-                        }
-                        if (isAdmin) {
-                            FeedCheckRow(state = feedCheck, onCheck = {
-                                val podcastApi = ApiClient.getPodcastApi() ?: return@FeedCheckRow
-                                scope.launch {
-                                    FeedCheck(podcastApi).run(
-                                        podcastId = itemId,
-                                        episodesBefore = media.episodes?.size ?: 0,
-                                        onState = {
-                                            feedCheck = it
-                                            // What it found is queued; watch it arrive in the list.
-                                            if (it is FeedCheckState.Found && it.count > 0) startWatch()
-                                        },
-                                        reload = { reload()?.media?.episodes?.size }
-                                    )
-                                }
-                            })
-                        }
-                    }
-                )
-            }
-        )
+            )
         }
         if (downloadsOpen && autoDownloads != null) {
             DownloadsPanel(
                 settings = autoDownloads.settings,
                 failed = autoDownloads.failed,
                 onChange = { change -> scope.launch { autoDownloads.change(change) } },
-                onClose = { downloadsOpen = false }
+                onClose = {
+                    downloadsOpen = false
+                    autoDownloads.seen()
+                }
             )
         }
     }

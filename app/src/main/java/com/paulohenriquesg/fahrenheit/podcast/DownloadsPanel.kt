@@ -22,6 +22,11 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.FilterChip
+import androidx.tv.material3.LocalContentColor
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
 import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Switch
@@ -130,7 +135,11 @@ private fun Choice(label: String, chosen: Boolean, tag: String, onClick: () -> U
     FilterChip(
         selected = chosen,
         onClick = onClick,
-        modifier = Modifier.testTag(tag).semantics { selected = chosen }
+        modifier = Modifier.testTag(tag).semantics { selected = chosen },
+        // Ticked, as the mock and the other panels show the current choice.
+        leadingIcon = if (chosen) {
+            { Icon(Icons.Filled.Check, contentDescription = null, tint = LocalContentColor.current, modifier = Modifier.size(16.dp)) }
+        } else null
     ) {
         Text(label)
     }
