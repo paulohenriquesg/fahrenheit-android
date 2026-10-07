@@ -58,8 +58,8 @@ fun CoverWall(covers: List<ImageBitmap>, modifier: Modifier = Modifier, alpha: F
         val density = LocalDensity.current
         // The layer is the screen plus the drift, so moving it never bares an
         // edge (#172). It is only moved, never turned, and nothing is drawn past
-        // its bounds: the Fire TV drew a clip under a turned layer cut and
-        // untilted, and drops what a layer draws outside itself (#176).
+        // its bounds: on the Fire TV a clip under a turned layer drew the covers
+        // cut and untilted, and a layer drops what it draws outside itself (#176).
         val wall = WallFrame.forScreen(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), density)
         Spacer(
             Modifier
@@ -78,9 +78,11 @@ fun CoverWall(covers: List<ImageBitmap>, modifier: Modifier = Modifier, alpha: F
                     // The tilt is drawn: a grid that, turned round the layer's
                     // centre, still covers the whole layer.
                     val grid = WallFrame.grid(size, TILT_DEGREES)
-                    val origin = Offset((size.width - grid.width) / 2, (size.height - grid.height) / 2)
-                    val columns = ceil(grid.width / step).toInt() + 1
-                    val rows = ceil(grid.height / step).toInt() + 1
+                    // A step early each way: the grid only just reaches the layer's
+                    // corners, and a cover's place is rounded to whole pixels.
+                    val origin = Offset((size.width - grid.width) / 2 - step, (size.height - grid.height) / 2 - step)
+                    val columns = ceil(grid.width / step).toInt() + 2
+                    val rows = ceil(grid.height / step).toInt() + 2
                     val cells = (0 until rows).flatMap { row ->
                         (0 until columns).map { column ->
                             val x = origin.x + column * step

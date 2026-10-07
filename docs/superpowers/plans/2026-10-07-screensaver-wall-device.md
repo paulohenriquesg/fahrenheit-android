@@ -25,7 +25,9 @@ of the drift) but draw it the way the device renders.
 1. **Red:** `WallFrameTest`: the unturned layer covers the screen's corners over the
    drift and is no bigger than needed; the turned grid covers the layer's corners and
    is no bigger than needed. `ScreensaverScreenTest`: the layer is the frame's size and
-   is not turned (its top edge stays level in root coordinates).
+   is not turned (its top edge stays level in root coordinates). From review:
+   `CoverWallTest` renders the wall to pixels and checks cover in every corner and
+   no bare row or column at both ends of the drift.
 2. **Green:** `WallFrame.size` (screen + drift), `WallFrame.grid` (turned cover of a
    rect), `CoverWall` drawing as above.
 3. **Gate, review, PR** (Closes #176).
@@ -34,4 +36,9 @@ of the drift) but draw it the way the device renders.
 
 - Wall style, 2 min timeout: captures at both ends of the drift show whole tilted
   covers across the full screen, no black areas.
+- Check the bottom-left and top-right corners at the drift's ends in particular:
+  at -8 degrees those are where the drawn grid has the least to spare.
 - The login screen's welcome-back backdrop: the same.
+- If the right half is still black, the turn was not the cause: the layer is
+  still larger than the screen (screen plus drift, via `requiredSize`), the
+  issue's other suspect, and is the next thing to change.
