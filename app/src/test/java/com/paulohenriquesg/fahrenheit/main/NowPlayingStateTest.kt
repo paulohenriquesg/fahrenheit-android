@@ -22,7 +22,6 @@ import com.paulohenriquesg.fahrenheit.ui.elements.CoverTags
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -103,15 +102,18 @@ class NowPlayingStateTest {
         assertNotEquals(resting, bars())
     }
 
-    // The ring is 44 dp with a 3 dp stroke, so 38 dp inside it (#177).
+    // Inside the stroke with a gap all round (#177), measured against the
+    // ring itself, so a thinner ring or thicker stroke cannot crowd it again.
     @Test fun `the cover sits inside the ring`() {
         show(book.copy(playing = false))
+        val ring = compose.onNodeWithTag(NOW_PLAYING_RING_TAG, useUnmergedTree = true).fetchSemanticsNode()
         val cover = compose.onNodeWithTag(NOW_PLAYING_COVER_TAG, useUnmergedTree = true).fetchSemanticsNode()
-        val inside = with(compose.density) { 38.dp.toPx() }
-        val side = with(compose.density) { 36.dp.toPx() }
-        assertEquals(side, cover.size.width.toFloat(), 1f)
-        assertEquals(side, cover.size.height.toFloat(), 1f)
-        assertTrue(cover.size.width <= inside)
+        val (stroke, gap) = with(compose.density) { RING_STROKE.toPx() to 1.dp.toPx() }
+        val inside = ring.size.width - 2 * stroke
+        assertEquals(inside - 2 * gap, cover.size.width.toFloat(), 1f)
+        assertEquals(cover.size.width, cover.size.height)
+        // Centred, so the gap is even all round.
+        assertEquals(ring.boundsInWindow.center, cover.boundsInWindow.center)
     }
 
     // A square's corners ran into the ring (#177). With no server the

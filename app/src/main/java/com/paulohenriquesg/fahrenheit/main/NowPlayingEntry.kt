@@ -58,6 +58,7 @@ const val NOW_PLAYING_STOP_TAG = "rail_now_playing_stop"
 const val NOW_PLAYING_EQUALISER_TAG = "now_playing_equaliser"
 const val NOW_PLAYING_PAUSED_TAG = "now_playing_paused"
 const val NOW_PLAYING_COVER_TAG = "now_playing_cover"
+const val NOW_PLAYING_RING_TAG = "now_playing_ring"
 
 /**
  * The rail's way back to the player (#107; the rail frames of
@@ -175,23 +176,28 @@ private fun leftWords(seconds: Double): String =
 private val CLOSED_WIDTH = 56.dp
 private val OPEN_WIDTH = 240.dp
 
+private val RING_SIZE = 44.dp
+internal val RING_STROKE = 3.dp
+/** Clear between the stroke and the round cover, all round (#177). */
+private val RING_GAP = 1.dp
+
 /** The cover inside a ring of progress, and the play state at its corner. */
 @Composable
 internal fun CoverWithRing(entry: RailEntry) {
     val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
     val done = MaterialTheme.colorScheme.primary
-    Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(RING_SIZE).testTag(NOW_PLAYING_RING_TAG), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
-            val stroke = 3.dp.toPx()
+            val stroke = RING_STROKE.toPx()
             val inset = stroke / 2
             val arc = Size(size.width - stroke, size.height - stroke)
             drawArc(track, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(stroke))
             drawArc(done, -90f, 360f * entry.progress, false, Offset(inset, inset), arc, style = Stroke(stroke))
         }
-        // Round, and 1 dp clear of the stroke all round (#177): a square's
-        // corners ran into the ring. A placeholder is clipped the same.
+        // Round, and clear of the stroke all round (#177): a square's corners
+        // ran into the ring. A placeholder is clipped the same.
         Box(Modifier.clip(CircleShape).testTag(NOW_PLAYING_COVER_TAG)) {
-            CoverImage(itemId = entry.itemId, contentDescription = entry.title, size = 36.dp)
+            CoverImage(itemId = entry.itemId, contentDescription = entry.title, size = RING_SIZE - (RING_STROKE + RING_GAP) * 2)
         }
         Box(
             Modifier
