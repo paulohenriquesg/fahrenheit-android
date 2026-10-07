@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Podcast Actions</title>
+<style>
+  :root { --bg:#121212; --surface:#1E1E1E; --surface2:#2B2930; --on:#E6E1E5; --muted:#CAC4D0; --primary:#D0BCFF; --on-primary:#381E72; --outline:#938F99; }
+  body { margin:0; background:#050506; color:var(--on); font-family:Roboto, system-ui, sans-serif; padding:32px 16px; }
+  .page { max-width:1240px; margin:0 auto; }
+  h1 { font-size:28px; margin:0 0 8px; } h2 { font-size:22px; margin:44px 0 8px; }
+  p.why { color:var(--muted); font-size:15px; line-height:1.55; max-width:940px; margin:0 0 14px; }
+  p.why b { color:var(--on); }
+  .shell { width:100%; aspect-ratio:16/9; container-type:inline-size; border-radius:12px; overflow:hidden; box-shadow:0 0 0 1px #333; }
+  .tv { position:relative; width:1920px; height:1080px; transform-origin:0 0; transform:scale(calc(100cqw / 1920px)); overflow:hidden; background:var(--bg); }
+  .wash { position:absolute; inset:0; background: radial-gradient(circle at 18% 30%, #7A1530 0, transparent 60%), linear-gradient(#4A0E20, #121212 80%); }
+  .art { border-radius:16px; background:linear-gradient(150deg,#E8174A,#7A0A26); display:grid; place-items:center; color:#fff; font-weight:900; text-align:center; line-height:1.05; flex:none; }
+  .art.b { background:linear-gradient(150deg,#3E6FB0,#14233D); }
+  .art.g { background:linear-gradient(150deg,#3E8A5B,#13301F); }
+  .art.y { background:linear-gradient(150deg,#C9A227,#4A3A08); }
+  .chip { display:inline-flex; align-items:center; gap:14px; border-radius:40px; padding:20px 34px; font-size:30px; font-weight:600; background:rgba(60,52,70,.75); color:var(--on); white-space:nowrap; }
+  .chip.foc { background:#fff; color:#1d1b20; transform:scale(1.06); }
+  .chip.on .hrt { color:#FF6F91; }
+  .chip.foc.on .hrt { color:#C2185B; }
+  .circ { width:96px; height:96px; border-radius:50%; background:rgba(60,52,70,.75); display:grid; place-items:center; font-size:40px; flex:none; }
+  .circ.big { width:120px; height:120px; background:#E8DDFF; color:#381E72; }
+  .circ.dim { opacity:.4; }
+  .note { font-size:14px; color:var(--muted); margin-top:8px; }
+  .toast { position:absolute; left:50%; bottom:60px; transform:translateX(-50%); background:#E6E1E5; color:#1d1b20; border-radius:40px; padding:18px 36px; font-size:28px; font-weight:600; }
+  /* rail */
+  .rail { position:absolute; left:0; top:0; bottom:0; width:112px; background:var(--surface); display:flex; flex-direction:column; align-items:center; padding-top:40px; gap:34px; }
+  .rail div { width:56px; height:56px; border-radius:14px; background:#2B2930; }
+  .rail div.on { background:var(--primary); }
+  .stage { position:absolute; left:112px; right:0; top:0; bottom:0; padding:48px 64px; }
+  /* show screen */
+  .show-head { display:flex; gap:48px; align-items:flex-start; }
+  .show-head h3 { font-size:58px; margin:0 0 10px; }
+  .show-head .meta { font-size:26px; color:var(--muted); margin-bottom:26px; }
+  .row-btns { display:flex; gap:20px; flex-wrap:wrap; }
+  .tabs { display:flex; gap:16px; margin:34px 0 22px; }
+  .tab { padding:12px 28px; border-radius:30px; font-size:26px; color:var(--muted); background:#2B2930; }
+  .tab.on { background:var(--primary); color:var(--on-primary); font-weight:700; }
+  .ep { display:flex; align-items:center; gap:28px; padding:20px 26px; border-radius:20px; margin-bottom:10px; }
+  .ep .t { font-size:30px; font-weight:600; } .ep .s { font-size:23px; color:var(--muted); margin-top:6px; }
+  .ep .grow { flex:1; min-width:0; }
+  .ep.foc { background:#3A3442; outline:4px solid var(--primary); }
+  .ep.done { opacity:.55; }
+  .ep .acts { display:flex; gap:14px; }
+  .mini { width:72px; height:72px; border-radius:50%; background:#2B2930; display:grid; place-items:center; font-size:30px; color:var(--on); }
+  .mini.foc { background:#fff; color:#1d1b20; outline:4px solid var(--primary); outline-offset:3px; }
+  .mini.on { color:#FF6F91; }
+  .tick { color:var(--primary); font-weight:800; }
+  .bar { height:8px; width:300px; border-radius:4px; background:#49454F; margin-top:12px; } .bar i { display:block; height:100%; border-radius:4px; background:var(--primary); }
+  /* side panel */
+  .scrim { position:absolute; inset:0; background:rgba(0,0,0,.55); }
+  .panel { position:absolute; right:0; top:0; bottom:0; width:860px; background:var(--surface); padding:64px 60px; display:flex; flex-direction:column; gap:30px; }
+  .panel h4 { font-size:44px; margin:0 0 6px; }
+  .setting { background:#262429; border-radius:22px; padding:26px 30px; }
+  .setting.foc { outline:4px solid var(--primary); }
+  .setting .l { font-size:29px; font-weight:600; } .setting .d { font-size:22px; color:var(--muted); margin-top:6px; }
+  .setting .opts { display:flex; gap:12px; margin-top:18px; flex-wrap:wrap; }
+  .opt { padding:12px 24px; border-radius:26px; background:#36333C; font-size:24px; }
+  .opt.on { background:var(--primary); color:var(--on-primary); font-weight:700; }
+  .sw { width:90px; height:48px; border-radius:24px; background:var(--primary); position:relative; float:right; margin-top:-56px; }
+  .sw::after { content:""; position:absolute; right:6px; top:6px; width:36px; height:36px; border-radius:50%; background:var(--on-primary); }
+  /* home */
+  .shelf h4 { font-size:34px; margin:0 0 20px; }
+  .covers { display:flex; gap:32px; }
+  .cv { width:236px; } .cv .art { width:236px; height:236px; font-size:36px; }
+  .cv .t { font-size:23px; margin-top:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cv .s { font-size:20px; color:var(--muted); margin-top:4px; }
+  .cv.foc .art { outline:6px solid var(--primary); outline-offset:4px; }
+  .badge { position:absolute; margin:10px; width:44px; height:44px; border-radius:50%; background:rgba(0,0,0,.6); display:grid; place-items:center; font-size:22px; }
+</style></head>
+<body><div class="page">
+<h1>Podcasts: favourites, Mark finished, auto-download</h1>
+<p class="why">Three things Audiobookshelf already keeps on the server that the TV can't reach yet. Nothing here is stored only on the TV: <b>Favourites is an Audiobookshelf playlist you choose in Settings</b> (the server keeps playlists per library and lets them hold episodes and books), so it shows in the web and phone apps too, and the TV never creates one unasked; <b>Mark finished</b> is the same progress flag the web app sets; <b>auto-download</b> is the show's own setting on the server. Invented titles throughout; frames are 1920×1080 scaled down.</p>
+
+<h2>0. Settings: choose the Favourites playlist (off until you do)</h2>
+<p class="why">A new row in <b>Settings → Playback</b>, for the library you are in (the server keeps playlists per library, so each library has its own choice; the row names the library). The row shows the current choice; <b>Center opens a side panel</b>, like Speed and Sleep, with a scrolling list: <b>None</b> (the default), <b>＋ Create "Favourites"</b> (makes it on the server and selects it), then your playlists by name with their item counts. Focus opens on the current choice; Center picks and closes. <b>Until a playlist is chosen there is no heart anywhere and no Favourites shelf.</b> If the chosen playlist is deleted on the server, the hearts go away and the row is back to None.</p>
+<div class="shell"><div class="tv">
+  <div class="rail"><div></div><div></div><div></div><div class="on"></div></div>
+  <div class="stage">
+    <div style="font-size:56px;font-weight:800;margin-bottom:30px">Settings</div>
+    <div style="font-size:28px;color:var(--muted);margin:0 0 16px">Playback</div>
+    <div class="setting" style="margin-bottom:22px"><div class="l">Play the next episode automatically</div><div class="d">When an episode ends, the next newer one plays</div><div class="sw"></div></div>
+    <div class="setting foc" style="display:flex;align-items:center;gap:30px"><div style="flex:1"><div class="l">Favourites playlist · Podcasts library</div><div class="d">The heart in the player and on episodes adds to this Audiobookshelf playlist, which the web and phone apps show too. Off until one is chosen.</div></div>
+      <div style="font-size:30px;font-weight:600;color:var(--primary);white-space:nowrap">None ›</div></div>
+  </div>
+</div></div>
+<p class="note">The closed row, before anything is chosen.</p>
+
+<p class="why" style="margin-top:22px">The panel open. With <b>more than about 12 playlists</b> a search field heads the list: a few letters (or the remote's voice button, through the Fire TV keyboard) narrow it as you type. With fewer, there is no field: scrolling is quicker than typing with a remote.</p>
+<div class="shell"><div class="tv">
+  <div class="rail"><div></div><div></div><div></div><div class="on"></div></div>
+  <div class="stage"><div style="font-size:56px;font-weight:800">Settings</div></div>
+  <div class="scrim"></div>
+  <div class="panel" style="gap:14px">
+    <h4>Favourites playlist</h4>
+    <div style="font-size:24px;color:var(--muted);margin-bottom:14px">Podcasts library · 31 playlists</div>
+    <div style="border:3px solid var(--outline);border-radius:18px;padding:20px 26px;font-size:28px;color:var(--muted);margin-bottom:10px">🔍 &nbsp;Search playlists</div>
+    <div class="ep" style="margin:0;padding:18px 26px"><div class="grow"><div class="t">None</div><div class="s">No heart, no Favourites shelf</div></div></div>
+    <div class="ep" style="margin:0;padding:18px 26px"><div class="grow"><div class="t">＋ Create "Favourites"</div><div class="s">A new, empty playlist on the server</div></div></div>
+    <div style="height:2px;background:#49454F;margin:8px 0"></div>
+    <div class="ep" style="margin:0;padding:18px 26px"><div class="grow"><div class="t">Bedtime</div><div class="s">9 items</div></div></div>
+    <div class="ep" style="margin:0;padding:18px 26px"><div class="grow"><div class="t">Best of 2025</div><div class="s">22 items</div></div></div>
+    <div class="ep foc" style="margin:0;padding:18px 26px"><div class="grow"><div class="t">Favourites</div><div class="s">48 items</div></div><div class="tick" style="font-size:34px">✓</div></div>
+    <div class="ep" style="margin:0;padding:18px 26px"><div class="grow"><div class="t">History deep dives</div><div class="s">17 items</div></div></div>
+    <div class="ep" style="margin:0;padding:18px 26px;opacity:.6"><div class="grow"><div class="t">Kids</div><div class="s">6 items</div></div></div>
+  </div>
+</div></div>
+<p class="note">Focus opens on the current choice (✓). "＋ Create" is replaced by nothing when a playlist named "Favourites" already exists: that one is in the list. The list scrolls; the last row fading shows there is more.</p>
+
+<h2>1. The player: a heart beside Go to podcast</h2>
+<p class="why"><b>Only when a Favourites playlist is chosen.</b> One more chip in the episode's row. Choosing it adds the episode to that playlist, or takes it out; the heart fills and a short note confirms. Books get the same chip, with their own library's choice.</p>
+<div class="shell"><div class="tv">
+  <div class="wash"></div>
+  <div style="position:absolute;left:150px;top:160px;display:flex;gap:72px;align-items:center">
+    <div class="art" style="width:500px;height:500px;font-size:120px">SHOW</div>
+    <div><div style="font-size:30px;color:var(--primary);font-weight:700;letter-spacing:.04em">THE RIVER HOUR · 4 DAYS AGO</div><div style="font-size:84px;font-weight:500;margin:14px 0">Episode 120 · Rapids</div><div style="font-size:32px;color:var(--muted)">32 min</div></div>
+  </div>
+  <div style="position:absolute;left:150px;right:150px;top:730px;height:10px;border-radius:5px;background:rgba(255,255,255,.18)"><div style="width:45%;height:100%;border-radius:5px;background:var(--primary)"></div></div>
+  <div style="position:absolute;left:150px;top:760px;font-size:32px">14 min 28 s</div><div style="position:absolute;right:150px;top:760px;font-size:32px">17 min 49 s left of 32 min 18 s</div>
+  <div style="position:absolute;left:150px;right:150px;top:845px;display:flex;align-items:center;gap:26px">
+    <div class="circ">⏮</div><div class="circ">↺</div><div class="circ big">❚❚</div><div class="circ">↻</div><div class="circ dim">⏭</div>
+    <div style="flex:1"></div>
+    <div class="chip">☰ Go to podcast</div><div class="chip foc on"><span class="hrt">♥</span> Favourite</div><div class="chip">Speed 1×</div><div class="chip">☾ Sleep</div><div class="chip">About</div>
+  </div>
+  <div class="toast" style="bottom:auto;top:60px">Added to Favourites</div>
+</div></div>
+
+<h2>2. The show: finished episodes, and actions on a row</h2>
+<p class="why">Finished episodes are dimmed with a tick, as the web app shows them. On a focused row, <b>Right</b> moves onto small round buttons: <b>Mark finished</b> (a tick; on a finished episode it reads "Mark unfinished") and, when a Favourites playlist is chosen, the heart. Center on the row itself still plays it. Nothing changes while you scroll the list with Up and Down; the buttons only appear on the focused row.</p>
+<div class="shell"><div class="tv">
+  <div class="rail"><div></div><div class="on"></div><div></div><div></div></div>
+  <div class="stage">
+    <div class="show-head">
+      <div class="art" style="width:260px;height:260px;font-size:56px">SHOW</div>
+      <div style="flex:1"><h3>The River Hour</h3><div class="meta">History · 412 episodes · new episodes download every day</div>
+        <div class="row-btns"><div class="chip">▶ Play latest</div><div class="chip">⟳ Check for new</div><div class="chip">⚙ Downloads</div></div></div>
+    </div>
+    <div class="tabs"><div class="tab on">All</div><div class="tab">Not finished</div><div class="tab">Favourites</div></div>
+    <div class="ep foc"><div class="art" style="width:96px;height:96px;font-size:20px">SHOW</div><div class="grow"><div class="t">Episode 120 · Rapids</div><div class="s">4 days ago · 32 min · 18 min left</div><div class="bar"><i style="width:45%"></i></div></div>
+      <div class="acts"><div class="mini foc">✓</div><div class="mini on">♥</div></div></div>
+    <div class="ep"><div class="art" style="width:96px;height:96px;font-size:20px">SHOW</div><div class="grow"><div class="t">Episode 119 · The Delta</div><div class="s">11 days ago · 29 min</div></div></div>
+    <div class="ep done"><div class="art" style="width:96px;height:96px;font-size:20px">SHOW</div><div class="grow"><div class="t"><span class="tick">✓</span> Episode 118 · Headwaters</div><div class="s">18 days ago · 31 min · finished</div></div></div>
+  </div>
+</div></div>
+<p class="note">The focused row shows its two buttons with the tick focused, after one Right. The "Favourites" tab lists this show's episodes in the chosen playlist; like the heart, it is only there when one is chosen.</p>
+
+<h2>3. The show's Downloads panel</h2>
+<p class="why">"Downloads" on the show opens a side panel, like Speed and Sleep, with the show's own auto-download settings as the server keeps them. Changes save as they are chosen. Shown only to a user the server lets change the library (an admin, or a user with update rights); others see the settings read-only, or not at all.</p>
+<div class="shell"><div class="tv">
+  <div class="rail"><div></div><div class="on"></div><div></div><div></div></div>
+  <div class="stage">
+    <div class="show-head"><div class="art" style="width:260px;height:260px;font-size:56px">SHOW</div><div><h3>The River Hour</h3><div class="meta">History · 412 episodes</div></div></div>
+  </div>
+  <div class="scrim"></div>
+  <div class="panel">
+    <h4>Downloads</h4>
+    <div class="setting foc"><div class="l">Download new episodes</div><div class="d">The server fetches them as they come out</div><div class="sw"></div></div>
+    <div class="setting"><div class="l">Check for new episodes</div><div class="opts"><div class="opt">Every hour</div><div class="opt on">Every day ✓</div><div class="opt">Every week</div></div></div>
+    <div class="setting"><div class="l">Keep</div><div class="d">Older downloaded episodes are deleted from the server</div><div class="opts"><div class="opt on">All ✓</div><div class="opt">Latest 5</div><div class="opt">Latest 10</div><div class="opt">Latest 25</div></div></div>
+    <div class="setting"><div class="l">New episodes per check</div><div class="opts"><div class="opt">1</div><div class="opt on">3 ✓</div><div class="opt">10</div><div class="opt">All</div></div></div>
+  </div>
+</div></div>
+<p class="note">The server stores the schedule as a cron expression; the panel offers three plain choices and shows "Custom" (read-only) when the web app set something else.</p>
+
+<h2>4. Home: a Favourites shelf</h2>
+<p class="why">On Home of each library, after Continue Listening, <b>when that library has a Favourites playlist chosen</b>: what is in it, in the playlist's order, under the playlist's own name. An episode plays from where it was left; a book opens its screen. Empty Favourites shows no shelf.</p>
+<div class="shell"><div class="tv">
+  <div class="rail"><div class="on"></div><div></div><div></div><div></div></div>
+  <div class="stage">
+    <div style="font-size:56px;font-weight:800;margin-bottom:36px">Home</div>
+    <div class="shelf" style="margin-bottom:44px"><h4>Continue Listening</h4><div class="covers">
+      <div class="cv"><div class="art">SHOW</div><div class="t">Episode 120 · Rapids</div><div class="s">18 min left</div></div>
+      <div class="cv"><div class="art b">NIGHT<br>DESK</div><div class="t">Night Desk 88</div><div class="s">1 h 37 min left</div></div>
+    </div></div>
+    <div class="shelf"><h4>♥ Favourites</h4><div class="covers">
+      <div class="cv foc"><div class="art g" style="position:relative">FIELD<br>NOTES<div class="badge" style="top:0;right:0">♥</div></div><div class="t">Field Notes 12 · Moss</div><div class="s">The Field Notes · 41 min</div></div>
+      <div class="cv"><div class="art">SHOW</div><div class="t">Episode 97 · The Dam</div><div class="s">The River Hour · finished</div></div>
+      <div class="cv"><div class="art y">SIGNAL</div><div class="t">Signal 3 · Static</div><div class="s">Signal · 55 min</div></div>
+      <div class="cv"><div class="art b">NIGHT<br>DESK</div><div class="t">Night Desk 40</div><div class="s">1 h 12 min</div></div>
+    </div></div>
+  </div>
+</div></div>
+<p class="note">Also possible later from the same playlist work: "Add to playlist" for any playlist you already have, and a Playlists section in the rail.</p>
+</div></body></html>
