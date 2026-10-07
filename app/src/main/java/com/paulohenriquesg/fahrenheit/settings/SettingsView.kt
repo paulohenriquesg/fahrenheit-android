@@ -415,7 +415,10 @@ private fun SettingRow(title: String, subtitle: String, trailing: @Composable ()
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                // Some titles carry a server string: the account, the library.
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = subtitle,

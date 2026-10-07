@@ -71,6 +71,7 @@ import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.api.Playlist
 import com.paulohenriquesg.fahrenheit.favourites.Favourites
 import com.paulohenriquesg.fahrenheit.favourites.FavouritesSetting
+import com.paulohenriquesg.fahrenheit.favourites.FavouritesShelf
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
 import com.paulohenriquesg.fahrenheit.ui.Space
@@ -153,6 +154,11 @@ fun MainScreen(
                 val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
                 if (savedLibraryId != null && savedLibraryId != currentLibrary?.id) {
                     shouldRefreshLibrary = true
+                } else if (shelves.isNotEmpty()) {
+                    // Back from the player, where the heart may have changed Favourites (#180).
+                    currentLibrary?.id?.let { libraryId ->
+                        scope.launch { shelves = FavouritesShelf.refreshed({ shelves }, libraryId, favourites()) }
+                    }
                 }
             }
         }
@@ -256,14 +262,15 @@ fun MainScreen(
     val favouritesSetting = currentLibrary?.id?.let { libraryId ->
         favourites()?.let { kept ->
             FavouritesSetting(
+                libraryId = libraryId,
                 libraryName = currentLibrary?.name.orEmpty(),
                 chosen = favouritesChosen,
                 load = { kept.playlists(libraryId) },
                 choose = { pick ->
                     kept.choose(libraryId, pick).map { chosen ->
                         favouritesChosen = chosen
-                        // Home's shelf follows the choice.
-                        shelves = fetchPersonalizedView(libraryId)
+                        // Home's shelf follows the choice, in this screen's scope: the panel closes meanwhile.
+                        scope.launch { shelves = FavouritesShelf.refreshed({ shelves }, libraryId, kept) }
                     }
                 }
             )

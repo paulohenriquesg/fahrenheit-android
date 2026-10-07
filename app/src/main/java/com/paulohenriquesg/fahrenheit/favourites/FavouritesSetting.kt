@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -23,6 +24,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -49,6 +51,7 @@ private const val SEARCH_ABOVE = 12
  * panel needs: the library's playlists, and a way to keep a pick.
  */
 class FavouritesSetting(
+    val libraryId: String,
     val libraryName: String,
     /** The chosen playlist; null for None. */
     val chosen: Playlist?,
@@ -66,19 +69,22 @@ class FavouritesSetting(
 fun FavouritesPanel(setting: FavouritesSetting, onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var playlists by remember(setting) { mutableStateOf<List<Playlist>?>(null) }
-    var failed by remember(setting) { mutableStateOf(false) }
+    // Keyed on the library, not the setting: Settings hands over a new one as soon as a pick is kept.
+    var playlists by remember(setting.libraryId) { mutableStateOf<List<Playlist>?>(null) }
+    var failed by remember(setting.libraryId) { mutableStateOf(false) }
+    val load by rememberUpdatedState(setting.load)
+    val choose by rememberUpdatedState(setting.choose)
     var query by remember { mutableStateOf("") }
     var picking by remember { mutableStateOf(false) }
-    LaunchedEffect(setting) {
-        setting.load().onSuccess { playlists = it }.onFailure { failed = true }
+    LaunchedEffect(setting.libraryId) {
+        load().onSuccess { playlists = it }.onFailure { failed = true }
     }
     val failedText = stringResource(R.string.favourites_change_failed)
     fun pick(choice: FavouritesPick) {
         if (picking) return
         picking = true
         scope.launch {
-            setting.choose(choice)
+            choose(choice)
                 .onSuccess { onClose() }
                 .onFailure { Toast.makeText(context, failedText, Toast.LENGTH_LONG).show() }
             picking = false
@@ -87,12 +93,16 @@ fun FavouritesPanel(setting: FavouritesSetting, onClose: () -> Unit) {
 
     SidePanel(stringResource(R.string.favourites_panel), onClose) {
         val all = playlists
-        val count = all?.size ?: 0
+        // Counted once they are in: "0 playlists" while loading would be untrue.
         Text(
-            text = pluralStringResource(
-                R.plurals.favourites_playlists, count, setting.libraryName,
-                NumberFormat.getIntegerInstance(Locale.getDefault()).format(count)
-            ),
+            text = all?.let {
+                pluralStringResource(
+                    R.plurals.favourites_playlists, it.size, setting.libraryName,
+                    NumberFormat.getIntegerInstance(Locale.getDefault()).format(it.size)
+                )
+            } ?: setting.libraryName,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 10.dp)

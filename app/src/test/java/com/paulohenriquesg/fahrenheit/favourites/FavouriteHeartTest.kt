@@ -74,4 +74,26 @@ class FavouriteHeartTest {
         assertEquals(HeartChange.Failed, heart.toggle())
         assertTrue(heart.filled)
     }
+
+    // The server deleted the playlist with its last item, and making it again
+    // failed: the heart must not keep pointing at a playlist that is gone.
+    @Test
+    fun `when the last one goes and the playlist cannot be made again, the heart goes`() = runBlocking {
+        server.add("pl_1", "Bedtime", "lib_1", PlaylistItem("li_1", "ep_1"))
+        val heart = heart().apply { load() }
+        server.failingCreate = IOException("offline")
+
+        assertEquals(HeartChange.Failed, heart.toggle())
+        assertNull(heart.playlist)
+    }
+
+    @Test
+    fun `a playlist deleted elsewhere takes the heart away on the next press`() = runBlocking {
+        server.add("pl_1", "Bedtime", "lib_1", PlaylistItem("li_1", "ep_2"))
+        val heart = heart().apply { load() }
+        server.playlists.clear()
+
+        assertEquals(HeartChange.Failed, heart.toggle())
+        assertNull(heart.playlist)
+    }
 }

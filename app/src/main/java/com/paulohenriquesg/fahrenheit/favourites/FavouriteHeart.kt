@@ -57,7 +57,8 @@ class FavouriteHeart(
         playlist = favourites.current(libraryId).getOrNull()
     }
 
-    /** Adds or takes out; null for a press while the last is still on its way. */
+    /** Adds or takes out; on a failure the heart shows the playlist as the server now has it, or as it was offline. 
+     * Null null for a press while the last is still on its way. */
     suspend fun toggle(): HeartChange? {
         val before = playlist ?: return null
         if (busy) return null
@@ -69,7 +70,13 @@ class FavouriteHeart(
                     playlist = after
                     if (wasIn) HeartChange.Removed(after.name) else HeartChange.Added(after.name)
                 },
-                onFailure = { HeartChange.Failed }
+                onFailure = {
+                    // Read it again: offline it stays as it was, but a playlist
+                    // that has gone (deleted elsewhere, or with its last item and
+                    // not made again) takes the heart away rather than failing forever.
+                    playlist = favourites.current(libraryId).getOrElse { before }
+                    HeartChange.Failed
+                }
             )
         } finally {
             busy = false

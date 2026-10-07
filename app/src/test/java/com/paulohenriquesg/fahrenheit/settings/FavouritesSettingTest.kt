@@ -1,11 +1,16 @@
 package com.paulohenriquesg.fahrenheit.settings
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.test.onNodeWithText
+import kotlinx.coroutines.CompletableDeferred
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
@@ -49,10 +54,12 @@ class FavouritesSettingTest {
         chosen: Playlist? = null,
         playlists: List<Playlist> = listOf(playlist("pl_1", "Bedtime", 9), playlist("pl_2", "Kids", 6)),
         choose: Result<Unit> = Result.success(Unit),
-        favourites: Boolean = true
+        favourites: Boolean = true,
+        libraryName: String = "Podcasts"
     ) {
         val setting = FavouritesSetting(
-            libraryName = "Podcasts",
+            libraryId = "lib_1",
+            libraryName = libraryName,
             chosen = chosen,
             load = { Result.success(playlists) },
             choose = { picks += it; choose }
@@ -201,5 +208,73 @@ class FavouritesSettingTest {
         open()
 
         compose.onNodeWithTag(favouritesOptionTag("pl_25")).assertIsFocused()
+    }
+
+    // MainScreen hands the panel a new setting as soon as a pick is kept; the
+    // panel went back to "Loading" and asked for the playlists again.
+    @Test
+    fun `a pick being kept does not send the panel back to loading`() {
+        var loads = 0
+        val held = CompletableDeferred<Result<Unit>>()
+        val playlists = listOf(playlist("pl_1", "Bedtime", 9))
+        fun setting(chosen: Playlist?, onChoose: suspend (FavouritesPick) -> Result<Unit>): FavouritesSetting =
+            FavouritesSetting("lib_1", "Podcasts", chosen, load = { loads++; Result.success(playlists) }, choose = onChoose)
+        var current by mutableStateOf<FavouritesSetting?>(null)
+        current = setting(null) { pick ->
+            current = setting((pick as FavouritesPick.Existing).playlist) { Result.success(Unit) }
+            held.await()
+        }
+        compose.setContent {
+            FahrenheitTheme {
+                SettingsView(
+                    theme = ThemePreference.System, onTheme = {}, rowLayout = true, onLayout = {},
+                    version = "v0.0.10", update = UpdateCheck.Idle, onCheckUpdates = {}, onInstall = {},
+                    username = "a listener", server = "http://books.example:13378", onSignOut = {},
+                    deviceName = "Living room", onDeviceName = {},
+                    favourites = current
+                )
+            }
+        }
+        compose.waitForIdle()
+        open()
+
+        compose.onNodeWithTag(favouritesOptionTag("pl_1")).performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Loading playlists…").assertDoesNotExist()
+        compose.onNodeWithTag(favouritesOptionTag("pl_1")).assertExists()
+        assertEquals(1, loads)
+    }
+
+    @Test
+    fun `while the playlists load, the panel does not count them as none`() {
+        val setting = FavouritesSetting("lib_1", "Podcasts", null, load = { CompletableDeferred<Result<List<Playlist>>>().await() }, choose = { Result.success(Unit) })
+        compose.setContent {
+            FahrenheitTheme {
+                SettingsView(
+                    theme = ThemePreference.System, onTheme = {}, rowLayout = true, onLayout = {},
+                    version = "v0.0.10", update = UpdateCheck.Idle, onCheckUpdates = {}, onInstall = {},
+                    username = "a listener", server = "http://books.example:13378", onSignOut = {},
+                    deviceName = "Living room", onDeviceName = {},
+                    favourites = setting
+                )
+            }
+        }
+        compose.waitForIdle()
+        open()
+
+        compose.onNodeWithText("Loading playlists…").assertExists()
+        compose.onNodeWithText("Podcasts · 0 playlists").assertDoesNotExist()
+        compose.onNodeWithText("Podcasts").assertExists()
+    }
+
+    @Test
+    fun `a long library name stays on one line`() {
+        render(libraryName = "An Invented Library " .repeat(12).trim())
+
+        val title = compose.onNodeWithText("Favourites playlist", substring = true).performScrollTo().fetchSemanticsNode()
+        val layouts = mutableListOf<TextLayoutResult>()
+        title.config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+        assertEquals(1, layouts.single().lineCount)
     }
 }

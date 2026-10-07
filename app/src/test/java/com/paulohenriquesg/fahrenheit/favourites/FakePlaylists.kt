@@ -17,6 +17,8 @@ import retrofit2.Response
 class FakePlaylists : PlaylistApi {
     val playlists = mutableListOf<Playlist>()
     var failing: Throwable? = null
+    /** Fails create alone, after anything else has gone through. */
+    var failingCreate: Throwable? = null
     val calls = mutableListOf<String>()
     private var nextId = 100
 
@@ -43,7 +45,7 @@ class FakePlaylists : PlaylistApi {
     }
 
     override suspend fun create(body: NewPlaylist): Playlist {
-        calls += "create ${body.name}"; fail()
+        calls += "create ${body.name}"; fail(); failingCreate?.let { throw it }
         return add("pl_${nextId++}", body.name, body.libraryId)
     }
 
