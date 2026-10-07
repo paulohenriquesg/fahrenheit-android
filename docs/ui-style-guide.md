@@ -158,6 +158,11 @@ The rail entry and the bar on the book and podcast screens show what *is*:
 moving bars while playing, a still ⏸ while paused. The player's own button and
 the remote show the *action*, so a ▶ while playing read as the opposite (#170).
 
+The cover is a **circle** inside the progress ring (#177): 36 dp in a 44 dp
+ring with a 3 dp stroke, so a 1 dp gap all round. A square's corners ran into
+the arc. Placeholders are clipped the same; the state badge stays at the
+bottom-right, over the ring.
+
 ## Components
 
 Prefer **`androidx.tv.material3`**: its components are built for focus. Reach for

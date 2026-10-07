@@ -34,6 +34,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -56,6 +57,7 @@ const val NOW_PLAYING_TAG = "rail_now_playing"
 const val NOW_PLAYING_STOP_TAG = "rail_now_playing_stop"
 const val NOW_PLAYING_EQUALISER_TAG = "now_playing_equaliser"
 const val NOW_PLAYING_PAUSED_TAG = "now_playing_paused"
+const val NOW_PLAYING_COVER_TAG = "now_playing_cover"
 
 /**
  * The rail's way back to the player (#107; the rail frames of
@@ -186,7 +188,11 @@ internal fun CoverWithRing(entry: RailEntry) {
             drawArc(track, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(stroke))
             drawArc(done, -90f, 360f * entry.progress, false, Offset(inset, inset), arc, style = Stroke(stroke))
         }
-        CoverImage(itemId = entry.itemId, contentDescription = entry.title, size = 32.dp)
+        // Round, and 1 dp clear of the stroke all round (#177): a square's
+        // corners ran into the ring. A placeholder is clipped the same.
+        Box(Modifier.clip(CircleShape).testTag(NOW_PLAYING_COVER_TAG)) {
+            CoverImage(itemId = entry.itemId, contentDescription = entry.title, size = 36.dp)
+        }
         Box(
             Modifier
                 .align(Alignment.BottomEnd)
