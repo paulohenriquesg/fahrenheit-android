@@ -31,8 +31,15 @@ with the app's usual message, if the server refuses. Mock: `podcast-actions.html
 3. **The button is a TV `IconButton`**, 40dp, the transport buttons' look:
    inverts on focus with a 3dp primary border, no growth.
 4. **The failure message is the book's** (`mark_finished_failed`).
-5. The header's Resume still follows `/api/me` as read on open; marking does not
-   re-read it.
+5. **After a mark the server's progress is read again**, as the book reads itself
+   again: the rows and the header's Resume follow it, and marks the server has
+   answered give way to it (`settle`) - playing a finished episode un-finishes it
+   there (review).
+6. **A press on an episode whose mark is still out is ignored**, so two marks
+   never race to the server (review).
+7. **The button sits after the card, outside its border**, in a slot every row
+   keeps; the mock draws it inside the row. The device check decides if it reads
+   as part of the row.
 
 ## Tasks
 

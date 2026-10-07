@@ -39,12 +39,32 @@ class EpisodeMarking {
     var marks: Map<String, Boolean> by mutableStateOf(emptyMap())
         private set
 
-    /** @param send tells the server; false is a refusal. */
-    suspend fun mark(episodeId: String, finished: Boolean, send: suspend () -> Boolean): Boolean {
+    // Episodes whose mark is still on its way to the server.
+    private val out = mutableSetOf<String>()
+
+    /**
+     * @param send tells the server; false is a refusal.
+     * @return whether the server took it; null when the press was ignored,
+     *   because that episode's last mark is still out and a second would race it.
+     */
+    suspend fun mark(episodeId: String, finished: Boolean, send: suspend () -> Boolean): Boolean? {
+        if (!out.add(episodeId)) return null
         val before = marks[episodeId]
         marks = marks + (episodeId to finished)
-        val worked = send()
+        val worked = try {
+            send()
+        } finally {
+            out.remove(episodeId)
+        }
         if (!worked) marks = if (before == null) marks - episodeId else marks + (episodeId to before)
         return worked
+    }
+
+    /**
+     * The server's progress has been read again: it says what is so now, so
+     * only marks still out are kept over it.
+     */
+    fun settle() {
+        marks = marks.filterKeys { it in out }
     }
 }

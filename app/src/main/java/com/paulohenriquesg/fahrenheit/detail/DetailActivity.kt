@@ -174,7 +174,9 @@ class DetailActivity : ComponentActivity() {
         // One call for both who the user is (the admin check) and what they
         // have heard (#78); read again on every return, e.g. from the player.
         val isPodcast = itemDetail?.mediaType == "podcast"
-        LaunchedEffect(isPodcast, resumes) {
+        // Bumped after an episode is marked, as the book reads itself again.
+        var meReads by remember { mutableIntStateOf(0) }
+        LaunchedEffect(isPodcast, resumes, meReads) {
             if (!isPodcast) return@LaunchedEffect
             val podcastApi = ApiClient.getPodcastApi() ?: return@LaunchedEffect
             runCatching { podcastApi.me() }.onSuccess { me = it }
@@ -211,7 +213,7 @@ class DetailActivity : ComponentActivity() {
         }
         DetailBody(isBook) { margin ->
             if (!isBook) {
-                PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it }, nowPlaying = nowPlaying)
+                PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it }, onMarked = { meReads++ }, nowPlaying = nowPlaying)
             } else {
                 BookDetailView(
                     itemId = itemId,
@@ -264,6 +266,7 @@ class DetailActivity : ComponentActivity() {
         item: LibraryItemResponse,
         me: Me?,
         onReloaded: (LibraryItemResponse) -> Unit,
+        onMarked: () -> Unit,
         nowPlaying: @Composable () -> Unit
     ) {
         val context = LocalContext.current
@@ -283,6 +286,8 @@ class DetailActivity : ComponentActivity() {
         val isAdmin = FeedCheck.mayCheck(me?.type, feedUrl)
         // Marks made here show at once, over what was read on open (#181).
         val marking = remember(itemId) { EpisodeMarking() }
+        // Each fresh read is the server's word: playing a finished episode un-finishes it there.
+        LaunchedEffect(me) { marking.settle() }
         val heard = EpisodeMarks.over(EpisodeProgress.index(me?.mediaProgress.orEmpty(), itemId), marking.marks)
         val resumeEpisode = EpisodeProgress.resumable(
             me?.mediaProgress.orEmpty(), itemId, onServer = media.episodes.orEmpty().map { it.id }.toSet()
@@ -361,8 +366,11 @@ class DetailActivity : ComponentActivity() {
                             Playback.markFinished(context, itemId, finished, episode.id, keepAt) { done.resume(it) }
                         }
                     }
-                    if (!worked) {
-                        Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
+                    when (worked) {
+                        // Read again, so the rows and Resume say what the server now holds.
+                        true -> onMarked()
+                        false -> Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
+                        null -> Unit
                     }
                 }
             },

@@ -293,4 +293,18 @@ class PodcastEpisodesViewTest {
 
         assertEquals("s1" to false, marked)
     }
+
+    // Up and Down still walk the rows from the button (#181).
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun `Down from the button goes to the next row`() {
+        render()
+        compose.onNodeWithTag("episode_row_server:s1").performKeyInput { pressKey(Key.DirectionRight) }
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("episode_mark_server:s1").performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("episode_row_feed:g2").assertIsFocused()
+    }
 }
