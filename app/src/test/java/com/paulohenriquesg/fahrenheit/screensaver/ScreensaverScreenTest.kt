@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverWallTags
@@ -61,7 +62,7 @@ class ScreensaverScreenTest {
     }
 
     @Test
-    fun `the wall's own layer is the whole tilted, drifting wall, not the screen`() {
+    fun `the wall's own layer is the screen plus the drift, not the screen`() {
         render(ScreensaverStyle.Wall, covers = List(3) { cover() })
 
         val screen = compose.onNodeWithTag(ScreensaverTags.SCREEN).fetchSemanticsNode().size
@@ -69,6 +70,18 @@ class ScreensaverScreenTest {
         val wall = WallFrame.forScreen(screen.width.toFloat(), screen.height.toFloat(), compose.density)
         assertEquals(wall.width, layer.width.toFloat(), 1f)
         assertEquals(wall.height, layer.height.toFloat(), 1f)
+    }
+
+    // A clip under a turned layer is what the Fire TV drew wrong (#176): the tilt is drawn, the layer only moves.
+    @Test
+    fun `the wall's layer is not turned, only moved`() {
+        render(ScreensaverStyle.Wall, covers = List(3) { cover() })
+
+        val node = compose.onNodeWithTag(CoverWallTags.LAYER, useUnmergedTree = true).fetchSemanticsNode()
+        val coordinates = node.layoutInfo.coordinates
+        val topLeft = coordinates.localToRoot(Offset.Zero)
+        val topRight = coordinates.localToRoot(Offset(node.size.width.toFloat(), 0f))
+        assertEquals(topLeft.y, topRight.y, 0.5f)
     }
 
     @Test
