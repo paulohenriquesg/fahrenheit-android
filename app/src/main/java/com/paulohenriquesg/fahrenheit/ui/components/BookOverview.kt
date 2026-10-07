@@ -72,6 +72,7 @@ import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 
 const val DESCRIPTION_BOX_TAG = "book_description_box"
 const val FACTS_TAG = "book_facts"
+const val TITLE_TAG = "book_title"
 
 /** How much of the description box's bottom fades out while there is more below. */
 private val DESCRIPTION_FADE = 48.dp
@@ -93,7 +94,8 @@ val DescriptionFadesOut = SemanticsPropertyKey<Boolean>("DescriptionFadesOut")
  *   the caller lands it on an action (the book screen's Resume).
  * @param top above the description: the book screen's Now playing (#159).
  * @param factsFocus lands focus on the facts, for an About with nothing else
- *   to focus (an episode with no description, #178); null leaves them unfocusable.
+ *   to focus (an episode with no description, #178), or on the title when
+ *   there are no facts either; null leaves both unfocusable.
  */
 @Composable
 fun BookOverview(
@@ -136,7 +138,10 @@ fun BookOverview(
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .testTag(TITLE_TAG)
+                    .then(factsFocus?.takeIf { facts.isEmpty() }?.let { Modifier.focusRequester(it).focusable() } ?: Modifier)
             )
             byline?.let {
                 Text(

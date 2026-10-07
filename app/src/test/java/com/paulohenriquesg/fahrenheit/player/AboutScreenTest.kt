@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import com.paulohenriquesg.fahrenheit.detail.DESCRIPTION_TAG
 import com.paulohenriquesg.fahrenheit.ui.components.DESCRIPTION_BOX_TAG
 import com.paulohenriquesg.fahrenheit.ui.components.FACTS_TAG
+import com.paulohenriquesg.fahrenheit.ui.components.TITLE_TAG
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -154,5 +155,11 @@ class AboutScreenTest {
         compose.waitForIdle()
         assertFalse(compose.activity.isFinishing)
         compose.onNodeWithText("About").assertIsFocused()
+    }
+
+    // Review (#178): with nothing else to focus, focus stayed on the chip under About.
+    @Test fun `an episode with no description and no facts lands on its title`() {
+        show(episode.copy(description = null, facts = emptyList()), finished = null)
+        compose.onNodeWithTag(TITLE_TAG).assertIsFocused()
     }
 }
