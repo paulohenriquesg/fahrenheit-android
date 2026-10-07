@@ -34,8 +34,20 @@ class AboutFactsTest {
         AboutFacts.book(metadata(""","narratorName":"A Reader""""), length = null).single()
     )
 
-    @Test fun `an episode's facts are when it came out and how long it is`() = assertEquals(
-        listOf(AboutFact(AboutFact.Kind.Published, "Yesterday"), AboutFact(AboutFact.Kind.Length, "30 min 0 s")),
-        AboutFacts.episode(published = "Yesterday", length = 1800.0)
+    // #178: the show, then when it came out and how long it is, then its number when the feed gives one.
+    @Test fun `an episode's facts are its show, date, length, season and number`() = assertEquals(
+        listOf(
+            AboutFact(AboutFact.Kind.Show, "A Show"),
+            AboutFact(AboutFact.Kind.Published, "Yesterday"),
+            AboutFact(AboutFact.Kind.Length, "30 min 0 s"),
+            AboutFact(AboutFact.Kind.Season, "2"),
+            AboutFact(AboutFact.Kind.Episode, "14")
+        ),
+        AboutFacts.episode(show = "A Show", published = "Yesterday", length = 1800.0, season = " 2 ", episode = "14")
+    )
+
+    @Test fun `an episode's missing facts are left out`() = assertEquals(
+        listOf(AboutFact(AboutFact.Kind.Length, "30 min 0 s")),
+        AboutFacts.episode(show = " ", published = "", length = 1800.0, season = null, episode = " ")
     )
 }

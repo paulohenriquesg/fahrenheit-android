@@ -201,11 +201,23 @@ class NowPlayingTest {
     }
 
     @Test
-    fun `an episode's facts are its date and length, and it has no Mark finished`() {
+    fun `an episode's facts are its show, date and length, and it has no Mark finished`() {
         val playing = NowPlaying.of(podcast, episodeId = "e295", now = now)!!
-        assertEquals(listOf(AboutFact(AboutFact.Kind.Published, "Yesterday"), AboutFact(AboutFact.Kind.Length, "30 min 0 s")), playing.facts)
+        val show = podcast.media.metadata.title
+        assertEquals(
+            listOf(AboutFact(AboutFact.Kind.Show, show), AboutFact(AboutFact.Kind.Published, "Yesterday"), AboutFact(AboutFact.Kind.Length, "30 min 0 s")),
+            playing.facts
+        )
         assertEquals(null, playing.finished)
     }
+
+    // #178: About's byline, under the episode's title, is its show; the player's stays in the kicker.
+    @Test
+    fun `an episode carries its show, for About`() =
+        assertEquals(podcast.media.metadata.title, NowPlaying.of(podcast, episodeId = "e295", now = now)!!.show)
+
+    @Test
+    fun `a book has no show`() = assertNull(NowPlaying.of(book, episodeId = null, now = now)!!.show)
 
     // Review: a library holding books 1, 2 and 7 of a series read "Book 7 of 3".
     @Test

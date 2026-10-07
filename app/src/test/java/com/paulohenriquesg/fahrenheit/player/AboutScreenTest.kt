@@ -10,10 +10,13 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
 import com.paulohenriquesg.fahrenheit.detail.DESCRIPTION_TAG
+import com.paulohenriquesg.fahrenheit.ui.components.DESCRIPTION_BOX_TAG
+import com.paulohenriquesg.fahrenheit.ui.components.FACTS_TAG
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -44,7 +47,19 @@ class AboutScreenTest {
     )
 
     /** As the player does it: the screen or the player, and the panels' host for focus. */
-    private fun show() {
+    // #178: an episode, as NowPlaying.of makes one.
+    private val episode = NowPlaying(
+        itemId = "p1", title = "Episode 14: The Quiet Hour", timeline = null, mediaDuration = null, chapters = null,
+        episodeId = "e14", goToPodcast = true, description = "<p>Two hosts talk about a quiet hour.</p>",
+        show = "A Made-up Show",
+        facts = listOf(
+            AboutFact(AboutFact.Kind.Show, "A Made-up Show"),
+            AboutFact(AboutFact.Kind.Published, "Yesterday"),
+            AboutFact(AboutFact.Kind.Length, "30 min 0 s")
+        )
+    )
+
+    private fun show(playing: NowPlaying = book, finished: Boolean? = false) {
         compose.setContent {
             FahrenheitTheme {
                 val panels = rememberPlayerPanels()
@@ -52,10 +67,10 @@ class AboutScreenTest {
                 AboutChip(panels)
                 if (panels.open == PlayerPanel.About) {
                     AboutScreen(
-                        nowPlaying = book,
+                        nowPlaying = playing,
                         wash = Color(0xFF24301A),
                         series = null,
-                        finished = false,
+                        finished = finished,
                         onPlayInstead = {},
                         onMarkFinished = { marked += it },
                         onClose = panels::close
@@ -99,5 +114,45 @@ class AboutScreenTest {
         compose.onNodeWithTag(DESCRIPTION_TAG).performKeyInput { pressKey(Key.DirectionUp) }
         compose.waitForIdle()
         compose.onNodeWithTag(DESCRIPTION_TAG).assertIsFocused()
+    }
+
+    // #178: an episode's About is the same full-screen layout as a book's.
+    @Test fun `an episode opens the full-screen About, its show under the title`() {
+        show(episode, finished = null)
+        compose.onNodeWithText("Episode 14: The Quiet Hour", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(DESCRIPTION_BOX_TAG).assertIsDisplayed()
+        // The byline, and again among the facts.
+        assertEquals(2, compose.onAllNodesWithText("A Made-up Show").fetchSemanticsNodes().size)
+    }
+
+    @Test fun `an episode's facts include its show and length`() {
+        show(episode, finished = null)
+        compose.onNodeWithText("Show").assertIsDisplayed()
+        compose.onNodeWithText("Length").assertIsDisplayed()
+        compose.onNodeWithText("30 min 0 s").assertIsDisplayed()
+    }
+
+    @Test fun `an episode has no Mark finished`() {
+        show(episode, finished = null)
+        compose.onNodeWithText("Mark finished").assertDoesNotExist()
+        compose.onNodeWithText("Mark unfinished").assertDoesNotExist()
+    }
+
+    @Test fun `an episode's About lands on its description`() {
+        show(episode, finished = null)
+        compose.onNodeWithTag(DESCRIPTION_TAG).assertIsFocused()
+    }
+
+    @Test fun `an episode with no description lands on its facts`() {
+        show(episode.copy(description = " "), finished = null)
+        compose.onNodeWithTag(FACTS_TAG).assertIsFocused()
+    }
+
+    @Test fun `back from an episode's About returns to the player, on the About chip`() {
+        show(episode.copy(description = null), finished = null)
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
+        assertFalse(compose.activity.isFinishing)
+        compose.onNodeWithText("About").assertIsFocused()
     }
 }

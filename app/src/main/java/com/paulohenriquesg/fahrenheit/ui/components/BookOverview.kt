@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.ui.components
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,14 +24,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -38,6 +46,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,6 +71,13 @@ import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 
 const val DESCRIPTION_BOX_TAG = "book_description_box"
+const val FACTS_TAG = "book_facts"
+
+/** How much of the description box's bottom fades out while there is more below. */
+private val DESCRIPTION_FADE = 48.dp
+
+/** Whether the description box fades out at its bottom: there is more below (#178). */
+val DescriptionFadesOut = SemanticsPropertyKey<Boolean>("DescriptionFadesOut")
 
 /**
  * One book, set out for reading about it (#134; option 1 of
@@ -76,6 +92,8 @@ const val DESCRIPTION_BOX_TAG = "book_description_box"
  * @param landOnDescription focus lands on the description (About); otherwise
  *   the caller lands it on an action (the book screen's Resume).
  * @param top above the description: the book screen's Now playing (#159).
+ * @param factsFocus lands focus on the facts, for an About with nothing else
+ *   to focus (an episode with no description, #178); null leaves them unfocusable.
  */
 @Composable
 fun BookOverview(
@@ -91,6 +109,7 @@ fun BookOverview(
     landOnDescription: Boolean,
     modifier: Modifier = Modifier,
     top: @Composable () -> Unit = {},
+    factsFocus: FocusRequester? = null,
     actions: @Composable ColumnScope.() -> Unit
 ) {
     val text = description?.takeIf { it.isNotBlank() }
@@ -135,6 +154,9 @@ fun BookOverview(
             top()
             text?.let {
                 val scroll = rememberScrollState()
+                // More below fades the text out at the bottom rather than cutting
+                // it mid-line, which read as clipped, not scrollable (#178).
+                val fades by remember { derivedStateOf { scroll.canScrollForward } }
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -142,6 +164,19 @@ fun BookOverview(
                         .weight(1f, fill = false)
                         .heightIn(max = 230.dp)
                         .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), RoundedCornerShape(12.dp))
+                        .semantics { this[DescriptionFadesOut] = fades }
+                        // The text fades, not the box behind it.
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            if (fades) {
+                                val from = size.height - DESCRIPTION_FADE.toPx()
+                                drawRect(
+                                    Brush.verticalGradient(listOf(Color.Black, Color.Transparent), startY = from, endY = size.height),
+                                    blendMode = BlendMode.DstIn
+                                )
+                            }
+                        }
                         // Down past the end of the description goes to this book in
                         // the series, not whichever cover sits under its middle.
                         .onPreviewKeyEvent { event ->
@@ -175,7 +210,14 @@ fun BookOverview(
                             )
                         }
                     }
-                    if (facts.isNotEmpty()) FactsGrid(facts, Modifier.width(280.dp))
+                    if (facts.isNotEmpty()) {
+                        FactsGrid(
+                            facts,
+                            Modifier
+                                .width(280.dp)
+                                .then(factsFocus?.let { Modifier.focusRequester(it).focusable() } ?: Modifier)
+                        )
+                    }
                 }
             }
         }
@@ -271,7 +313,7 @@ fun SeriesShelf(
 /** The facts as a list of labels and values (the mock's two columns). */
 @Composable
 private fun FactsGrid(facts: List<AboutFact>, modifier: Modifier = Modifier) {
-    Column(modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.testTag(FACTS_TAG).padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         facts.forEach { fact ->
             Row {
                 Text(
