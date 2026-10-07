@@ -28,6 +28,7 @@ object ApiClient {
     private var libraryApi: LibraryApi? = null
     private var browseApi: BrowseApi? = null
     private var podcastApi: PodcastApi? = null
+    private var playlistApi: PlaylistApi? = null
     // Read on ExoPlayer's loading thread (AudioHttp), written on the main one.
     @Volatile
     private var audioClient: OkHttpClient? = null
@@ -71,6 +72,10 @@ object ApiClient {
             hostValue,
             buildAuthenticatedClient(sessionManager!!, refreshVia(hostValue))
         ).create(PodcastApi::class.java)
+        playlistApi = buildRetrofit(
+            hostValue,
+            buildAuthenticatedClient(sessionManager!!, refreshVia(hostValue))
+        ).create(PlaylistApi::class.java)
         audioClient = buildAuthenticatedClient(sessionManager!!, refreshVia(hostValue))
         return SessionState.Ready
     }
@@ -87,6 +92,7 @@ object ApiClient {
         libraryApi = null
         browseApi = null
         podcastApi = null
+        playlistApi = null
         audioClient = null
         host = null
         token = null
@@ -105,6 +111,9 @@ object ApiClient {
 
     /** Podcast feed endpoints as suspend calls; null until a session is active. */
     fun getPodcastApi(): PodcastApi? = podcastApi
+
+    /** The user's playlists, for Favourites (#180); null until a session is active. */
+    fun getPlaylistApi(): PlaylistApi? = playlistApi
 
     /** The authenticated client for streaming audio; null until a session is active. */
     fun audioHttpClient(): OkHttpClient? = audioClient

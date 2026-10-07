@@ -259,6 +259,7 @@ palette (see `docs/mocks/README.md`).
 | `latest-episodes.html` | Latest Episodes grouped by day, and its empty state |
 | `settings.html` | Settings and Switch Library as sections, the theme choice, checking for updates |
 | `stats.html` | the stats screen, before and after |
+| `podcast-actions.html` | Favourites (the Settings choice, the player's heart, the Home shelf), episode row actions, the show's Downloads panel |
 
 ## Colour
 

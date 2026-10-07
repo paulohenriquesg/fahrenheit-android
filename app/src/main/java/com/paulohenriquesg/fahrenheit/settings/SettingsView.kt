@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.Alignment
@@ -46,6 +47,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
+import com.paulohenriquesg.fahrenheit.favourites.FAVOURITES_ROW_TAG
+import com.paulohenriquesg.fahrenheit.favourites.FavouritesPanel
+import com.paulohenriquesg.fahrenheit.favourites.FavouritesSetting
 import com.paulohenriquesg.fahrenheit.ui.Border
 import com.paulohenriquesg.fahrenheit.ui.Radius
 import com.paulohenriquesg.fahrenheit.ui.Space
@@ -100,10 +104,22 @@ fun SettingsView(
     screensaverMinutes: Int? = 5,
     onScreensaverMinutes: (Int?) -> Unit = {},
     screensaverStyle: ScreensaverStyle = ScreensaverStyle.Wall,
-    onScreensaverStyle: (ScreensaverStyle) -> Unit = {}
+    onScreensaverStyle: (ScreensaverStyle) -> Unit = {},
+    favourites: FavouritesSetting? = null
 ) {
+    // The Favourites panel, over the screen; focus goes back to its row when it closes.
+    var favouritesOpen by remember { mutableStateOf(false) }
+    var favouritesClosed by remember { mutableStateOf(false) }
+    val favouritesRow = remember { FocusRequester() }
+    LaunchedEffect(favouritesClosed) {
+        if (favouritesClosed) {
+            favouritesRow.requestFocusWhenAttached()
+            favouritesClosed = false
+        }
+    }
+    Box(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = Space.screenH, vertical = Space.gap),
         verticalArrangement = Arrangement.spacedBy(Space.gap)
@@ -186,6 +202,25 @@ fun SettingsView(
                         modifier = Modifier.testTag(PLAY_NEXT_EPISODE_TAG)
                     )
                 }
+                // An Audiobookshelf playlist, one per library (#180; docs/mocks/podcast-actions.html, frame 0).
+                favourites?.let { setting ->
+                    SettingRow(
+                        title = stringResource(R.string.favourites_row, setting.libraryName),
+                        subtitle = stringResource(R.string.favourites_row_subtitle)
+                    ) {
+                        Button(
+                            onClick = { favouritesOpen = true },
+                            modifier = Modifier.focusRequester(favouritesRow).testTag(FAVOURITES_ROW_TAG)
+                        ) {
+                            Text(
+                                stringResource(R.string.favourites_chosen, setting.chosen?.name ?: stringResource(R.string.favourites_none)),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.widthIn(max = 220.dp)
+                            )
+                        }
+                    }
+                }
                 SkipRow(stringResource(R.string.settings_skip_back), skipBack, "skip_back", onSkipBack)
                 SkipRow(stringResource(R.string.settings_skip_forward), skipForward, "skip_forward", onSkipForward)
                 // Our own screensaver while something plays (#156; docs/mocks/screensaver.html).
@@ -252,6 +287,13 @@ fun SettingsView(
                 DeviceNameRow(deviceName, onDeviceName)
             }
         }
+    }
+    if (favouritesOpen && favourites != null) {
+        FavouritesPanel(favourites) {
+            favouritesOpen = false
+            favouritesClosed = true
+        }
+    }
     }
 }
 

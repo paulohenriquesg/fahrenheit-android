@@ -68,6 +68,9 @@ import com.paulohenriquesg.fahrenheit.api.LibraryStats
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibraryQuery
 import com.paulohenriquesg.fahrenheit.api.Shelf
+import com.paulohenriquesg.fahrenheit.api.Playlist
+import com.paulohenriquesg.fahrenheit.favourites.Favourites
+import com.paulohenriquesg.fahrenheit.favourites.FavouritesSetting
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
 import com.paulohenriquesg.fahrenheit.ui.Space
@@ -94,7 +97,9 @@ fun MainScreen(
     fetchPersonalizedView: suspend (String) -> List<Shelf>,
     fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() },
     /** The playback service's player, while this screen is visible; null when not connected (#107). */
-    playback: Player? = null
+    playback: Player? = null,
+    /** Favourites (#180), while signed in. */
+    favourites: () -> Favourites? = { null }
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -241,6 +246,29 @@ fun MainScreen(
     var screensaverStyle by remember { mutableStateOf(PlayerSettings(context).screensaverStyle) }
     var skipBack by remember { mutableStateOf(PlayerSettings(context).skipBackSeconds) }
     var skipForward by remember { mutableStateOf(PlayerSettings(context).skipForwardSeconds) }
+    // The library's Favourites playlist, read each time Settings opens (#180).
+    var favouritesChosen by remember { mutableStateOf<Playlist?>(null) }
+    LaunchedEffect(view, currentLibrary?.id) {
+        if (view != MainView.SETTINGS) return@LaunchedEffect
+        val libraryId = currentLibrary?.id ?: return@LaunchedEffect
+        favourites()?.current(libraryId)?.onSuccess { favouritesChosen = it }
+    }
+    val favouritesSetting = currentLibrary?.id?.let { libraryId ->
+        favourites()?.let { kept ->
+            FavouritesSetting(
+                libraryName = currentLibrary?.name.orEmpty(),
+                chosen = favouritesChosen,
+                load = { kept.playlists(libraryId) },
+                choose = { pick ->
+                    kept.choose(libraryId, pick).map { chosen ->
+                        favouritesChosen = chosen
+                        // Home's shelf follows the choice.
+                        shelves = fetchPersonalizedView(libraryId)
+                    }
+                }
+            )
+        }
+    }
 
     // Back walks up a level: content -> rail -> Home -> out (#125).
     var railHasFocus by remember { mutableStateOf(false) }
@@ -467,7 +495,8 @@ fun MainScreen(
                         onSkipForward = {
                             PlayerSettings(context).skipForwardSeconds = it
                             skipForward = it
-                        }
+                        },
+                        favourites = favouritesSetting
                     )
                     MainView.SWITCH_LIBRARY -> SwitchLibraryView(
                         libraries = libraries,

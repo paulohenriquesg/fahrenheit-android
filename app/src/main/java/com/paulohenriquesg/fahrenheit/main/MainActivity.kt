@@ -104,7 +104,8 @@ class MainActivity : ComponentActivity() {
                         mainHandler::fetchLibraryItems,
                         mainHandler::fetchPersonalizedView,
                         mainHandler::fetchProgress,
-                        playback = playback
+                        playback = playback,
+                        favourites = mainHandler::favourites
                     )
                 }
             }
