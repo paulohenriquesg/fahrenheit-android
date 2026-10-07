@@ -7,12 +7,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.unit.dp
+import androidx.tv.material3.ColorScheme
+import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.player.RailEntry
+import com.paulohenriquesg.fahrenheit.ui.elements.CoverPlaceholderTone
+import com.paulohenriquesg.fahrenheit.ui.elements.CoverTags
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -37,11 +43,17 @@ class NowPlayingStateTest {
 
     private val book = RailEntry("b1", null, "A Long Drift", playing = true, progress = 0.4f, chapter = "Chapter 12", chapterNumber = 12, leftSeconds = 1210.0)
     private var entry by mutableStateOf(book)
+    private lateinit var scheme: ColorScheme
 
     private fun show(first: RailEntry, byHand: Boolean = false) {
         entry = first
         if (byHand) compose.mainClock.autoAdvance = false
-        compose.setContent { FahrenheitTheme { CoverWithRing(entry) } }
+        compose.setContent {
+            FahrenheitTheme {
+                scheme = MaterialTheme.colorScheme
+                CoverWithRing(entry)
+            }
+        }
         if (byHand) compose.mainClock.advanceTimeByFrame() else compose.waitForIdle()
     }
 
@@ -90,21 +102,55 @@ class NowPlayingStateTest {
         assertNotEquals(resting, bars())
     }
 
+    // Inside the stroke with a gap all round (#177), measured against the
+    // ring itself, so a thinner ring or thicker stroke cannot crowd it again.
+    @Test fun `the cover sits inside the ring`() {
+        show(book.copy(playing = false))
+        val ring = compose.onNodeWithTag(NOW_PLAYING_RING_TAG, useUnmergedTree = true).fetchSemanticsNode()
+        val cover = compose.onNodeWithTag(NOW_PLAYING_COVER_TAG, useUnmergedTree = true).fetchSemanticsNode()
+        val (stroke, gap) = with(compose.density) { RING_STROKE.toPx() to 1.dp.toPx() }
+        val inside = ring.size.width - 2 * stroke
+        assertEquals(inside - 2 * gap, cover.size.width.toFloat(), 1f)
+        assertEquals(cover.size.width, cover.size.height)
+        // Centred, so the gap is even all round.
+        assertEquals(ring.boundsInWindow.center, cover.boundsInWindow.center)
+    }
+
+    // A square's corners ran into the ring (#177). With no server the
+    // placeholder is drawn, and its padding is plain tone at the top middle;
+    // a round cover leaves the box's corner to what is behind it.
+    @Test fun `the cover is round, placeholder and all`() {
+        show(book.copy(playing = false))
+        compose.onNodeWithTag(CoverTags.PLACEHOLDER, useUnmergedTree = true).assertExists()
+        val node = compose.onNodeWithTag(NOW_PLAYING_COVER_TAG, useUnmergedTree = true).fetchSemanticsNode()
+        val at = node.positionInWindow
+        val map = window()
+        val left = at.x.toInt()
+        val top = at.y.toInt()
+        val middle = map[left + node.size.width / 2, top + 2]
+        assertEquals(CoverPlaceholderTone.of(scheme), middle)
+        assertNotEquals(middle, map[left + 1, top + 1])
+    }
+
     // The window drawn into a bitmap (captureToImage waits for a frame callback
     // Robolectric never sends), cut to the bars' own bounds.
     private fun bars(): List<Int> {
         val node = compose.onNodeWithTag(NOW_PLAYING_EQUALISER_TAG, useUnmergedTree = true).fetchSemanticsNode()
         val at = node.positionInWindow
-        var pixels: List<Int> = emptyList()
+        val map = window()
+        return (0 until node.size.height).flatMap { y ->
+            (0 until node.size.width).map { x -> map[at.x.toInt() + x, at.y.toInt() + y].hashCode() }
+        }
+    }
+
+    private fun window(): PixelMap {
+        lateinit var map: PixelMap
         compose.runOnUiThread {
             val view = compose.activity.window.decorView
             val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
             view.draw(Canvas(bitmap))
-            val map = bitmap.asImageBitmap().toPixelMap()
-            pixels = (0 until node.size.height).flatMap { y ->
-                (0 until node.size.width).map { x -> map[at.x.toInt() + x, at.y.toInt() + y].hashCode() }
-            }
+            map = bitmap.asImageBitmap().toPixelMap()
         }
-        return pixels
+        return map
     }
 }
