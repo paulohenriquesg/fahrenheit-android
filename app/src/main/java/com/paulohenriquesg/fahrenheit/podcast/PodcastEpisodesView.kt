@@ -23,6 +23,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.stringResource
+import androidx.tv.material3.IconButton
+import androidx.tv.material3.IconButtonDefaults
+import androidx.tv.material3.LocalContentColor
+import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material3.Icon
@@ -76,6 +84,7 @@ fun PodcastEpisodesView(
     onPlay: (Episode) -> Unit,
     onDownload: (EpisodeRow) -> Unit,
     progress: Map<String, EpisodeProgress> = emptyMap(),
+    onMark: (Episode, Boolean) -> Unit = { _, _ -> },
     coverItemId: String? = null,
     date: (EpisodeRow) -> String = { "" },
     focusFirstRow: Boolean = true,
@@ -147,6 +156,7 @@ fun PodcastEpisodesView(
                 coverItemId = coverItemId,
                 date = date(row),
                 modifier = if (index == 0) Modifier.focusRequester(initialFocus) else Modifier,
+                onMark = row.onServer?.let { episode -> { finished: Boolean -> onMark(episode, finished) } },
                 onPress = {
                     val episode = row.onServer
                     when {
@@ -222,101 +232,152 @@ private fun EpisodeRowCard(
     coverItemId: String?,
     date: String,
     modifier: Modifier = Modifier,
+    onMark: ((Boolean) -> Unit)?,
     onPress: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }
-    Card(
-        scale = CardFocus.noGrowth,
-        onClick = onPress,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp)
-            .testTag("episode_row_${row.key}")
-            .onFocusChanged { focused = it.isFocused },
-        colors = CardDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        border = CardDefaults.border(
-            focusedBorder = Border(BorderStroke(3.dp, MaterialTheme.colorScheme.primary))
-        )
+    // The row or its button: the button shows while either holds focus, so
+    // Right can reach it and Left come back (#181).
+    var rowFocused by remember { mutableStateOf(false) }
+    val finished = progress == EpisodeProgress.Heard
+    Row(
+        modifier = Modifier.fillMaxWidth().onFocusChanged { rowFocused = it.hasFocus },
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Kept on every row so per-episode covers have a place to land.
-            coverItemId?.let {
-                CoverImage(itemId = it, contentDescription = row.title, size = 64.dp)
-                Spacer(Modifier.width(Space.gap))
-            }
-            // A tick reads as "done", so it means heard. Being on the server is
-            // what the play icon at the end of the row says.
-            Box(modifier = Modifier.size(24.dp)) {
-                when {
-                    progress == EpisodeProgress.Heard -> Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "Heard",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    !row.downloaded -> Icon(
-                        imageVector = Icons.Outlined.Download,
-                        contentDescription = "Not on the server",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        Card(
+            scale = CardFocus.noGrowth,
+            onClick = onPress,
+            modifier = modifier
+                .weight(1f)
+                .padding(horizontal = 4.dp)
+                .testTag("episode_row_${row.key}")
+                .onFocusChanged { focused = it.isFocused },
+            colors = CardDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
+            border = CardDefaults.border(
+                focusedBorder = Border(BorderStroke(3.dp, MaterialTheme.colorScheme.primary))
+            )
+        ) {
+            Row(
+                // Finished rows are dimmed, as the web app shows them, until focus
+                // makes one the row being read.
+                modifier = Modifier.padding(12.dp).alpha(if (finished && !rowFocused) FINISHED_ALPHA else 1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Kept on every row so per-episode covers have a place to land.
+                coverItemId?.let {
+                    CoverImage(itemId = it, contentDescription = row.title, size = 64.dp)
+                    Spacer(Modifier.width(Space.gap))
                 }
-            }
-            Spacer(Modifier.width(Space.gap))
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // A tick reads as "done", so it means heard. Being on the server is
+                // what the play icon at the end of the row says.
+                Box(modifier = Modifier.size(24.dp)) {
+                    when {
+                        finished -> Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = "Finished",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        !row.downloaded -> Icon(
+                            imageVector = Icons.Outlined.Download,
+                            contentDescription = "Not on the server",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(Modifier.width(Space.gap))
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = row.title,
                         style = MaterialTheme.typography.titleMedium,
                         color = if (row.downloaded) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    // Marked, not hidden or struck through (#78).
-                    if (progress == EpisodeProgress.Heard) {
-                        Spacer(Modifier.width(12.dp))
-                        FactChip(Fact("Heard"))
-                    }
-                }
-                row.description?.takeIf { it.isNotBlank() }?.let {
-                    Text(
-                        text = RichText.fromHtml(it),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    row.description?.takeIf { it.isNotBlank() }?.let {
+                        Text(
+                            text = RichText.fromHtml(it),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    val inProgress = progress as? EpisodeProgress.InProgress
+                    val meta = listOfNotNull(
+                        date.takeIf { it.isNotEmpty() },
+                        row.durationSeconds?.takeIf { it > 0 }?.let { formatDuration(it) },
+                        inProgress?.let { "${formatDuration(it.secondsLeft)} left" },
+                        // Marked, not hidden or struck through (#78), in the web app's word (#181).
+                        "finished".takeIf { finished }
+                    ).joinToString(" • ")
+                    if (meta.isNotEmpty()) {
+                        Text(meta, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    inProgress?.let { ProgressBar(it.fraction) }
                 }
-                val inProgress = progress as? EpisodeProgress.InProgress
-                val meta = listOfNotNull(
-                    date.takeIf { it.isNotEmpty() },
-                    row.durationSeconds?.takeIf { it > 0 }?.let { formatDuration(it) },
-                    inProgress?.let { "${formatDuration(it.secondsLeft)} left" }
-                ).joinToString(" • ")
-                if (meta.isNotEmpty()) {
-                    Text(meta, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(Space.gap))
+                val label = EpisodeRowLabel.of(row.downloaded, state, focused, progress)
+                if (row.downloaded) {
+                    // Playable: an icon, with the word ("Play" / "Resume") as its description.
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = label,
+                        tint = if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(32.dp)
+                    )
+                } else {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                inProgress?.let { ProgressBar(it.fraction) }
             }
-            Spacer(Modifier.width(Space.gap))
-            val label = EpisodeRowLabel.of(row.downloaded, state, focused, progress)
-            if (row.downloaded) {
-                // Playable: an icon, with the word ("Play" / "Resume") as its description.
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = label,
-                    tint = if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(32.dp)
-                )
-            } else {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        }
+        // Kept on every row, so the button appearing moves nothing.
+        Box(modifier = Modifier.width(MARK_SLOT), contentAlignment = Alignment.Center) {
+            if (rowFocused && onMark != null) {
+                MarkButton(
+                    finished = finished,
+                    onClick = { onMark(!finished) },
+                    modifier = Modifier.testTag("episode_mark_${row.key}")
                 )
             }
         }
     }
 }
+
+/** Mark finished, or unfinished: a round TV button, inverted on focus as the transport's are. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun MarkButton(finished: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.size(40.dp),
+        scale = IconButtonDefaults.scale(focusedScale = 1f),
+        colors = IconButtonDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            focusedContainerColor = MaterialTheme.colorScheme.onSurface,
+            focusedContentColor = MaterialTheme.colorScheme.surface
+        ),
+        border = IconButtonDefaults.border(
+            focusedBorder = Border(BorderStroke(3.dp, MaterialTheme.colorScheme.primary))
+        )
+    ) {
+        // A phone Icon reads the phone content colour, not the TV button's.
+        CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides LocalContentColor.current) {
+            Icon(
+                imageVector = Icons.Filled.Check,
+                contentDescription = stringResource(if (finished) R.string.mark_unfinished else R.string.mark_finished),
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+private const val FINISHED_ALPHA = 0.55f
+private val MARK_SLOT = 56.dp

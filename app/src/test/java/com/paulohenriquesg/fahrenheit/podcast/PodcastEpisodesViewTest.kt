@@ -54,6 +54,7 @@ class PodcastEpisodesViewTest {
     private var played: Episode? = null
     private var downloaded: EpisodeRow? = null
     private var tabChosen: EpisodeTab? = null
+    private var marked: Pair<String, Boolean>? = null
 
     private fun render(
         tab: EpisodeTab = EpisodeTab.All,
@@ -72,6 +73,7 @@ class PodcastEpisodesViewTest {
                     onPlay = { played = it },
                     onDownload = { downloaded = it },
                     progress = progress,
+                    onMark = { episode, finished -> marked = episode.id to finished },
                     title = "The Show",
                     header = {
                         // As tall as the real one: a cover and a description.
@@ -186,11 +188,13 @@ class PodcastEpisodesViewTest {
         compose.onNodeWithText("The Show").assertIsDisplayed()
     }
 
+    // As the web app says it, in the row's line (#181).
     @Test
-    fun `a heard episode is marked heard`() {
+    fun `a finished episode says finished in its line`() {
         render(progress = mapOf("s1" to EpisodeProgress.Heard))
 
-        compose.onNodeWithText("Heard").assertIsDisplayed()
+        compose.onNodeWithText("finished").assertIsDisplayed()
+        compose.onNodeWithText("Heard").assertDoesNotExist()
     }
 
     @Test
@@ -220,17 +224,17 @@ class PodcastEpisodesViewTest {
     // A tick read as "heard", so it means heard; being on the server is what
     // the play icon already says.
     @Test
-    fun `a downloaded episode not yet heard carries no tick`() {
+    fun `a downloaded episode not yet finished carries no tick`() {
         render()
 
-        compose.onNodeWithContentDescription("Heard").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Finished").assertDoesNotExist()
     }
 
     @Test
-    fun `a heard episode carries the tick`() {
+    fun `a finished episode carries the tick`() {
         render(progress = mapOf("s1" to EpisodeProgress.Heard))
 
-        compose.onNodeWithContentDescription("Heard").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Finished").assertIsDisplayed()
     }
 
     @Test
@@ -238,5 +242,55 @@ class PodcastEpisodesViewTest {
         render()
 
         compose.onNodeWithContentDescription("Not on the server").assertIsDisplayed()
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun `Right from the focused row reaches Mark finished, and Left comes back`() {
+        render()
+        compose.onNodeWithTag("episode_row_server:s1").assertIsFocused()
+
+        compose.onNodeWithTag("episode_row_server:s1").performKeyInput { pressKey(Key.DirectionRight) }
+        compose.waitForIdle()
+        compose.onNodeWithTag("episode_mark_server:s1").assertIsFocused()
+        compose.onNodeWithContentDescription("Mark finished").assertIsDisplayed()
+
+        compose.onNodeWithTag("episode_mark_server:s1").performKeyInput { pressKey(Key.DirectionLeft) }
+        compose.waitForIdle()
+        compose.onNodeWithTag("episode_row_server:s1").assertIsFocused()
+    }
+
+    @Test
+    fun `the button is only on the focused row, and never on one the server lacks`() {
+        render()
+        compose.onNodeWithTag("episode_mark_server:s1").assertExists()
+
+        compose.onNodeWithTag("episode_row_feed:g2").performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("episode_mark_server:s1").assertDoesNotExist()
+        compose.onNodeWithTag("episode_mark_feed:g2").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Mark finished asks for the episode to be finished, and the row still plays`() {
+        render()
+
+        compose.onNodeWithTag("episode_mark_server:s1").performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+
+        assertEquals("s1" to true, marked)
+        assertNull(played)
+    }
+
+    @Test
+    fun `on a finished episode it reads Mark unfinished, and asks for that`() {
+        render(progress = mapOf("s1" to EpisodeProgress.Heard))
+
+        compose.onNodeWithContentDescription("Mark unfinished").assertExists()
+        compose.onNodeWithTag("episode_mark_server:s1").performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+
+        assertEquals("s1" to false, marked)
     }
 }
