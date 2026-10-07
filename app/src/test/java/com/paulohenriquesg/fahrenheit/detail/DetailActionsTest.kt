@@ -30,6 +30,8 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.assertLeftPositionInRootIsEqualTo
 import com.paulohenriquesg.fahrenheit.player.SIDE_PANEL_SCRIM_TAG
+import com.paulohenriquesg.fahrenheit.podcast.DownloadSettings
+import com.paulohenriquesg.fahrenheit.podcast.DownloadsPanel
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -146,7 +148,7 @@ class DetailActionsTest {
     @Test fun `the chapters panel covers the whole screen, the book keeps its margins`() {
         compose.setContent {
             FahrenheitTheme {
-                DetailBody(isBook = true) { margin ->
+                DetailBody { margin ->
                     BookDetailView(
                         itemId = "b1",
                         content = DetailHeaderContent("A Book", null, emptyList(), "Play", null),
@@ -165,6 +167,24 @@ class DetailActionsTest {
         assertEquals(screen, scrim)
         // The book itself still sits inside the margin: its cover starts 24 dp in.
         compose.onNodeWithContentDescription("A Book").assertLeftPositionInRootIsEqualTo(24.dp)
+    }
+
+    // #182: a podcast's Downloads panel reaches the edges too; its screen
+    // takes the same margin inside, as a book's does.
+    @Test fun `a podcast's panel covers the whole screen, and the podcast keeps its margins`() {
+        var given: PaddingValues? = null
+        compose.setContent {
+            FahrenheitTheme {
+                DetailBody { margin ->
+                    given = margin
+                    DownloadsPanel(DownloadSettings(true, "0 0 * * *", 0, 3), failed = false, onChange = {}, onClose = {})
+                }
+            }
+        }
+        compose.waitForIdle()
+
+        assertEquals(compose.onRoot().getUnclippedBoundsInRoot(), compose.onNodeWithTag(SIDE_PANEL_SCRIM_TAG).getUnclippedBoundsInRoot())
+        assertEquals(PaddingValues(horizontal = 24.dp, vertical = 16.dp), given)
     }
 
     private val series = SeriesBooks(
