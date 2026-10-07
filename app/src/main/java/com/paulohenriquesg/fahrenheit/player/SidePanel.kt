@@ -36,7 +36,6 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ListItem
@@ -99,7 +98,7 @@ fun PlayerPanelHost(panels: PlayerPanels, panel: @Composable (PlayerPanel) -> Un
  */
 @OptIn(ExperimentalComposeUiApi::class) // focusProperties.exit
 @Composable
-fun SidePanel(title: String, onClose: () -> Unit, width: Dp = 320.dp, content: @Composable ColumnScope.() -> Unit) {
+fun SidePanel(title: String, onClose: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     BackHandler(onBack = onClose)
     val shown = remember { MutableTransitionState(false) }.apply { targetState = true }
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)).testTag(SIDE_PANEL_SCRIM_TAG)) {
@@ -111,7 +110,7 @@ fun SidePanel(title: String, onClose: () -> Unit, width: Dp = 320.dp, content: @
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(width)
+                    .width(320.dp)
                     .background(MaterialTheme.colorScheme.surface)
                     .focusProperties { exit = { FocusRequester.Cancel } }
                     .focusGroup()

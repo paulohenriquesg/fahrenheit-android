@@ -193,9 +193,13 @@ book screen and About (#137) draw Resume and Mark finished as the default TV
   remembers which chip opened one, and focus goes back to it on close. Back
   closes the panel, and focus cannot leave it for the controls behind (#107).
   The book screen opens the same Chapters panel.
-- **About is its own screen**, not a panel: `AboutScreen` lays the book out as
-  the book screen does (`BookOverview`), over the same cover wash, drawn over
-  the player so the player keeps its state (#134, #137).
+- **About is its own screen**, not a panel, for a book and an episode alike:
+  `AboutScreen` lays it out as the book screen does (`BookOverview`), over the
+  same cover wash, drawn over the player so the player keeps its state (#134,
+  #137, #178). An episode has its show as the byline and among the facts, and
+  no series or Mark finished; with no description, focus lands on the facts.
+- **A description box that scrolls fades out at the bottom** while there is
+  more below, so it reads as scrollable rather than clipped (#178).
 
 ## The player's look, on every full screen
 

@@ -4,6 +4,8 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
@@ -196,5 +198,23 @@ class BookOverviewTest {
         val inset = (node.size.height - layouts.single().size.height) / 2f
         val wanted = with(compose.density) { 11.dp.toPx() }
         assertTrue("inset ${inset}px, wanted ${wanted}px", inset >= wanted)
+    }
+
+    // #178: the box's text stopped mid-line and looked clipped, not scrollable.
+    @Test fun `a long description fades out at the bottom`() {
+        show(description = long)
+        compose.onNodeWithTag(DESCRIPTION_BOX_TAG).assert(SemanticsMatcher.expectValue(DescriptionFadesOut, true))
+    }
+
+    @Test fun `a description that fits does not fade`() {
+        show()
+        compose.onNodeWithTag(DESCRIPTION_BOX_TAG).assert(SemanticsMatcher.expectValue(DescriptionFadesOut, false))
+    }
+
+    @Test fun `scrolled to its end, the description no longer fades`() {
+        show(description = long)
+        compose.onNodeWithTag(DESCRIPTION_BOX_TAG).performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 1_000_000f) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(DESCRIPTION_BOX_TAG).assert(SemanticsMatcher.expectValue(DescriptionFadesOut, false))
     }
 }

@@ -23,13 +23,14 @@ import com.paulohenriquesg.fahrenheit.ui.components.BookOverview
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 
 /**
- * A book's About from the player (#134): the one book layout, in place of the
+ * About from the player (#134, an episode's since #178): the one book layout, in place of the
  * player while it is open and over the same cover wash; Back returns to the
  * player. Drawn over the player rather than instead of it, so the player keeps
  * its state and focus goes back to the About chip, as for every panel.
  *
- * Focus lands on the description, or on Mark finished when there is none;
- * it cannot wander to the player hidden underneath.
+ * Focus lands on the description, or on Mark finished when there is none, or
+ * on the facts for an episode, which has no Mark finished; it cannot wander to
+ * the player hidden underneath. An episode has no series, and its show is its byline.
  */
 @OptIn(ExperimentalComposeUiApi::class) // focusProperties.exit
 @Composable
@@ -44,7 +45,9 @@ fun AboutScreen(
     onClose: () -> Unit
 ) {
     BackHandler(onBack = onClose)
-    val markFocus = rememberInitialFocus(enabled = nowPlaying.description.isNullOrBlank() && finished != null)
+    val noDescription = nowPlaying.description.isNullOrBlank()
+    val markFocus = rememberInitialFocus(enabled = noDescription && finished != null)
+    val factsFocus = rememberInitialFocus(enabled = noDescription && finished == null)
     Box(
         Modifier
             .fillMaxSize()
@@ -57,14 +60,15 @@ fun AboutScreen(
         BookOverview(
             itemId = nowPlaying.itemId,
             title = nowPlaying.title,
-            byline = nowPlaying.byline,
+            byline = nowPlaying.byline ?: nowPlaying.show,
             description = nowPlaying.description,
             facts = nowPlaying.facts,
             series = series,
             seriesName = nowPlaying.series?.name,
             onSeriesBook = onPlayInstead,
             askBeforeSwitching = true,
-            landOnDescription = true
+            landOnDescription = true,
+            factsFocus = factsFocus
         ) {
             finished?.let { done ->
                 ActionChip(

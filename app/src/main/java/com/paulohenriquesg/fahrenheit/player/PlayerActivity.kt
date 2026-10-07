@@ -379,19 +379,11 @@ class PlayerActivity : ComponentActivity() {
                                             else Toast.makeText(this@PlayerActivity, getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
                                         }
                                     }
-                                    // A book's About is the one book layout over the wash (#134); an
-                                    // episode keeps the panel until podcast screens are designed.
-                                    if (playing.episodeId == null) {
-                                        AboutScreen(
-                                            nowPlaying = playing, wash = wash, series = series, finished = finished, marking = marking,
-                                            onPlayInstead = playInstead, onMarkFinished = mark, onClose = panels::close
-                                        )
-                                    } else {
-                                        AboutPanel(
-                                            description = playing.description, facts = playing.facts, series = series, finished = finished,
-                                            marking = marking, onPlayInstead = playInstead, onMarkFinished = mark, onClose = panels::close
-                                        )
-                                    }
+                                    // A book's and an episode's About alike: the one book layout over the wash (#134, #178).
+                                    AboutScreen(
+                                        nowPlaying = playing, wash = wash, series = series, finished = finished, marking = marking,
+                                        onPlayInstead = playInstead, onMarkFinished = mark, onClose = panels::close
+                                    )
                                 }
                                 PlayerPanel.Speed -> SpeedPanel(
                                     current = rememberPlaybackSpeed(connected),

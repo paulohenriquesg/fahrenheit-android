@@ -30,6 +30,8 @@ data class NowPlaying(
     val kicker: String? = null,
     /** Who wrote it and who reads it; null for an episode. */
     val byline: String? = null,
+    /** An episode's show, About's byline for it (#178); null for a book. */
+    val show: String? = null,
     /** The book's (first) series, for About and "Book N of M"; null for an episode or a standalone book. */
     val series: SeriesRef? = null,
     val libraryId: String? = null,
@@ -123,7 +125,8 @@ data class NowPlaying(
                 kicker = listOfNotNull(metadata.title.takeIf { it.isNotBlank() }, published.takeIf { it.isNotEmpty() })
                     .joinToString(" · ").takeIf { it.isNotEmpty() },
                 byline = null,
-                facts = AboutFacts.episode(published, episode.audioTrack?.duration),
+                show = metadata.title.takeIf { it.isNotBlank() },
+                facts = AboutFacts.episode(metadata.title, published, episode.audioTrack?.duration, episode.season, episode.episode),
                 badge = EpisodeDetails.badge(episode.episodeType),
                 details = EpisodeDetails.line(episode.season, episode.episode, episode.audioTrack?.duration),
                 notes = EpisodeDetails.notes(episode.subtitle, episode.description),
