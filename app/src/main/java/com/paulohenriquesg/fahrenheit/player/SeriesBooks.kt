@@ -4,8 +4,8 @@ import com.paulohenriquesg.fahrenheit.api.LibraryItem
 
 /** @param sequence its place in the series as the server gives it: "2", "2.5". */
 data class SeriesBook(val itemId: String, val title: String, val sequence: String? = null) {
-    /** "Book 2.5" under its cover; the title when it has no place (#194). */
-    val label: String get() = sequence?.trim()?.takeIf { it.isNotEmpty() }?.let { "Book $it" } ?: title
+    /** Its place, for "Book 2.5" under its cover; null when it has none (#194). */
+    val number: String? get() = sequence?.trim()?.takeIf { it.isNotEmpty() }
 }
 
 /**

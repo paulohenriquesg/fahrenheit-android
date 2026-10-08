@@ -6,10 +6,10 @@
 
 **Architecture:**
 - **`RichText.fromHtml`**: before rendering, a literal `\r\n` or `\n` (backslash, n) becomes `<br>`; two in a row are then a blank line (a paragraph break). Real HTML is untouched.
-- **`SeriesBook.sequence`**: from the item's series (the server sends the filtered series with its sequence). `SeriesBook.label(book)`: "Book 2.5" from the sequence, the title without one.
+- **`SeriesBook.sequence`**: from the item's series (the server sends the filtered series with its sequence). `SeriesBook.number`: its trimmed sequence, or null; the card reads "Book 2.5" (`R.string.series_book_number`), or the title without one.
 - **`SeriesShelf`**: each card's label is that label. The cover size comes from the row's width (`SeriesRow.coverSize`): the largest number of whole covers that still leaves half a cover showing at the right edge, so the row reads as scrollable.
 - **`BookOverview`**: the right column fills the height; the description box takes `weight(1f)` (no 230 dp cap), the lower section (series + facts, tagged `BOOK_LOWER_TAG`) sits at the bottom; with no description a spacer takes its place. The focus border moves from the scrolled text to the box itself, drawn outside the fade layer, so it is never scrolled or faded away.
-- **Title**: three lines. When it is still cut, the description box opens with the full title as its heading (the full title is then on the page, where the most room is).
+- **Title**: three lines. When it is still cut, the description box opens with the full title as its heading; with no description, the full title stands where the box would be.
 - **Genres**: `DetailHeaderModel.book` skips blank genres too; `AboutFacts.book` pinned for empty and blank.
 - **Optional marquee**: a focused card whose label is cut scrolls it with `basicMarquee(iterations = 3)`; only while focused, finite.
 

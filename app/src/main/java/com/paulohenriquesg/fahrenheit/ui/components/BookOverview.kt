@@ -80,6 +80,7 @@ const val DESCRIPTION_BOX_TAG = "book_description_box"
 const val FACTS_TAG = "book_facts"
 const val TITLE_TAG = "book_title"
 const val BOOK_LOWER_TAG = "book_lower"
+const val FULL_TITLE_TAG = "book_full_title"
 
 /** The series row's covers, sized so the row reads as scrollable (#194). */
 internal object SeriesRow {
@@ -193,7 +194,21 @@ fun BookOverview(
         }
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
             top()
-            if (text == null) Spacer(Modifier.weight(1f))
+            if (text == null) {
+                // Where the description would open with it (#194).
+                Box(Modifier.weight(1f)) {
+                    if (titleCut) {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 4,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.testTag(FULL_TITLE_TAG)
+                        )
+                    }
+                }
+            }
             text?.let {
                 val scroll = rememberScrollState()
                 var focused by remember { mutableStateOf(false) }
@@ -349,7 +364,7 @@ fun SeriesShelf(
                 }
                 if (titles) {
                     Text(
-                        book.label,
+                        book.number?.let { stringResource(R.string.series_book_number, it) } ?: book.title,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (index == series.current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

@@ -110,10 +110,10 @@ class SeriesBooksTest {
     }
 
     @Test
-    fun `a book is labelled by its place, or by its title without one`() {
-        assertEquals("Book 1", SeriesBook("b1", "The First", sequence = "1").label)
-        assertEquals("Book 2.5", SeriesBook("b2", "The Second", sequence = " 2.5 ").label)
-        assertEquals("The Third", SeriesBook("b3", "The Third", sequence = " ").label)
-        assertEquals("The Fourth", SeriesBook("b4", "The Fourth").label)
+    fun `a book's number is its place, or none without one`() {
+        assertEquals("1", SeriesBook("b1", "The First", sequence = "1").number)
+        assertEquals("2.5", SeriesBook("b2", "The Second", sequence = " 2.5 ").number)
+        assertEquals(null, SeriesBook("b3", "The Third", sequence = " ").number)
+        assertEquals(null, SeriesBook("b4", "The Fourth").number)
     }
 }

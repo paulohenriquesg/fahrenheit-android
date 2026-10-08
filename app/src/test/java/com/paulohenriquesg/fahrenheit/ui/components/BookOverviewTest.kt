@@ -10,6 +10,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.isFocused
@@ -339,6 +340,18 @@ class BookOverviewTest {
     @Test fun `a title cut even at three lines is shown whole above the description`() {
         show(title = tooLong)
         assertTrue(descriptionText(), descriptionText().startsWith("$tooLong\n\nA survey ship"))
+    }
+
+    @Test fun `with no description, a cut title is shown whole where it would be`() {
+        show(title = tooLong, description = null, landOnDescription = false)
+        // The cut one under the cover, and the whole one on the right.
+        compose.onAllNodesWithText(tooLong).assertCountEquals(2)
+        compose.onNodeWithTag(FULL_TITLE_TAG).assertIsDisplayed()
+    }
+
+    @Test fun `with no description, a title that fits is not repeated`() {
+        show(title = threeLines, description = null, landOnDescription = false)
+        compose.onNodeWithTag(FULL_TITLE_TAG).assertDoesNotExist()
     }
 
     @Test fun `a title that fits is not repeated above the description`() {

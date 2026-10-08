@@ -210,7 +210,8 @@ book screen and About (#137) draw Resume and Mark finished as the default TV
   facts at the bottom margin, the description box filling the height above
   them. Its focus border is the box's, drawn outside the fade, not the
   scrolled text's. The title takes three lines; when even that cuts it, the
-  description opens with the full title in bold.
+  description opens with the full title in bold, or with no description the
+  full title stands where the box would be.
 - **A series row reads as scrollable**: its covers are sized so half the next
   one shows at the right edge (`SeriesRow.coverSize`), and each is labelled
   by its place, "Book 2.5", or its title when the server gives no sequence.
