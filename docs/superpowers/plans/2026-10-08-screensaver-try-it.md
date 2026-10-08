@@ -9,8 +9,8 @@
 ## Rulings
 
 1. **Under the Style choices**, in the same row's trailing column, a TV `Button` like Settings' other actions, tagged `screensaver_try_it`.
-2. **Nothing queued:** the button is disabled and its label is "Play something to try it". No sample content.
-3. **The item is the one queued when Try it was pressed;** the trial stays up if playback stops under it (black behind until the line is known).
+2. **Nothing queued:** the button reads "Play something to try it", is dimmed, says it is disabled to accessibility, and does nothing. It is never `enabled = false`: a disabled TV button gives up focus (as `FeedCheckRow` notes), and the queue can empty while Try it holds it. No sample content.
+3. **The item is the one queued when Try it was pressed;** if the queue empties or moves to another item while it shows, the trial closes (from review: one item's art under another's line, or a trial with nothing to say).
 4. **Animations:** the trial is the real `ScreensaverScreen`, which moves only while composed; once closed, the compose clock goes idle again. Tests hold the clock while it shows.
 
 ## Tasks

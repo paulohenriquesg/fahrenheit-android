@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.settings
 
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -200,7 +202,8 @@ class ScreensaverSettingTest {
         tryIt()
         compose.onNodeWithTag(ScreensaverTags.SCREEN).assertExists()
 
-        tryIt.performKeyInput { pressKey(Key.DirectionUp) }
+        // Center, the key that pressed Try it: one let through would open it again.
+        tryIt.performKeyInput { pressKey(Key.DirectionCenter) }
         settle()
 
         compose.onNodeWithTag(ScreensaverTags.SCREEN).assertDoesNotExist()
@@ -215,14 +218,68 @@ class ScreensaverSettingTest {
     @Test
     fun `Back closes it and stays in Settings`() {
         renderTrying(ScreensaverStyle.Wall)
+        // As MainScreen's Back handler would: it must never hear this Back.
+        var backs = 0
+        compose.runOnUiThread {
+            compose.activity.onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    backs++
+                }
+            })
+        }
         tryIt()
 
-        tryIt.performKeyInput { pressKey(Key.Back) }
+        // Through the activity, as the remote's Back arrives.
+        compose.runOnUiThread {
+            compose.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK))
+            compose.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK))
+        }
         settle()
 
         compose.onNodeWithTag(ScreensaverTags.SCREEN).assertDoesNotExist()
         tryIt.assertIsFocused()
-        assertEquals(false, compose.activity.isFinishing)
+        assertEquals(0, backs)
+    }
+
+    @Test
+    fun `the queue emptying leaves focus on Try it, which then says why it does nothing`() {
+        renderTrying()
+        tryIt.performScrollTo().performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+
+        queued = null
+        compose.waitForIdle()
+
+        tryIt.assertIsFocused().assertIsNotEnabled()
+        compose.onNodeWithText("Play something to try it").assertExists()
+        tryIt.performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithTag(ScreensaverTags.SCREEN).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the queue emptying under a trial closes it, focus still on Try it`() {
+        renderTrying(ScreensaverStyle.Bouncing)
+        tryIt()
+        compose.onNodeWithTag(ScreensaverTags.SCREEN).assertExists()
+
+        queued = null
+        settle()
+
+        compose.onNodeWithTag(ScreensaverTags.SCREEN).assertDoesNotExist()
+        tryIt.assertIsFocused()
+    }
+
+    @Test
+    fun `something else queued under a trial closes it rather than mix two items`() {
+        renderTrying(ScreensaverStyle.Wall)
+        tryIt()
+
+        queued = Queued(itemId = "b2", playing = true)
+        settle()
+
+        compose.onNodeWithTag(ScreensaverTags.SCREEN).assertDoesNotExist()
+        tryIt.assertIsFocused()
     }
 
     @Test

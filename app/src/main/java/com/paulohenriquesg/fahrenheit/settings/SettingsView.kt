@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.KeyEventType
@@ -46,6 +47,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
@@ -298,10 +301,23 @@ fun SettingsView(
                         // and time left. Without it there is nothing to show.
                         if (screensaver != null) {
                             val queued = screensaver.queued()
+                            // A trial of something no longer queued would mix
+                            // one item's art with another's line: closed.
+                            LaunchedEffect(queued?.itemId) {
+                                if (trying != null && trying != queued?.itemId) {
+                                    trying = null
+                                    closing = false
+                                }
+                            }
+                            // Never disabled: a disabled button gives up focus,
+                            // and the queue can empty while Try it holds it. It
+                            // says it is disabled, looks it, and does nothing.
                             Button(
-                                onClick = { trying = queued?.itemId },
-                                enabled = queued != null,
-                                modifier = Modifier.testTag("screensaver_try_it")
+                                onClick = { queued?.let { trying = it.itemId } },
+                                modifier = Modifier
+                                    .testTag("screensaver_try_it")
+                                    .alpha(if (queued != null) 1f else 0.5f)
+                                    .semantics { if (queued == null) disabled() }
                             ) {
                                 Text(
                                     stringResource(
