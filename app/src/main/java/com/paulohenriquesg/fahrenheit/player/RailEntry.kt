@@ -18,7 +18,7 @@ import kotlinx.coroutines.delay
  *
  * @property progress how far through the whole book or episode, 0..1: the ring.
  * @property chapter the title of the chapter playing; null for none, or an untitled one.
- * @property chapterNumber the chapter's number, for a book with chapters.
+ * @property chapterNumber the chapter's number, for a book or episode with chapters.
  * @property leftSeconds what is left of the chapter, or of the whole when
  *   there is no chapter, at the speed - as the player counts it.
  */
@@ -74,10 +74,11 @@ data class RailEntry(
  * The rail's entry for what [player] - the main screen's controller - has
  * queued; null when nothing is, or there is no player. It follows the
  * player's events, and its position only while playing (a loop that never
- * ends would keep Compose from idling). A book's chapters are asked for once.
+ * ends would keep Compose from idling). A book's or episode's chapters are
+ * asked for once.
  */
 @Composable
-fun rememberRailEntry(player: Player?, chaptersOf: suspend (String) -> List<Chapter>?): RailEntry? {
+fun rememberRailEntry(player: Player?, chaptersOf: suspend (itemId: String, episodeId: String?) -> List<Chapter>?): RailEntry? {
     if (player == null) return null
     var changes by remember(player) { mutableIntStateOf(0) }
     var playing by remember(player) { mutableStateOf(player.isPlaying) }
@@ -100,13 +101,12 @@ fun rememberRailEntry(player: Player?, chaptersOf: suspend (String) -> List<Chap
     // Read on every change.
     changes.let { }
     val file = QueuedFile.of(player.currentMediaItem)
-    var spans by remember(file?.itemId, file?.episodeId) {
-        mutableStateOf(file?.itemId?.let { RailChapters.known[it] }.orEmpty())
-    }
-    LaunchedEffect(file?.itemId, file?.episodeId) {
-        if (file == null || file.episodeId != null || file.itemId in RailChapters.known) return@LaunchedEffect
-        spans = ChapterClock.spans(chaptersOf(file.itemId), file.bookTotal)
-            .also { RailChapters.known[file.itemId] = it }
+    val known = file?.let { RailChapters.key(it.itemId, it.episodeId) }
+    var spans by remember(known) { mutableStateOf(known?.let { RailChapters.known[it] }.orEmpty()) }
+    LaunchedEffect(known) {
+        if (file == null || known == null || known in RailChapters.known) return@LaunchedEffect
+        spans = ChapterClock.spans(chaptersOf(file.itemId, file.episodeId), file.bookTotal)
+            .also { RailChapters.known[known] = it }
     }
     return RailEntry.of(
         file = file,
@@ -122,9 +122,12 @@ fun rememberRailEntry(player: Player?, chaptersOf: suspend (String) -> List<Chap
 internal const val RAIL_POLL_MS = 5_000L
 
 /**
- * Books' chapters, once asked for: the main screen gets a new controller on
- * every return to it, and should not fetch the item each time. Main thread only.
+ * Books' and episodes' chapters, once asked for: the main screen gets a new
+ * controller on every return to it, and should not fetch the item each time.
+ * Main thread only.
  */
 internal object RailChapters {
     val known = mutableMapOf<String, List<ChapterSpan>>()
+
+    fun key(itemId: String, episodeId: String?) = if (episodeId == null) itemId else "$itemId/$episodeId"
 }

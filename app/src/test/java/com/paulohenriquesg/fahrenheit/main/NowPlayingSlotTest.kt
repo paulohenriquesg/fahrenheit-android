@@ -55,7 +55,7 @@ class NowPlayingSlotTest {
         player.play()
         compose.setContent {
             FahrenheitTheme {
-                NowPlayingSlot(player, open = true, chaptersOf = { null }, onOpen = {}, onStopped = { stops++ })
+                NowPlayingSlot(player, open = true, chaptersOf = { _, _ -> null }, onOpen = {}, onStopped = { stops++ })
             }
         }
         run(player).untilPendingCommandsAreFullyHandled()

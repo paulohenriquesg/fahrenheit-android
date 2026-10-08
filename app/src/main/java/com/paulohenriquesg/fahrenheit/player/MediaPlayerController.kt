@@ -133,7 +133,7 @@ fun MediaPlayerController(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         // The bar you seek with is the chapter's; the book's sits under it
-        // (#107). A book without chapters, or an episode, has the one bar.
+        // (#107). A book or episode without chapters has the one bar.
         PlaybackBar(
             fraction = chapter?.fraction(currentTime) ?: PlaybackPosition.fraction(currentTime, totalTime),
             modifier = Modifier.fillMaxWidth().testTag(CHAPTER_BAR_TAG),

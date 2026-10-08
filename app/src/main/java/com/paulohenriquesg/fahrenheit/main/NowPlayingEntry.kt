@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.main
 import com.paulohenriquesg.fahrenheit.player.rememberRailEntry
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.Chapter
+import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import androidx.media3.common.Player
 import androidx.compose.foundation.layout.width
@@ -130,7 +131,7 @@ fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit
 fun NowPlayingSlot(
     player: Player,
     open: Boolean,
-    chaptersOf: suspend (String) -> List<Chapter>?,
+    chaptersOf: suspend (itemId: String, episodeId: String?) -> List<Chapter>?,
     onOpen: (RailEntry) -> Unit,
     onStopped: () -> Unit = {}
 ) {
@@ -185,9 +186,14 @@ internal fun StopButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/** A book's chapters, for Now playing's time left; null when they could not be read. */
-suspend fun queuedChapters(itemId: String): List<Chapter>? =
-    ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.media?.chapters
+/** A book's or episode's chapters, for Now playing's time left; null when they could not be read. */
+suspend fun queuedChapters(itemId: String, episodeId: String?): List<Chapter>? =
+    ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.let { chaptersIn(it, episodeId) }
+
+/** The book's chapters, or the episode's (#183); null for an episode [item] no longer has. */
+internal fun chaptersIn(item: LibraryItemResponse, episodeId: String?): List<Chapter>? =
+    if (episodeId == null) item.media.chapters
+    else item.media.episodes?.firstOrNull { it.id == episodeId }?.chapters
 
 /**
  * "Chapter · N min left", or what is left of an episode or an unchaptered book.

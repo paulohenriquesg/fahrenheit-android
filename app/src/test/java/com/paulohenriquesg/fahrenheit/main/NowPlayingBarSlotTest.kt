@@ -54,7 +54,7 @@ class NowPlayingBarSlotTest {
         compose.setContent {
             FahrenheitTheme {
                 Column {
-                    NowPlayingBarSlot(connected, chaptersOf = { null }, onOpen = {})
+                    NowPlayingBarSlot(connected, chaptersOf = { _, _ -> null }, onOpen = {})
                     BasicText("the screen", Modifier.testTag("content").focusable())
                 }
             }
@@ -82,7 +82,7 @@ class NowPlayingBarSlotTest {
 
     @Test
     fun `no controller, no bar`() {
-        compose.setContent { FahrenheitTheme { NowPlayingBarSlot(null, chaptersOf = { null }, onOpen = {}) } }
+        compose.setContent { FahrenheitTheme { NowPlayingBarSlot(null, chaptersOf = { _, _ -> null }, onOpen = {}) } }
         compose.waitForIdle()
         compose.onNodeWithTag(NOW_PLAYING_BAR_TAG).assertDoesNotExist()
     }
