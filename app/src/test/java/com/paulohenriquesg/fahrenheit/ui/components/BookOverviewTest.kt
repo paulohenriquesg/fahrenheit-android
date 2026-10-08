@@ -350,4 +350,22 @@ class BookOverviewTest {
         show(title = threeLines, actions = 3)
         assertTrue(compose.onNodeWithText("ACTION 3").getUnclippedBoundsInRoot().bottom <= screenBottom)
     }
+
+    // #194: a focused card's cut label scrolls, a few times and then rests,
+    // so the screen (and this test) still goes idle.
+    @Test fun `only the focused series card's label scrolls`() {
+        val long = SeriesBooks(
+            listOf(SeriesBook("b1", "A Title Far Too Long for Its Card"), SeriesBook("b2", "The Long Drift"), SeriesBook("b3", "Another Title Too Long to Fit")),
+            currentId = "b2"
+        )
+        show(series = long, landOnDescription = false)
+        fun scrolls(label: String) = compose.onNodeWithText(label).fetchSemanticsNode().config.getOrElse(SeriesLabelScrolls) { false }
+
+        assertFalse(scrolls("A Title Far Too Long for Its Card"))
+        compose.onNode(hasContentDescription("A Title Far Too Long for Its Card") and hasClickAction()).performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+
+        assertTrue(scrolls("A Title Far Too Long for Its Card"))
+        assertFalse(scrolls("Another Title Too Long to Fit"))
+    }
 }

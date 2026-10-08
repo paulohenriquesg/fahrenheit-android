@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.ui.components
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -96,11 +97,17 @@ internal object SeriesRow {
 
 private val DESCRIPTION_SHAPE = RoundedCornerShape(12.dp)
 
+/** How many times a focused series card's cut label scrolls by before it rests. */
+private const val LABEL_RUNS = 3
+
 /** Between the series' covers. */
 private val SERIES_GAP = 12.dp
 
 /** How much of the description box's bottom fades out while there is more below. */
 private val DESCRIPTION_FADE = 48.dp
+
+/** Whether a series card's label scrolls: its card has focus (#194). */
+val SeriesLabelScrolls = SemanticsPropertyKey<Boolean>("SeriesLabelScrolls")
 
 /** Whether the description box fades out at its bottom: there is more below (#178). */
 val DescriptionFadesOut = SemanticsPropertyKey<Boolean>("DescriptionFadesOut")
@@ -316,6 +323,7 @@ fun SeriesShelf(
     LazyRow(state = state, horizontalArrangement = Arrangement.spacedBy(SERIES_GAP), verticalAlignment = Alignment.Top) {
         itemsIndexed(series.books, key = { index, _ -> keys[index] }) { index, book ->
             val isThis = index == (series.current ?: 0)
+            var focused by remember { mutableStateOf(false) }
             Column(Modifier.width(coverSize)) {
                 Surface(
                     onClick = {
@@ -328,6 +336,7 @@ fun SeriesShelf(
                     modifier = Modifier
                         .focusRequester(covers.getValue(book.itemId))
                         .then(if (isThis) landHere else Modifier)
+                        .onFocusChanged { focused = it.isFocused }
                         .semantics { selected = index == series.current },
                     shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
                     border = ClickableSurfaceDefaults.border(
@@ -344,8 +353,14 @@ fun SeriesShelf(
                         style = MaterialTheme.typography.bodySmall,
                         color = if (index == series.current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 6.dp)
+                        // Focused, a cut label scrolls into view a few times and
+                        // rests: never endlessly, which would keep the screen from
+                        // ever going idle. basicMarquee only moves text that is cut.
+                        overflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .padding(top = 6.dp)
+                            .semantics { this[SeriesLabelScrolls] = focused }
+                            .then(if (focused) Modifier.basicMarquee(iterations = LABEL_RUNS) else Modifier)
                     )
                 }
             }
