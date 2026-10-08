@@ -31,7 +31,8 @@ import kotlinx.coroutines.withContext
  *   with the position it wrote.
  * @param reported told when the server's idea of what is being listened to
  *   has just changed: the first report of a stretch of listening reached it -
- *   only then does it count the item as started - or a closing one did (#197).
+ *   only then does it count the item as started - or a closing report with
+ *   something new in it did (#197).
  */
 class PlaybackReporting(
     private val player: Player,
@@ -128,6 +129,9 @@ class PlaybackReporting(
         }
         time?.playing(true)
         if (rounds?.isActive == true) return
+        // Played again before the last stretch's closing report arrived: that
+        // report is told and stands for this start too - same item, already
+        // in progress on the server.
         stretch?.reported = false
         val active = reporter ?: return
         rounds = scope.launch { active.run { player.isPlaying } }

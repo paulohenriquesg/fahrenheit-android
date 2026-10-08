@@ -108,5 +108,52 @@ class HomeReloadTest {
         assertEquals(emptyList<String>(), fetched)
     }
 
+    // Review: Library, the player, Back to Home - the news came while Home was hidden.
+    @Test
+    fun `a request while Home is hidden is made when Home shows again`() {
+        val fetched = mutableListOf<String>()
+        val reload = reload(fetched, mutableListOf())
+        reload.showing = false
+
+        reload.request()
+        closeWindow()
+        assertEquals("not while hidden", emptyList<String>(), fetched)
+
+        reload.showing = true
+        closeWindow()
+        assertEquals(listOf("lib"), fetched)
+    }
+
+    @Test
+    fun `showing Home again with nothing owed fetches nothing`() {
+        val fetched = mutableListOf<String>()
+        val reload = reload(fetched, mutableListOf())
+
+        reload.showing = false
+        reload.showing = true
+        closeWindow()
+
+        assertEquals(emptyList<String>(), fetched)
+    }
+
+    // Review: a slow older fetch must not put back shelves from before the news.
+    @Test
+    fun `an older fetch answering last does not replace a newer one`() {
+        val shown = mutableListOf<List<Shelf>>()
+        val first = CompletableDeferred<Unit>()
+        var calls = 0
+        val reload = reload(mutableListOf(), shown, answer = {
+            if (++calls == 1) { first.await(); old } else fresh
+        })
+
+        reload.request()
+        closeWindow()
+        reload.request()
+        closeWindow()
+        first.complete(Unit)
+
+        assertEquals(listOf(fresh), shown)
+    }
+
     private fun shelf(id: String) = Shelf(id = id, label = id, labelStringKey = id, type = "book", bookEntities = emptyList())
 }

@@ -13,9 +13,10 @@
 ## Rulings
 
 1. **Window: 500 ms**, trailing: the first request starts it, the fetch runs at its end. A request after the fetch started starts a new window - it may carry news the running fetch predates.
-2. **Only while Home is the view.** Other views do not show the shelves, and choosing Home fetches them.
+2. **Only while Home is the view and the screen is up.** A request made while another view is up is owed, and made when Home shows again - from the rail or by Back (from review). News while the activity is stopped (the player in front) is left to the return, which reloads anyway.
 3. **The rail's Home row goes through `HomeReload` too**, so its failure also keeps what is shown.
 4. **No loading state for a reload:** the old shelves stay until the new ones arrive; the shelf and card keys already keep focus on the same item.
+5. **The latest fetch wins** (from review): an older one answering last is dropped.
 
 ## Tasks
 

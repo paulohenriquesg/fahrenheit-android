@@ -19,7 +19,11 @@ import kotlinx.coroutines.launch
  * Fetches Home's shelves again, keeping what is shown until new ones arrive
  * (#197). The reasons come in bursts - back from the player, and the report
  * of the stop it made - so requests inside one [window] make one fetch; one
- * made after a fetch began may carry news it predates, and makes another.
+ * made after a fetch began may carry news it predates, and makes another,
+ * whose shelves win however the two answer.
+ *
+ * While Home is not [showing], a request is owed rather than made, and made
+ * when it shows again: Back to Home from another view fetches nothing else.
  *
  * @param fetch the shelves of a library, or null when they could not be read.
  * @param library the library Home shows now; shelves for another are dropped.
@@ -32,8 +36,23 @@ class HomeReload(
     private val window: suspend () -> Unit = { delay(WINDOW_MS) }
 ) {
     private var waiting = false
+    private var owed = false
+    /** The latest fetch begun; only its shelves are shown. */
+    private var latest = 0
+
+    /** Whether Home is the view. */
+    var showing: Boolean = true
+        set(value) {
+            field = value
+            if (value && owed) request()
+        }
 
     fun request() {
+        if (!showing) {
+            owed = true
+            return
+        }
+        owed = false
         if (waiting) return
         waiting = true
         scope.launch {
@@ -43,8 +62,9 @@ class HomeReload(
                 waiting = false
             }
             val id = library() ?: return@launch
+            val ticket = ++latest
             val shelves = fetch(id) ?: return@launch
-            if (library() == id) show(shelves)
+            if (ticket == latest && library() == id) show(shelves)
         }
     }
 
@@ -56,7 +76,8 @@ class HomeReload(
 /**
  * Asks for Home's shelves again on coming back to the screen - not on first
  * arriving, which the start-up load covers - and each time [news] says the
- * server's idea of what is in progress changed.
+ * server's idea of what is in progress changed while the screen is up. News
+ * from behind it, the player's own starts and stops, is for the return.
  */
 @Composable
 fun HomeReloadTriggers(news: StateFlow<Int>, onReload: () -> Unit) {
@@ -79,6 +100,8 @@ fun HomeReloadTriggers(news: StateFlow<Int>, onReload: () -> Unit) {
     }
     LaunchedEffect(news) {
         // The count as it stands is old news.
-        news.drop(1).collect { reload() }
+        news.drop(1).collect {
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) reload()
+        }
     }
 }

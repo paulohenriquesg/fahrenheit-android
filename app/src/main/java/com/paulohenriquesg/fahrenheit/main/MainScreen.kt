@@ -41,6 +41,7 @@ import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -193,9 +194,9 @@ fun MainScreen(
     val homeReload = remember {
         HomeReload(scope, fetchPersonalizedView, library = { currentLibrary?.id }, show = { shelves = it })
     }
-    HomeReloadTriggers(listeningNews) {
-        if (view == MainView.HOME) homeReload.request()
-    }
+    // Asked for while another view is up, it is made on coming back to Home.
+    SideEffect { homeReload.showing = view == MainView.HOME }
+    HomeReloadTriggers(listeningNews) { homeReload.request() }
 
     // Fetch libraries from the API
     LaunchedEffect(Unit) {

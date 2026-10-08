@@ -65,4 +65,19 @@ class HomeReloadTriggersTest {
 
         assertEquals(2, asked)
     }
+
+    // Review: the player's own starts and stops, behind it, are for the return to pay.
+    @Test
+    fun `news while the screen is stopped asks nothing, and coming back asks once`() {
+        show()
+
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        news.reported()
+        compose.waitForIdle()
+        assertEquals(0, asked)
+
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.waitForIdle()
+        assertEquals(1, asked)
+    }
 }
