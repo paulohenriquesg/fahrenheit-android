@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.main
 import androidx.media3.common.Player
 import com.paulohenriquesg.fahrenheit.player.PlayerSettings
 import android.app.Activity
+import com.paulohenriquesg.fahrenheit.screensaver.PlaybackListening
 import com.paulohenriquesg.fahrenheit.settings.SettingsView
 import com.paulohenriquesg.fahrenheit.settings.UpdateCheck
 import com.paulohenriquesg.fahrenheit.player.PlaybackDevice
@@ -253,6 +254,7 @@ fun MainScreen(
     var playNextEpisode by remember { mutableStateOf(PlayerSettings(context).playNextEpisode) }
     var screensaverMinutes by remember { mutableStateOf(PlayerSettings(context).screensaverMinutes) }
     var screensaverStyle by remember { mutableStateOf(PlayerSettings(context).screensaverStyle) }
+    val listening = remember { PlaybackListening(context) }
     var skipBack by remember { mutableStateOf(PlayerSettings(context).skipBackSeconds) }
     var skipForward by remember { mutableStateOf(PlayerSettings(context).skipForwardSeconds) }
     // The library's Favourites playlist, read each time Settings opens (#180).
@@ -501,6 +503,7 @@ fun MainScreen(
                             PlayerSettings(context).screensaverStyle = it
                             screensaverStyle = it
                         },
+                        screensaver = listening,
                         skipForward = skipForward,
                         onSkipForward = {
                             PlayerSettings(context).skipForwardSeconds = it
