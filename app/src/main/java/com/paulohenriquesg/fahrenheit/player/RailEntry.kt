@@ -33,6 +33,14 @@ data class RailEntry(
     val leftSeconds: Double
 ) {
     companion object {
+        /**
+         * Whether the entry shows it playing (#179): play is wanted, and the
+         * player can play - or is buffering, so a seek does not flash the
+         * pause badge. An ended player still wants to play; it is not playing.
+         */
+        fun showsPlaying(playWhenReady: Boolean, state: Int): Boolean =
+            playWhenReady && (state == Player.STATE_READY || state == Player.STATE_BUFFERING)
+
         /** Null when nothing of ours is queued. */
         fun of(
             file: QueuedFile?,
@@ -104,8 +112,7 @@ fun rememberRailEntry(player: Player?, chaptersOf: suspend (String) -> List<Chap
         file = file,
         title = player.currentMediaItem?.mediaMetadata?.title?.toString(),
         positionInFile = player.currentPosition / 1000.0,
-        // What was asked for, as the player's button shows it.
-        playing = player.playWhenReady,
+        playing = RailEntry.showsPlaying(player.playWhenReady, player.playbackState),
         speed = player.playbackParameters.speed,
         spans = spans
     )

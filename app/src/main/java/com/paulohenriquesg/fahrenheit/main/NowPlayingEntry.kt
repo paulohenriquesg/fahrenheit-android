@@ -27,6 +27,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.paulohenriquesg.fahrenheit.player.RAIL_POLL_MS
@@ -119,7 +123,11 @@ fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit
  * The entry for what [player] has queued, or nothing. Reads the player
  * inside itself, so its changes redraw this entry and not the whole screen.
  *
- * @param onStopped after Stop has ended playback: the focused button is about to go.
+ * An entry that goes by itself - the end of the queue (#179) - while it holds
+ * focus stays until [onStopped] has moved focus out, as Stop does (#53).
+ *
+ * @param onStopped after Stop has ended playback, or the queue has ended with
+ *   focus on the entry: the focused button is about to go.
  */
 @Composable
 fun NowPlayingSlot(
@@ -129,11 +137,34 @@ fun NowPlayingSlot(
     onOpen: (RailEntry) -> Unit,
     onStopped: () -> Unit = {}
 ) {
-    val entry = rememberRailEntry(player, chaptersOf) ?: return
-    NowPlayingEntry(entry, open, onOpen, onStop = {
-        Playback.end(player)
-        onStopped()
-    })
+    val live = rememberRailEntry(player, chaptersOf)
+    val kept = remember { KeptEntry() }
+    var focused by remember { mutableStateOf(false) }
+    val leaving = live == null && focused
+    if (!leaving) kept.entry = live
+    val entry = kept.entry ?: return
+    if (leaving) {
+        LaunchedEffect(Unit) {
+            onStopped()
+            // Gone either way: one that could not hand focus on would stay for good.
+            focused = false
+        }
+    }
+    NowPlayingEntry(
+        entry,
+        open,
+        onOpen,
+        onStop = {
+            Playback.end(player)
+            onStopped()
+        },
+        modifier = Modifier.onFocusChanged { focused = it.hasFocus }
+    )
+}
+
+/** The last entry shown; not state, so keeping it redraws nothing. */
+internal class KeptEntry {
+    var entry: RailEntry? = null
 }
 
 /** Stop, beside or under Now playing: ends the listening session (#155, #159). */

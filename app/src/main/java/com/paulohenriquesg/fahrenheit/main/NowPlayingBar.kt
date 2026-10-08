@@ -11,6 +11,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -71,24 +76,36 @@ fun NowPlayingBar(entry: RailEntry, onOpen: (RailEntry) -> Unit, onStop: (RailEn
  * moved the screen and took focus with it.
  *
  * Stop moves focus down into the screen first: the focused button goes with
- * the bar, and a TV with nothing focused ignores the remote (#53).
+ * the bar, and a TV with nothing focused ignores the remote (#53). A bar that
+ * goes by itself - the end of the queue (#179) - while focused stays until
+ * focus has moved down the same way.
  */
 @Composable
 fun NowPlayingBarSlot(player: Player?, chaptersOf: suspend (String) -> List<Chapter>?, onOpen: (RailEntry) -> Unit) {
     val live = rememberRailEntry(player, chaptersOf)
     val kept = remember { KeptEntry() }
-    if (player != null) kept.entry = live
+    var focused by remember { mutableStateOf(false) }
+    // The end of the queue ends it as Stop does (#179): focus moves down first here too.
+    val leaving = player != null && live == null && focused
+    if (player != null && !leaving) kept.entry = live
     val entry = kept.entry ?: return
     val focus = LocalFocusManager.current
-    NowPlayingBar(entry, onOpen, onStop = {
-        focus.moveFocus(FocusDirection.Down)
-        player?.let(Playback::end)
-    })
-}
-
-/** The last entry a controller gave; not state, so keeping it redraws nothing. */
-private class KeptEntry {
-    var entry: RailEntry? = null
+    if (leaving) {
+        LaunchedEffect(Unit) {
+            focus.moveFocus(FocusDirection.Down)
+            // Gone either way: a bar with nowhere to send focus would stay for good.
+            focused = false
+        }
+    }
+    NowPlayingBar(
+        entry,
+        onOpen,
+        onStop = {
+            focus.moveFocus(FocusDirection.Down)
+            player?.let(Playback::end)
+        },
+        modifier = Modifier.onFocusChanged { focused = it.hasFocus }
+    )
 }
 
 private val BAR_WIDTH = 320.dp

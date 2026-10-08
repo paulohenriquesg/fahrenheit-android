@@ -1,8 +1,11 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import androidx.media3.common.Player
 import com.paulohenriquesg.fahrenheit.api.Chapter
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** What the rail's Now playing entry says about what is queued (#107). */
@@ -46,5 +49,22 @@ class RailEntryTest {
         val entry = RailEntry.of(book, "A Book", 10.0, playing = true, speed = 1f, spans = untitled)!!
         assertNull(entry.chapter)
         assertEquals(1, entry.chapterNumber)
+    }
+
+    // The state, honestly (#179): bars only while play is wanted and the player can play.
+    @Test fun `ready or buffering, with play wanted, shows playing`() {
+        assertTrue(RailEntry.showsPlaying(playWhenReady = true, state = Player.STATE_READY))
+        // A seek buffers: no pause badge flashing.
+        assertTrue(RailEntry.showsPlaying(playWhenReady = true, state = Player.STATE_BUFFERING))
+    }
+
+    @Test fun `paused shows paused`() {
+        assertFalse(RailEntry.showsPlaying(playWhenReady = false, state = Player.STATE_READY))
+        assertFalse(RailEntry.showsPlaying(playWhenReady = false, state = Player.STATE_BUFFERING))
+    }
+
+    @Test fun `ended or idle never shows playing, though play is still wanted`() {
+        assertFalse(RailEntry.showsPlaying(playWhenReady = true, state = Player.STATE_ENDED))
+        assertFalse(RailEntry.showsPlaying(playWhenReady = true, state = Player.STATE_IDLE))
     }
 }

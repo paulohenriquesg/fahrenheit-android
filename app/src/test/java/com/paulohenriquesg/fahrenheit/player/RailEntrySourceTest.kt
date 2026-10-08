@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.test.utils.TestExoPlayerBuilder
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper.run
@@ -79,6 +80,19 @@ class RailEntrySourceTest {
         run(player).untilPendingCommandsAreFullyHandled()
         compose.waitForIdle()
         assertNull(entry)
+    }
+
+    // #179: the player keeps wanting to play after the end; the entry says it stopped.
+    @Test fun `played to its end, the entry is not playing`() {
+        show()
+        queue(startAt = 3595.0)
+        compose.runOnUiThread {
+            player.prepare()
+            player.play()
+        }
+        run(player).untilState(Player.STATE_ENDED)
+        compose.waitForIdle()
+        assertEquals(false, entry!!.playing)
     }
 
     @Test fun `no player, no entry`() {

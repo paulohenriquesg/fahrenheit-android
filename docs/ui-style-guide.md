@@ -157,6 +157,12 @@ for as long as it is shown (`CoverWall`), its tests move the clock by hand.
 The rail entry and the bar on the book and podcast screens show what *is*:
 moving bars while playing, a still ⏸ while paused. The player's own button and
 the remote show the *action*, so a ▶ while playing read as the opposite (#170).
+Bars only while play is wanted *and* the player is ready or buffering (a seek
+does not flash ⏸); an ended player still wants to play, and shows no bars.
+
+At the end of the queue - the newest episode, the end of a book - the session
+ends as Stop ends it, and the entry and the bar go (#179). One that goes while
+it holds focus first hands focus on, as Stop does (#53).
 
 The cover is a **circle** inside the progress ring (#177): 36 dp in a 44 dp
 ring with a 3 dp stroke, so a 1 dp gap all round. A square's corners ran into
