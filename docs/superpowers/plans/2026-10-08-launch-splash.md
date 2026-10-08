@@ -38,8 +38,11 @@ draws, and after that Home is empty until the libraries and shelves arrive.
 - The check adds one round trip (`api/me`) to every cold start that has a
   session. In exchange, any refresh happens on the launch screen, and with an
   unreachable server you get the sign-in form instead of an empty Home.
-- An unreachable server waits out the client's 15 s connect timeout, with
-  "Connecting to your server…" on screen the whole time.
+- The check gives up after 10 s and counts as unreachable. Without that
+  limit, the client's own timeouts (15 s to connect, 60 s to read) could keep
+  the launch screen up for a minute.
+- After a failed check the only way on is to sign in again. A "Try again" for a
+  session that is still good is left open for the coordinator to decide.
 - The stored session is kept when the check fails, so the next launch tries
   again.
 - The icon is still the template launcher icon. Replacing it is a separate

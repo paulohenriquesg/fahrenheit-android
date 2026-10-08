@@ -90,7 +90,7 @@ fun LaunchScreen() {
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold),
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = Space.gap).testTag("launch_brand")
             )
             Text(

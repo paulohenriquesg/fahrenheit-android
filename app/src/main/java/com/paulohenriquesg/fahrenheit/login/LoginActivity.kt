@@ -17,7 +17,10 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.main.MainActivity
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withStarted
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.elements.RecentCovers
@@ -48,9 +51,18 @@ class LoginActivity : ComponentActivity() {
         return result
     }
 
+    /**
+     * Only once the screen is in front: a check that ends after Home was
+     * pressed would have its start blocked as a background launch, and the
+     * finish() after it would close the app.
+     */
     private fun goHome() {
-        startActivity(Intent(this, MainActivity::class.java))
-        finish()
+        lifecycleScope.launch {
+            lifecycle.withStarted {
+                startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                finish()
+            }
+        }
     }
 
     @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
