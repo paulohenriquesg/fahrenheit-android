@@ -85,16 +85,21 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import androidx.compose.runtime.mutableIntStateOf
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsFluid
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsRow
+import com.paulohenriquesg.fahrenheit.player.ListeningNews
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun MainScreen(
     fetchLibraryItems: suspend (String, LibraryQuery) -> List<LibraryItem>,
-    fetchPersonalizedView: suspend (String) -> List<Shelf>,
+    /** Null when the shelves could not be read. */
+    fetchPersonalizedView: suspend (String) -> List<Shelf>?,
     fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() },
     /** The playback service's player, while this screen is visible; null when not connected (#107). */
-    playback: Player? = null
+    playback: Player? = null,
+    /** Says when what is in progress has just changed on the server (#197). */
+    listeningNews: StateFlow<Int> = ListeningNews.process.count
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -173,13 +178,23 @@ fun MainScreen(
                 library.clear()
                 isLoadingHome = true
                 newLibrary.id?.let { libraryId ->
-                    shelves = fetchPersonalizedView(libraryId)
+                    shelves = fetchPersonalizedView(libraryId).orEmpty()
                     library.open(libraryId, LibraryQuery.Everything)
                 }
                 isLoadingHome = false
             }
             shouldRefreshLibrary = false
         }
+    }
+
+    // Back from the player, or playback started or stopped meanwhile: Continue
+    // listening may have changed (#197). What is shown stays until the new
+    // shelves arrive, and stays if they cannot be read.
+    val homeReload = remember {
+        HomeReload(scope, fetchPersonalizedView, library = { currentLibrary?.id }, show = { shelves = it })
+    }
+    HomeReloadTriggers(listeningNews) {
+        if (view == MainView.HOME) homeReload.request()
     }
 
     // Fetch libraries from the API
@@ -194,7 +209,7 @@ fun MainScreen(
                         currentLibrary = LibraryChoice.pick(libraries, savedLibraryId)
                         currentLibrary?.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
                         currentLibrary?.id?.let { libraryId ->
-                            shelves = fetchPersonalizedView(libraryId)
+                            shelves = fetchPersonalizedView(libraryId).orEmpty()
                             library.open(libraryId, LibraryQuery.Everything)
                         }
                     }
@@ -273,9 +288,7 @@ fun MainScreen(
         when (action) {
             MenuAction.HOME -> {
                 view = MainView.HOME
-                libraryId?.let { id ->
-                    scope.launch { shelves = fetchPersonalizedView(id) }
-                }
+                homeReload.request()
             }
             MenuAction.LIBRARY -> {
                 view = MainView.LIBRARY

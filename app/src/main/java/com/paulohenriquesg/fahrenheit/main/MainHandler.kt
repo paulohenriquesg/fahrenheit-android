@@ -28,8 +28,16 @@ class MainHandler(private val context: Context) {
     suspend fun fetchLibraryItems(libraryId: String, query: LibraryQuery): List<LibraryItem> =
         fetch("Failed to load library items") { it.items(libraryId, query) }
 
-    suspend fun fetchPersonalizedView(libraryId: String): List<Shelf> =
-        fetch("Failed to load personalized view") { it.personalizedShelves(libraryId) }
+    /**
+     * Home's shelves, or null when they could not be read (#197): a reload
+     * then keeps the ones shown, where an empty list would blank Home.
+     */
+    suspend fun fetchPersonalizedView(libraryId: String): List<Shelf>? {
+        val repository = repository() ?: return null
+        return repository.personalizedShelves(libraryId)
+            .onFailure { report("Failed to load personalized view", it) }
+            .getOrNull()
+    }
 
     /**
      * Everything the user has started, for the covers on Home (#104). Throws
@@ -44,12 +52,16 @@ class MainHandler(private val context: Context) {
     ): List<T> {
         val repository = repository() ?: return emptyList()
         return block(repository).getOrElse { error ->
-            Toast.makeText(
-                context,
-                "$failureMessage: ${error.message ?: "network error"}",
-                Toast.LENGTH_SHORT
-            ).show()
+            report(failureMessage, error)
             emptyList()
         }
+    }
+
+    private fun report(failureMessage: String, error: Throwable) {
+        Toast.makeText(
+            context,
+            "$failureMessage: ${error.message ?: "network error"}",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }

@@ -29,6 +29,9 @@ import kotlinx.coroutines.withContext
  * @param now a monotonic clock in milliseconds, for listening time.
  * @param delivered told each time a report about an item reaches the server,
  *   with the position it wrote.
+ * @param reported told when the server's idea of what is being listened to
+ *   has just changed: the first report of a stretch of listening reached it -
+ *   only then does it count the item as started - or a closing one did (#197).
  */
 class PlaybackReporting(
     private val player: Player,
@@ -37,12 +40,15 @@ class PlaybackReporting(
     private val pause: suspend () -> Unit = { delay(ProgressSync.INTERVAL_MS) },
     private val now: () -> Long = { SystemClock.elapsedRealtime() },
     private val closings: Closings = Closings.process,
-    private val delivered: (QueuedFile, Double) -> Unit = { _, _ -> }
+    private val delivered: (QueuedFile, Double) -> Unit = { _, _ -> },
+    private val reported: (QueuedFile) -> Unit = {}
 ) : Player.Listener {
 
     private var reportingFor: QueuedFile? = null
     private var reporter: ProgressReporter? = null
     private var time: ListeningTime? = null
+    /** Whether this stretch of the current reporter's listening has been [reported]. */
+    private var stretch: Stretch? = null
     private var rounds: Job? = null
     /** Where the item just left ended, for its closing report: the live position already belongs to the next. */
     private var endedAt: Double? = null
@@ -102,6 +108,7 @@ class PlaybackReporting(
             reportingFor = current
             val delivery = open(current)
             val listening = ListeningTime(now).also { time = it }
+            val told = Stretch().also { stretch = it }
             reporter = ProgressReporter(
                 send = delivery::sync,
                 position = { positionIn(current) },
@@ -109,12 +116,19 @@ class PlaybackReporting(
                 pause = pause,
                 listened = listening::pending,
                 delivered = listening::delivered,
-                reached = { this.delivered(current, it.currentTime) },
+                reached = {
+                    this.delivered(current, it.currentTime)
+                    if (!told.reported) {
+                        told.reported = true
+                        reported(current)
+                    }
+                },
                 close = delivery::close
             )
         }
         time?.playing(true)
         if (rounds?.isActive == true) return
+        stretch?.reported = false
         val active = reporter ?: return
         rounds = scope.launch { active.run { player.isPlaying } }
     }
@@ -124,6 +138,8 @@ class PlaybackReporting(
         rounds = null
         time?.playing(false)
         val active = reporter ?: return
+        // The closing report is news of its own.
+        stretch?.reported = false
         // Undispatched, so the position is read now, before the queue changes.
         // Not cancellable: once playback ends the service, and its scope, are gone
         // within milliseconds, which would drop the report mid-send.
@@ -142,6 +158,10 @@ class PlaybackReporting(
         if (!now.isFor(owner.itemId, owner.episodeId)) return endedAt ?: -1.0
         return now.bookTime(player.currentPosition / 1000.0)
     }
+}
+
+private class Stretch {
+    var reported = false
 }
 
 /**

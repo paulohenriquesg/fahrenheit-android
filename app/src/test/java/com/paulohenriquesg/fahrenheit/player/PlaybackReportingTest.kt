@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -252,5 +253,94 @@ class PlaybackReportingTest {
         val second = sent.filter { it.first.episodeId == "e2" }
         assertEquals("e1 closed at its end: $sent", 3600.0, first.single().second, 1.0)
         assertTrue("e2 reported: $sent", second.isNotEmpty() && second.last().second >= 5.0)
+    }
+
+    /**
+     * A reporting whose rounds come round when [rounds] is sent to, and whose
+     * deliveries succeed; what [PlaybackReporting.reported] is told goes to [told].
+     */
+    private fun counted(rounds: Channel<Unit>, told: MutableList<String>, fails: () -> Boolean = { false }): Player {
+        val reporting = PlaybackReporting(
+            player,
+            CoroutineScope(Dispatchers.Unconfined),
+            open = { _ ->
+                object : ListeningDelivery {
+                    override suspend fun sync(report: ListeningReport) { if (fails()) error("offline") }
+                    override suspend fun close(report: ListeningReport?) = Unit
+                }
+            },
+            pause = { rounds.receive() },
+            now = { player.clock.elapsedRealtime() },
+            reported = { told += it.itemId }
+        )
+        player.addListener(reporting)
+        return LeavingGuard(player, reporting::beforeLeaving)
+    }
+
+    // #197: the server counts an item as started only once a report reaches it.
+    @Test
+    fun `the first report to reach the server is told, and later rounds are not`() {
+        val rounds = Channel<Unit>(Channel.UNLIMITED)
+        val told = mutableListOf<String>()
+        val guard = counted(rounds, told)
+        val queue = PlaybackQueue.of(nowPlaying("b1", twoParts), 3602.0) { "https://abs.test$it" }!!
+        guard.setMediaItems(queue.items, queue.index, queue.positionMs)
+        guard.prepare()
+        guard.play()
+        run(player).untilPositionAtLeast(2_000)
+        assertEquals("before any report", emptyList<String>(), told)
+
+        rounds.trySend(Unit)
+        run(player).untilPositionAtLeast(3_000)
+        rounds.trySend(Unit)
+        run(player).untilPositionAtLeast(4_000)
+
+        assertEquals(listOf("b1"), told)
+    }
+
+    @Test
+    fun `a failed first report is not told, the first one to arrive is`() {
+        val rounds = Channel<Unit>(Channel.UNLIMITED)
+        val told = mutableListOf<String>()
+        var offline = true
+        val guard = counted(rounds, told, fails = { offline })
+        val queue = PlaybackQueue.of(nowPlaying("b1", twoParts), 3602.0) { "https://abs.test$it" }!!
+        guard.setMediaItems(queue.items, queue.index, queue.positionMs)
+        guard.prepare()
+        guard.play()
+        run(player).untilPositionAtLeast(2_000)
+
+        rounds.trySend(Unit)
+        run(player).untilPositionAtLeast(3_000)
+        assertEquals(emptyList<String>(), told)
+
+        offline = false
+        rounds.trySend(Unit)
+        run(player).untilPositionAtLeast(4_000)
+        assertEquals(listOf("b1"), told)
+    }
+
+    @Test
+    fun `the closing report is told, and playing on is a new start`() {
+        val rounds = Channel<Unit>(Channel.UNLIMITED)
+        val told = mutableListOf<String>()
+        val guard = counted(rounds, told)
+        val queue = PlaybackQueue.of(nowPlaying("b1", twoParts), 3602.0) { "https://abs.test$it" }!!
+        guard.setMediaItems(queue.items, queue.index, queue.positionMs)
+        guard.prepare()
+        guard.play()
+        run(player).untilPositionAtLeast(2_000)
+        rounds.trySend(Unit)
+        run(player).untilPositionAtLeast(3_000)
+
+        guard.pause()
+        run(player).untilPendingCommandsAreFullyHandled()
+        assertEquals("first report, then the close", listOf("b1", "b1"), told)
+
+        guard.play()
+        run(player).untilPositionAtLeast(5_000)
+        rounds.trySend(Unit)
+        run(player).untilPositionAtLeast(6_000)
+        assertEquals(listOf("b1", "b1", "b1"), told)
     }
 }
