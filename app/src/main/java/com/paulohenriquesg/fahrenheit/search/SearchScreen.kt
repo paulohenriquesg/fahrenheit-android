@@ -99,6 +99,7 @@ fun SearchScreen() {
 
 object SearchTags {
     const val FIELD = "search_field"
+    fun cutLine(kind: String) = "search_cut_$kind"
 }
 
 /**
@@ -164,7 +165,7 @@ fun SearchContent(
             else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(Space.gap)) {
                 if (results.items.isNotEmpty()) {
                     item(key = "items") {
-                        ResultGroup(itemKind, results.items.size) {
+                        ResultGroup(itemKind, results.items.size, cut = results.itemsCut, cutTag = SearchTags.cutLine("items")) {
                             val keys = StableKeys.of(results.items) { it.id }
                             items(results.items.size, key = { keys[it] }) { index ->
                                 LibraryItemCard(results.items[index], onClick = onItemClick)
@@ -174,7 +175,7 @@ fun SearchContent(
                 }
                 if (results.authors.isNotEmpty()) {
                     item(key = "authors") {
-                        ResultGroup(authorKind, results.authors.size) {
+                        ResultGroup(authorKind, results.authors.size, cut = results.authorsCut, cutTag = SearchTags.cutLine("authors")) {
                             items(results.authors, key = { "author-${it.id}" }) { author ->
                                 AuthorCard(author) { onAuthorClick(author) }
                             }
@@ -186,9 +187,18 @@ fun SearchContent(
     }
 }
 
-/** One kind of match: "Books · 3", then the matches in a single row. */
+/**
+ * One kind of match: "Books · 3", then the matches in a single row. A kind the
+ * server cut at its limit says so under the row (#193).
+ */
 @Composable
-private fun ResultGroup(kind: String, count: Int, row: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
+private fun ResultGroup(
+    kind: String,
+    count: Int,
+    cut: Boolean,
+    cutTag: String,
+    row: androidx.compose.foundation.lazy.LazyListScope.() -> Unit
+) {
     Column {
         Text(
             text = stringResource(R.string.search_group, kind, count),
@@ -202,6 +212,14 @@ private fun ResultGroup(kind: String, count: Int, row: androidx.compose.foundati
             contentPadding = PaddingValues(vertical = Space.inset),
             content = row
         )
+        if (cut) {
+            Text(
+                text = stringResource(R.string.search_cut, BrowseRepository.SEARCH_LIMIT),
+                modifier = Modifier.testTag(cutTag),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
