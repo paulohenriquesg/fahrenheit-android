@@ -47,6 +47,12 @@ object ChapterClock {
         return if (i > 0) spans[i - 1].start else current.start
     }
 
+    /** In the first chapter, too near its start for Previous to restart it: nothing comes before. */
+    fun atFirstStart(spans: List<ChapterSpan>, at: Double): Boolean {
+        val first = spans.firstOrNull() ?: return false
+        return at(spans, at) == first && at - first.start <= RESTART_WITHIN
+    }
+
     fun nextTarget(spans: List<ChapterSpan>, at: Double): Double? {
         val current = at(spans, at) ?: return null
         if (at + AT_START < current.start) return current.start

@@ -113,6 +113,51 @@ class SleepWatchTest {
         assertEquals(8, shown!!.minutesLeft)
     }
 
+    private fun episode(id: String) = NowPlaying(
+        itemId = "p1", title = id,
+        timeline = TrackTimeline(listOf(TimelineTrack(index = 1, startOffset = 0.0, duration = 3600.0, contentUrl = "/$id"))),
+        mediaDuration = null, chapters = null, episodeId = id, goToPodcast = true, description = null
+    )
+
+    private fun queue(start: QueueStart) {
+        player.setMediaItems(start.items, start.index, start.positionMs)
+        run(player).untilPendingCommandsAreFullyHandled()
+    }
+
+    // #183: an episode's last chapter can end, by the feed's reckoning, after
+    // its file does, and with the next episode queued the player never ends.
+    @Test
+    fun `end of chapter stops when the queue moves on to the next episode`() {
+        queue(PlaybackQueue.of(episode("e1"), 3590.0, { "https://abs.test$it" }, next = episode("e2"))!!)
+        watch.set(SleepCommand.args(SleepChoice.EndOfChapter, chapterEnds = listOf(600.0, 1200.0, 3700.0)))
+
+        player.play()
+        // Into the next file: it pauses there, at its start.
+        run(player).untilPositionAtLeast(1, 0)
+        watch.check()
+
+        assertFalse(player.playWhenReady)
+        assertFalse(watch.running)
+    }
+
+    @Test
+    fun `end of chapter carries on into a book's next file`() {
+        val twoFiles = book.copy(
+            timeline = TrackTimeline(
+                listOf(TimelineTrack(1, 0.0, 3600.0, "/b1"), TimelineTrack(2, 3600.0, 3600.0, "/b2"))
+            )
+        )
+        queue(PlaybackQueue.of(twoFiles, 3590.0) { "https://abs.test$it" }!!)
+        watch.set(SleepCommand.args(SleepChoice.EndOfChapter, chapterEnds = listOf(1200.0, 4200.0, 7200.0)))
+
+        player.play()
+        run(player).untilPositionAtLeast(1, 1)
+        watch.check()
+
+        assertTrue(player.playWhenReady)
+        assertTrue(watch.running)
+    }
+
     @Test
     fun `what is left is published in whole minutes`() {
         watch.set(SleepCommand.args(SleepChoice.Minutes(30)))

@@ -196,8 +196,8 @@ internal fun chaptersIn(item: LibraryItemResponse, episodeId: String?): List<Cha
     else item.media.episodes?.firstOrNull { it.id == episodeId }?.chapters
 
 /**
- * "Chapter · N min left", or what is left of an episode or an unchaptered book.
- * Two texts for a book: only the chapter's name is shortened, and the time
+ * "Chapter · N min left", or what is left of a book or episode without chapters.
+ * Two texts with a chapter: only the chapter's name is shortened, and the time
  * left always shows (#198) - one line with one ellipsis lost it to a long name.
  */
 @Composable

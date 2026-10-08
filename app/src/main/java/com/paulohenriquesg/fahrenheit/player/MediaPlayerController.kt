@@ -192,7 +192,12 @@ fun MediaPlayerController(
         ) {
             if (chapter != null) {
                 TransportButton(
-                    onClick = { ChapterClock.previousTarget(spans, playback.bookPosition())?.let(::seekTo) },
+                    onClick = {
+                        val at = playback.bookPosition()
+                        // At an episode's very start, the episode before it (#183).
+                        val before = episodes?.onPrevious?.takeIf { ChapterClock.atFirstStart(spans, at) }
+                        if (before != null) before() else ChapterClock.previousTarget(spans, at)?.let(::seekTo)
+                    },
                     size = 48.dp,
                     container = TvMaterialTheme.colorScheme.secondaryContainer,
                     content = TvMaterialTheme.colorScheme.onSecondaryContainer
@@ -251,9 +256,12 @@ fun MediaPlayerController(
             }
             if (chapter != null) {
                 TransportButton(
-                    // Nothing after the last chapter: the press does nothing
-                    // rather than leaving a button that cannot take focus.
-                    onClick = { ChapterClock.nextTarget(spans, playback.bookPosition())?.let(::seekTo) },
+                    // Nothing after a book's last chapter: the press does nothing
+                    // rather than leaving a button that cannot take focus. In an
+                    // episode's last chapter, the episode after it (#183).
+                    onClick = {
+                        ChapterClock.nextTarget(spans, playback.bookPosition())?.let(::seekTo) ?: episodes?.onNext?.invoke()
+                    },
                     size = 48.dp,
                     container = TvMaterialTheme.colorScheme.secondaryContainer,
                     content = TvMaterialTheme.colorScheme.onSecondaryContainer
