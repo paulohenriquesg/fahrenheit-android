@@ -86,6 +86,18 @@ class ListeningControlsTest {
         assertEquals(listOf(true), heard)
     }
 
+    // #179: at the end the service empties the queue, with the screen still
+    // showing; a mark for "whatever is queued" found nothing and failed.
+    @Test fun `mark finished names the book or episode the screen shows`() {
+        ListeningControls(player, "p1", null, total = 1800.0, memory, episodeId = "e1") { command, args ->
+            sent += command to args
+            Futures.immediateFuture(answer)
+        }.markFinished(true) {}
+        val args = sent.single().second
+        assertEquals("p1", FinishCommand.itemOf(args))
+        assertEquals("e1", FinishCommand.episodeOf(args))
+    }
+
     @Test fun `a mark the service could not make is said`() {
         answer = SessionResult(SessionError.ERROR_UNKNOWN)
         val heard = mutableListOf<Boolean>()

@@ -72,7 +72,12 @@ class NowPlayingSlotTest {
 
     // #179: the end of the queue ends it as Stop does; Stop held focus.
     @Test
-    fun `the entry going by itself hands focus to the section first`() {
+    fun `the entry going by itself hands focus to the section first`() = endsWithFocusOn(NOW_PLAYING_STOP_TAG)
+
+    @Test
+    fun `the entry going by itself with focus on it hands focus on too`() = endsWithFocusOn(NOW_PLAYING_TAG)
+
+    private fun endsWithFocusOn(focusOn: String) {
         player = TestExoPlayerBuilder(compose.activity).setMediaSourceFactory(hourLongFiles()).build()
         val book = NowPlaying("b1", "A Book", TrackTimeline(listOf(TimelineTrack(1, 0.0, 3600.0, "/b1"))), null, null, null, false, null)
         val queue = PlaybackQueue.of(book, 600.0) { "https://abs.test$it" }!!
@@ -93,7 +98,7 @@ class NowPlayingSlotTest {
         }
         run(player).untilPendingCommandsAreFullyHandled()
         compose.waitForIdle()
-        compose.onNodeWithTag(NOW_PLAYING_STOP_TAG).performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.onNodeWithTag(focusOn).performSemanticsAction(SemanticsActions.RequestFocus)
         compose.waitForIdle()
 
         // The service, at the end of the queue.

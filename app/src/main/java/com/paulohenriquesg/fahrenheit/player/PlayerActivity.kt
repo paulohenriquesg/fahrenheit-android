@@ -201,7 +201,7 @@ class PlayerActivity : ComponentActivity() {
         }
         val listening = remember(connected, playing) {
             if (connected == null || playing == null) null
-            else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds, connected::sendCustomCommand)
+            else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds, playing.episodeId, connected::sendCustomCommand)
         }
         LaunchedEffect(connected, playing) {
             if (connected == null || playing == null) return@LaunchedEffect
