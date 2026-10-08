@@ -50,7 +50,11 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.LocalContentColor
@@ -251,7 +255,7 @@ fun DetailHeader(
     }
 }
 
-/** Between the description's focus border and its text, so the border never sits on the words (#170). */
+/** Between the description box's focus border and its text, so the border never sits on the words (#170). */
 private val DESCRIPTION_PADDING = 12.dp
 
 /**
@@ -261,15 +265,26 @@ private val DESCRIPTION_PADDING = 12.dp
  *
  * Shared with the player's About panel (#107), which wants focus on it even
  * when it fits: [alwaysFocusable].
+ *
+ * @param heading opens the text in bold: a title too long for its own place (#194).
  */
 @Composable
 internal fun FullDescription(
     description: String,
     scroll: ScrollState,
     modifier: Modifier = Modifier,
-    alwaysFocusable: Boolean = false
+    alwaysFocusable: Boolean = false,
+    heading: String? = null
 ) {
-    val text = remember(description) { RichText.fromHtml(description) }
+    val headingColour = MaterialTheme.colorScheme.onSurface
+    val text = remember(description, heading, headingColour) {
+        val body = RichText.fromHtml(description)
+        if (heading == null) body else buildAnnotatedString {
+            withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = headingColour)) { append(heading) }
+            append("\n\n")
+            append(body)
+        }
+    }
     val scope = rememberCoroutineScope()
     val step = with(LocalDensity.current) { 160.dp.toPx() }
     // Focus scrolls the box in with its own padding and border just out of
@@ -279,7 +294,6 @@ internal fun FullDescription(
     // How much of the description's top is scrolled out of view: its clipped
     // bounds start below where it really starts.
     fun hiddenAbove(): Float = coordinates?.let { it.boundsInWindow().top - it.positionInWindow().y } ?: 0f
-    var focused by remember { mutableStateOf(false) }
     val overflows = scroll.maxValue > 0
 
     Text(
@@ -289,15 +303,7 @@ internal fun FullDescription(
         modifier = modifier
             .testTag(DESCRIPTION_TAG)
             .onGloballyPositioned { coordinates = it }
-            .border(
-                BorderStroke(
-                    if (focused) 3.dp else 0.dp,
-                    if (focused) MaterialTheme.colorScheme.primary else Color.Transparent
-                ),
-                RoundedCornerShape(6.dp)
-            )
             .padding(DESCRIPTION_PADDING)
-            .onFocusChanged { focused = it.isFocused }
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.key) {

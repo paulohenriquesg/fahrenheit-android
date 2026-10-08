@@ -65,6 +65,16 @@ class DetailHeaderModelTest {
         assertEquals(listOf(Fact("16h 10m")), header.chips)
     }
 
+    // #194: no genres, or only blank ones, leave the genre out rather than an empty fact.
+    @Test
+    fun `blank genres are left out`() {
+        assertEquals(listOf(Fact("16h 10m")), DetailHeaderModel.book(book(genres = """[" ",""]""", year = null)).chips)
+        assertEquals(
+            listOf(Fact("16h 10m"), Fact("Science Fiction")),
+            DetailHeaderModel.book(book(genres = """[" ","Science Fiction"]""", year = null)).chips
+        )
+    }
+
     @Test
     fun `a finished book says so`() {
         val header = DetailHeaderModel.book(book(progress = """{"progress":1.0,"currentTime":58200.0,"isFinished":true}"""))

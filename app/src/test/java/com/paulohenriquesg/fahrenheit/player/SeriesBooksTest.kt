@@ -94,4 +94,26 @@ class SeriesBooksTest {
         assertEquals(listOf("The First", "The Second"), books.map { it.media.metadata.title })
         assertEquals("A Long Saga", books[0].media.metadata.series!!.single().name)
     }
+
+    // #194: every card read "<Series title> a…"; each now says where it sits.
+    @Test
+    fun `each book carries its place in the series`() = runBlocking {
+        server.enqueue(MockResponse().setBody("""{"results":[
+            {"id":"b1","media":{"numTracks":1,"metadata":{"title":"The First","explicit":false,
+              "series":{"id":"s1","name":"A Long Saga","sequence":"2.5"}}}},
+            {"id":"b2","media":{"numTracks":1,"metadata":{"title":"The Second","explicit":false,
+              "series":{"id":"s1","name":"A Long Saga","sequence":null}}}}],"total":2,"sortBy":"sequence"}"""))
+
+        val series = SeriesBooks.of(LibraryRepository(api).seriesBooks("l1", "s1").getOrThrow(), currentId = "b1")
+
+        assertEquals(listOf("2.5", null), series.books.map { it.sequence })
+    }
+
+    @Test
+    fun `a book is labelled by its place, or by its title without one`() {
+        assertEquals("Book 1", SeriesBook("b1", "The First", sequence = "1").label)
+        assertEquals("Book 2.5", SeriesBook("b2", "The Second", sequence = " 2.5 ").label)
+        assertEquals("The Third", SeriesBook("b3", "The Third", sequence = " ").label)
+        assertEquals("The Fourth", SeriesBook("b4", "The Fourth").label)
+    }
 }

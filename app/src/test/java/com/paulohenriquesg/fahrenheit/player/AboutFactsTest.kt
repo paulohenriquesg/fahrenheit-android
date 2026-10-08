@@ -29,6 +29,13 @@ class AboutFactsTest {
         AboutFacts.book(metadata(""","publisher":" ","genres":[]"""), length = 600.0)
     )
 
+    // #194: the facts block leaves Genres out entirely, no empty label.
+    @Test fun `no genres, an empty list or only blank ones leave Genres out`() {
+        listOf("", ""","genres":[]""", ""","genres":[" ",""]""").forEach { genres ->
+            assertEquals(genres, emptyList<AboutFact>(), AboutFacts.book(metadata(genres), length = null))
+        }
+    }
+
     @Test fun `a minified narrator name is used when there is no list`() = assertEquals(
         AboutFact(AboutFact.Kind.ReadBy, "A Reader"),
         AboutFacts.book(metadata(""","narratorName":"A Reader""""), length = null).single()

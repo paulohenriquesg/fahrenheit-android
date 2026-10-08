@@ -1,5 +1,7 @@
 package com.paulohenriquesg.fahrenheit.ui.components
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
@@ -9,6 +11,9 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -19,7 +24,13 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.Button
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.detail.DESCRIPTION_TAG
 import com.paulohenriquesg.fahrenheit.player.AboutFact
@@ -59,13 +70,16 @@ class BookOverviewTest {
         series: SeriesBooks? = three,
         ask: Boolean = false,
         landOnDescription: Boolean = true,
-        facts: List<AboutFact> = this.facts
+        facts: List<AboutFact> = this.facts,
+        title: String = "The Long Drift",
+        actions: Int = 1
     ) {
         compose.setContent {
             FahrenheitTheme {
+                primary = MaterialTheme.colorScheme.primary
                 BookOverview(
                     itemId = "b2",
-                    title = "The Long Drift",
+                    title = title,
                     byline = "An Author · read by A Reader",
                     description = description,
                     facts = facts,
@@ -76,11 +90,14 @@ class BookOverviewTest {
                     landOnDescription = landOnDescription
                 ) {
                     Button(onClick = {}) { Text("ACTION") }
+                    repeat(actions - 1) { Button(onClick = {}) { Text("ACTION ${it + 2}") } }
                 }
             }
         }
         compose.waitForIdle()
     }
+
+    private var primary = Color.Unspecified
 
     private fun press(text: String) {
         compose.onNodeWithText(text).performSemanticsAction(SemanticsActions.OnClick)
@@ -216,5 +233,121 @@ class BookOverviewTest {
         compose.onNodeWithTag(DESCRIPTION_BOX_TAG).performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 1_000_000f) }
         compose.waitForIdle()
         compose.onNodeWithTag(DESCRIPTION_BOX_TAG).assert(SemanticsMatcher.expectValue(DescriptionFadesOut, false))
+    }
+
+    private fun bounds(tag: String) = compose.onNodeWithTag(tag).getUnclippedBoundsInRoot()
+    private val screenBottom: Dp get() = compose.onRoot().getUnclippedBoundsInRoot().bottom
+
+    /** The series and facts at the bottom, the description box reaching down to just above them. */
+    private fun assertDetailsAtTheBottom(descriptionAbove: Boolean) {
+        val lower = bounds(BOOK_LOWER_TAG)
+        assertEquals(screenBottom.value, lower.bottom.value, 1f)
+        if (descriptionAbove) {
+            val box = bounds(DESCRIPTION_BOX_TAG)
+            assertTrue("box ends at ${box.bottom}, details start at ${lower.top}", box.bottom <= lower.top)
+            assertTrue("box ends at ${box.bottom}, details start at ${lower.top}", lower.top - box.bottom <= 24.5.dp)
+        }
+    }
+
+    // #194: the bottom third of the screen sat empty under a cut-off description.
+    @Test fun `the series and facts sit at the bottom, the description fills the space above`() {
+        show()
+        assertDetailsAtTheBottom(descriptionAbove = true)
+    }
+
+    @Test fun `with no series, the facts still sit at the bottom under the description`() {
+        show(series = null)
+        assertDetailsAtTheBottom(descriptionAbove = true)
+    }
+
+    @Test fun `with no description, the details still sit at the bottom`() {
+        show(description = null, landOnDescription = false)
+        assertDetailsAtTheBottom(descriptionAbove = false)
+    }
+
+    @Test fun `series cards are labelled by their place in the series`() {
+        show(
+            series = SeriesBooks(
+                listOf(SeriesBook("b1", "The Quiet Signal", "1"), SeriesBook("b2", "The Long Drift", "2"), SeriesBook("b3", "A Late Message", "2.5")),
+                currentId = "b2"
+            )
+        )
+        compose.onNodeWithText("Book 1").assertIsDisplayed()
+        compose.onNodeWithText("Book 2").assertIsDisplayed()
+        compose.onNodeWithText("Book 2.5").assertIsDisplayed()
+        compose.onNodeWithText("A Late Message").assertDoesNotExist()
+    }
+
+    // #194: the row showed four of seven, with nothing to say there were more.
+    @OptIn(ExperimentalTestApi::class)
+    @Test fun `right on the series row reaches the last book`() {
+        val seven = SeriesBooks((1..7).map { SeriesBook("b$it", "Book number $it", "$it") }, currentId = "b1")
+        show(series = seven, landOnDescription = false)
+        compose.onNode(hasContentDescription("Book number 1") and hasClickAction()).performSemanticsAction(SemanticsActions.RequestFocus)
+        repeat(6) {
+            compose.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionRight) }
+            compose.waitForIdle()
+        }
+        compose.onNode(hasContentDescription("Book number 7") and hasClickAction()).assertIsFocused().assertIsDisplayed()
+    }
+
+    // #194: the focus border ran on under the fade, past the box's bottom.
+    @Test fun `the description's focus border is drawn whole`() {
+        show(description = long, landOnDescription = true)
+        val box = compose.onNodeWithTag(DESCRIPTION_BOX_TAG).fetchSemanticsNode()
+        val at = box.positionInWindow
+        val pixels = window()
+        val inBorder = with(compose.density) { 1.5.dp.roundToPx() }
+        val x = at.x.toInt() + box.size.width / 2
+        listOf(at.y.toInt() + box.size.height - 1 - inBorder, at.y.toInt() + inBorder).forEach { y ->
+            val seen = pixels[x, y]
+            assertEquals("red at $x,$y", primary.red, seen.red, 0.05f)
+            assertEquals("green at $x,$y", primary.green, seen.green, 0.05f)
+            assertEquals("blue at $x,$y", primary.blue, seen.blue, 0.05f)
+        }
+    }
+
+    // captureToImage waits for a frame callback Robolectric never sends, so the
+    // window is drawn into a bitmap directly (as NowPlayingStateTest does).
+    private fun window(): PixelMap {
+        lateinit var map: PixelMap
+        compose.runOnUiThread {
+            val view = compose.activity.window.decorView
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            view.draw(Canvas(bitmap))
+            map = bitmap.asImageBitmap().toPixelMap()
+        }
+        return map
+    }
+
+    private fun descriptionText(): String = compose.onNodeWithTag(DESCRIPTION_TAG).fetchSemanticsNode()
+        .config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString("") { it.text }
+
+    private val threeLines = "A Remarkably Long Title for One Book"
+    private val tooLong = (1..12).joinToString(" ") { "Chapter-length words $it" }
+
+    // #194: the title was cut at two lines, and the full title was nowhere on the page.
+    @Test fun `a long title takes three lines`() {
+        show(title = threeLines)
+        val node = compose.onNodeWithTag(TITLE_TAG).fetchSemanticsNode()
+        val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        node.config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+        assertEquals(3, layouts.single().lineCount)
+        assertFalse(layouts.single().hasVisualOverflow)
+    }
+
+    @Test fun `a title cut even at three lines is shown whole above the description`() {
+        show(title = tooLong)
+        assertTrue(descriptionText(), descriptionText().startsWith("$tooLong\n\nA survey ship"))
+    }
+
+    @Test fun `a title that fits is not repeated above the description`() {
+        show(title = threeLines)
+        assertEquals("A survey ship drifts into a quiet sector.", descriptionText())
+    }
+
+    @Test fun `three actions still fit under a three-line title`() {
+        show(title = threeLines, actions = 3)
+        assertTrue(compose.onNodeWithText("ACTION 3").getUnclippedBoundsInRoot().bottom <= screenBottom)
     }
 }

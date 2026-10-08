@@ -14,8 +14,15 @@ object RichText {
 
     fun fromHtml(source: String?): AnnotatedString {
         if (source.isNullOrBlank()) return AnnotatedString("")
-        return trimmed(AnnotatedString.fromHtml(source))
+        return trimmed(AnnotatedString.fromHtml(source.replace(WRITTEN_NEWLINE, "<br>")))
     }
+
+    /**
+     * Some descriptions hold the two characters backslash and n where a line
+     * break was meant, and showed them as written (#194). Two in a row are a
+     * paragraph break.
+     */
+    private val WRITTEN_NEWLINE = Regex("""(\\r)?\\n""")
 
     private fun trimmed(rendered: AnnotatedString): AnnotatedString {
         // Html leaves the paragraph's trailing newlines on the end.

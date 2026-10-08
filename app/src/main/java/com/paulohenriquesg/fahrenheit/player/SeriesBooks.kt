@@ -2,7 +2,11 @@ package com.paulohenriquesg.fahrenheit.player
 
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 
-data class SeriesBook(val itemId: String, val title: String)
+/** @param sequence its place in the series as the server gives it: "2", "2.5". */
+data class SeriesBook(val itemId: String, val title: String, val sequence: String? = null) {
+    /** "Book 2.5" under its cover; the title when it has no place (#194). */
+    val label: String get() = sequence?.trim()?.takeIf { it.isNotEmpty() }?.let { "Book $it" } ?: title
+}
 
 /**
  * The books of a series in series order, and where the one playing sits
@@ -15,6 +19,9 @@ data class SeriesBooks(val books: List<SeriesBook>, val currentId: String) {
 
     companion object {
         fun of(items: List<LibraryItem>, currentId: String) =
-            SeriesBooks(items.map { SeriesBook(it.id, it.media.metadata.title) }, currentId)
+            SeriesBooks(
+                items.map { SeriesBook(it.id, it.media.metadata.title, it.media.metadata.series?.firstOrNull()?.sequence) },
+                currentId
+            )
     }
 }

@@ -3,13 +3,16 @@ package com.paulohenriquesg.fahrenheit.ui.components
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -66,6 +70,7 @@ import com.paulohenriquesg.fahrenheit.player.SeriesBook
 import com.paulohenriquesg.fahrenheit.player.SeriesBooks
 import com.paulohenriquesg.fahrenheit.player.factLabel
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
+import com.paulohenriquesg.fahrenheit.ui.Border as FocusBorder
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
@@ -73,6 +78,26 @@ import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 const val DESCRIPTION_BOX_TAG = "book_description_box"
 const val FACTS_TAG = "book_facts"
 const val TITLE_TAG = "book_title"
+const val BOOK_LOWER_TAG = "book_lower"
+
+/** The series row's covers, sized so the row reads as scrollable (#194). */
+internal object SeriesRow {
+    /**
+     * As many whole covers as fit at no less than [smallest], and half of the
+     * next one showing at the right edge: a row that ends on a whole cover
+     * looks like all there is.
+     */
+    fun coverSize(width: Dp, gap: Dp, smallest: Dp): Dp {
+        fun size(whole: Int) = (width - gap * whole) / (whole + 0.5f)
+        val whole = generateSequence(1) { it + 1 }.takeWhile { size(it) >= smallest }.lastOrNull() ?: 1
+        return size(whole)
+    }
+}
+
+private val DESCRIPTION_SHAPE = RoundedCornerShape(12.dp)
+
+/** Between the series' covers. */
+private val SERIES_GAP = 12.dp
 
 /** How much of the description box's bottom fades out while there is more below. */
 private val DESCRIPTION_FADE = 48.dp
@@ -86,7 +111,8 @@ val DescriptionFadesOut = SemanticsPropertyKey<Boolean>("DescriptionFadesOut")
  *
  * On the left the cover, the title, who wrote and reads it, and [actions].
  * On the right the description, in a wide box that scrolls with Down, and
- * under it the series - with this book marked and in view - beside the facts.
+ * under it the series - with this book marked and in view - beside the facts,
+ * at the bottom of the screen; the description fills the height above them (#194).
  *
  * @param askBeforeSwitching from the player, choosing another book of the
  *   series asks "Play <title> instead?" first; from the book screen it opens it.
@@ -118,6 +144,8 @@ fun BookOverview(
     val descriptionFocus = rememberInitialFocus(enabled = landOnDescription && text != null)
     val thisBook = remember { FocusRequester() }
     val row = series?.takeIf { it.total > 1 }
+    // Three lines, and when even that cuts it, the description opens with it in full (#194).
+    var titleCut by remember(title) { mutableStateOf(false) }
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(40.dp)) {
         Column(
             Modifier
@@ -137,8 +165,9 @@ fun BookOverview(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
+                onTextLayout = { titleCut = it.hasVisualOverflow },
                 modifier = Modifier
                     .testTag(TITLE_TAG)
                     .then(factsFocus?.takeIf { facts.isEmpty() }?.let { Modifier.focusRequester(it).focusable() } ?: Modifier)
@@ -155,20 +184,25 @@ fun BookOverview(
             Spacer(Modifier.height(6.dp))
             actions()
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
             top()
+            if (text == null) Spacer(Modifier.weight(1f))
             text?.let {
                 val scroll = rememberScrollState()
+                var focused by remember { mutableStateOf(false) }
                 // More below fades the text out at the bottom rather than cutting
                 // it mid-line, which read as clipped, not scrollable (#178).
                 val fades by remember { derivedStateOf { scroll.canScrollForward } }
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        // Gives way to what is above and below it: it scrolls.
-                        .weight(1f, fill = false)
-                        .heightIn(max = 230.dp)
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), RoundedCornerShape(12.dp))
+                        // Down to the series and facts at the bottom: it scrolls.
+                        .weight(1f)
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), DESCRIPTION_SHAPE)
+                        // Focus is the box's border, outside the fade: on the text
+                        // it scrolled and faded out of view at the bottom (#194).
+                        .onFocusChanged { focused = it.hasFocus }
+                        .then(if (focused) Modifier.border(FocusBorder.focus, MaterialTheme.colorScheme.primary, DESCRIPTION_SHAPE) else Modifier)
                         .semantics { this[DescriptionFadesOut] = fades }
                         // The text fades, not the box behind it.
                         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
@@ -196,23 +230,27 @@ fun BookOverview(
                     FullDescription(
                         it, scroll,
                         modifier = Modifier.focusRequester(descriptionFocus),
-                        alwaysFocusable = true
+                        alwaysFocusable = true,
+                        heading = title.takeIf { titleCut }
                     )
                 }
             }
             if (row != null || facts.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+                Row(Modifier.testTag(BOOK_LOWER_TAG), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
                     row?.let {
-                        Column(Modifier.weight(1f)) {
-                            SeriesShelf(
-                                series = it,
-                                label = stringResource(R.string.series_count, seriesName ?: stringResource(R.string.about_series), it.total),
-                                askBeforeSwitching = askBeforeSwitching,
-                                onChoose = onSeriesBook,
-                                landHere = Modifier.focusRequester(thisBook),
-                                coverSize = 84.dp,
-                                titles = true
-                            )
+                        BoxWithConstraints(Modifier.weight(1f)) {
+                            val cover = SeriesRow.coverSize(maxWidth, SERIES_GAP, smallest = 72.dp)
+                            Column {
+                                SeriesShelf(
+                                    series = it,
+                                    label = stringResource(R.string.series_count, seriesName ?: stringResource(R.string.about_series), it.total),
+                                    askBeforeSwitching = askBeforeSwitching,
+                                    onChoose = onSeriesBook,
+                                    landHere = Modifier.focusRequester(thisBook),
+                                    coverSize = cover,
+                                    titles = true
+                                )
+                            }
                         }
                     }
                     if (facts.isNotEmpty()) {
@@ -275,7 +313,7 @@ fun SeriesShelf(
     val keys = remember(series) { StableKeys.of(series.books) { it.itemId } }
     // Opens with this book in view, the one before it beside it for context.
     val state = rememberLazyListState(initialFirstVisibleItemIndex = ((series.current ?: 0) - 1).coerceAtLeast(0))
-    LazyRow(state = state, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+    LazyRow(state = state, horizontalArrangement = Arrangement.spacedBy(SERIES_GAP), verticalAlignment = Alignment.Top) {
         itemsIndexed(series.books, key = { index, _ -> keys[index] }) { index, book ->
             val isThis = index == (series.current ?: 0)
             Column(Modifier.width(coverSize)) {
@@ -302,7 +340,7 @@ fun SeriesShelf(
                 }
                 if (titles) {
                     Text(
-                        book.title,
+                        book.label,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (index == series.current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

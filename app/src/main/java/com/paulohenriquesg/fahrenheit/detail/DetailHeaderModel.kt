@@ -61,7 +61,7 @@ object DetailHeaderModel {
             chips = listOfNotNull(
                 item.media.duration?.takeIf { it > 0 }?.let { Fact(formatDuration(it)) },
                 metadata.publishedYear?.takeIf { it.isNotBlank() }?.let { Fact(it) },
-                metadata.genres?.firstOrNull()?.let { Fact(it) },
+                metadata.genres?.firstOrNull { it.isNotBlank() }?.let { Fact(it) },
                 progressOf(item)?.let { Fact(it) }
             ),
             // Says where it resumes, rather than a bare "Play".
