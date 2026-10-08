@@ -216,7 +216,7 @@ private fun ResultGroup(
             Text(
                 text = stringResource(R.string.search_cut, BrowseRepository.SEARCH_LIMIT),
                 modifier = Modifier.testTag(cutTag),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

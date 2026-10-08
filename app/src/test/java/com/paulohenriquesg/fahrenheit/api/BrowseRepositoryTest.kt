@@ -230,6 +230,17 @@ class BrowseRepositoryTest {
     }
 
     @Test
+    fun `a podcast library's podcasts that come back at the limit were cut`() = runBlocking {
+        val api = FakeBrowseApi(search = {
+            SearchLibraryItemsResponse(book = listOf(item("b1")), podcast = (1..50).map { item("p$it") })
+        })
+
+        val found = BrowseRepository(api).search("lib", "a", "podcast").getOrThrow()
+
+        assertTrue(found.itemsCut)
+    }
+
+    @Test
     fun `each kind is judged on its own`() = runBlocking {
         val api = FakeBrowseApi(search = {
             SearchLibraryItemsResponse(

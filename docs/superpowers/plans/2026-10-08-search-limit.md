@@ -7,7 +7,7 @@
 **Architecture:**
 - **`BrowseRepository.SEARCH_LIMIT = 50`**, passed explicitly to `BrowseApi.searchLibraryItems` (whose default goes to 50 as well, so no other caller asks for 10).
 - **`SearchResults`** gains `itemsCut` / `authorsCut`, each true when that kind came back with at least the limit. Items are judged on the raw match count, before matches with no library item are dropped, since that is what the server cut.
-- **`SearchContent`**: `ResultGroup` takes `cut`; when true, a line under the row in `bodySmall` `onSurfaceVariant` (secondary text, per the style guide). The rows stay `LazyRow`s with stable keys.
+- **`SearchContent`**: `ResultGroup` takes `cut`; when true, a line under the row in `bodyMedium` (14sp) `onSurfaceVariant` (secondary text, per the style guide). The rows stay `LazyRow`s with stable keys.
 
 ## Rulings
 
@@ -26,3 +26,4 @@
 
 - A broad one-letter search on the stick: sections that hit 50 show "Showing the first 50. Add a word to narrow it." under their row; a narrow search shows no such line.
 - D-pad right through a 50-item row moves without jank, and Down moves between groups.
+- With the last group (authors) cut, focus a card in its row: the cut line under it is on screen, not below the fold.

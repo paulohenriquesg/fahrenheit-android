@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.TextFieldValue
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.Author
@@ -18,6 +19,7 @@ import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.SearchResults
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -124,6 +126,22 @@ class SearchContentTest {
         )
 
         compose.onNodeWithText(CUT_LINE).assertIsDisplayed()
+    }
+
+    // Secondary text is 14sp and up (docs/ui-style-guide.md): smaller is
+    // unreadable at 3 metres.
+    @Test
+    fun `the cut line is readable from the sofa`() {
+        render(
+            query = "a",
+            results = SearchResults(items = listOf(book("b1", "First Invented Book")), authors = emptyList(), itemsCut = true)
+        )
+
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText(CUT_LINE).fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+
+        assertTrue(layouts.single().layoutInput.style.fontSize.value >= 14f)
     }
 
     @Test
