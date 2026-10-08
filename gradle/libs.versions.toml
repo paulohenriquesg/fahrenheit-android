@@ -7,6 +7,7 @@ commonmark = "0.30.0"
 converterGson = "3.0.0"
 kotlin = "2.4.20"
 coreKtx = "1.15.0"
+coreSplashscreen = "1.0.1"
 appcompat = "1.7.0"
 composeBom = "2024.12.01"
 lifecycleViewmodelCompose = "2.8.7"
@@ -31,6 +32,7 @@ androidx-media3-session = { module = "androidx.media3:media3-session", version.r
 androidx-media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
 androidx-media3-test-utils-robolectric = { module = "androidx.media3:media3-test-utils-robolectric", version.ref = "media3" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }

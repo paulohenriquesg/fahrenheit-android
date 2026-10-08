@@ -50,6 +50,11 @@ class LoginHandler(
         _error.value = null
     }
 
+    /** A verdict reached before any attempt: the launch check's (#191). */
+    fun show(error: LoginError) {
+        _error.value = error
+    }
+
     fun handleLogin(
         host: String,
         username: String,

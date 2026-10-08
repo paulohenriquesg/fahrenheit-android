@@ -34,6 +34,7 @@ import com.paulohenriquesg.fahrenheit.update.AppUpdates
 import com.paulohenriquesg.fahrenheit.update.PendingInstall
 import kotlinx.coroutines.launch
 import com.paulohenriquesg.fahrenheit.update.UpdateActivity
+import com.paulohenriquesg.fahrenheit.utils.StartupTimeline
 
 class MainActivity : ComponentActivity() {
     private lateinit var mainHandler: MainHandler
@@ -68,6 +69,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        StartupTimeline.app.mark("main started")
 
         mainHandler = MainHandler(this)
 
