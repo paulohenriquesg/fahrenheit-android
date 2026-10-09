@@ -273,4 +273,30 @@
         <item quantity="one">%d day ago</item>
         <item quantity="other">%d days ago</item>
     </plurals>
+
+    <!-- Favourites: an Audiobookshelf playlist chosen per library (#180) -->
+    <string name="favourites_row">Favourites playlist · %1$s</string>
+    <string name="favourites_row_subtitle">The heart in the player adds to this Audiobookshelf playlist, which the web and phone apps show too. Off until one is chosen.</string>
+    <string name="favourites_chosen">%1$s ›</string>
+    <string name="favourites_none">None</string>
+    <string name="favourites_none_detail">No heart, no Favourites shelf</string>
+    <string name="favourites_create">＋ Create "%1$s"</string>
+    <string name="favourites_create_detail">A new, empty playlist on the server</string>
+    <string name="favourites_panel">Favourites playlist</string>
+    <string name="favourites_search">Search playlists</string>
+    <string name="favourites_loading">Loading playlists…</string>
+    <string name="favourites_load_failed">Couldn\'t read your playlists. Check the connection and try again.</string>
+    <string name="favourites_change_failed">Couldn\'t change Favourites. Check the connection and try again.</string>
+    <string name="favourite">Favourite</string>
+    <string name="favourite_remove">Remove from %1$s</string>
+    <string name="favourite_added">Added to %1$s</string>
+    <string name="favourite_removed">Removed from %1$s</string>
+    <plurals name="favourites_items">
+        <item quantity="one">%1$s item</item>
+        <item quantity="other">%1$s items</item>
+    </plurals>
+    <plurals name="favourites_playlists">
+        <item quantity="one">%1$s · %2$s playlist</item>
+        <item quantity="other">%1$s · %2$s playlists</item>
+    </plurals>
 </resources>

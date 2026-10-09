@@ -8,6 +8,9 @@ import com.paulohenriquesg.fahrenheit.api.LibraryQuery
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.api.Shelf
+import com.paulohenriquesg.fahrenheit.favourites.Favourites
+import com.paulohenriquesg.fahrenheit.favourites.FavouritesChoice
+import com.paulohenriquesg.fahrenheit.favourites.FavouritesShelf
 
 /**
  * Home screen data, as suspend calls.
@@ -29,7 +32,14 @@ class MainHandler(private val context: Context) {
         fetch("Failed to load library items") { it.items(libraryId, query) }
 
     suspend fun fetchPersonalizedView(libraryId: String): List<Shelf> =
-        fetch("Failed to load personalized view") { it.personalizedShelves(libraryId) }
+        FavouritesShelf.onto(
+            fetch("Failed to load personalized view") { it.personalizedShelves(libraryId) },
+            libraryId,
+            favourites()
+        )
+
+    /** Favourites (#180), while signed in. */
+    fun favourites(): Favourites? = ApiClient.getPlaylistApi()?.let { Favourites(it, FavouritesChoice(context)) }
 
     /**
      * Everything the user has started, for the covers on Home (#104). Throws

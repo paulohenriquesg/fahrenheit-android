@@ -36,6 +36,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ListItem
@@ -132,8 +133,9 @@ fun PanelOption(label: String, selected: Boolean, onClick: () -> Unit, modifier:
         selected = selected,
         onClick = onClick,
         modifier = modifier,
-        headlineContent = { Text(label) },
-        supportingContent = detail?.let { { Text(it) } },
+        // Chapter and playlist names come from the server, and run long.
+        headlineContent = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = detail?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
         trailingContent = if (selected) {
             { Icon(Icons.Filled.Check, contentDescription = null, tint = LocalContentColor.current) }
         } else null

@@ -1,5 +1,10 @@
 package com.paulohenriquesg.fahrenheit.player
 
+import com.paulohenriquesg.fahrenheit.favourites.FavouriteButton
+import com.paulohenriquesg.fahrenheit.favourites.FavouriteHeart
+import com.paulohenriquesg.fahrenheit.favourites.Favourites
+import com.paulohenriquesg.fahrenheit.favourites.FavouritesChoice
+import com.paulohenriquesg.fahrenheit.favourites.HeartChange
 import androidx.compose.runtime.mutableIntStateOf
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
@@ -261,6 +266,15 @@ class PlayerActivity : ComponentActivity() {
                 ?.also { if (it.current == null) Log.w(TAG, "The series ${ref.id} does not list $itemId") }
                 ?.takeIf { it.current != null }
         }
+        // The heart, while the library has a Favourites playlist (#180).
+        val heart = remember(playing?.libraryId, playing?.itemId, playing?.episodeId) {
+            val shown = playing
+            val libraryId = shown?.libraryId
+            val kept = ApiClient.getPlaylistApi()?.let { Favourites(it, FavouritesChoice(this@PlayerActivity)) }
+            if (shown == null || libraryId == null || kept == null) null
+            else FavouriteHeart(kept, libraryId, shown.itemId, shown.episodeId)
+        }
+        LaunchedEffect(heart) { heart?.load() }
         // Keyed on the episode too: an answer must not seek one episode to another's position.
         val prompt = remember(connected, playing?.itemId, playing?.episodeId, playback) {
             val player = connected
@@ -332,12 +346,22 @@ class PlayerActivity : ComponentActivity() {
                                     )
                                 },
                                 trailing = {
-                                    // Frame C's actions; an episode has Go to podcast where a book has Chapters.
-                                    if (playing.goToPodcast) GoToPodcastButton { goToPodcast(itemId) }
-                                    if (spans.isNotEmpty()) ChaptersChip(panels)
-                                    SpeedChip(rememberPlaybackSpeed(connected), panels)
-                                    SleepChip(sleep, panels)
-                                    AboutChip(panels)
+                                    PlayerActions(
+                                        panels = panels,
+                                        speed = rememberPlaybackSpeed(connected),
+                                        sleep = sleep,
+                                        chapters = spans.isNotEmpty(),
+                                        onGoToPodcast = if (playing.goToPodcast) ({ goToPodcast(itemId) }) else null,
+                                        favourite = heart?.playlist?.let { playlist ->
+                                            {
+                                                FavouriteButton(
+                                                    filled = heart.filled,
+                                                    playlist = playlist.name,
+                                                    onClick = { scope.launch { heart.toggle()?.let(::confirm) } }
+                                                )
+                                            }
+                                        }
+                                    )
                                 }
                             )
                         }
@@ -423,6 +447,16 @@ class PlayerActivity : ComponentActivity() {
         keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
 
     private fun goToPodcast(podcastId: String) = leaveForPodcast(this, podcastId)
+
+    /** The short note after the heart (frame 1). */
+    private fun confirm(change: HeartChange) {
+        val text = when (change) {
+            is HeartChange.Added -> getString(R.string.favourite_added, change.playlist)
+            is HeartChange.Removed -> getString(R.string.favourite_removed, change.playlist)
+            HeartChange.Failed -> getString(R.string.favourites_change_failed)
+        }
+        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+    }
 
     private val playerSettings by lazy { PlayerSettings(this) }
 

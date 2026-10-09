@@ -119,6 +119,7 @@ class ApiClientInitializeTest {
         assertNull(ApiClient.getLibraryApi())
         assertNull(ApiClient.getBrowseApi())
         assertNull(ApiClient.getPodcastApi())
+        assertNull(ApiClient.getPlaylistApi())
         assertNull(ApiClient.getToken())
     }
 
@@ -142,5 +143,14 @@ class ApiClientInitializeTest {
         ApiClient.initialize(app)
 
         assertNotNull(ApiClient.getPodcastApi())
+    }
+
+    @Test
+    fun `a ready session can keep Favourites`() {
+        store("http://abs.local:13378", "a-token")
+
+        ApiClient.initialize(app)
+
+        assertNotNull(ApiClient.getPlaylistApi())
     }
 }

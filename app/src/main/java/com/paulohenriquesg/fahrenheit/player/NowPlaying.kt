@@ -126,6 +126,7 @@ data class NowPlaying(
                     .joinToString(" · ").takeIf { it.isNotEmpty() },
                 byline = null,
                 show = metadata.title.takeIf { it.isNotBlank() },
+                libraryId = item.libraryId,
                 facts = AboutFacts.episode(metadata.title, published, episode.audioTrack?.duration, episode.season, episode.episode),
                 badge = EpisodeDetails.badge(episode.episodeType),
                 details = EpisodeDetails.line(episode.season, episode.episode, episode.audioTrack?.duration),

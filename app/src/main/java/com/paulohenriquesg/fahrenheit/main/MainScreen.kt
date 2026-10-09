@@ -68,6 +68,10 @@ import com.paulohenriquesg.fahrenheit.api.LibraryStats
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibraryQuery
 import com.paulohenriquesg.fahrenheit.api.Shelf
+import com.paulohenriquesg.fahrenheit.api.Playlist
+import com.paulohenriquesg.fahrenheit.favourites.Favourites
+import com.paulohenriquesg.fahrenheit.favourites.FavouritesSetting
+import com.paulohenriquesg.fahrenheit.favourites.FavouritesShelf
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
 import com.paulohenriquesg.fahrenheit.ui.Space
@@ -94,7 +98,9 @@ fun MainScreen(
     fetchPersonalizedView: suspend (String) -> List<Shelf>,
     fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() },
     /** The playback service's player, while this screen is visible; null when not connected (#107). */
-    playback: Player? = null
+    playback: Player? = null,
+    /** Favourites (#180), while signed in. */
+    favourites: () -> Favourites? = { null }
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -148,6 +154,11 @@ fun MainScreen(
                 val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
                 if (savedLibraryId != null && savedLibraryId != currentLibrary?.id) {
                     shouldRefreshLibrary = true
+                } else if (shelves.isNotEmpty()) {
+                    // Back from the player, where the heart may have changed Favourites (#180).
+                    currentLibrary?.id?.let { libraryId ->
+                        scope.launch { shelves = FavouritesShelf.refreshed({ shelves }, libraryId, favourites()) }
+                    }
                 }
             }
         }
@@ -241,6 +252,30 @@ fun MainScreen(
     var screensaverStyle by remember { mutableStateOf(PlayerSettings(context).screensaverStyle) }
     var skipBack by remember { mutableStateOf(PlayerSettings(context).skipBackSeconds) }
     var skipForward by remember { mutableStateOf(PlayerSettings(context).skipForwardSeconds) }
+    // The library's Favourites playlist, read each time Settings opens (#180).
+    var favouritesChosen by remember { mutableStateOf<Playlist?>(null) }
+    LaunchedEffect(view, currentLibrary?.id) {
+        if (view != MainView.SETTINGS) return@LaunchedEffect
+        val libraryId = currentLibrary?.id ?: return@LaunchedEffect
+        favourites()?.current(libraryId)?.onSuccess { favouritesChosen = it }
+    }
+    val favouritesSetting = currentLibrary?.id?.let { libraryId ->
+        favourites()?.let { kept ->
+            FavouritesSetting(
+                libraryId = libraryId,
+                libraryName = currentLibrary?.name.orEmpty(),
+                chosen = favouritesChosen,
+                load = { kept.playlists(libraryId) },
+                choose = { pick ->
+                    kept.choose(libraryId, pick).map { chosen ->
+                        favouritesChosen = chosen
+                        // Home's shelf follows the choice, in this screen's scope: the panel closes meanwhile.
+                        scope.launch { shelves = FavouritesShelf.refreshed({ shelves }, libraryId, kept) }
+                    }
+                }
+            )
+        }
+    }
 
     // Back walks up a level: content -> rail -> Home -> out (#125).
     var railHasFocus by remember { mutableStateOf(false) }
@@ -467,7 +502,8 @@ fun MainScreen(
                         onSkipForward = {
                             PlayerSettings(context).skipForwardSeconds = it
                             skipForward = it
-                        }
+                        },
+                        favourites = favouritesSetting
                     )
                     MainView.SWITCH_LIBRARY -> SwitchLibraryView(
                         libraries = libraries,
