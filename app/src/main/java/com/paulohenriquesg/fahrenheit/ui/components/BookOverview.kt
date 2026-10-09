@@ -364,7 +364,12 @@ fun SeriesShelf(
                 }
                 if (titles) {
                     Text(
-                        book.number?.let { stringResource(R.string.series_book_number, it) } ?: book.title,
+                        // Focused, the title too: "Book 1" alone is never cut, so it
+                        // never scrolled and the title was nowhere on the row (#204).
+                        book.number?.let {
+                            if (focused) stringResource(R.string.series_book_number_titled, it, book.title)
+                            else stringResource(R.string.series_book_number, it)
+                        } ?: book.title,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (index == series.current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
