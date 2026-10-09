@@ -3,7 +3,7 @@ package com.paulohenriquesg.fahrenheit.podcast
 import com.google.gson.JsonObject
 import com.paulohenriquesg.fahrenheit.api.Episode
 
-enum class EpisodeTab { All, OnServer, NotDownloaded }
+enum class EpisodeTab { All, OnServer, NotDownloaded, Favourites }
 
 /**
  * One episode on a podcast's screen: in the feed, on the server, or both.
@@ -42,10 +42,12 @@ object EpisodeList {
         return (fromFeed + serverOnly).sortedByDescending { it.publishedAt ?: 0L }
     }
 
-    fun filter(rows: List<EpisodeRow>, tab: EpisodeTab): List<EpisodeRow> = when (tab) {
+    /** @param favourites the episodes the Favourites tab lists; null for None, when it lists everything. */
+    fun filter(rows: List<EpisodeRow>, tab: EpisodeTab, favourites: Set<String>? = null): List<EpisodeRow> = when (tab) {
         EpisodeTab.All -> rows
         EpisodeTab.OnServer -> rows.filter { it.downloaded }
         EpisodeTab.NotDownloaded -> rows.filterNot { it.downloaded }
+        EpisodeTab.Favourites -> if (favourites == null) rows else rows.filter { it.onServer?.id in favourites }
     }
 
     /**

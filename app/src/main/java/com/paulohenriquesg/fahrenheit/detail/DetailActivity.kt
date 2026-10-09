@@ -29,6 +29,11 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.favourites.Favourites
+import com.paulohenriquesg.fahrenheit.favourites.FavouritesChoice
+import com.paulohenriquesg.fahrenheit.favourites.LibraryFavourites
+import com.paulohenriquesg.fahrenheit.favourites.note
+import com.paulohenriquesg.fahrenheit.podcast.EpisodeHearts
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeOrder
 import com.paulohenriquesg.fahrenheit.podcast.DownloadProgress
@@ -284,6 +289,15 @@ class DetailActivity : ComponentActivity() {
         val scope = rememberCoroutineScope()
         var feed by remember { mutableStateOf<FeedLoad>(FeedLoad.Unavailable) }
         var tab by remember { mutableStateOf(EpisodeTab.All) }
+        // The library's Favourites playlist, for the hearts and the tab (#180):
+        // read again with the progress, so a heart changed in the player shows.
+        val favourites = remember(item.libraryId) {
+            ApiClient.getPlaylistApi()?.let { LibraryFavourites(Favourites(it, FavouritesChoice(context)), item.libraryId) }
+        }
+        LaunchedEffect(favourites, me) { favourites?.load() }
+        val inFavourites = favourites?.episodesOf(itemId)
+        // In the playlist when its tab was chosen: one taken out there stays listed.
+        var favouritesKept by remember { mutableStateOf(emptySet<String>()) }
         var feedCheck by remember { mutableStateOf<FeedCheckState>(FeedCheckState.Idle) }
         var queue by remember { mutableStateOf(DownloadQueue(null, emptyList())) }
         var misses by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
@@ -338,7 +352,9 @@ class DetailActivity : ComponentActivity() {
             autoDownload = media.autoDownloadEpisodes?.let { autoDownloads?.settings?.enabled ?: it },
             schedule = autoDownloads?.settings?.schedule ?: media.autoDownloadSchedule,
             now = now,
-            serverFormat = serverFormat
+            serverFormat = serverFormat,
+            favourites = inFavourites,
+            favouritesKept = favouritesKept
         )
         val header = DetailHeaderModel.podcast(item, screen.facts, resumeTitle = resumeEpisode?.title)
         val reload: suspend () -> LibraryItemResponse? = {
@@ -377,7 +393,10 @@ class DetailActivity : ComponentActivity() {
             PodcastEpisodesView(
                 screen = screen,
                 tab = tab,
-                onTab = { tab = it },
+                onTab = {
+                    if (it == EpisodeTab.Favourites) favouritesKept = inFavourites.orEmpty()
+                    tab = it
+                },
                 downloads = downloads,
                 onPlay = play,
                 progress = heard,
@@ -413,6 +432,15 @@ class DetailActivity : ComponentActivity() {
                     }
                 },
                 coverItemId = itemId,
+                hearts = favourites?.playlist?.let { playlist ->
+                    EpisodeHearts(playlist.name, inFavourites.orEmpty()) { episode ->
+                        scope.launch {
+                            favourites.toggle(itemId, episode.id)?.let { change ->
+                                Toast.makeText(context, change.note(context), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                },
                 date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
                 focusFirstRow = header.primary == null,
                 title = media.metadata.title,
