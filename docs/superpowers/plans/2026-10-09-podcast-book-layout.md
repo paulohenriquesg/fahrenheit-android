@@ -54,7 +54,9 @@ with an immutable `PodcastUiState` (#208).
 ## The ViewModel (#208)
 
 `PodcastViewModel(itemId, item, podcastApi, settingsApi, reloadItem,
-markFinished, now, serverFormat, scope)` holds `StateFlow<PodcastUiState>`.
+markFinished, now, serverFormat, favourites, scope)` holds
+`StateFlow<PodcastUiState>`. `favourites` is the library's Favourites playlist
+(#211), which reached main during this work: its hearts and its tab move in too.
 
 - **State** covers:
   - the item and its progress (from `GET /api/me`, until the progress store

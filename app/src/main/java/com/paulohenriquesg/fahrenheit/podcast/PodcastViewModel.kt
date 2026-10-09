@@ -11,6 +11,7 @@ import com.paulohenriquesg.fahrenheit.api.PodcastSettingsApi
 import com.paulohenriquesg.fahrenheit.detail.DetailHeaderModel
 import com.paulohenriquesg.fahrenheit.favourites.HeartChange
 import com.paulohenriquesg.fahrenheit.favourites.LibraryFavourites
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -74,6 +75,10 @@ class PodcastViewModel(
     private val scope = scope ?: viewModelScope
     private var item = item
     private var me: Me? = null
+    /** The server has been asked who this is, whatever it answered. */
+    private var asked = false
+    /** The feed is read, and the queue watched, once an admin is known: once. */
+    private var feedAsked = false
     private var feed: FeedLoad = FeedLoad.Unavailable
     private val tabs = EpisodeTabChoice()
     private var heartChange: HeartChange? = null
@@ -99,8 +104,14 @@ class PodcastViewModel(
     fun refresh() {
         val api = podcastApi ?: return
         scope.launch {
-            val wasAdmin = isAdmin
-            runCatching { api.me() }.onSuccess { me = it }
+            try {
+                me = api.me()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Offline: what was read before stands.
+            }
+            asked = true
             // Each fresh read is the server's word: playing a finished episode un-finishes it there.
             marking.settle()
             // So is the playlist: a heart changed in the player shows here (#180).
@@ -109,7 +120,8 @@ class PodcastViewModel(
                 tabs.follow(it.episodesOf(itemId))
             }
             publish()
-            if (isAdmin && !wasAdmin) {
+            if (isAdmin && !feedAsked) {
+                feedAsked = true
                 // Episodes queued elsewhere show where they are.
                 startWatch()
                 readFeed()
@@ -263,8 +275,9 @@ class PodcastViewModel(
             feed = feed,
             tab = tabs.tab,
             lastEpisodeCheck = media.lastEpisodeCheck,
-            // The button says it when there is one (#205); a fact says it otherwise.
-            autoDownload = if (mayChangeDownloads) null else media.autoDownloadEpisodes,
+            // The button says it when there is one (#205); a fact says it otherwise,
+            // once it is known there will be no button.
+            autoDownload = if (mayChangeDownloads || !asked) null else media.autoDownloadEpisodes,
             schedule = media.autoDownloadSchedule,
             now = now,
             serverFormat = serverFormat,

@@ -248,6 +248,9 @@ private fun EpisodeRowCard(
     // reach them and Left come back (#181).
     var rowFocused by remember { mutableStateOf(false) }
     val finished = progress == EpisodeProgress.Heard
+    // Finished rows are dimmed, as the web app shows them, until focus makes
+    // one the row being read.
+    val dimmed = finished && !rowFocused
     Row(
         modifier = Modifier.fillMaxWidth().onFocusChanged { rowFocused = it.hasFocus },
         verticalAlignment = Alignment.CenterVertically
@@ -259,7 +262,7 @@ private fun EpisodeRowCard(
                 .weight(1f)
                 .padding(horizontal = 4.dp)
                 .testTag("episode_row_${row.key}")
-                .semantics { this[EpisodeRowDimmed] = finished && !rowFocused }
+                .semantics { this[EpisodeRowDimmed] = dimmed }
                 .onFocusChanged { focused = it.isFocused },
             colors = CardDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.surface,
@@ -270,9 +273,7 @@ private fun EpisodeRowCard(
             )
         ) {
             Row(
-                // Finished rows are dimmed, as the web app shows them, until focus
-                // makes one the row being read.
-                modifier = Modifier.padding(12.dp).alpha(if (finished && !rowFocused) FINISHED_ALPHA else 1f),
+                modifier = Modifier.padding(12.dp).alpha(if (dimmed) FINISHED_ALPHA else 1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Kept on every row so per-episode covers have a place to land.

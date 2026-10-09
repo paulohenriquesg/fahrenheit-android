@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.paulohenriquesg.fahrenheit.api.Episode
+import com.paulohenriquesg.fahrenheit.detail.DESCRIPTION_TAG
 import com.paulohenriquesg.fahrenheit.ui.components.DESCRIPTION_BOX_TAG
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
@@ -227,6 +228,7 @@ class PodcastPageTest {
 
         press(PODCAST_DESCRIPTION_TAG)
         compose.onNodeWithTag(DESCRIPTION_BOX_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(DESCRIPTION_TAG).assertIsFocused()
 
         back()
         compose.onNodeWithTag(DESCRIPTION_BOX_TAG).assertDoesNotExist()
@@ -281,5 +283,19 @@ class PodcastPageTest {
         compose.onNodeWithTag("episode_favourite_server:s2").performKeyInput { pressKey(Key.DirectionUp) }
         compose.waitForIdle()
         compose.onNodeWithTag("episode_row_server:s1").assertIsFocused()
+    }
+
+    // Review: Left out of the list from what is not a row, through the column's exit.
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun `Left from the description lands on the primary too`() {
+        show()
+        compose.onNodeWithTag(PODCAST_DESCRIPTION_TAG).performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(PODCAST_DESCRIPTION_TAG).performKeyInput { pressKey(Key.DirectionLeft) }
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(PODCAST_PRIMARY_TAG).assertIsFocused()
     }
 }

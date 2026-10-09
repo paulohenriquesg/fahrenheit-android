@@ -27,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -69,21 +70,27 @@ class PodcastViewModelTest {
 
     private class Api(
         var me: Me = Me(type = "user"),
+        var meGate: CompletableDeferred<Unit>? = null,
         val feedEpisodes: List<JsonObject> = emptyList(),
         val found: Int? = 0,
         var queue: DownloadQueue = DownloadQueue(null, emptyList())
     ) : PodcastApi {
         var meReads = 0
         var feedReads = 0
+        var queueReads = 0
         val requested = mutableListOf<List<JsonObject>>()
-        override suspend fun me(): Me = me.also { meReads++ }
+        override suspend fun me(): Me {
+            meReads++
+            meGate?.await()
+            return me
+        }
         override suspend fun checkNew(podcastId: String, limit: Int): CheckNewResponse =
             found?.let { CheckNewResponse(List(it) { FeedEpisode("new") }) } ?: error("refused")
         override suspend fun feed(request: FeedRequest): FeedResponse {
             feedReads++
             return FeedResponse(FeedPodcast(feedEpisodes))
         }
-        override suspend fun downloadQueue(libraryId: String) = queue
+        override suspend fun downloadQueue(libraryId: String) = queue.also { queueReads++ }
         override suspend fun downloadEpisodes(podcastId: String, episodes: List<JsonObject>) {
             requested += episodes
         }
@@ -192,12 +199,93 @@ class PodcastViewModelTest {
 
     @Test
     fun `the feed check says what it is doing and what it found`() {
-        val api = Api(me = Me(type = "admin"), found = 0)
-        val model = model(api)
+        val gate = CompletableDeferred<CheckNewResponse>()
+        val api = object : PodcastApi by Api(me = Me(type = "admin")) {
+            override suspend fun checkNew(podcastId: String, limit: Int) = gate.await()
+        }
+        val model = PodcastViewModel("p1", item(), api, null, { null }, { _, _, _ -> true }, 10, null, scope = scope)
+
+        model.checkFeed()
+        assertEquals(FeedCheckState.Checking, model.state.value.feedCheck)
+
+        gate.complete(CheckNewResponse(emptyList()))
+        assertEquals(FeedCheckState.Found(0), model.state.value.feedCheck)
+    }
+
+    // Review: the transitions that left DetailActivity, each pinned (#208).
+    @Test
+    fun `an admin's screen watches the download queue from the start`() {
+        val api = Api(me = Me(type = "admin"))
+        model(api)
+
+        assertEquals(1, api.queueReads)
+    }
+
+    @Test
+    fun `a check that finds episodes reads the show again, and its rows follow`() {
+        val more: LibraryItemResponse = gson.fromJson(
+            gson.toJson(item()).replace(""""episodes":[""", """"episodes":[{"id":"s3","title":"Third Rail","publishedAt":3,"guid":"g3"},"""),
+            LibraryItemResponse::class.java
+        )
+        val api = Api(me = Me(type = "admin"), found = 1)
+        val model = model(api, reload = { more })
 
         model.checkFeed()
 
-        assertEquals(FeedCheckState.Found(0), model.state.value.feedCheck)
+        assertTrue(api.queueReads >= 2)
+        assertEquals(FeedCheckState.Found(1), model.state.value.feedCheck)
+        assertTrue(model.state.value.screen.rows.any { it.title == "Third Rail" })
+    }
+
+    @Test
+    fun `coming back reads the Favourites again`() {
+        playlists.add("pl_1", "Bedtime", "lib", PlaylistItem("p1", "s1"))
+        val model = model(favourites = favourites())
+        // A heart pressed in the player, say.
+        runBlocking { favourites().apply { load() }.toggle("p1", "s2") }
+
+        model.refresh()
+
+        assertEquals(setOf("s1", "s2"), model.state.value.favourites)
+    }
+
+    @Test
+    fun `a mark gives way to the server's word on the next read`() {
+        val answer = CompletableDeferred<Boolean>()
+        markAnswer = { answer.await() }
+        val api = Api()
+        val model = model(api)
+        val episode = model.state.value.screen.rows.first { it.title == "First Steps" }.onServer!!
+        model.mark(episode, true)
+        assertEquals(EpisodeProgress.Heard, model.state.value.progress["s1"])
+
+        // Played on elsewhere meanwhile: the server has it under way, and says so.
+        api.me = Me(type = "user", mediaProgress = listOf(progress("s1", 100.0)))
+        answer.complete(true)
+
+        assertTrue(model.state.value.progress["s1"] is EpisodeProgress.InProgress)
+    }
+
+    @Test
+    fun `two reads at once ask for the feed once`() {
+        val gate = CompletableDeferred<Unit>()
+        val api = Api(me = Me(type = "admin"), meGate = gate)
+        val model = model(api)
+        model.refresh()
+
+        gate.complete(Unit)
+
+        assertEquals(1, api.feedReads)
+    }
+
+    // Review: before the server says who this is, the page does not claim
+    // automatic downloads are off - the button may be about to say otherwise.
+    @Test
+    fun `until the user is known, the downloads fact waits`() {
+        val api = Api(me = Me(type = "user", permissions = MePermissions(update = true)), meGate = CompletableDeferred())
+        val state = model(api).state.value
+
+        assertEquals(listOf("2 episodes on the server", "Feed never checked"), state.screen.facts.map { it.text })
     }
 
     @Test
