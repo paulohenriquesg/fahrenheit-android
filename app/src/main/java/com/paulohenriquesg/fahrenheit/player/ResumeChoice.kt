@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.player
 
 import android.content.res.Resources
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Border
 import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonBorder
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
@@ -165,6 +168,25 @@ private val MARK = 18.dp
 /** As tall as the transport's Play, as the card is the player's own. */
 private val BUTTON_HEIGHT = 60.dp
 
+private val ANSWER_SHAPE = RoundedCornerShape(16.dp)
+
+/**
+ * The library's outline for an outlined button, strokes and colours as they
+ * are, drawn on the answer's own corners: the default keeps its pill (#209).
+ */
+@Composable
+private fun answerBorder(): ButtonBorder {
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    val disabled = Border(BorderStroke(1.5.dp, color.copy(alpha = 0.2f)), shape = ANSWER_SHAPE)
+    return OutlinedButtonDefaults.border(
+        border = Border(BorderStroke(1.5.dp, color.copy(alpha = 0.4f)), shape = ANSWER_SHAPE),
+        focusedBorder = Border(BorderStroke(1.65.dp, color), shape = ANSWER_SHAPE),
+        pressedBorder = Border(BorderStroke(1.5.dp, color), shape = ANSWER_SHAPE),
+        disabledBorder = disabled,
+        focusedDisabledBorder = disabled
+    )
+}
+
 /**
  * The question, as a card over the dimmed player (#158;
  * docs/mocks/resume-question.html). Focus starts on the server's position:
@@ -221,7 +243,8 @@ fun ResumeChoice(offer: ResumeOffer, item: ResumeItem, now: Long, onContinue: ()
                 thereMark = words.thereMark,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // A focused answer grows by a tenth, about 13 dp here: room for it (#209).
+            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Button(
                     onClick = onContinue,
                     modifier = Modifier
@@ -229,7 +252,7 @@ fun ResumeChoice(offer: ResumeOffer, item: ResumeItem, now: Long, onContinue: ()
                         .heightIn(min = BUTTON_HEIGHT)
                         .focusRequester(continueFocus)
                         .testTag("resume_continue"),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(16.dp))
+                    shape = ButtonDefaults.shape(ANSWER_SHAPE)
                 ) {
                     Answer(words.continueLabel, words.continueDetail)
                 }
@@ -239,7 +262,8 @@ fun ResumeChoice(offer: ResumeOffer, item: ResumeItem, now: Long, onContinue: ()
                         .weight(1f)
                         .heightIn(min = BUTTON_HEIGHT)
                         .testTag("resume_stay"),
-                    shape = OutlinedButtonDefaults.shape(RoundedCornerShape(16.dp))
+                    shape = OutlinedButtonDefaults.shape(ANSWER_SHAPE),
+                    border = answerBorder()
                 ) {
                     Answer(words.stayLabel, words.stayDetail)
                 }

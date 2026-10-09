@@ -17,6 +17,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -221,6 +222,17 @@ class ResumeChoiceTest {
 
         compose.onNodeWithTag("resume_continue").assertHeightIsAtLeast(60.dp)
         compose.onNodeWithTag("resume_stay").assertHeightIsAtLeast(60.dp)
+    }
+
+    // A focused TV button grows by a tenth about its centre (#209).
+    @Test
+    fun `a focused answer, grown, stays clear of the other`() {
+        show()
+        val continueBounds = compose.onNodeWithTag("resume_continue").fetchSemanticsNode().boundsInRoot
+        val stayBounds = compose.onNodeWithTag("resume_stay").fetchSemanticsNode().boundsInRoot
+
+        val clear = stayBounds.left - continueBounds.right - continueBounds.width * 0.05f
+        assertTrue("only ${clear / compose.density.density} dp clear", clear >= with(compose.density) { 8.dp.toPx() })
     }
 
     @Test
