@@ -65,8 +65,12 @@ const val PODCAST_FACTS_TAG = "podcast_facts"
 const val PODCAST_DOWNLOADS_TAG = "podcast_downloads"
 const val PODCAST_DESCRIPTION_TAG = "podcast_description"
 
-/** The book page's left column (`BookOverview`), so the two screens line up. */
-private val COLUMN_WIDTH = 180.dp
+/**
+ * Wider than the book page's 180dp (device check of #213): there each action
+ * wrapped to three lines and Resume cut the episode's name. Here each is its
+ * label on one line and its state on another, as the mock draws them.
+ */
+private val COLUMN_WIDTH = 240.dp
 private val COLUMN_GAP = 40.dp
 private val DESCRIPTION_SHAPE = RoundedCornerShape(12.dp)
 private val DESCRIPTION_FADE = 32.dp
@@ -202,7 +206,7 @@ private fun LeftColumn(
     Column(Modifier.width(COLUMN_WIDTH).fillMaxHeight().testTag(PODCAST_LEFT_TAG)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             // The cover gives way, never an action: three buttons, two of them two
-            // lines, under a long title do not fit beside a whole 180dp cover.
+            // lines, under a long title do not fit beside a whole-width cover.
             BoxWithConstraints(Modifier.weight(1f, fill = false)) {
                 CoverImage(itemId = state.itemId, contentDescription = state.title, size = min(maxWidth, maxHeight))
             }

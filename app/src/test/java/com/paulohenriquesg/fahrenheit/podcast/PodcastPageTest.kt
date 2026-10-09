@@ -36,6 +36,8 @@ import com.paulohenriquesg.fahrenheit.detail.DESCRIPTION_TAG
 import com.paulohenriquesg.fahrenheit.ui.components.DESCRIPTION_BOX_TAG
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import androidx.compose.ui.text.TextLayoutResult
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -297,5 +299,25 @@ class PodcastPageTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag(PODCAST_PRIMARY_TAG).assertIsFocused()
+    }
+
+    private fun lines(text: String): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult].action!!.invoke(results)
+        return results.single()
+    }
+
+    // Device check of #213: at 180dp "Resume <episode>" was cut short and
+    // the two-line buttons wrapped to three. Each is its label on one line,
+    // then its state (#205: about 240dp, as the mock draws it).
+    @Test
+    fun `each button's label fits on one line, and Resume shows the episode`() {
+        show(state().copy(primary = "Resume Episode Eight"))
+
+        listOf("Check for new episodes", "Automatic downloads").forEach { label ->
+            assertEquals(label, 1, lines(label).lineCount)
+        }
+        assertFalse("Resume is cut", lines("Resume Episode Eight").hasVisualOverflow)
     }
 }

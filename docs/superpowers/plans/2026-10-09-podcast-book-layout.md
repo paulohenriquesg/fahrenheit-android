@@ -10,7 +10,9 @@ with an immutable `PodcastUiState` (#208).
 
 ## Layout
 
-- **Left column**, 180dp as the book's (`BookOverview`), 40dp from the right one:
+- **Left column**, 240dp (first built at the book's 180dp; on the stick the
+  actions wrapped to three lines and Resume cut the episode's name, so it
+  widened to the mock's), 40dp from the right one:
   - the cover, the title (`headlineSmall`, two lines), "Podcast · genre";
   - then, stacked as the book's actions are (TV `Button`):
     - **Resume <episode>** or **Play newest episode**, which takes focus on arrival;
@@ -40,7 +42,7 @@ with an immutable `PodcastUiState` (#208).
 
 1. **The cover gives way, never a button.** Three buttons, two of them two
    lines high, under a long title do not fit 508dp. So the cover takes what is
-   left, up to 180dp, and every button and the facts stay on screen. A test at
+   left, up to the column's width, and every button and the facts stay on screen. A test at
    font scale 1.3 checks this.
 2. **The schedule stays visible without the button.** The Automatic downloads
    button is only for users the server would take a change from (#182). Anyone
