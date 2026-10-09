@@ -132,8 +132,11 @@ class PlaybackReporting(
         // Not cancellable: once playback ends the service, and its scope, are gone
         // within milliseconds, which would drop the report mid-send.
         val closing = scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            val ended = withContext(NonCancellable) { active.finish() }
-            if (ended && file != null) closed(file)
+            // Told inside too: at the end of the queue the service, and this
+            // scope, go while the report is out.
+            withContext(NonCancellable) {
+                if (active.finish() && file != null) closed(file)
+            }
         }
         closings.track(closing)
     }

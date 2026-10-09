@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.progress
 
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.api.Me
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.api.ProgressMark
 import org.junit.Assert.assertEquals
@@ -136,6 +137,60 @@ class ProgressStoreTest {
 
         assertEquals(120.0, store.of("book")?.currentTime!!, 0.0)
         assertEquals(setOf(ProgressKey("book", null)), store.entries.value.keys)
+    }
+
+    // Review: a read still out at sign-out must not bring the last account's progress back.
+    @Test
+    fun `a read begun before sign-out adds nothing after it`() {
+        val began = store.generation
+
+        store.clear()
+        store.replace(listOf(server("book", at = 100.0)), since = began)
+        store.read(server("other", at = 5.0), since = began)
+
+        assertEquals(emptyMap<ProgressKey, MediaProgressResponse>(), store.entries.value)
+    }
+
+    @Test
+    fun `finishing puts progress at the whole, as the server does`() {
+        store.played("book", null, position = 600.0, duration = 3600.0)
+
+        store.marked("book", null, ProgressMark(isFinished = true))
+
+        assertEquals(1.0, store.of("book")?.progress!!, 0.0)
+    }
+
+    // The server resets the position only when it un-finishes something finished.
+    @Test
+    fun `un-finishing something not finished leaves its place`() {
+        store.played("book", null, position = 600.0, duration = 3600.0)
+
+        store.marked("book", null, ProgressMark(isFinished = false))
+
+        assertEquals(600.0, store.of("book")?.currentTime!!, 0.0)
+    }
+
+    // Review: Resume picks the latest lastUpdate, and the server's clock is not this device's.
+    @Test
+    fun `what the player wrote is the latest, even with this device's clock behind the server's`() {
+        clock = 1_000L
+        store.replace(listOf(server("pod", "e1", at = 10.0).copy(lastUpdate = 9_000_000L)), since = store.generation)
+
+        store.played("pod", "e2", position = 20.0, duration = 3600.0)
+
+        assertEquals(true, store.of("pod", "e2")?.lastUpdate!! > 9_000_000L)
+    }
+
+    // The podcast page reads GET /api/me anyway, for who the user is.
+    @Test
+    fun `a reply from GET api me goes in whole, and one without the list changes nothing`() {
+        store.played("book", null, position = 10.0, duration = 100.0)
+
+        store.readMe(Me(type = "user", mediaProgress = null), since = store.generation)
+        assertEquals(10.0, store.of("book")?.currentTime!!, 0.0)
+
+        store.readMe(Me(type = "user", mediaProgress = listOf(server("other", at = 5.0))), since = store.generation)
+        assertEquals(setOf(ProgressKey("other", null)), store.entries.value.keys)
     }
 
     @Test

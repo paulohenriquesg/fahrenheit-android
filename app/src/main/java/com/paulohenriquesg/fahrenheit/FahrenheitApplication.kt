@@ -17,7 +17,7 @@ open class FahrenheitApplication : Application() {
     protected open val listeningScreensaver: Boolean = true
 
     /** Reading the server's progress on coming back (#207); off under unit test, where it would be one more request to every fake server. */
-    protected open val progressResync: Boolean = true
+    internal open val progressResync: Boolean = true
 
     override fun onCreate() {
         super.onCreate()

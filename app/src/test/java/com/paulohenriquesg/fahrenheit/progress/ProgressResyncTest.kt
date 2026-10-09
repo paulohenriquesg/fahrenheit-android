@@ -64,4 +64,47 @@ class ProgressResyncTest {
 
         assertEquals(30.0, store.of("book")?.currentTime!!, 0.0)
     }
+
+    // Review: a TV launched before its network is up would otherwise go the
+    // whole session without progress - it is rarely sent to the background.
+    @Test
+    fun `asked again only if never read, a failed read is tried again and a good one is not`() {
+        var reads = 0
+        var fails = true
+        val resync = ProgressResync(store, scope) { reads++; if (fails) error("offline") else emptyList() }
+
+        resync.request()
+        fails = false
+        resync.requestIfNeverRead()
+        resync.requestIfNeverRead()
+
+        assertEquals(2, reads)
+    }
+
+    @Test
+    fun `after sign-out, never read again`() {
+        var reads = 0
+        val resync = ProgressResync(store, scope) { reads++; emptyList() }
+        resync.request()
+
+        store.clear()
+        resync.requestIfNeverRead()
+
+        assertEquals(2, reads)
+    }
+
+    // Review: the next account's read must not wait on one begun for the last.
+    @Test
+    fun `a read out at sign-out does not hold up the next account's`() {
+        var reads = 0
+        val first = CompletableDeferred<List<MediaProgressResponse>>()
+        val resync = ProgressResync(store, scope) { if (++reads == 1) first.await() else listOf(server("mine", 1.0)) }
+        resync.request()
+
+        store.clear()
+        resync.request()
+        first.complete(listOf(server("theirs", 2.0)))
+
+        assertEquals(setOf(ProgressKey("mine", null)), store.entries.value.keys)
+    }
 }

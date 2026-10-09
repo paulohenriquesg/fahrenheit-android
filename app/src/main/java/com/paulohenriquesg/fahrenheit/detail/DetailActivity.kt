@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -45,7 +46,6 @@ import com.paulohenriquesg.fahrenheit.api.Me
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.paulohenriquesg.fahrenheit.progress.ProgressKey
 import com.paulohenriquesg.fahrenheit.progress.ProgressStore
-import androidx.compose.runtime.mutableIntStateOf
 import com.paulohenriquesg.fahrenheit.podcast.DownloadWatch
 import com.paulohenriquesg.fahrenheit.api.DownloadQueue
 import com.paulohenriquesg.fahrenheit.podcast.FeedLoad
@@ -154,7 +154,6 @@ class DetailActivity : ComponentActivity() {
         var me by remember { mutableStateOf<Me?>(null) }
 
         val context = LocalContext.current
-        val scope = rememberCoroutineScope()
         var marking by remember { mutableStateOf(false) }
 
         LaunchedEffect(itemId) {
@@ -195,7 +194,9 @@ class DetailActivity : ComponentActivity() {
         LaunchedEffect(isPodcast) {
             if (!isPodcast) return@LaunchedEffect
             val podcastApi = ApiClient.getPodcastApi() ?: return@LaunchedEffect
-            runCatching { podcastApi.me() }.onSuccess { me = it }
+            val since = ProgressStore.process.generation
+            // Read anyway, so what it says of progress goes in the store too.
+            runCatching { podcastApi.me() }.onSuccess { me = it; ProgressStore.process.readMe(it, since) }
         }
 
         if (loadFailed) {

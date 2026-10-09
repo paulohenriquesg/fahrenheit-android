@@ -22,6 +22,10 @@
 2. **No fetch on each screen's resume.** The resumes that read `/api/me` (Home's covers, Latest Episodes, the podcast page) and the book page's re-read of its item go; the store already holds what the player and the marks wrote. The app coming back to the foreground re-reads, for listening elsewhere.
 3. **The podcast page still reads `/api/me` once** for the user's type (the admin feed check), not for progress. Optimistic marks settle on each change of the store.
 4. **The player's own resume check** (`ResumeSources`, `PlayerActivity.savedProgress`) is left as it is: it asks the server on purpose, before playing.
+5. **The Now playing entry and the player's About** (from review): the entry shows no progress, so it has nothing to read; About's finished mark (`rememberFinished`) belongs to the player screen, which moves to the store with its ViewModel (#208's next screen).
+6. **A first read that fails is tried again** (from review): Home asks again on each return while nothing has been read since signing in, and the podcast page's own GET /api/me (read for the user's type) goes in the store too.
+7. **Sign-out ends the last account's reads** (from review): a read begun before it adds nothing, and does not hold up the next account's.
+8. **The player's writes are the latest** (from review): stamped later than anything known, since Resume compares them with the server's stamps.
 
 ## Tasks
 

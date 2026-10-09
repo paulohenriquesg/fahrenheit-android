@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.progress
 
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.api.Me
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.api.ProgressMark
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +22,8 @@ data class ProgressKey(val itemId: String, val episodeId: String?)
  * In memory, for the process; main thread.
  *
  * @param now this device's clock, for [MediaProgressResponse.lastUpdate] on
- *   what the player wrote - only ever compared with other entries.
+ *   what the player wrote. Resume compares it with the server's own stamps,
+ *   so a write here is also stamped later than any of those.
  */
 class ProgressStore(private val now: () -> Long = System::currentTimeMillis) {
     private val all = MutableStateFlow<Map<ProgressKey, MediaProgressResponse>>(emptyMap())
@@ -32,6 +34,10 @@ class ProgressStore(private val now: () -> Long = System::currentTimeMillis) {
     var generation: Long = 0
         private set
 
+    /** The generation of the last sign-out: a read begun before it is the last account's. */
+    var clearedAt: Long = 0
+        private set
+
     /** The generation each key was last written here at. */
     private val written = mutableMapOf<ProgressKey, Long>()
 
@@ -39,6 +45,7 @@ class ProgressStore(private val now: () -> Long = System::currentTimeMillis) {
 
     /** Everything the server holds, read since [since]: it replaces all but what was written here after. */
     fun replace(progress: List<MediaProgressResponse>, since: Long) {
+        if (since < clearedAt) return
         val kept = all.value.filterKeys { newerThan(it, since) }
         val read = progress.mapNotNull { p -> keyOf(p)?.let { it to p } }.toMap().filterKeys { !newerThan(it, since) }
         written.keys.retainAll(kept.keys)
@@ -48,7 +55,7 @@ class ProgressStore(private val now: () -> Long = System::currentTimeMillis) {
     /** One item as the server holds it, read since [since]. */
     fun read(progress: MediaProgressResponse, since: Long) {
         val key = keyOf(progress) ?: return
-        if (newerThan(key, since)) return
+        if (since < clearedAt || newerThan(key, since)) return
         all.value = all.value + (key to progress)
     }
 
@@ -73,12 +80,19 @@ class ProgressStore(private val now: () -> Long = System::currentTimeMillis) {
         )
     }
 
-    /** Mark finished or unfinished, or a position, reached the server. Un-finishing puts it at 0, as there. */
+    /**
+     * Mark finished or unfinished, or a position, reached the server. As
+     * there, finishing puts progress at the whole, and un-finishing something
+     * finished puts it back at the start.
+     */
     fun marked(itemId: String, episodeId: String?, mark: ProgressMark) = write(itemId, episodeId) { old ->
         var next = old ?: MediaProgressResponse(libraryItemId = itemId, episodeId = episodeId, currentTime = 0.0)
         mark.isFinished?.let { finished ->
-            next = next.copy(isFinished = finished)
-            if (!finished) next = next.copy(currentTime = 0.0, progress = 0.0)
+            next = when {
+                finished -> next.copy(isFinished = true, progress = 1.0)
+                next.isFinished == true -> next.copy(isFinished = false, currentTime = 0.0, progress = 0.0)
+                else -> next.copy(isFinished = false)
+            }
         }
         mark.currentTime?.let { at ->
             next = next.copy(currentTime = at, progress = next.duration?.takeIf { it > 0 }?.let { (at / it).coerceIn(0.0, 1.0) })
@@ -86,8 +100,14 @@ class ProgressStore(private val now: () -> Long = System::currentTimeMillis) {
         next
     }
 
+    /** A reply from GET /api/me, read since [since]; one without the list says nothing of progress. */
+    fun readMe(me: Me, since: Long) {
+        me.mediaProgress?.let { replace(it, since) }
+    }
+
     /** Signed out: none of it is the next user's. */
     fun clear() {
+        clearedAt = ++generation
         written.clear()
         all.value = emptyMap()
     }
@@ -95,7 +115,9 @@ class ProgressStore(private val now: () -> Long = System::currentTimeMillis) {
     private fun write(itemId: String, episodeId: String?, change: (MediaProgressResponse?) -> MediaProgressResponse) {
         val key = ProgressKey(itemId, episodeId)
         written[key] = ++generation
-        all.value = all.value + (key to change(all.value[key]).copy(lastUpdate = now()))
+        // Later than anything known, whatever the two clocks say.
+        val latest = all.value.values.maxOfOrNull { it.lastUpdate ?: 0L } ?: 0L
+        all.value = all.value + (key to change(all.value[key]).copy(lastUpdate = maxOf(now(), latest + 1)))
     }
 
     private fun newerThan(key: ProgressKey, since: Long) = (written[key] ?: 0) > since

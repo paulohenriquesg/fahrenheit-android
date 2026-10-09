@@ -89,7 +89,6 @@ import com.paulohenriquesg.fahrenheit.ui.elements.CoverProgress
 import com.paulohenriquesg.fahrenheit.progress.ProgressStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.runtime.mutableIntStateOf
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsFluid
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsRow
 import kotlinx.coroutines.launch
