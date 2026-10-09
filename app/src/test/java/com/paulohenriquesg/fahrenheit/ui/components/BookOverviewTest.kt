@@ -401,6 +401,7 @@ class BookOverviewTest {
         compose.onNodeWithText("Book 3 · A Late Message").assertDoesNotExist()
     }
 
+    // Guards #194's behaviour, which #204 keeps: no number, no "Book" to add.
     @Test fun `with no number, the focused series card reads its title alone`() {
         show(landOnDescription = false)
         compose.onNode(hasContentDescription("A Late Message") and hasClickAction()).performSemanticsAction(SemanticsActions.RequestFocus)

@@ -364,8 +364,8 @@ fun SeriesShelf(
                 }
                 if (titles) {
                     Text(
-                        // Focused, the title too: "Book 1" alone is never cut, so it
-                        // never scrolled and the title was nowhere on the row (#204).
+                        // Focused, the number and the title, which the marquee
+                        // scrolls when cut; at rest the number alone (#204).
                         book.number?.let {
                             if (focused) stringResource(R.string.series_book_number_titled, it, book.title)
                             else stringResource(R.string.series_book_number, it)
