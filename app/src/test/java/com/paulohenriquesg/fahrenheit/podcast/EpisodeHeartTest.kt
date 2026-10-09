@@ -21,6 +21,7 @@ import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -99,6 +100,29 @@ class EpisodeHeartTest {
         compose.onNodeWithTag("episode_favourite_server:s1").performKeyInput { pressKey(Key.DirectionLeft) }
         compose.waitForIdle()
         compose.onNodeWithTag("episode_mark_server:s1").assertIsFocused()
+    }
+
+    // Up and Down still walk the rows from the heart, as from Mark finished (#181).
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun `Down from the heart goes to the next row`() {
+        render()
+        compose.onNodeWithTag("episode_favourite_server:s1").performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("episode_favourite_server:s1").performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("episode_row_feed:g2").assertIsFocused()
+    }
+
+    @Test
+    fun `it sits after Mark finished`() {
+        render()
+
+        val mark = compose.onNodeWithTag("episode_mark_server:s1").fetchSemanticsNode().boundsInRoot
+        val heart = compose.onNodeWithTag("episode_favourite_server:s1").fetchSemanticsNode().boundsInRoot
+        assertTrue(heart.left >= mark.right)
     }
 
     @Test

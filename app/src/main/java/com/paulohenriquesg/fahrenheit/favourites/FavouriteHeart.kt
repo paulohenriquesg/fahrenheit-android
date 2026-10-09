@@ -18,7 +18,7 @@ import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.Playlist
 import com.paulohenriquesg.fahrenheit.player.TransportButton
-import com.paulohenriquesg.fahrenheit.podcast.RowButton
+import com.paulohenriquesg.fahrenheit.ui.elements.RowButton
 
 const val FAVOURITE_BUTTON_TAG = "player_favourite"
 
@@ -49,8 +49,15 @@ class LibraryFavourites(private val favourites: Favourites, private val libraryI
 
     private var busy = false
 
+    /** Bumped by each press, so a read sent before one cannot undo it when it answers. */
+    private var presses = 0
+
+    /** Reads it again; offline, it stays as it was rather than taking the hearts away. */
     suspend fun load() {
-        playlist = favourites.current(libraryId).getOrNull()
+        val before = presses
+        val read = favourites.current(libraryId)
+        if (presses != before || busy) return
+        playlist = read.getOrElse { playlist }
     }
 
     fun holds(itemId: String, episodeId: String?): Boolean = playlist?.holds(itemId, episodeId) == true
@@ -69,6 +76,7 @@ class LibraryFavourites(private val favourites: Favourites, private val libraryI
         val before = playlist ?: return null
         if (busy) return null
         busy = true
+        presses++
         val wasIn = holds(itemId, episodeId)
         return try {
             favourites.toggle(before, itemId, episodeId).fold(

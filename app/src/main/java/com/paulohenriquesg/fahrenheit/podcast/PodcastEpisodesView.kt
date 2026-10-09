@@ -24,12 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
-import androidx.tv.material3.IconButton
-import androidx.tv.material3.IconButtonDefaults
-import androidx.tv.material3.LocalContentColor
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Download
@@ -41,8 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import com.paulohenriquesg.fahrenheit.favourites.EpisodeFavouriteButton
+import com.paulohenriquesg.fahrenheit.ui.elements.RowButton
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -385,31 +381,6 @@ private fun MarkButton(finished: Boolean, onClick: () -> Unit, modifier: Modifie
     description = stringResource(if (finished) R.string.mark_unfinished else R.string.mark_finished),
     modifier = modifier
 )
-
-/** A round button on a focused row, inverted on focus as the transport's are (#181). */
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-internal fun RowButton(onClick: () -> Unit, icon: ImageVector, description: String, modifier: Modifier = Modifier) {
-    IconButton(
-        onClick = onClick,
-        modifier = modifier.size(40.dp),
-        scale = IconButtonDefaults.scale(focusedScale = 1f),
-        colors = IconButtonDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            focusedContainerColor = MaterialTheme.colorScheme.onSurface,
-            focusedContentColor = MaterialTheme.colorScheme.surface
-        ),
-        border = IconButtonDefaults.border(
-            focusedBorder = Border(BorderStroke(3.dp, MaterialTheme.colorScheme.primary))
-        )
-    ) {
-        // A phone Icon reads the phone content colour, not the TV button's.
-        CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides LocalContentColor.current) {
-            Icon(imageVector = icon, contentDescription = description, modifier = Modifier.size(22.dp))
-        }
-    }
-}
 
 private const val FINISHED_ALPHA = 0.55f
 private val MARK_SLOT = 56.dp
