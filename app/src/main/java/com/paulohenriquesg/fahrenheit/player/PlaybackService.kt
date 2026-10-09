@@ -77,7 +77,11 @@ class PlaybackService : MediaSessionService() {
             open = { ListeningSession(it, ApiClient::getApiService, PlaybackDevice.info(this)) },
             // Known by the position written, not the time: the server stamps
             // its own clock, which the app never sees (#145).
-            delivered = { file, position -> ServerKnowledge.process.wrote(file.itemId, file.episodeId, position) }
+            delivered = { file, position ->
+                ServerKnowledge.process.wrote(file.itemId, file.episodeId, position)
+                ProgressWrites.process.delivered(file, position)
+            },
+            closed = ProgressWrites::readBackLater
         )
         exo.addListener(reporting)
         val watch = SleepWatch(exo, now = { SystemClock.elapsedRealtime() }, publish = { session?.setSessionExtras(it) })
@@ -115,8 +119,10 @@ class PlaybackService : MediaSessionService() {
             pending = Closings.process::settled,
             wrote = ServerKnowledge.process::wrote
         ) { itemId, episodeId, mark ->
-            val api = ApiClient.getLibraryApi() ?: error("signed out")
-            if (episodeId != null) api.markFinished(itemId, episodeId, mark) else api.markFinished(itemId, mark)
+            ProgressWrites.process.marked(itemId, episodeId, mark) {
+                val api = ApiClient.getLibraryApi() ?: error("signed out")
+                if (episodeId != null) api.markFinished(itemId, episodeId, mark) else api.markFinished(itemId, mark)
+            }
         }
         session = MediaSession.Builder(this, guarded)
             .setCallback(

@@ -29,6 +29,8 @@ import kotlinx.coroutines.withContext
  * @param now a monotonic clock in milliseconds, for listening time.
  * @param delivered told each time a report about an item reaches the server,
  *   with the position it wrote.
+ * @param closed told once a stretch of an item's listening is closed, its
+ *   last report delivered or failed (#207).
  */
 class PlaybackReporting(
     private val player: Player,
@@ -37,7 +39,8 @@ class PlaybackReporting(
     private val pause: suspend () -> Unit = { delay(ProgressSync.INTERVAL_MS) },
     private val now: () -> Long = { SystemClock.elapsedRealtime() },
     private val closings: Closings = Closings.process,
-    private val delivered: (QueuedFile, Double) -> Unit = { _, _ -> }
+    private val delivered: (QueuedFile, Double) -> Unit = { _, _ -> },
+    private val closed: (QueuedFile) -> Unit = {}
 ) : Player.Listener {
 
     private var reportingFor: QueuedFile? = null
@@ -124,11 +127,16 @@ class PlaybackReporting(
         rounds = null
         time?.playing(false)
         val active = reporter ?: return
+        val file = reportingFor
         // Undispatched, so the position is read now, before the queue changes.
         // Not cancellable: once playback ends the service, and its scope, are gone
         // within milliseconds, which would drop the report mid-send.
         val closing = scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            withContext(NonCancellable) { active.finish() }
+            // Told inside too: at the end of the queue the service, and this
+            // scope, go while the report is out.
+            withContext(NonCancellable) {
+                if (active.finish() && file != null) closed(file)
+            }
         }
         closings.track(closing)
     }

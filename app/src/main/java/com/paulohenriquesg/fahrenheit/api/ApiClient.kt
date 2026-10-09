@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.api
 
 import android.content.Context
+import com.paulohenriquesg.fahrenheit.progress.ProgressStore
 import com.paulohenriquesg.fahrenheit.auth.toAuthSession
 import com.paulohenriquesg.fahrenheit.auth.TokenRefreshAuthenticator
 import com.paulohenriquesg.fahrenheit.auth.SessionState
@@ -88,9 +89,13 @@ object ApiClient {
     /**
      * Drops the signed-in session. Clearing stored credentials is not enough
      * on its own: the client built from them lives here, and kept working with
-     * the old token for as long as the process did.
+     * the old token for as long as the process did. Nor is the progress held
+     * for every screen the next account's (#207).
      */
-    fun clearSession() = forget()
+    fun clearSession() {
+        forget()
+        ProgressStore.process.clear()
+    }
 
     private fun forget() {
         apiService = null

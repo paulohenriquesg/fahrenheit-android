@@ -8,6 +8,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,15 +34,22 @@ class DetailChapterIntentTest {
         LibraryItemResponse::class.java
     )
 
+    private fun placeToKeep(item: LibraryItemResponse) = DetailActivity.placeToKeep(item, item.userMediaProgress)
+
+    // #207: where it was is what the store holds now, not the copy read on open.
+    @Test
+    fun `an un-finished book stays where the given progress says`() =
+        assertEquals(2000.0, DetailActivity.placeToKeep(book(currentTime = 1000.0), MediaProgressResponse(currentTime = 2000.0))!!, 0.0)
+
     // Review: un-finishing a book not playing sent it back to the start.
     @Test
     fun `an un-finished book stays where it was`() =
-        assertEquals(1000.0, DetailActivity.placeToKeep(book(currentTime = 1000.0))!!, 0.0)
+        assertEquals(1000.0, placeToKeep(book(currentTime = 1000.0))!!, 0.0)
 
     @Test
     fun `so near the end that the server would finish it again, it goes back to the start`() {
-        assertNull(DetailActivity.placeToKeep(book(currentTime = 3595.0)))
-        assertNull(DetailActivity.placeToKeep(book(currentTime = 0.0)))
-        assertNull(DetailActivity.placeToKeep(book(currentTime = null)))
+        assertNull(placeToKeep(book(currentTime = 3595.0)))
+        assertNull(placeToKeep(book(currentTime = 0.0)))
+        assertNull(placeToKeep(book(currentTime = null)))
     }
 }

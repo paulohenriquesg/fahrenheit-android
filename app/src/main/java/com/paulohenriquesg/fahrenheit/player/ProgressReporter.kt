@@ -55,9 +55,11 @@ class ProgressReporter(
      * position and time are read before anything suspends, so a caller that
      * starts this undispatched captures them as they are now, before the
      * queue changes under it. Not retried: there is no next round to retry in.
+     *
+     * @return whether this closed the stretch; false when there was none open.
      */
-    suspend fun finish() {
-        if (!played || closed) return
+    suspend fun finish(): Boolean {
+        if (!played || closed) return false
         closed = true
         val report = ProgressSync.next(position(), total(), lastSent, listened())
         report?.let { lastSent = it.currentTime }
@@ -65,5 +67,6 @@ class ProgressReporter(
             delivered(it.timeListened)
             reached(it)
         }
+        return true
     }
 }

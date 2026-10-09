@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -42,7 +43,9 @@ import com.paulohenriquesg.fahrenheit.podcast.EpisodeProgress
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeMarking
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeMarks
 import com.paulohenriquesg.fahrenheit.api.Me
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.paulohenriquesg.fahrenheit.progress.ProgressKey
+import com.paulohenriquesg.fahrenheit.progress.ProgressStore
 import com.paulohenriquesg.fahrenheit.podcast.DownloadWatch
 import com.paulohenriquesg.fahrenheit.api.DownloadQueue
 import com.paulohenriquesg.fahrenheit.podcast.FeedLoad
@@ -69,6 +72,7 @@ import com.paulohenriquesg.fahrenheit.podcast.PodcastDownloads
 import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import android.util.Log
 import com.paulohenriquesg.fahrenheit.player.AboutFact
 import com.paulohenriquesg.fahrenheit.player.AboutFacts
@@ -85,7 +89,7 @@ import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 
 class DetailActivity : ComponentActivity() {
-    /** Counts returns to this screen, so progress is read again after the player. */
+    /** Counts returns to this screen, so favourites are read again (#180); progress is the store's (#207). */
     private var resumes by mutableIntStateOf(0)
 
     /**
@@ -150,7 +154,6 @@ class DetailActivity : ComponentActivity() {
         var me by remember { mutableStateOf<Me?>(null) }
 
         val context = LocalContext.current
-        val scope = rememberCoroutineScope()
         var marking by remember { mutableStateOf(false) }
 
         LaunchedEffect(itemId) {
@@ -159,17 +162,17 @@ class DetailActivity : ComponentActivity() {
                 loadFailed = true
                 return@LaunchedEffect
             }
+            val since = ProgressStore.process.generation
             LibraryRepository(api).item(itemId)
-                .onSuccess { itemDetail = it; loadFailed = false }
+                // Its progress goes in the store, which says what it is from then on (#207).
+                .onSuccess { ProgressStore.process.readItem(it, since); itemDetail = it; loadFailed = false }
                 .onFailure { loadFailed = true }
         }
 
-        // A book is read again on coming back - from the player, say - so
-        // Chapters opens where it was left and Mark says what the server holds.
-        LaunchedEffect(resumes) {
-            if (resumes <= 1 || itemDetail?.mediaType != "book") return@LaunchedEffect
-            ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId) }?.onSuccess { itemDetail = it }
-        }
+        // Progress is the shared store's (#207): back from the player, Chapters
+        // opens where it was left and Mark says what the server holds, with no
+        // read of this screen's own.
+        val progress by ProgressStore.process.entries.collectAsStateWithLifecycle()
 
         // The rest of a book's series (#134), as the player reads it.
         val seriesRef = itemDetail?.media?.metadata?.series?.firstOrNull()
@@ -186,15 +189,14 @@ class DetailActivity : ComponentActivity() {
                 ?.takeIf { it.current != null }
         }
 
-        // One call for both who the user is (the admin check) and what they
-        // have heard (#78); read again on every return, e.g. from the player.
+        // Who the user is, for the admin check; what they have heard is the store's (#207).
         val isPodcast = itemDetail?.mediaType == "podcast"
-        // Bumped after an episode is marked, as the book reads itself again.
-        var meReads by remember { mutableIntStateOf(0) }
-        LaunchedEffect(isPodcast, resumes, meReads) {
+        LaunchedEffect(isPodcast) {
             if (!isPodcast) return@LaunchedEffect
             val podcastApi = ApiClient.getPodcastApi() ?: return@LaunchedEffect
-            runCatching { podcastApi.me() }.onSuccess { me = it }
+            val since = ProgressStore.process.generation
+            // Read anyway, so what it says of progress goes in the store too.
+            runCatching { podcastApi.me() }.onSuccess { me = it; ProgressStore.process.readMe(it, since) }
         }
 
         if (loadFailed) {
@@ -228,39 +230,35 @@ class DetailActivity : ComponentActivity() {
         }
         DetailBody { margin ->
             if (!isBook) {
-                PodcastEpisodes(itemId, item, me, margin, onReloaded = { itemDetail = it }, onMarked = { meReads++ }, returns = resumes, nowPlaying = nowPlaying)
+                PodcastEpisodes(itemId, item, me, progress.values.toList(), margin, onReloaded = { itemDetail = it }, returns = resumes, nowPlaying = nowPlaying)
             } else {
+                val bookProgress = progress[ProgressKey(itemId, null)]
                 BookDetailView(
                     itemId = itemId,
-                    content = DetailHeaderModel.book(item),
+                    content = DetailHeaderModel.book(item, bookProgress),
                     onPrimary = { context.startActivity(playBookIntent(context, itemId)) },
                     chapters = remember(item) { ChapterClock.spans(item.media.chapters, item.media.duration ?: 0.0) },
-                    at = item.userMediaProgress?.currentTime ?: 0.0,
+                    at = bookProgress?.currentTime ?: 0.0,
                     onChapter = { start -> context.startActivity(playChapterIntent(context, itemId, start)) },
                     padding = margin,
-                    facts = remember(item) {
+                    facts = remember(item, bookProgress) {
                         AboutFacts.book(item.media.metadata, item.media.duration) +
-                            listOfNotNull(DetailHeaderModel.progressOf(item)?.let { AboutFact(AboutFact.Kind.Progress, it) })
+                            listOfNotNull(DetailHeaderModel.progressOf(bookProgress)?.let { AboutFact(AboutFact.Kind.Progress, it) })
                     },
                     series = seriesBooks,
                     seriesName = seriesRef?.name,
                     onSeriesBook = { context.startActivity(createIntent(context, it.itemId)) },
                     nowPlaying = nowPlaying,
-                    finished = item.userMediaProgress?.isFinished == true,
+                    finished = bookProgress?.isFinished == true,
                     marking = marking,
                     onMarkFinished = { done ->
                         marking = true
                         // Through the playback service, in case this book is the one playing (#105).
-                        Playback.markFinished(context, itemId, done, keepAt = placeToKeep(item)) { worked ->
+                        Playback.markFinished(context, itemId, done, keepAt = placeToKeep(item, bookProgress)) { worked ->
                             marking = false
+                            // Done, the facts and Resume follow: the service put the mark in the store (#207).
                             if (!worked) {
                                 Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
-                                return@markFinished
-                            }
-                            // Read again, so the facts and Resume say what the server now holds.
-                            scope.launch {
-                                ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId) }
-                                    ?.onSuccess { itemDetail = it }
                             }
                         }
                     }
@@ -280,9 +278,9 @@ class DetailActivity : ComponentActivity() {
         itemId: String,
         item: LibraryItemResponse,
         me: Me?,
+        progress: List<MediaProgressResponse>,
         margin: PaddingValues,
         onReloaded: (LibraryItemResponse) -> Unit,
-        onMarked: () -> Unit,
         returns: Int,
         nowPlaying: @Composable () -> Unit
     ) {
@@ -311,9 +309,9 @@ class DetailActivity : ComponentActivity() {
         val isAdmin = FeedCheck.mayCheck(me?.type, feedUrl)
         // Marks made here show at once, over what was read on open (#181).
         val marking = remember(itemId) { EpisodeMarking() }
-        // Each fresh read is the server's word: playing a finished episode un-finishes it there.
-        LaunchedEffect(me) { marking.settle() }
-        val heard = EpisodeMarks.over(EpisodeProgress.index(me?.mediaProgress.orEmpty(), itemId), marking.marks)
+        // Each change of the store is the server's word: playing a finished episode un-finishes it there.
+        LaunchedEffect(progress) { marking.settle() }
+        val heard = EpisodeMarks.over(EpisodeProgress.index(progress, itemId), marking.marks)
         // The show's own auto-download settings (#182): offered only to whom the server would take them from.
         val settingsApi = ApiClient.getPodcastSettingsApi()
         val autoDownloads = remember(itemId, settingsApi) {
@@ -328,7 +326,7 @@ class DetailActivity : ComponentActivity() {
             if (!downloadsOpen && downloadsOpened) downloadsButton.requestFocusWhenAttached()
         }
         val resumeEpisode = EpisodeProgress.resumable(
-            me?.mediaProgress.orEmpty(), itemId, onServer = media.episodes.orEmpty().map { it.id }.toSet()
+            progress, itemId, onServer = media.episodes.orEmpty().map { it.id }.toSet()
         )?.let { id -> media.episodes?.firstOrNull { it.id == id } }
 
         // Read on open, every time: nothing of the feed is stored.
@@ -399,7 +397,7 @@ class DetailActivity : ComponentActivity() {
                 progress = heard,
                 onMark = { episode, finished ->
                     val keepAt = if (finished) null else EpisodeMarks.keepAt(
-                        me?.mediaProgress?.firstOrNull { it.libraryItemId == itemId && it.episodeId == episode.id }
+                        progress.firstOrNull { it.libraryItemId == itemId && it.episodeId == episode.id }
                     )
                     scope.launch {
                         val worked = marking.mark(episode.id, finished) {
@@ -409,8 +407,8 @@ class DetailActivity : ComponentActivity() {
                             }
                         }
                         when (worked) {
-                            // Read again, so the rows and Resume say what the server now holds.
-                            true -> onMarked()
+                            // The service put the mark in the store, which the rows and Resume read (#207).
+                            true -> marking.settle()
                             false -> Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
                             null -> Unit
                         }
@@ -523,8 +521,8 @@ class DetailActivity : ComponentActivity() {
          * server would put it at: where it was, unless that is so near the end
          * that the server would finish it again (its rule: under 10 s left).
          */
-        internal fun placeToKeep(item: LibraryItemResponse): Double? {
-            val at = item.userMediaProgress?.currentTime ?: return null
+        internal fun placeToKeep(item: LibraryItemResponse, progress: MediaProgressResponse?): Double? {
+            val at = progress?.currentTime ?: return null
             val length = item.media.duration ?: return null
             return at.takeIf { at > 0 && length - at > 10 }
         }
