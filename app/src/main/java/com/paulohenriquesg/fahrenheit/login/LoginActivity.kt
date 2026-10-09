@@ -42,14 +42,21 @@ class LoginActivity : ComponentActivity() {
      * here, on the launch screen, rather than on Home's first request.
      */
     private suspend fun checkSession(): SessionCheck.Result {
-        val api = ApiClient.getPodcastApi() ?: return SessionCheck.Result.SignIn(null)
+        val api = ApiClient.getPodcastApi() ?: return SessionCheck.Result.Rejected
         val tokenBefore = ApiClient.getToken()
+        sessionChecks++
         StartupTimeline.app.mark("session check started")
         val result = SessionCheck { withContext(Dispatchers.IO) { api.me() } }.run()
         val refreshed = ApiClient.getToken() != tokenBefore
+        // The first check's verdict, then, if it took retries, when one got through.
         StartupTimeline.app.mark("session check done", "$result, token refreshed=$refreshed")
+        if (result == SessionCheck.Result.Ready && sessionChecks > 1) {
+            StartupTimeline.app.mark("session ready", "check $sessionChecks, token refreshed=$refreshed")
+        }
         return result
     }
+
+    private var sessionChecks = 0
 
     /**
      * Only once the screen is in front: a check that ends after Home was
@@ -93,8 +100,7 @@ class LoginActivity : ComponentActivity() {
                 ) {
                     LaunchGate(
                         check = check,
-                        onReady = ::goHome,
-                        onSignIn = { error -> error?.let(loginHandler::show) }
+                        onReady = ::goHome
                     ) {
                         LoginScreen(
                             loginHandler::handleLogin,

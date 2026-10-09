@@ -546,7 +546,7 @@ private val SecretKeyboard = KeyboardOptions(
  *   place and its focus.
  */
 @Composable
-private fun LoginButton(
+internal fun LoginButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

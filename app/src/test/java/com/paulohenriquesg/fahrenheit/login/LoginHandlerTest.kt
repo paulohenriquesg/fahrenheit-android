@@ -126,14 +126,4 @@ class LoginHandlerTest {
 
         assertNull(h.error.value)
     }
-
-    // The launch check's verdict lands where a sign-in's would (#191).
-    @Test
-    fun `a failed launch check is the screen's error`() {
-        val h = handler { _, _, _ -> error("must not be called") }
-
-        h.show(LoginError.Unreachable)
-
-        assertEquals(LoginError.Unreachable, h.error.value)
-    }
 }

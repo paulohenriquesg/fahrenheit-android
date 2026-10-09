@@ -10,17 +10,21 @@ draws, and after that Home is empty until the libraries and shelves arrive.
 ## Steps
 
 1. **Pin first** (watched red):
-   - `SessionCheck`: the probe answering means Ready. No answer (IOException)
-     means the sign-in form with `Unreachable`. 401/403 (the refresh failed too)
-     means the form with no error, since Welcome back asks for the password
-     anyway. Any other HTTP code means `ServerError(code)`, anything else
-     `Unexpected`.
+   - `SessionCheck`: the probe answering means Ready. Only 401/403 (the
+     refresh token spent too) means Rejected. Everything else is Unreachable:
+     no answer, no answer within 10 s, a 5xx, or an unexpected error. A TV just
+     woken often has no Wi-Fi for its first seconds, and none of these is a
+     reason to ask for the password.
    - `LaunchScreen`: shows the app name and "Signing in…", and "Connecting to
      your server…" once 3 s have passed. The stored server address appears
      nowhere on it.
    - `LaunchGate`: while the check runs it shows the launch screen, not the
      form. When the check says Ready it goes Home once and never draws the
-     form. When it says sign in, it draws the form and passes the error on.
+     form. Rejected draws the sign-in form. Unreachable stays on the launch
+     screen with "Can't reach your server" and a focused Try again, and
+     checks again on its own after 2, 4 and 8 s, then waits for a press. A
+     press checks at once and starts those waits over. The stored session is
+     never touched.
      With no stored session there is no check and the form shows straight away.
    - `StartupTimeline`: each step is logged once, in ms since the process
      started.
@@ -36,14 +40,14 @@ draws, and after that Home is empty until the libraries and shelves arrive.
 ## Limits
 
 - The check adds one round trip (`api/me`) to every cold start that has a
-  session. In exchange, any refresh happens on the launch screen, and with an
-  unreachable server you get the sign-in form instead of an empty Home.
+  session. In exchange, any refresh happens on the launch screen, and an
+  unreachable server shows a launch screen that says so and keeps trying,
+  instead of an empty Home.
 - The check gives up after 10 s and counts as unreachable. Without that
   limit, the client's own timeouts (15 s to connect, 60 s to read) could keep
   the launch screen up for a minute.
-- After a failed check the only way on is to sign in again. A "Try again" for a
-  session that is still good is left open for the coordinator to decide.
-- The stored session is kept when the check fails, so the next launch tries
-  again.
+- The automatic retries stop after the 8 s wait (four checks in about
+  14 s plus the checks' own time), so a server that stays away leaves an
+  idle screen waiting for Try again rather than a loop that never ends.
 - The icon is still the template launcher icon. Replacing it is a separate
   job.
