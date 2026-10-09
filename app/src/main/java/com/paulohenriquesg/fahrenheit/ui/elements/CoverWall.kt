@@ -14,13 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
@@ -30,6 +28,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
@@ -57,9 +56,10 @@ fun CoverWall(covers: List<ImageBitmap>, modifier: Modifier = Modifier, alpha: F
     )
     BoxWithConstraints(modifier.clipToBounds(), contentAlignment = Alignment.Center) {
         val density = LocalDensity.current
-        // The layer is the whole wall, turned and moved as one, so the covers
-        // reach its edges from inside: a TV drops what a layer draws past its
-        // bounds, which left the edges of the screen bare (#172).
+        // The layer is the screen plus the drift, so moving it never bares an
+        // edge (#172). It is only moved, never turned, and nothing is drawn past
+        // its bounds: on the Fire TV a clip under a turned layer drew the covers
+        // cut and untilted, and a layer drops what it draws outside itself (#176).
         val wall = WallFrame.forScreen(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), density)
         Spacer(
             Modifier
@@ -70,39 +70,43 @@ fun CoverWall(covers: List<ImageBitmap>, modifier: Modifier = Modifier, alpha: F
                     val shift = WallFrame.shift(drift.value, DRIFT_X.toPx(), DRIFT_Y.toPx())
                     translationX = shift.x
                     translationY = shift.y
-                    rotationZ = TILT_DEGREES
                 }
                 .drawWithCache {
                     val cell = CELL.toPx()
                     val step = cell + GAP.toPx()
                     val side = cell.toInt()
-                    val corner = CornerRadius(6.dp.toPx())
-                    val columns = (size.width / step).toInt() + 1
-                    val rows = (size.height / step).toInt() + 1
+                    // The tilt is drawn: a grid that, turned round the layer's
+                    // centre, still covers the whole layer.
+                    val grid = WallFrame.grid(size, TILT_DEGREES)
+                    // A step early each way: the grid only just reaches the layer's
+                    // corners, and a cover's place is rounded to whole pixels.
+                    val origin = Offset((size.width - grid.width) / 2 - step, (size.height - grid.height) / 2 - step)
+                    val columns = ceil(grid.width / step).toInt() + 2
+                    val rows = ceil(grid.height / step).toInt() + 2
                     val cells = (0 until rows).flatMap { row ->
                         (0 until columns).map { column ->
-                            val x = column * step
-                            val y = row * step
+                            val x = origin.x + column * step
+                            val y = origin.y + row * step
                             // Offset by row, so one cover does not line up down a column.
                             Triple(x, y, covers[(row * 5 + column) % covers.size])
                         }
                     }
-                    val frames = cells.map { (x, y, _) ->
-                        Path().apply { addRoundRect(RoundRect(x, y, x + cell, y + cell, corner)) }
-                    }
                     onDrawBehind {
-                        cells.forEachIndexed { i, (x, y, cover) ->
-                            // The middle square of a cover of another shape, not a squashed whole.
-                            val crop = min(cover.width, cover.height)
-                            clipPath(frames[i]) {
-                                drawImage(
-                                    cover,
-                                    srcOffset = IntOffset((cover.width - crop) / 2, (cover.height - crop) / 2),
-                                    srcSize = IntSize(crop, crop),
-                                    dstOffset = IntOffset(x.toInt(), y.toInt()),
-                                    dstSize = IntSize(side, side),
-                                    alpha = alpha
-                                )
+                        // Plain squares, and only an untilted clip to the layer's own bounds.
+                        clipRect {
+                            rotate(TILT_DEGREES) {
+                                cells.forEach { (x, y, cover) ->
+                                    // The middle square of a cover of another shape, not a squashed whole.
+                                    val crop = min(cover.width, cover.height)
+                                    drawImage(
+                                        cover,
+                                        srcOffset = IntOffset((cover.width - crop) / 2, (cover.height - crop) / 2),
+                                        srcSize = IntSize(crop, crop),
+                                        dstOffset = IntOffset(x.toInt(), y.toInt()),
+                                        dstSize = IntSize(side, side),
+                                        alpha = alpha
+                                    )
+                                }
                             }
                         }
                     }
@@ -123,30 +127,34 @@ object CoverWallTags {
 }
 
 /**
- * The wall's size and place (#172): turned round its own centre and drifting
- * half its drift each way from the middle of the screen, it covers the whole
- * screen, edge to edge, at every point of the drift.
+ * The wall's size and place (#172, #176): the layer drifts half its drift each
+ * way from the middle of the screen and is never turned; the tilt is drawn
+ * inside it, round its centre.
  */
 internal object WallFrame {
     /**
-     * The smallest wall that does it: every screen corner is at most half the
-     * screen plus half the drift from the wall's centre along each axis, and
-     * turning that box by the tilt widens it by the other side's share.
+     * The smallest layer that covers the screen at every point of the drift:
+     * the screen plus the drift, centred.
      */
-    fun size(width: Float, height: Float, driftX: Float, driftY: Float, tiltDegrees: Float): Size {
+    fun size(width: Float, height: Float, driftX: Float, driftY: Float): Size =
+        Size(width + driftX, height + driftY)
+
+    /**
+     * The smallest grid that, turned by [tiltDegrees] round the [layer]'s
+     * centre, still covers the whole layer: the layer turned back, boxed.
+     */
+    fun grid(layer: Size, tiltDegrees: Float): Size {
         val a = Math.toRadians(tiltDegrees.toDouble())
-        val halfX = (width + driftX) / 2
-        val halfY = (height + driftY) / 2
         val c = abs(cos(a)).toFloat()
         val s = abs(sin(a)).toFloat()
-        return Size(2 * (halfX * c + halfY * s), 2 * (halfX * s + halfY * c))
+        return Size(layer.width * c + layer.height * s, layer.width * s + layer.height * c)
     }
 
     /** The wall's centre from the screen's, at [t] from 0 to 1 along the drift. */
     fun shift(t: Float, driftX: Float, driftY: Float): Offset =
         Offset((0.5f - t) * driftX, (0.5f - t) * driftY)
 
-    /** As drawn: this wall's drift and tilt. */
+    /** As drawn: this wall's layer for its drift. */
     fun forScreen(width: Float, height: Float, density: Density): Size =
-        with(density) { size(width, height, DRIFT_X.toPx(), DRIFT_Y.toPx(), TILT_DEGREES) }
+        with(density) { size(width, height, DRIFT_X.toPx(), DRIFT_Y.toPx()) }
 }
