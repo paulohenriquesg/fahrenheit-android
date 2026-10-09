@@ -42,6 +42,7 @@ import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -98,15 +99,17 @@ import com.paulohenriquesg.fahrenheit.utils.StartupTimeline
 @Composable
 fun MainScreen(
     fetchLibraryItems: suspend (String, LibraryQuery) -> List<LibraryItem>,
-    fetchPersonalizedView: suspend (String) -> List<Shelf>,
+    /** A library's Home shelves; null when they could not be read. */
+    fetchPersonalizedView: suspend (String) -> List<Shelf>?,
     /** The playback service's player, while this screen is visible; null when not connected (#107). */
     playback: Player? = null,
     /** Favourites (#180), while signed in. */
     favourites: () -> Favourites? = { null },
     /** Home's state, out of this composable as it is touched (#208). */
-    homeModel: HomeViewModel = viewModel { HomeViewModel(ProgressStore.process) }
+    homeModel: HomeViewModel = viewModel { HomeViewModel(ProgressStore.process, fetchPersonalizedView) }
 ) {
     val home by homeModel.uiState.collectAsStateWithLifecycle()
+    val shelves = home.shelves
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -118,7 +121,6 @@ fun MainScreen(
     // The library list, and which view of it: the whole library from the
     // rail, or the one a Home shelf's "See all" stands for (#146).
     val library = remember { LibraryList(scope, fetchLibraryItems) }
-    var shelves by remember { mutableStateOf(listOf<Shelf>()) }
     var currentLibrary by remember { mutableStateOf<Library?>(null) }
     val listState = rememberLazyListState()
     val isRowLayout by LayoutManager.isRowLayout  // Use LayoutManager instead of local state
@@ -132,7 +134,6 @@ fun MainScreen(
     var shouldRefreshLibrary by remember { mutableStateOf(false) }
     var seriesList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Series>()) }
     var collectionsList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Collection>()) }
-    var isLoadingHome by remember { mutableStateOf(false) }
     var isLoadingSeries by remember { mutableStateOf(false) }
     var isLoadingCollections by remember { mutableStateOf(false) }
     var isLoadingStats by remember { mutableStateOf(false) }
@@ -153,18 +154,21 @@ fun MainScreen(
 
     // Detect when returning from LibrarySelectionActivity
     DisposableEffect(lifecycleOwner) {
+        // Stopped since the last resume: the first resume is the start-up load's.
+        var left = false
         val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) left = true
             if (event == Lifecycle.Event.ON_RESUME) {
                 // Check if library has changed
                 val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
                 if (savedLibraryId != null && savedLibraryId != currentLibrary?.id) {
                     shouldRefreshLibrary = true
-                } else if (shelves.isNotEmpty()) {
-                    // Back from the player, where the heart may have changed Favourites (#180).
-                    currentLibrary?.id?.let { libraryId ->
-                        scope.launch { shelves = FavouritesShelf.refreshed({ shelves }, libraryId, favourites()) }
-                    }
+                } else if (left) {
+                    // Back from the player, say: the shelves are read again (#197),
+                    // Favourites among them, which the heart may have changed (#180).
+                    homeModel.returned()
                 }
+                left = false
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -185,14 +189,11 @@ fun MainScreen(
 
                 // Drop what belongs to the library being left: Home showed its
                 // shelves for the second or two the fetch took.
-                shelves = emptyList()
                 library.clear()
-                isLoadingHome = true
                 newLibrary.id?.let { libraryId ->
-                    shelves = fetchPersonalizedView(libraryId)
+                    homeModel.open(libraryId)
                     library.open(libraryId, LibraryQuery.Everything)
                 }
-                isLoadingHome = false
             }
             shouldRefreshLibrary = false
         }
@@ -211,8 +212,7 @@ fun MainScreen(
                         currentLibrary = LibraryChoice.pick(libraries, savedLibraryId)
                         currentLibrary?.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
                         currentLibrary?.id?.let { libraryId ->
-                            shelves = fetchPersonalizedView(libraryId)
-                            StartupTimeline.app.mark("home shelves loaded", "${shelves.size} shelves")
+                            homeModel.open(libraryId)
                             library.open(libraryId, LibraryQuery.Everything)
                         }
                     }
@@ -224,6 +224,21 @@ fun MainScreen(
                         Toast.LENGTH_SHORT
                     ).show()
                 }
+        }
+    }
+
+    LaunchedEffect(shelves.isNotEmpty()) {
+        if (shelves.isNotEmpty()) StartupTimeline.app.mark("home shelves loaded", "${shelves.size} shelves")
+    }
+
+    // Home reloads only while it shows; what comes meanwhile is owed (#197).
+    val screen by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
+    SideEffect { homeModel.visible(view == MainView.HOME && screen.isAtLeast(Lifecycle.State.STARTED)) }
+
+    // Only a load asked for that leaves Home empty says it failed (#197).
+    LaunchedEffect(homeModel) {
+        homeModel.failures.collect {
+            Toast.makeText(context, context.getString(R.string.home_shelves_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -278,7 +293,7 @@ fun MainScreen(
                     kept.choose(libraryId, pick).map { chosen ->
                         favouritesChosen = chosen
                         // Home's shelf follows the choice, in this screen's scope: the panel closes meanwhile.
-                        scope.launch { shelves = FavouritesShelf.refreshed({ shelves }, libraryId, kept) }
+                        homeModel.refreshFavourites(kept)
                     }
                 }
             )
@@ -316,9 +331,7 @@ fun MainScreen(
         when (action) {
             MenuAction.HOME -> {
                 view = MainView.HOME
-                libraryId?.let { id ->
-                    scope.launch { shelves = fetchPersonalizedView(id) }
-                }
+                if (libraryId != null) homeModel.choseHome()
             }
             MenuAction.LIBRARY -> {
                 view = MainView.LIBRARY
@@ -438,7 +451,7 @@ fun MainScreen(
                     )
                 }
                 when (view) {
-                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, isLoadingHome, home.covers, onSeeAll = { tile ->
+                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, home.loading, home.covers, onSeeAll = { tile ->
                         // As though the rail's row had been chosen, so the rail
                         // highlights the screen the tile opened.
                         MainView.forMenuAction(tile.opens)?.let { highlightedMenuItemId = it.menuItemId }

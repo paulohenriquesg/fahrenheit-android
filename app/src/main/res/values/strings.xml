@@ -105,6 +105,7 @@
     <string name="launching_installer">Launching installer…</string>
     <string name="listening_statistics">Listening Statistics</string>
     <string name="loading">Loading…</string>
+    <string name="home_shelves_failed">Could not load Home. Check the connection to your server.</string>
     <string name="loading_authors">Loading authors…</string>
     <string name="loading_collections">Loading collections…</string>
     <string name="loading_episodes">Loading episodes…</string>

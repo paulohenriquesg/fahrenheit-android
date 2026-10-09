@@ -201,4 +201,58 @@ class ProgressStoreTest {
 
         assertEquals(emptyMap<ProgressKey, MediaProgressResponse>(), store.entries.value)
     }
+
+    // #197: Home reloads its shelves when listening starts, stops or finishes.
+    @Test
+    fun `the first report of a stretch is news, the next ones are not`() {
+        val before = store.news.value
+
+        store.played("book", null, position = 10.0, duration = 100.0)
+        store.played("book", null, position = 20.0, duration = 100.0)
+
+        assertEquals(before + 1, store.news.value)
+    }
+
+    @Test
+    fun `a stop is news, read back or not, and the next report starts a new stretch`() {
+        store.played("book", null, position = 10.0, duration = 100.0)
+        val playing = store.news.value
+
+        store.stopped("book", null, progress = null, since = store.generation)
+        assertEquals(playing + 1, store.news.value)
+
+        store.played("book", null, position = 30.0, duration = 100.0)
+        assertEquals(playing + 2, store.news.value)
+    }
+
+    @Test
+    fun `a stop read back is the server's word`() {
+        store.played("book", null, position = 95.0, duration = 100.0)
+
+        store.stopped("book", null, server("book", at = 95.0, finished = true), since = store.generation)
+
+        assertEquals(true, store.of("book")?.isFinished)
+    }
+
+    @Test
+    fun `a mark that changes whether it is finished is news, one that does not is not`() {
+        store.marked("book", null, ProgressMark(isFinished = true))
+        val finished = store.news.value
+
+        store.marked("book", null, ProgressMark(isFinished = true))
+        assertEquals("already finished", finished, store.news.value)
+
+        store.marked("book", null, ProgressMark(isFinished = false))
+        assertEquals(finished + 1, store.news.value)
+    }
+
+    @Test
+    fun `a resync or a page's own read is not news`() {
+        val before = store.news.value
+
+        store.replace(listOf(server("book", at = 10.0)), since = store.generation)
+        store.read(server("other", at = 5.0), since = store.generation)
+
+        assertEquals(before, store.news.value)
+    }
 }

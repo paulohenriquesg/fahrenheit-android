@@ -30,12 +30,15 @@ class MainHandler(private val context: Context) {
     suspend fun fetchLibraryItems(libraryId: String, query: LibraryQuery): List<LibraryItem> =
         fetch("Failed to load library items") { it.items(libraryId, query) }
 
-    suspend fun fetchPersonalizedView(libraryId: String): List<Shelf> =
-        FavouritesShelf.onto(
-            fetch("Failed to load personalized view") { it.personalizedShelves(libraryId) },
-            libraryId,
-            favourites()
-        )
+    /**
+     * Home's shelves, with Favourites among them; null when they could not be
+     * read (or signed out). No toast: only the caller knows whether the viewer
+     * asked for them, and a reload in the background fails quietly (#197).
+     */
+    suspend fun fetchPersonalizedView(libraryId: String): List<Shelf>? {
+        val shelves = repository()?.personalizedShelves(libraryId)?.getOrNull() ?: return null
+        return FavouritesShelf.onto(shelves, libraryId, favourites())
+    }
 
     /** Favourites (#180), while signed in. */
     fun favourites(): Favourites? = ApiClient.getPlaylistApi()?.let { Favourites(it, FavouritesChoice(context)) }
