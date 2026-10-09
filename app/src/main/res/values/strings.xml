@@ -159,6 +159,7 @@
     <string name="search_failed">Search failed. Check the connection to your server.</string>
     <string name="search_nothing_found">Nothing found for \"%1$s\"</string>
     <string name="search_group">%1$s · %2$d</string>
+    <string name="search_cut">Showing the first %1$d. Add a word to narrow it.</string>
     <string name="podcasts">Podcasts</string>
     <string name="see_all">See all %1$d</string>
     <string name="select_library">Select Library</string>

@@ -46,6 +46,6 @@ interface BrowseApi {
     suspend fun searchLibraryItems(
         @Path("libraryId") libraryId: String,
         @Query("q") query: String,
-        @Query("limit") limit: Int = 10
+        @Query("limit") limit: Int = BrowseRepository.SEARCH_LIMIT
     ): SearchLibraryItemsResponse
 }

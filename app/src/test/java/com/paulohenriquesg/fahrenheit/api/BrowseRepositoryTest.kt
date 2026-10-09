@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.api
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
@@ -26,6 +27,8 @@ class BrowseRepositoryTest {
         private val author: (() -> AuthorDetailResponse)? = null,
         private val recentEpisodes: (() -> RecentEpisodesResponse)? = null
     ) : BrowseApi {
+        var searchLimit: Int? = null
+
         override suspend fun getLibrarySeries(libraryId: String, limit: Int, minified: Int) =
             series?.invoke() ?: error("no series configured")
 
@@ -38,8 +41,10 @@ class BrowseRepositoryTest {
         override suspend fun getListeningStats() =
             stats?.invoke() ?: error("no stats configured")
 
-        override suspend fun searchLibraryItems(libraryId: String, query: String, limit: Int) =
-            search?.invoke() ?: error("no search configured")
+        override suspend fun searchLibraryItems(libraryId: String, query: String, limit: Int): SearchLibraryItemsResponse {
+            searchLimit = limit
+            return search?.invoke() ?: error("no search configured")
+        }
 
         override suspend fun getAuthor(authorId: String, include: String) =
             author?.invoke() ?: error("no author configured")
@@ -175,6 +180,79 @@ class BrowseRepositoryTest {
         val found = BrowseRepository(api).search("lib", "writer", "book").getOrThrow()
 
         assertEquals(listOf("a1"), found.authors.map { it.id })
+    }
+
+    // The server has no offset for search, only a limit per kind (#193): ask
+    // for enough that a cut list is rare, and say when one was cut.
+    @Test
+    fun `a search asks for 50 matches of each kind`() = runBlocking {
+        val api = FakeBrowseApi(search = { SearchLibraryItemsResponse() })
+
+        BrowseRepository(api).search("lib", "a", "book").getOrThrow()
+
+        assertEquals(50, api.searchLimit)
+    }
+
+    @Test
+    fun `items that come back at the limit were cut`() = runBlocking {
+        val api = FakeBrowseApi(search = {
+            SearchLibraryItemsResponse(book = (1..50).map { item("b$it") })
+        })
+
+        val found = BrowseRepository(api).search("lib", "a", "book").getOrThrow()
+
+        assertTrue(found.itemsCut)
+    }
+
+    @Test
+    fun `items that come back short of the limit were not cut`() = runBlocking {
+        val api = FakeBrowseApi(search = {
+            SearchLibraryItemsResponse(book = (1..49).map { item("b$it") })
+        })
+
+        val found = BrowseRepository(api).search("lib", "a", "book").getOrThrow()
+
+        assertFalse(found.itemsCut)
+    }
+
+    // The server counted the matches, not the ones that carry an item: a cut
+    // list is still cut after a match without one is dropped.
+    @Test
+    fun `items are judged on the matches the server sent`() = runBlocking {
+        val api = FakeBrowseApi(search = {
+            SearchLibraryItemsResponse(book = (1..49).map { item("b$it") } + SearchBookItem(libraryItem = null))
+        })
+
+        val found = BrowseRepository(api).search("lib", "a", "book").getOrThrow()
+
+        assertEquals(49, found.items.size)
+        assertTrue(found.itemsCut)
+    }
+
+    @Test
+    fun `a podcast library's podcasts that come back at the limit were cut`() = runBlocking {
+        val api = FakeBrowseApi(search = {
+            SearchLibraryItemsResponse(book = listOf(item("b1")), podcast = (1..50).map { item("p$it") })
+        })
+
+        val found = BrowseRepository(api).search("lib", "a", "podcast").getOrThrow()
+
+        assertTrue(found.itemsCut)
+    }
+
+    @Test
+    fun `each kind is judged on its own`() = runBlocking {
+        val api = FakeBrowseApi(search = {
+            SearchLibraryItemsResponse(
+                book = (1..3).map { item("b$it") },
+                authors = (1..50).map { Author(id = "a$it", name = "Writer $it") }
+            )
+        })
+
+        val found = BrowseRepository(api).search("lib", "a", "book").getOrThrow()
+
+        assertTrue(found.authorsCut)
+        assertFalse(found.itemsCut)
     }
 
     @Test

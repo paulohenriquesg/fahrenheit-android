@@ -3,12 +3,15 @@ package com.paulohenriquesg.fahrenheit.search
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.TextFieldValue
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.Author
@@ -16,6 +19,7 @@ import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.SearchResults
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -112,6 +116,60 @@ class SearchContentTest {
         assertEquals("a1", opened)
     }
 
+    // The server has no offset for search (#193): a kind that came back at the
+    // limit says it was cut, under its own row.
+    @Test
+    fun `a kind that was cut says so`() {
+        render(
+            query = "a",
+            results = SearchResults(items = listOf(book("b1", "First Invented Book")), authors = emptyList(), itemsCut = true)
+        )
+
+        compose.onNodeWithText(CUT_LINE).assertIsDisplayed()
+    }
+
+    // Secondary text is 14sp and up (docs/ui-style-guide.md): smaller is
+    // unreadable at 3 metres.
+    @Test
+    fun `the cut line is readable from the sofa`() {
+        render(
+            query = "a",
+            results = SearchResults(items = listOf(book("b1", "First Invented Book")), authors = emptyList(), itemsCut = true)
+        )
+
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText(CUT_LINE).fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+
+        assertTrue(layouts.single().layoutInput.style.fontSize.value >= 14f)
+    }
+
+    @Test
+    fun `a kind that was not cut says nothing about it`() {
+        render(
+            query = "a",
+            results = SearchResults(items = listOf(book("b1", "First Invented Book")), authors = emptyList())
+        )
+
+        compose.onNodeWithText(CUT_LINE).assertDoesNotExist()
+    }
+
+    @Test
+    fun `only the kind that was cut says so`() {
+        render(
+            query = "a",
+            results = SearchResults(
+                items = listOf(book("b1", "First Invented Book")),
+                authors = listOf(Author(id = "a1", name = "An Invented Writer")),
+                authorsCut = true
+            )
+        )
+
+        compose.onAllNodesWithText(CUT_LINE).assertCountEquals(1)
+        compose.onNodeWithTag(SearchTags.cutLine("authors")).assertExists()
+        compose.onNodeWithTag(SearchTags.cutLine("items")).assertDoesNotExist()
+    }
+
     @Test
     fun `nothing matched says so`() {
         render(query = "zzz")
@@ -125,6 +183,10 @@ class SearchContentTest {
 
         compose.onNodeWithText("Search failed. Check the connection to your server.").assertIsDisplayed()
         compose.onNodeWithText("Nothing found", substring = true).assertDoesNotExist()
+    }
+
+    private companion object {
+        const val CUT_LINE = "Showing the first 50. Add a word to narrow it."
     }
 
     private fun book(id: String, title: String): LibraryItem = Gson().fromJson(
