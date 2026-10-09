@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.podcast
 
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.paulohenriquesg.fahrenheit.api.DownloadQueue
@@ -71,7 +72,10 @@ class PodcastViewModel(
     private val serverFormat: String?,
     private val favourites: LibraryFavourites? = null,
     private val progressStore: ProgressStore = ProgressStore.process,
-    private val clock: () -> Long = System::currentTimeMillis,
+    /** For the download window (#215): one that does not jump when the device sets its time. */
+    private val clock: () -> Long = SystemClock::elapsedRealtime,
+    /** Between polls of the download queue; a test moves its clock instead of waiting. */
+    private val watchPause: (suspend () -> Unit)? = null,
     scope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -264,10 +268,12 @@ class PodcastViewModel(
                     watch.watch(
                         onUpdate = { q, asked ->
                             queue = q
-                            // The watch knows what it awaits; a refusal is this screen's to remember.
-                            requests = requests.filterValues { it == DownloadRequest.Refused } + asked
+                            // Over what this screen asked, not instead of it: a refusal is
+                            // its own to remember, and a request still on its way not yet the watch's.
+                            requests = requests + asked
                             publish()
                         },
+                        pause = watchPause ?: DownloadWatch.pollPause,
                         reload = { reload()?.media?.episodes }
                     )
                 } while (watch.waiting)

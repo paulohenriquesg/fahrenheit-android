@@ -22,8 +22,9 @@ read "failed".
 - `getDownloadQueueDetails(libraryId)` leaves it out only when its
   `libraryId` is not the library asked about. That is set from
   `libraryItem.libraryId`, so the source does not explain the empty replies.
-- Debug builds now log each reply, `DownloadWatch: episode-downloads for …`,
-  so the next device run shows what the server said.
+- Debug builds now log the raw body of each `episode-downloads` reply
+  (`ApiClient`, via `HttpLoggingPolicy.logsBody`), so the next device run
+  shows exactly what the server sent.
 
 ## Design
 
@@ -36,10 +37,18 @@ read "failed".
   - `Asked` reads Requested until `FAIL_AFTER_MS` (2 min) has passed, then
     Failed.
 - **`DownloadWatch`** takes a clock and keeps each request until its episode
-  lands. While anything is awaited it reads the podcast again at every poll,
-  within its existing one-hour cap.
-- **The ViewModel** keeps a refusal across the watch's updates. The old code
-  lost it at the next poll.
+  lands, or until an hour has passed since it was asked for
+  (`GIVE_UP_AFTER_MS`). While anything is awaited it reads the podcast again
+  at every poll. A request given up on is still reported, so its row keeps
+  saying it failed, but the watch, and the page's restart of it, end. The
+  review found that without this a genuine failure was polled for as long as
+  the page lived.
+- **The ViewModel** merges what the watch reports over its own requests. A
+  refusal survives the watch's updates, where the old code lost it at the
+  next poll. A request still on its way is not dropped by a poll that lands
+  first.
+- **The clock is `elapsedRealtime`**, which does not jump when the device
+  sets its time.
 
 ## Tests (red first)
 
@@ -52,9 +61,16 @@ read "failed".
   - the device's case: empty queues, with the item read at every poll, until
     the episode lands at 10 s;
   - a late arrival after the window is still seen.
+- **`DownloadWatchTest`** (from review): a request nowhere to be seen for an
+  hour is given up on, and the watch ends.
 - **`PodcastViewModelTest`:**
   - an empty queue 10 s after asking still reads Requested;
-  - a refusal stays failed while another download is watched.
+  - a refusal stays failed while another download is watched;
+  - (from review) the device's whole path through the watch: Requested at
+    10 s, Failed past the window, then downloaded once the item has the
+    episode, without reopening.
+- **`HttpLoggingPolicyTest`:** only the queue's reply is logged whole, and
+  only in a debug build.
 
 ## Device check
 

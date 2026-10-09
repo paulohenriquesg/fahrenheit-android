@@ -145,4 +145,24 @@ class DownloadWatchTest {
 
         assertEquals(2, seen.size)
     }
+
+    // Review: kept until it lands, one that never does was polled for as long
+    // as the page lived. After an hour it is given up on - still reported, so
+    // its row keeps saying it failed - and the watch ends.
+    @Test
+    fun `one nowhere to be seen for an hour is given up on, and the watch ends`() = runBlocking {
+        val api = Api(emptyList())
+        val requests = mutableListOf<Map<String, DownloadRequest>>()
+        val watch = DownloadWatch(api, "lib", "p", now = { clock })
+
+        watch.request("feed:a", feedA)
+        // As the page runs it: again for as long as anything is awaited.
+        do {
+            watch.watch(onUpdate = { _, r -> requests += r }, pause = pause) { emptyList() }
+        } while (watch.waiting)
+
+        assertFalse(watch.waiting)
+        assertTrue("stopped near the hour, at $clock", clock in DownloadWatch.GIVE_UP_AFTER_MS..DownloadWatch.GIVE_UP_AFTER_MS + 5_000)
+        assertEquals(mapOf("feed:a" to DownloadRequest.Asked(at = 0)), requests.last())
+    }
 }

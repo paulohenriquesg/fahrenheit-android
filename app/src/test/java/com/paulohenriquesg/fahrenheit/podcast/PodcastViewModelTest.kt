@@ -110,6 +110,7 @@ class PodcastViewModelTest {
 
     private val store = ProgressStore()
     private var clock = 0L
+    private var watchPause: (suspend () -> Unit)? = null
     private var marks = mutableListOf<Triple<String, Boolean, Double?>>()
     private var markAnswer: suspend () -> Boolean = { true }
 
@@ -131,6 +132,7 @@ class PodcastViewModelTest {
         favourites = favourites,
         progressStore = store,
         clock = { clock },
+        watchPause = watchPause,
         scope = scope
     )
 
@@ -481,5 +483,33 @@ class PodcastViewModelTest {
 
         assertEquals(DownloadState.Failed, model.state.value.downloads[refused.key])
         assertEquals(DownloadState.Requested, model.state.value.downloads[other.key])
+    }
+
+    // Review: the whole path through the watch, as on the device - the queue
+    // empty throughout, the episode on the server only after the window.
+    @Test
+    fun `an episode that lands after the window goes requested, failed, then downloaded, without reopening`() {
+        val third = feedEpisode("g3", "Third Rail", 3)
+        val landed: LibraryItemResponse = gson.fromJson(
+            gson.toJson(item()).replace(""""episodes":[""", """"episodes":[{"id":"s3","title":"Third Rail","publishedAt":3,"guid":"g3"},"""),
+            LibraryItemResponse::class.java
+        )
+        val seen = mutableMapOf<Long, DownloadState?>()
+        lateinit var model: PodcastViewModel
+        watchPause = {
+            seen[clock] = model.state.value.downloads["feed:g3"]
+            clock += 5_000
+        }
+        val late = DownloadProgress.FAIL_AFTER_MS + 30_000
+        model = model(Api(me = Me(type = "admin"), feedEpisodes = listOf(third)), reload = { if (clock >= late) landed else item() })
+        val row = model.state.value.screen.rows.first { it.title == "Third Rail" }
+
+        model.download(row)
+
+        assertEquals(DownloadState.Requested, seen[10_000])
+        assertEquals(DownloadState.Failed, seen[DownloadProgress.FAIL_AFTER_MS + 5_000])
+        val now = model.state.value.screen.rows.first { it.title == "Third Rail" }
+        assertTrue(now.downloaded)
+        assertNull(model.state.value.downloads[now.key])
     }
 }

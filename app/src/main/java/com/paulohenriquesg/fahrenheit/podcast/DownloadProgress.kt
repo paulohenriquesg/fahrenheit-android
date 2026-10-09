@@ -4,12 +4,6 @@ import com.google.gson.JsonObject
 import com.paulohenriquesg.fahrenheit.api.DownloadQueue
 import com.paulohenriquesg.fahrenheit.api.QueuedDownload
 
-/**
- * Where a feed episode is on its way to the server (#76 step 3).
- *
- * The server reports no percentage: its queue says which episode is downloading
- * now and which wait, in order, across every podcast. That is what a row says.
- */
 /** An episode asked of the server from this screen. */
 sealed interface DownloadRequest {
     /** Asked at [at], in ms; failed only once [DownloadProgress.FAIL_AFTER_MS] has passed with nothing to show for it. */
@@ -19,6 +13,12 @@ sealed interface DownloadRequest {
     data object Refused : DownloadRequest
 }
 
+/**
+ * Where a feed episode is on its way to the server (#76 step 3).
+ *
+ * The server reports no percentage: its queue says which episode is downloading
+ * now and which wait, in order, across every podcast. That is what a row says.
+ */
 object DownloadProgress {
 
     /**

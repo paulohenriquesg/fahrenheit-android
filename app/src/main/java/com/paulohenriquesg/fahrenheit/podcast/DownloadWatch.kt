@@ -4,8 +4,7 @@ import com.google.gson.JsonObject
 import com.paulohenriquesg.fahrenheit.api.DownloadQueue
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.PodcastApi
-import android.util.Log
-import com.paulohenriquesg.fahrenheit.BuildConfig
+import android.os.SystemClock
 import kotlinx.coroutines.delay
 
 /**
@@ -19,7 +18,7 @@ class DownloadWatch(
     private val api: PodcastApi,
     private val libraryId: String,
     private val podcastId: String,
-    private val now: () -> Long = System::currentTimeMillis
+    private val now: () -> Long = SystemClock::elapsedRealtime
 ) {
     /**
      * Episodes asked for here and not yet on the server, by row key. One that
@@ -54,7 +53,7 @@ class DownloadWatch(
      */
     suspend fun watch(
         onUpdate: (DownloadQueue, Map<String, DownloadRequest>) -> Unit,
-        pause: suspend () -> Unit = { delay(POLL_INTERVAL_MS) },
+        pause: suspend () -> Unit = pollPause,
         reload: suspend () -> List<Episode>?
     ) {
         var wasBusy = false
@@ -62,14 +61,15 @@ class DownloadWatch(
             if (poll > 0) pause()
             // A queue that cannot be read this time is not the end of the watch.
             val queue = runCatching { api.downloadQueue(libraryId) }.getOrNull() ?: return@repeat
-            // #215: the reply was seen empty mid-download on 2.37.1; say what it was.
-            if (BuildConfig.DEBUG) Log.d(TAG, "episode-downloads for $libraryId: $queue")
             val busy = DownloadProgress.busy(queue, podcastId)
 
             // Something may have landed since the last look.
             val episodes = if (wasBusy || pending.isNotEmpty()) reload() else null
             pending.entries.removeAll { (key, feed) ->
-                (episodes?.any { EpisodeList.matches(it, feed) } == true).also { landed -> if (landed) asked.remove(key) }
+                val landed = episodes?.any { EpisodeList.matches(it, feed) } == true
+                if (landed) asked.remove(key)
+                // Given up on, it stays asked - its row keeps saying it failed - but is no longer awaited.
+                landed || now() - (asked[key] ?: 0) >= GIVE_UP_AFTER_MS
             }
             onUpdate(queue, asked.mapValues { DownloadRequest.Asked(it.value) })
 
@@ -78,11 +78,19 @@ class DownloadWatch(
         }
     }
 
-    private companion object {
-        const val TAG = "DownloadWatch"
-        const val POLL_INTERVAL_MS = 5_000L
+    companion object {
+        /**
+         * How long a request is looked for (#215): past the failure window it
+         * may still land, but not forever - every poll also reads the podcast.
+         */
+        const val GIVE_UP_AFTER_MS = 3_600_000L
+
+        /** Between polls. */
+        val pollPause: suspend () -> Unit = { delay(POLL_INTERVAL_MS) }
+
+        private const val POLL_INTERVAL_MS = 5_000L
 
         /** An hour: a long queue of other podcasts' episodes can take that. */
-        const val MAX_POLLS = 720
+        private const val MAX_POLLS = 720
     }
 }
