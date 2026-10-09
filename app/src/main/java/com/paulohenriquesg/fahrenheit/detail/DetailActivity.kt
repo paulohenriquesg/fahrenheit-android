@@ -29,6 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import com.paulohenriquesg.fahrenheit.favourites.Favourites
+import com.paulohenriquesg.fahrenheit.favourites.FavouritesChoice
+import com.paulohenriquesg.fahrenheit.favourites.LibraryFavourites
+import com.paulohenriquesg.fahrenheit.favourites.note
+import com.paulohenriquesg.fahrenheit.podcast.EpisodeHearts
+import com.paulohenriquesg.fahrenheit.podcast.EpisodeTabChoice
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeOrder
 import com.paulohenriquesg.fahrenheit.podcast.DownloadProgress
@@ -39,7 +45,6 @@ import com.paulohenriquesg.fahrenheit.api.Me
 import androidx.compose.runtime.mutableIntStateOf
 import com.paulohenriquesg.fahrenheit.podcast.DownloadWatch
 import com.paulohenriquesg.fahrenheit.api.DownloadQueue
-import com.paulohenriquesg.fahrenheit.podcast.EpisodeTab
 import com.paulohenriquesg.fahrenheit.podcast.FeedLoad
 import com.paulohenriquesg.fahrenheit.podcast.PodcastEpisodesView
 import com.paulohenriquesg.fahrenheit.podcast.PodcastFeed
@@ -223,7 +228,7 @@ class DetailActivity : ComponentActivity() {
         }
         DetailBody { margin ->
             if (!isBook) {
-                PodcastEpisodes(itemId, item, me, margin, onReloaded = { itemDetail = it }, onMarked = { meReads++ }, nowPlaying = nowPlaying)
+                PodcastEpisodes(itemId, item, me, margin, onReloaded = { itemDetail = it }, onMarked = { meReads++ }, returns = resumes, nowPlaying = nowPlaying)
             } else {
                 BookDetailView(
                     itemId = itemId,
@@ -278,12 +283,21 @@ class DetailActivity : ComponentActivity() {
         margin: PaddingValues,
         onReloaded: (LibraryItemResponse) -> Unit,
         onMarked: () -> Unit,
+        returns: Int,
         nowPlaying: @Composable () -> Unit
     ) {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         var feed by remember { mutableStateOf<FeedLoad>(FeedLoad.Unavailable) }
-        var tab by remember { mutableStateOf(EpisodeTab.All) }
+        val tabs = remember(itemId) { EpisodeTabChoice() }
+        // The library's Favourites playlist, for the hearts and the tab (#180):
+        // read again on every return, so a heart changed in the player shows.
+        val favourites = remember(item.libraryId) {
+            ApiClient.getPlaylistApi()?.let { LibraryFavourites(Favourites(it, FavouritesChoice(context)), item.libraryId) }
+        }
+        LaunchedEffect(favourites, returns) { favourites?.load() }
+        val inFavourites = favourites?.episodesOf(itemId)
+        LaunchedEffect(inFavourites == null) { tabs.follow(inFavourites) }
         var feedCheck by remember { mutableStateOf<FeedCheckState>(FeedCheckState.Idle) }
         var queue by remember { mutableStateOf(DownloadQueue(null, emptyList())) }
         var misses by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
@@ -333,12 +347,14 @@ class DetailActivity : ComponentActivity() {
         val screen = PodcastScreenModel.of(
             server = media.episodes.orEmpty(),
             feed = feed,
-            tab = tab,
+            tab = tabs.tab,
             lastEpisodeCheck = media.lastEpisodeCheck,
             autoDownload = media.autoDownloadEpisodes?.let { autoDownloads?.settings?.enabled ?: it },
             schedule = autoDownloads?.settings?.schedule ?: media.autoDownloadSchedule,
             now = now,
-            serverFormat = serverFormat
+            serverFormat = serverFormat,
+            favourites = inFavourites,
+            favouritesKept = tabs.kept
         )
         val header = DetailHeaderModel.podcast(item, screen.facts, resumeTitle = resumeEpisode?.title)
         val reload: suspend () -> LibraryItemResponse? = {
@@ -376,8 +392,8 @@ class DetailActivity : ComponentActivity() {
         Box(Modifier.fillMaxSize().padding(margin)) {
             PodcastEpisodesView(
                 screen = screen,
-                tab = tab,
-                onTab = { tab = it },
+                tab = tabs.tab,
+                onTab = { tabs.choose(it, inFavourites) },
                 downloads = downloads,
                 onPlay = play,
                 progress = heard,
@@ -413,6 +429,19 @@ class DetailActivity : ComponentActivity() {
                     }
                 },
                 coverItemId = itemId,
+                hearts = favourites?.playlist?.name?.let { name ->
+                    // Kept while nothing it shows changes, so the rows are not redrawn on every poll.
+                    remember(name, inFavourites) {
+                        EpisodeHearts(name, inFavourites.orEmpty()) { episode ->
+                            scope.launch {
+                                // Null for a press while another is on its way: that one's note will say.
+                                favourites.toggle(itemId, episode.id)?.let { change ->
+                                    Toast.makeText(context, change.note(context), Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                },
                 date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
                 focusFirstRow = header.primary == null,
                 title = media.metadata.title,

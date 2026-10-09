@@ -30,6 +30,11 @@ data class PodcastScreen(
  */
 object PodcastScreenModel {
 
+    /**
+     * @param favourites this show's episodes in the Favourites playlist; null for None (#180).
+     * @param favouritesKept those in it when the Favourites tab was chosen:
+     *   still listed after being taken out, until the tab is chosen again.
+     */
     fun of(
         server: List<Episode>,
         feed: FeedLoad,
@@ -38,18 +43,25 @@ object PodcastScreenModel {
         autoDownload: Boolean?,
         now: Long,
         serverFormat: String? = null,
-        schedule: String? = null
+        schedule: String? = null,
+        favourites: Set<String>? = null,
+        favouritesKept: Set<String> = emptySet()
     ): PodcastScreen {
         val feedEpisodes = (feed as? FeedLoad.Loaded)?.episodes
         val all = EpisodeList.merge(server, feedEpisodes)
         val onServer = all.count { it.downloaded }
-        // Tabs only when there are two kinds of row to tell apart.
-        val tabs = feedEpisodes?.let {
-            listOf(
+        // Tabs only when there are two kinds of row to tell apart: on the
+        // server or not, or in the Favourites playlist or not (#180).
+        val inFavourites = favourites?.let { EpisodeTab.Favourites to all.count { row -> row.onServer?.id in it } }
+        val tabs = when {
+            feedEpisodes != null -> listOfNotNull(
                 EpisodeTab.All to all.size,
                 EpisodeTab.OnServer to onServer,
-                EpisodeTab.NotDownloaded to all.size - onServer
+                EpisodeTab.NotDownloaded to all.size - onServer,
+                inFavourites
             )
+            inFavourites != null -> listOf(EpisodeTab.All to all.size, inFavourites)
+            else -> null
         }
         return PodcastScreen(
             facts = listOfNotNull(
@@ -67,7 +79,9 @@ object PodcastScreenModel {
                 }
             ),
             tabs = tabs,
-            rows = if (tabs == null) all else EpisodeList.filter(all, tab),
+            // An episode taken out on the Favourites tab stays until the tab is
+            // chosen again, so focus is not left on a row that went.
+            rows = if (tabs == null) all else EpisodeList.filter(all, tab, favourites?.plus(favouritesKept)),
             note = note(feed, all.isEmpty())
         )
     }

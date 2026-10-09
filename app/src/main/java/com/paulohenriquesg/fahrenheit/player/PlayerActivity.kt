@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import com.paulohenriquesg.fahrenheit.favourites.FavouriteButton
+import com.paulohenriquesg.fahrenheit.favourites.note
 import com.paulohenriquesg.fahrenheit.favourites.FavouriteHeart
 import com.paulohenriquesg.fahrenheit.favourites.Favourites
 import com.paulohenriquesg.fahrenheit.favourites.FavouritesChoice
@@ -457,12 +458,7 @@ class PlayerActivity : ComponentActivity() {
 
     /** The short note after the heart (frame 1). */
     private fun confirm(change: HeartChange) {
-        val text = when (change) {
-            is HeartChange.Added -> getString(R.string.favourite_added, change.playlist)
-            is HeartChange.Removed -> getString(R.string.favourite_removed, change.playlist)
-            HeartChange.Failed -> getString(R.string.favourites_change_failed)
-        }
-        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, change.note(this), Toast.LENGTH_SHORT).show()
     }
 
     private val playerSettings by lazy { PlayerSettings(this) }

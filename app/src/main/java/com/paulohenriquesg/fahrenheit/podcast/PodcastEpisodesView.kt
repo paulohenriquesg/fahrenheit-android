@@ -24,12 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
-import androidx.tv.material3.IconButton
-import androidx.tv.material3.IconButtonDefaults
-import androidx.tv.material3.LocalContentColor
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Download
@@ -41,6 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.paulohenriquesg.fahrenheit.favourites.EpisodeFavouriteButton
+import com.paulohenriquesg.fahrenheit.ui.elements.RowButton
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,10 +58,18 @@ import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 import com.paulohenriquesg.fahrenheit.utils.RichText
 import com.paulohenriquesg.fahrenheit.utils.formatDuration
 
+/**
+ * The heart on the focused episode row (#180, frame 2), while the library has
+ * a Favourites playlist: its name, this show's episodes in it, and a press.
+ * One value, so a page laid out anew (#205) passes the same thing.
+ */
+data class EpisodeHearts(val playlist: String, val episodes: Set<String>, val onToggle: (Episode) -> Unit)
+
 private val tabNames = mapOf(
     EpisodeTab.All to "All",
     EpisodeTab.OnServer to "On the server",
-    EpisodeTab.NotDownloaded to "Not downloaded"
+    EpisodeTab.NotDownloaded to "Not downloaded",
+    EpisodeTab.Favourites to "Favourites"
 )
 
 /**
@@ -89,6 +95,7 @@ fun PodcastEpisodesView(
     date: (EpisodeRow) -> String = { "" },
     focusFirstRow: Boolean = true,
     title: String = "",
+    hearts: EpisodeHearts? = null,
     header: @Composable () -> Unit = {}
 ) {
     // One list, header included, so moving down into the episodes pushes the
@@ -157,6 +164,7 @@ fun PodcastEpisodesView(
                 date = date(row),
                 modifier = if (index == 0) Modifier.focusRequester(initialFocus) else Modifier,
                 onMark = row.onServer?.let { episode -> { finished: Boolean -> onMark(episode, finished) } },
+                hearts = hearts,
                 onPress = {
                     val episode = row.onServer
                     when {
@@ -233,11 +241,12 @@ private fun EpisodeRowCard(
     date: String,
     modifier: Modifier = Modifier,
     onMark: ((Boolean) -> Unit)?,
+    hearts: EpisodeHearts?,
     onPress: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }
-    // The row or its button: the button shows while either holds focus, so
-    // Right can reach it and Left come back (#181).
+    // The row or its buttons: they show while any holds focus, so Right can
+    // reach them and Left come back (#181).
     var rowFocused by remember { mutableStateOf(false) }
     val finished = progress == EpisodeProgress.Heard
     Row(
@@ -347,37 +356,31 @@ private fun EpisodeRowCard(
                 )
             }
         }
-    }
-}
-
-/** Mark finished, or unfinished: a round TV button, inverted on focus as the transport's are. */
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun MarkButton(finished: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    IconButton(
-        onClick = onClick,
-        modifier = modifier.size(40.dp),
-        scale = IconButtonDefaults.scale(focusedScale = 1f),
-        colors = IconButtonDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            focusedContainerColor = MaterialTheme.colorScheme.onSurface,
-            focusedContentColor = MaterialTheme.colorScheme.surface
-        ),
-        border = IconButtonDefaults.border(
-            focusedBorder = Border(BorderStroke(3.dp, MaterialTheme.colorScheme.primary))
-        )
-    ) {
-        // A phone Icon reads the phone content colour, not the TV button's.
-        CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides LocalContentColor.current) {
-            Icon(
-                imageVector = Icons.Filled.Check,
-                contentDescription = stringResource(if (finished) R.string.mark_unfinished else R.string.mark_finished),
-                modifier = Modifier.size(22.dp)
-            )
+        // After Mark finished, on an episode the server has: a playlist holds only those.
+        if (hearts != null) {
+            Box(modifier = Modifier.width(MARK_SLOT), contentAlignment = Alignment.Center) {
+                val episode = row.onServer
+                if (rowFocused && episode != null) {
+                    EpisodeFavouriteButton(
+                        filled = episode.id in hearts.episodes,
+                        playlist = hearts.playlist,
+                        onClick = { hearts.onToggle(episode) },
+                        modifier = Modifier.testTag("episode_favourite_${row.key}")
+                    )
+                }
+            }
         }
     }
 }
+
+/** Mark finished, or unfinished. */
+@Composable
+private fun MarkButton(finished: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) = RowButton(
+    onClick = onClick,
+    icon = Icons.Filled.Check,
+    description = stringResource(if (finished) R.string.mark_unfinished else R.string.mark_finished),
+    modifier = modifier
+)
 
 private const val FINISHED_ALPHA = 0.55f
 private val MARK_SLOT = 56.dp
