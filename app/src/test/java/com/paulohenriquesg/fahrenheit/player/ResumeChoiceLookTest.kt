@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performSemanticsAction
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -20,6 +21,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
@@ -49,18 +51,19 @@ class ResumeChoiceLookTest {
         radiusDp - (radiusDp - strokeDp / 2) / sqrt(2f)
 
     /**
-     * The Stay answer's pixel at ([x], [y]) dp from its top-left, as drawn:
-     * grown by [scale] about its centre, as a focused button is.
+     * The Stay answer's pixels around ([x], [y]) dp from its top-left, as
+     * drawn: grown by [scale] about its centre, as a focused button is. Three
+     * by three, as a stroke this thin may fall either side of one pixel.
      */
-    private fun stayAt(map: PixelMap, x: Float, y: Float, scale: Float = 1f): Color {
+    private fun stayAround(map: PixelMap, x: Float, y: Float, scale: Float = 1f): List<Color> {
         val node = compose.onNodeWithTag("resume_stay").fetchSemanticsNode()
         val density = compose.density.density
         val at = node.positionInWindow
         val cx = node.size.width / 2f
         val cy = node.size.height / 2f
-        val px = at.x + cx + (x * density - cx) * scale
-        val py = at.y + cy + (y * density - cy) * scale
-        return map[px.toInt(), py.toInt()]
+        val px = (at.x + cx + (x * density - cx) * scale).roundToInt()
+        val py = (at.y + cy + (y * density - cy) * scale).roundToInt()
+        return (-1..1).flatMap { dy -> (-1..1).map { dx -> map[px + dx, py + dy] } }
     }
 
     private fun heightDp() = compose.onNodeWithTag("resume_stay").fetchSemanticsNode().size.height / compose.density.density
@@ -68,17 +71,20 @@ class ResumeChoiceLookTest {
     private fun differ(a: Color, b: Color) =
         maxOf(abs(a.red - b.red), abs(a.green - b.green), abs(a.blue - b.blue)) > 0.03f
 
+    /** Whether an outline runs through [pixels], against a bare [ground]. */
+    private fun outlined(pixels: List<Color>, ground: Color) = pixels.any { differ(it, ground) }
+
     @Test
     fun `unfocused, the outline follows the 16 dp corners`() {
         show()
         val map = window()
 
-        val outside = stayAt(map, 0.5f, 0.5f)
+        val outside = stayAround(map, 0.5f, 0.5f)[4]
         val corner = onArc(16f, 1.5f)
-        assertTrue(
-            "no outline on the 16 dp corner: ${stayAt(map, corner, corner)} against $outside",
-            differ(stayAt(map, corner, corner), outside)
-        )
+        assertTrue("no outline on the 16 dp corner", outlined(stayAround(map, corner, corner), outside))
+        // Inside the corner the container is clear: the card shows through.
+        val pill = onArc(heightDp() / 2, 1.5f)
+        assertFalse("an outline on the pill's arc", outlined(stayAround(map, pill, pill), outside))
     }
 
     @Test
@@ -89,17 +95,11 @@ class ResumeChoiceLookTest {
         val map = window()
         val grown = 1.1f
 
-        val filled = stayAt(map, heightDp() / 2, 4f, grown)
+        val filled = stayAround(map, heightDp() / 2, 5f, grown)[4]
         val pill = onArc(heightDp() / 2, 1.65f)
-        assertTrue(
-            "an outline on the pill's arc: ${stayAt(map, pill, pill, grown)} against $filled",
-            !differ(stayAt(map, pill, pill, grown), filled)
-        )
+        assertFalse("an outline on the pill's arc", outlined(stayAround(map, pill, pill, grown), filled))
         val corner = onArc(16f, 1.65f)
-        assertTrue(
-            "no outline on the 16 dp corner: ${stayAt(map, corner, corner, grown)} against $filled",
-            differ(stayAt(map, corner, corner, grown), filled)
-        )
+        assertTrue("no outline on the 16 dp corner", outlined(stayAround(map, corner, corner, grown), filled))
     }
 
     // The window drawn into a bitmap (captureToImage waits for a frame callback
