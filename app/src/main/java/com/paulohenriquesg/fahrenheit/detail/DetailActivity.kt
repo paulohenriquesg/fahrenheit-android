@@ -52,6 +52,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
+import com.paulohenriquesg.fahrenheit.player.ActionChip
+import com.paulohenriquesg.fahrenheit.podcast.DownloadSettings
+import com.paulohenriquesg.fahrenheit.podcast.DownloadsPanel
+import com.paulohenriquesg.fahrenheit.podcast.PodcastDownloads
+import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import android.util.Log
@@ -211,9 +221,9 @@ class DetailActivity : ComponentActivity() {
                 context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId))
             }
         }
-        DetailBody(isBook) { margin ->
+        DetailBody { margin ->
             if (!isBook) {
-                PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it }, onMarked = { meReads++ }, nowPlaying = nowPlaying)
+                PodcastEpisodes(itemId, item, me, margin, onReloaded = { itemDetail = it }, onMarked = { meReads++ }, nowPlaying = nowPlaying)
             } else {
                 BookDetailView(
                     itemId = itemId,
@@ -265,6 +275,7 @@ class DetailActivity : ComponentActivity() {
         itemId: String,
         item: LibraryItemResponse,
         me: Me?,
+        margin: PaddingValues,
         onReloaded: (LibraryItemResponse) -> Unit,
         onMarked: () -> Unit,
         nowPlaying: @Composable () -> Unit
@@ -289,6 +300,19 @@ class DetailActivity : ComponentActivity() {
         // Each fresh read is the server's word: playing a finished episode un-finishes it there.
         LaunchedEffect(me) { marking.settle() }
         val heard = EpisodeMarks.over(EpisodeProgress.index(me?.mediaProgress.orEmpty(), itemId), marking.marks)
+        // The show's own auto-download settings (#182): offered only to whom the server would take them from.
+        val settingsApi = ApiClient.getPodcastSettingsApi()
+        val autoDownloads = remember(itemId, settingsApi) {
+            settingsApi?.let { PodcastDownloads(itemId, DownloadSettings.of(item.media), it) }
+        }
+        val mayChangeDownloads = autoDownloads != null && DownloadSettings.mayChange(me)
+        var downloadsOpen by remember { mutableStateOf(false) }
+        var downloadsOpened by remember { mutableStateOf(false) }
+        val downloadsButton = remember { FocusRequester() }
+        LaunchedEffect(downloadsOpen) {
+            // Back to the button the panel was opened from.
+            if (!downloadsOpen && downloadsOpened) downloadsButton.requestFocusWhenAttached()
+        }
         val resumeEpisode = EpisodeProgress.resumable(
             me?.mediaProgress.orEmpty(), itemId, onServer = media.episodes.orEmpty().map { it.id }.toSet()
         )?.let { id -> media.episodes?.firstOrNull { it.id == id } }
@@ -311,7 +335,8 @@ class DetailActivity : ComponentActivity() {
             feed = feed,
             tab = tab,
             lastEpisodeCheck = media.lastEpisodeCheck,
-            autoDownload = media.autoDownloadEpisodes,
+            autoDownload = media.autoDownloadEpisodes?.let { autoDownloads?.settings?.enabled ?: it },
+            schedule = autoDownloads?.settings?.schedule ?: media.autoDownloadSchedule,
             now = now,
             serverFormat = serverFormat
         )
@@ -348,78 +373,99 @@ class DetailActivity : ComponentActivity() {
             context.startActivity(playEpisodeIntent(context, itemId, episode.id))
         }
 
-        PodcastEpisodesView(
-            screen = screen,
-            tab = tab,
-            onTab = { tab = it },
-            downloads = downloads,
-            onPlay = play,
-            progress = heard,
-            onMark = { episode, finished ->
-                val keepAt = if (finished) null else EpisodeMarks.keepAt(
-                    me?.mediaProgress?.firstOrNull { it.libraryItemId == itemId && it.episodeId == episode.id }
-                )
-                scope.launch {
-                    val worked = marking.mark(episode.id, finished) {
-                        // Through the playback service, in case this episode is the one playing.
-                        suspendCancellableCoroutine { done ->
-                            Playback.markFinished(context, itemId, finished, episode.id, keepAt) { done.resume(it) }
+        Box(Modifier.fillMaxSize().padding(margin)) {
+            PodcastEpisodesView(
+                screen = screen,
+                tab = tab,
+                onTab = { tab = it },
+                downloads = downloads,
+                onPlay = play,
+                progress = heard,
+                onMark = { episode, finished ->
+                    val keepAt = if (finished) null else EpisodeMarks.keepAt(
+                        me?.mediaProgress?.firstOrNull { it.libraryItemId == itemId && it.episodeId == episode.id }
+                    )
+                    scope.launch {
+                        val worked = marking.mark(episode.id, finished) {
+                            // Through the playback service, in case this episode is the one playing.
+                            suspendCancellableCoroutine { done ->
+                                Playback.markFinished(context, itemId, finished, episode.id, keepAt) { done.resume(it) }
+                            }
+                        }
+                        when (worked) {
+                            // Read again, so the rows and Resume say what the server now holds.
+                            true -> onMarked()
+                            false -> Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
+                            null -> Unit
                         }
                     }
-                    when (worked) {
-                        // Read again, so the rows and Resume say what the server now holds.
-                        true -> onMarked()
-                        false -> Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
-                        null -> Unit
-                    }
-                }
-            },
-            onDownload = { row ->
-                val episode = row.feed ?: return@PodcastEpisodesView
-                if (watch == null) return@PodcastEpisodesView
-                misses = misses + (row.key to 0)
-                scope.launch {
-                    if (watch.request(row.key, episode)) {
-                        startWatch()
-                    } else {
-                        misses = misses + (row.key to DownloadProgress.MISSES_BEFORE_FAILED)
-                    }
-                }
-            },
-            coverItemId = itemId,
-            date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
-            focusFirstRow = header.primary == null,
-            title = media.metadata.title,
-            header = {
-                DetailHeader(
-                    itemId = itemId,
-                    content = header,
-                    nowPlaying = nowPlaying,
-                    onPrimary = {
-                        (resumeEpisode ?: EpisodeOrder.newestFirst(media.episodes.orEmpty()).firstOrNull())?.let(play)
-                    },
-                    actions = {
-                        if (isAdmin) {
-                            FeedCheckRow(state = feedCheck, onCheck = {
-                                val podcastApi = ApiClient.getPodcastApi() ?: return@FeedCheckRow
-                                scope.launch {
-                                    FeedCheck(podcastApi).run(
-                                        podcastId = itemId,
-                                        episodesBefore = media.episodes?.size ?: 0,
-                                        onState = {
-                                            feedCheck = it
-                                            // What it found is queued; watch it arrive in the list.
-                                            if (it is FeedCheckState.Found && it.count > 0) startWatch()
-                                        },
-                                        reload = { reload()?.media?.episodes?.size }
-                                    )
-                                }
-                            })
+                },
+                onDownload = { row ->
+                    val episode = row.feed ?: return@PodcastEpisodesView
+                    if (watch == null) return@PodcastEpisodesView
+                    misses = misses + (row.key to 0)
+                    scope.launch {
+                        if (watch.request(row.key, episode)) {
+                            startWatch()
+                        } else {
+                            misses = misses + (row.key to DownloadProgress.MISSES_BEFORE_FAILED)
                         }
                     }
-                )
-            }
-        )
+                },
+                coverItemId = itemId,
+                date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
+                focusFirstRow = header.primary == null,
+                title = media.metadata.title,
+                header = {
+                    DetailHeader(
+                        itemId = itemId,
+                        content = header,
+                        nowPlaying = nowPlaying,
+                        onPrimary = {
+                            (resumeEpisode ?: EpisodeOrder.newestFirst(media.episodes.orEmpty()).firstOrNull())?.let(play)
+                        },
+                        actions = {
+                            if (mayChangeDownloads) {
+                                ActionChip(
+                                    text = "Downloads",
+                                    icon = Icons.Outlined.Settings,
+                                    onClick = { downloadsOpen = true; downloadsOpened = true },
+                                    modifier = Modifier.focusRequester(downloadsButton).testTag("podcast_downloads")
+                                )
+                            }
+                            if (isAdmin) {
+                                FeedCheckRow(state = feedCheck, onCheck = {
+                                    val podcastApi = ApiClient.getPodcastApi() ?: return@FeedCheckRow
+                                    scope.launch {
+                                        FeedCheck(podcastApi).run(
+                                            podcastId = itemId,
+                                            episodesBefore = media.episodes?.size ?: 0,
+                                            onState = {
+                                                feedCheck = it
+                                                // What it found is queued; watch it arrive in the list.
+                                                if (it is FeedCheckState.Found && it.count > 0) startWatch()
+                                            },
+                                            reload = { reload()?.media?.episodes?.size }
+                                        )
+                                    }
+                                })
+                            }
+                        }
+                    )
+                }
+            )
+        }
+        if (downloadsOpen && autoDownloads != null) {
+            DownloadsPanel(
+                settings = autoDownloads.settings,
+                failed = autoDownloads.failed,
+                onChange = { change -> scope.launch { autoDownloads.change(change) } },
+                onClose = {
+                    downloadsOpen = false
+                    autoDownloads.seen()
+                }
+            )
+        }
     }
 
     companion object {
@@ -461,16 +507,11 @@ class DetailActivity : ComponentActivity() {
 }
 
 /**
- * The details screen's body. A book keeps the screen's margin inside its
- * content (handed to [content]), so its Chapters panel reaches the screen's
- * edges; a podcast's screen is padded around, as before.
+ * The details screen's body. The screen's margin is kept inside the content
+ * (handed to [content]), so a panel - a book's Chapters, a podcast's
+ * Downloads (#182) - reaches the screen's edges.
  */
 @Composable
-internal fun DetailBody(isBook: Boolean, content: @Composable (PaddingValues) -> Unit) {
-    val margin = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
-    if (isBook) {
-        Box(Modifier.fillMaxSize()) { content(margin) }
-    } else {
-        Column(Modifier.fillMaxSize().padding(margin)) { content(PaddingValues()) }
-    }
+internal fun DetailBody(content: @Composable (PaddingValues) -> Unit) {
+    Box(Modifier.fillMaxSize()) { content(PaddingValues(horizontal = 24.dp, vertical = 16.dp)) }
 }

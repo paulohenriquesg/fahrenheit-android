@@ -61,6 +61,7 @@
     <string name="play">Play</string>
     <string name="mark_finished">Mark finished</string>
     <string name="mark_unfinished">Mark unfinished</string>
+    <string name="downloads_save_failed">Couldn\'t save that. Check the connection and try again.</string>
     <string name="mark_finished_failed">Couldn\'t tell the server. Check the connection and try again.</string>
     <string name="fact_read_by">Read by</string>
     <string name="fact_publisher">Publisher</string>

@@ -37,7 +37,8 @@ object PodcastScreenModel {
         lastEpisodeCheck: Long?,
         autoDownload: Boolean?,
         now: Long,
-        serverFormat: String? = null
+        serverFormat: String? = null,
+        schedule: String? = null
     ): PodcastScreen {
         val feedEpisodes = (feed as? FeedLoad.Loaded)?.episodes
         val all = EpisodeList.merge(server, feedEpisodes)
@@ -55,7 +56,12 @@ object PodcastScreenModel {
                 held(onServer, feedEpisodes?.let { all.size }),
                 checked(lastEpisodeCheck, now, serverFormat),
                 when (autoDownload) {
-                    true -> Fact("Automatic downloads on")
+                    true -> when (DownloadSchedule.choiceOf(schedule)) {
+                        ScheduleChoice.Hourly -> Fact("New episodes download every hour")
+                        ScheduleChoice.Daily -> Fact("New episodes download every day")
+                        ScheduleChoice.Weekly -> Fact("New episodes download every week")
+                        ScheduleChoice.Custom -> Fact("Automatic downloads on")
+                    }
                     false -> Fact("Automatic downloads off", warn = true)
                     null -> null
                 }

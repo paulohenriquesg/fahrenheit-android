@@ -32,8 +32,9 @@ class PodcastScreenModelTest {
         feed: FeedLoad = FeedLoad.Unavailable,
         tab: EpisodeTab = EpisodeTab.All,
         lastCheck: Long? = now - 705 * day,
-        autoDownload: Boolean? = false
-    ) = PodcastScreenModel.of(server, feed, tab, lastCheck, autoDownload, now, serverFormat = "yyyy-MM-dd")
+        autoDownload: Boolean? = false,
+        schedule: String? = null
+    ) = PodcastScreenModel.of(server, feed, tab, lastCheck, autoDownload, now, serverFormat = "yyyy-MM-dd", schedule = schedule)
 
     @Test
     fun `with the feed read, it says how much of it the server holds`() {
@@ -70,6 +71,16 @@ class PodcastScreenModelTest {
 
         assertEquals(Fact("Feed last checked: Today"), m.facts[1])
         assertEquals(Fact("Automatic downloads on"), m.facts[2])
+    }
+
+    // The header line says how often, when the schedule is one the panel names (#182).
+    @Test
+    fun `automatic downloads say how often`() {
+        assertEquals(Fact("New episodes download every hour"), model(autoDownload = true, schedule = "0 * * * *").facts[2])
+        assertEquals(Fact("New episodes download every day"), model(autoDownload = true, schedule = "0 0 * * *").facts[2])
+        assertEquals(Fact("New episodes download every week"), model(autoDownload = true, schedule = "0 0 * * 0").facts[2])
+        assertEquals(Fact("Automatic downloads on"), model(autoDownload = true, schedule = "*/30 * * * *").facts[2])
+        assertEquals(Fact("Automatic downloads off", warn = true), model(autoDownload = false, schedule = "0 0 * * *").facts[2])
     }
 
     @Test

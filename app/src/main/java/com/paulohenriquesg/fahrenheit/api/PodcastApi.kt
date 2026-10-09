@@ -75,8 +75,11 @@ data class FeedPodcast(@SerializedName("episodes") val episodes: List<JsonObject
 data class Me(
     @SerializedName("type") val type: String?,
     /** Everything the user has started, books and episodes alike (#78). */
-    @SerializedName("mediaProgress") val mediaProgress: List<MediaProgressResponse>? = null
+    @SerializedName("mediaProgress") val mediaProgress: List<MediaProgressResponse>? = null,
+    @SerializedName("permissions") val permissions: MePermissions? = null
 )
+
+data class MePermissions(@SerializedName("update") val update: Boolean? = null)
 
 data class CheckNewResponse(@SerializedName("episodes") val episodes: List<FeedEpisode>?)
 

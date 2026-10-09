@@ -69,7 +69,7 @@ class DetailNowPlayingTest {
     private fun showLongBook() {
         compose.setContent {
             FahrenheitTheme {
-                DetailBody(isBook = true) { margin ->
+                DetailBody { margin ->
                     BookDetailView(
                         itemId = "b1",
                         content = DetailHeaderContent(
