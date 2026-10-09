@@ -162,7 +162,9 @@ does not flash ⏸); an ended player still wants to play, and shows no bars.
 
 At the end of the queue - the newest episode, the end of a book - the session
 ends as Stop ends it, and the entry and the bar go (#179). One that goes while
-it holds focus first hands focus on, as Stop does (#53).
+it holds focus first hands focus on, as Stop does (#53). With the player open,
+it closes and goes back to where it was opened from - the book's or podcast's
+screen, or Home - adding nothing to go Back through.
 
 The open entry and the bar say "Chapter · N min left" in two texts: only the
 chapter's name is shortened, and the time left always shows (#198).

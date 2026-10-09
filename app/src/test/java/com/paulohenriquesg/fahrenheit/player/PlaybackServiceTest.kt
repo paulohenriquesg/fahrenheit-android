@@ -16,6 +16,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import androidx.media3.session.SessionResult
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -103,6 +104,19 @@ class PlaybackServiceTest {
         Playback.end(controller)
 
         runMainLooperUntil { service.get().sessionPlayer!!.mediaItemCount == 0 }
+    }
+
+    // #179: the end of the queue does what Stop does; with no player screen
+    // open, that is all - nothing is opened.
+    @Test
+    fun `ending with no screen open opens nothing`() {
+        val controller = connect()
+        queued(controller, startAt = 0.0)
+
+        Playback.end(controller)
+        runMainLooperUntil { service.get().sessionPlayer!!.mediaItemCount == 0 }
+
+        assertNull(shadowOf(context).nextStartedActivity)
     }
 
     // #155: Back, like Home, leaves the player and keeps playing. The screen
