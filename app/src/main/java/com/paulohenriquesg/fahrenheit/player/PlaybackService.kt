@@ -107,6 +107,8 @@ class PlaybackService : MediaSessionService() {
             reporting.beforeLeaving()
             watch.beforeLeaving()
         }
+        // The end of the queue ends the session, as Stop does (#179).
+        exo.addListener(QueueEnd(guarded))
         val marker = FinishMarker(
             exo,
             reporting::closeAndWait,

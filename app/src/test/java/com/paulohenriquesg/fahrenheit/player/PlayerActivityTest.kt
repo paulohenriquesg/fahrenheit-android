@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -72,5 +73,17 @@ class PlayerActivityTest {
         assertEquals("e3", started.getStringExtra("episode_id"))
         assertTrue(started.getBooleanExtra("auto_play", false))
         playing.release()
+    }
+
+    // #179, the maintainer's choice: the queue ending with the player open
+    // goes back to where it was opened from - and adds no screen to go Back to.
+    @Test
+    fun `the queue ending closes the player, opening nothing`() {
+        val player = screen.create().get()
+
+        PlayerActivity.closeAtQueueEnd(player)
+
+        assertTrue(player.isFinishing)
+        assertNull(shadowOf(player).nextStartedActivity)
     }
 }

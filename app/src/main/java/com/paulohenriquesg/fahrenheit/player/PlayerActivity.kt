@@ -188,6 +188,13 @@ class PlayerActivity : ComponentActivity() {
             connected?.addListener(follow)
             onDispose { connected?.removeListener(follow) }
         }
+        // Played to the end: nothing left to show (#179). Keyed on the episode
+        // shown, which follows auto-advance, so the end is the last one's.
+        DisposableEffect(connected, itemId, shownEpisode) {
+            val watch = connected?.let { QueueEndWatch(it, itemId, shownEpisode) { closeAtQueueEnd(this@PlayerActivity) } }
+            watch?.let { connected.addListener(it) }
+            onDispose { watch?.let { connected.removeListener(it) } }
+        }
         // Keyed on the item, not the episode: following a move is not a new start.
         var ready by remember(connected, playing?.itemId) { mutableStateOf(false) }
         // Which position to continue from, when the server's is newer and from
@@ -206,7 +213,7 @@ class PlayerActivity : ComponentActivity() {
         }
         val listening = remember(connected, playing) {
             if (connected == null || playing == null) null
-            else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds, connected::sendCustomCommand)
+            else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds, playing.episodeId, connected::sendCustomCommand)
         }
         LaunchedEffect(connected, playing) {
             if (connected == null || playing == null) return@LaunchedEffect
@@ -536,6 +543,13 @@ class PlayerActivity : ComponentActivity() {
             player.startActivity(createIntent(player, itemId, episodeId, autoPlay = true))
             player.finish()
         }
+
+        /**
+         * The queue played to its end with the player open (#179): back to
+         * where it was opened from - the book's or podcast's screen, or Home.
+         * Closing, not opening: Back has no extra screen to go through.
+         */
+        internal fun closeAtQueueEnd(player: android.app.Activity) = player.finish()
 
         /**
          * "Go to podcast" leaves the player for the podcast's screen; the

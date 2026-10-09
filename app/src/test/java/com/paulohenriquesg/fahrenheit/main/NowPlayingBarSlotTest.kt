@@ -105,6 +105,24 @@ class NowPlayingBarSlotTest {
         compose.onNodeWithTag("content").assertIsFocused()
     }
 
+    // #179: the end of the queue ends it as Stop does, with focus on Stop.
+    @Test
+    fun `the bar going by itself moves focus into the screen first`() {
+        player = TestExoPlayerBuilder(compose.activity).setMediaSourceFactory(hourLongFiles()).build()
+        queue()
+        show()
+        compose.onNodeWithTag(NOW_PLAYING_BAR_STOP_TAG).performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+
+        // The service, at the end of the queue.
+        compose.runOnUiThread { player!!.run { stop(); clearMediaItems() } }
+        run(player!!).untilPendingCommandsAreFullyHandled()
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(NOW_PLAYING_BAR_TAG).assertDoesNotExist()
+        compose.onNodeWithTag("content").assertIsFocused()
+    }
+
     // Review: back from the player the screen has no controller until it
     // connects again. The bar went and came back, taking focus with it.
     @Test

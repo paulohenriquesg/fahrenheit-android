@@ -23,6 +23,7 @@ class ListeningControls(
     chapters: List<Chapter>?,
     total: Double,
     private val memory: SpeedMemory,
+    private val episodeId: String? = null,
     private val send: (SessionCommand, Bundle) -> ListenableFuture<SessionResult>
 ) {
     private val chapterEnds = ChapterClock.spans(chapters, total).map { it.end }
@@ -41,9 +42,13 @@ class ListeningControls(
         send(SleepCommand.COMMAND, SleepCommand.args(choice, chapterEnds))
     }
 
-    /** Asks the service to mark what is queued finished or not ([FinishMarker]); [onDone] hears whether it worked. */
+    /**
+     * Asks the service to mark this book or episode finished or not
+     * ([FinishMarker]); [onDone] hears whether it worked. Named, not "whatever
+     * is queued": at the end the queue empties with the screen still showing (#179).
+     */
     fun markFinished(finished: Boolean, onDone: (Boolean) -> Unit) {
-        val answer = send(FinishCommand.COMMAND, FinishCommand.args(finished))
+        val answer = send(FinishCommand.COMMAND, FinishCommand.args(finished, itemId, episodeId))
         answer.addListener(
             { onDone(runCatching { answer.get().resultCode == SessionResult.RESULT_SUCCESS }.getOrDefault(false)) },
             MoreExecutors.directExecutor()

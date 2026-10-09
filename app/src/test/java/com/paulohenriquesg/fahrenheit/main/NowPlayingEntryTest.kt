@@ -1,6 +1,9 @@
 package com.paulohenriquesg.fahrenheit.main
 
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -11,6 +14,8 @@ import androidx.compose.ui.test.performSemanticsAction
 import com.paulohenriquesg.fahrenheit.player.RailEntry
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,7 +44,8 @@ class NowPlayingEntryTest {
         show(book, open = false)
         compose.onNodeWithContentDescription("A Long Drift").assertIsDisplayed()
         compose.onNodeWithContentDescription("Playing").assertExists()
-        compose.onNodeWithText("Chapter 12 · 20 min left").assertDoesNotExist()
+        compose.onNodeWithText("Chapter 12").assertDoesNotExist()
+        compose.onNodeWithText("· 20 min left").assertDoesNotExist()
     }
 
     @Test fun `paused says so`() {
@@ -51,7 +57,8 @@ class NowPlayingEntryTest {
         show(book, open = true)
         compose.onNodeWithText("A Long Drift").assertIsDisplayed()
         // Whole minutes, as the mock writes it: the seconds would jump with each poll.
-        compose.onNodeWithText("Chapter 12 · 20 min left").assertIsDisplayed()
+        compose.onNodeWithText("Chapter 12").assertIsDisplayed()
+        compose.onNodeWithText("· 20 min left").assertIsDisplayed()
     }
 
     @Test fun `an episode says what is left of it`() {
@@ -69,12 +76,14 @@ class NowPlayingEntryTest {
 
     @Test fun `an untitled chapter is numbered`() {
         show(book.copy(chapter = null, chapterNumber = 3), open = true)
-        compose.onNodeWithText("Chapter 3 · 20 min left").assertIsDisplayed()
+        compose.onNodeWithText("Chapter 3").assertIsDisplayed()
+        compose.onNodeWithText("· 20 min left").assertIsDisplayed()
     }
 
     @Test fun `under a minute left says the seconds`() {
         show(book.copy(leftSeconds = 42.0), open = true)
-        compose.onNodeWithText("Chapter 12 · 42 s left").assertIsDisplayed()
+        compose.onNodeWithText("Chapter 12").assertIsDisplayed()
+        compose.onNodeWithText("· 42 s left").assertIsDisplayed()
     }
 
     // #155: Back from the player keeps playing; stopping is here.
@@ -96,5 +105,25 @@ class NowPlayingEntryTest {
     @Test fun `closed, no Stop`() {
         show(book, open = false)
         compose.onNodeWithTag(NOW_PLAYING_STOP_TAG).assertDoesNotExist()
+    }
+
+    // #198: the time left always shows; only the chapter's name is shortened.
+    @Test fun `a long chapter name is shortened, and the time left shows in full`() {
+        show(book.copy(chapter = "A chapter whose name runs on far past the width of the entry, and further still"), open = true)
+        val chapter = layout(NOW_PLAYING_CHAPTER_TAG)
+        val left = layout(NOW_PLAYING_LEFT_TAG)
+        assertTrue(chapter.isLineEllipsized(0))
+        assertFalse(left.isLineEllipsized(0))
+        assertFalse(left.hasVisualOverflow)
+        compose.onNodeWithTag(NOW_PLAYING_LEFT_TAG, useUnmergedTree = true).assertTextEquals("· 20 min left")
+        val within = compose.onNodeWithTag(NOW_PLAYING_TAG).getBoundsInRoot()
+        val shown = compose.onNodeWithTag(NOW_PLAYING_LEFT_TAG, useUnmergedTree = true).getBoundsInRoot()
+        assertTrue("the time left ends inside the entry", shown.right <= within.right)
+    }
+
+    private fun layout(tag: String): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithTag(tag, useUnmergedTree = true).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
+        return results.single()
     }
 }

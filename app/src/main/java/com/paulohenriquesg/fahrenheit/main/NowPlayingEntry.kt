@@ -27,6 +27,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.paulohenriquesg.fahrenheit.player.RAIL_POLL_MS
@@ -59,6 +63,8 @@ const val NOW_PLAYING_EQUALISER_TAG = "now_playing_equaliser"
 const val NOW_PLAYING_PAUSED_TAG = "now_playing_paused"
 const val NOW_PLAYING_COVER_TAG = "now_playing_cover"
 const val NOW_PLAYING_RING_TAG = "now_playing_ring"
+const val NOW_PLAYING_CHAPTER_TAG = "now_playing_chapter"
+const val NOW_PLAYING_LEFT_TAG = "now_playing_left"
 
 /**
  * The rail's way back to the player (#107; the rail frames of
@@ -90,12 +96,7 @@ fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit
                 if (open) {
                     Column(Modifier.weight(1f)) {
                         Text(entry.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            leftLine(entry),
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        LeftLine(entry)
                     }
                 }
             }
@@ -119,7 +120,11 @@ fun NowPlayingEntry(entry: RailEntry, open: Boolean, onOpen: (RailEntry) -> Unit
  * The entry for what [player] has queued, or nothing. Reads the player
  * inside itself, so its changes redraw this entry and not the whole screen.
  *
- * @param onStopped after Stop has ended playback: the focused button is about to go.
+ * An entry that goes by itself - the end of the queue (#179) - while it holds
+ * focus stays until [onStopped] has moved focus out, as Stop does (#53).
+ *
+ * @param onStopped after Stop has ended playback, or the queue has ended with
+ *   focus on the entry: the focused button is about to go.
  */
 @Composable
 fun NowPlayingSlot(
@@ -129,11 +134,34 @@ fun NowPlayingSlot(
     onOpen: (RailEntry) -> Unit,
     onStopped: () -> Unit = {}
 ) {
-    val entry = rememberRailEntry(player, chaptersOf) ?: return
-    NowPlayingEntry(entry, open, onOpen, onStop = {
-        Playback.end(player)
-        onStopped()
-    })
+    val live = rememberRailEntry(player, chaptersOf)
+    val kept = remember { KeptEntry() }
+    var focused by remember { mutableStateOf(false) }
+    val leaving = live == null && focused
+    if (!leaving) kept.entry = live
+    val entry = kept.entry ?: return
+    if (leaving) {
+        LaunchedEffect(Unit) {
+            onStopped()
+            // Gone either way: one that could not hand focus on would stay for good.
+            focused = false
+        }
+    }
+    NowPlayingEntry(
+        entry,
+        open,
+        onOpen,
+        onStop = {
+            Playback.end(player)
+            onStopped()
+        },
+        modifier = Modifier.onFocusChanged { focused = it.hasFocus }
+    )
+}
+
+/** The last entry shown; not state, so keeping it redraws nothing. */
+internal class KeptEntry {
+    var entry: RailEntry? = null
 }
 
 /** Stop, beside or under Now playing: ends the listening session (#155, #159). */
@@ -161,12 +189,36 @@ internal fun StopButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
 suspend fun queuedChapters(itemId: String): List<Chapter>? =
     ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.media?.chapters
 
-/** "Chapter · N min left", or what is left of an episode or an unchaptered book. */
+/**
+ * "Chapter · N min left", or what is left of an episode or an unchaptered book.
+ * Two texts for a book: only the chapter's name is shortened, and the time
+ * left always shows (#198) - one line with one ellipsis lost it to a long name.
+ */
 @Composable
-internal fun leftLine(entry: RailEntry): String {
+internal fun LeftLine(entry: RailEntry) {
     val left = leftWords(entry.leftSeconds)
     val chapter = entry.chapter ?: entry.chapterNumber?.let { stringResource(R.string.chapter_number, it) }
-    return chapter?.let { stringResource(R.string.rail_chapter_left, it, left) } ?: stringResource(R.string.time_left, left)
+    val style = MaterialTheme.typography.bodySmall
+    if (chapter == null) {
+        Text(stringResource(R.string.time_left, left), style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        return
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            chapter,
+            style = style,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false).testTag(NOW_PLAYING_CHAPTER_TAG)
+        )
+        Text(
+            stringResource(R.string.rail_left_after_chapter, left),
+            style = style,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.testTag(NOW_PLAYING_LEFT_TAG)
+        )
+    }
 }
 
 /** Whole minutes, as the mock writes it - the seconds would jump with each poll - and seconds under one. */
