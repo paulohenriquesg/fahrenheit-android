@@ -36,4 +36,18 @@ class AppVisibilityTest {
         assertFalse(visibility.playerVisible)
         assertTrue(visibility.visible)
     }
+
+    // #207: coming back to the app reads the server's progress again; going
+    // from one screen to the next is not coming back - the next starts first.
+    @Test
+    fun `a start says whether it brought the app to the front`() {
+        val visibility = AppVisibility()
+
+        assertTrue("launched", visibility.started())
+        assertFalse("the next screen", visibility.started())
+        visibility.stopped()
+        visibility.stopped()
+
+        assertTrue("back from the TV's home screen", visibility.started())
+    }
 }

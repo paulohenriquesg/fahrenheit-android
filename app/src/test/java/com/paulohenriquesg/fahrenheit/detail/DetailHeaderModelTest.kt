@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.detail
 
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.podcast.Fact
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -27,6 +28,23 @@ class DetailHeaderModelTest {
         LibraryItemResponse::class.java
     )
 
+    /** The item's own copy of its progress, as most cases here need; the screen passes the store's (#207). */
+    private fun header(item: LibraryItemResponse) = DetailHeaderModel.book(item, item.userMediaProgress)
+
+    private fun progressOf(item: LibraryItemResponse) = DetailHeaderModel.progressOf(item.userMediaProgress)
+
+    // #207: the item was read on open; what the player and the marks wrote since is in the store.
+    @Test
+    fun `the header says what it is given, not the item's copy from when the page opened`() {
+        val opened = book(progress = """{"progress":0.34,"currentTime":19680.0,"isFinished":false}""")
+        val now = MediaProgressResponse(libraryItemId = "b1", currentTime = 58200.0, progress = 1.0, isFinished = true)
+
+        val header = DetailHeaderModel.book(opened, now)
+
+        assertEquals(Fact("Finished"), header.chips.last())
+        assertEquals("Play", header.primary)
+    }
+
     private fun podcast(genres: String = """["Technology","News:Tech News"]""", episodes: Int = 2): LibraryItemResponse =
         Gson().fromJson(
             """{"id":"p1","mediaType":"podcast","media":{"metadata":{"title":"APIs You Won't Hate","author":"APIs You Won't Hate",
@@ -36,12 +54,12 @@ class DetailHeaderModelTest {
 
     @Test
     fun `a book's by-line names its authors and narrators`() {
-        assertEquals("Andy Weir · narrated by Ray Porter", DetailHeaderModel.book(book()).byline)
+        assertEquals("Andy Weir · narrated by Ray Porter", header(book()).byline)
     }
 
     @Test
     fun `several authors are listed, and a book with no narrator says only who wrote it`() {
-        val header = DetailHeaderModel.book(
+        val header = header(
             book(authors = """[{"id":"a","name":"Terry Pratchett"},{"id":"b","name":"Neil Gaiman"}]""", narrators = "[]")
         )
 
@@ -50,7 +68,7 @@ class DetailHeaderModelTest {
 
     @Test
     fun `a book's facts are its length, year, genre and how far in`() {
-        val header = DetailHeaderModel.book(book(progress = """{"progress":0.34,"currentTime":19680.0,"isFinished":false}"""))
+        val header = header(book(progress = """{"progress":0.34,"currentTime":19680.0,"isFinished":false}"""))
 
         assertEquals(
             listOf(Fact("16h 10m"), Fact("2021"), Fact("Science Fiction"), Fact("34% in")),
@@ -60,7 +78,7 @@ class DetailHeaderModelTest {
 
     @Test
     fun `facts the server did not send are left out`() {
-        val header = DetailHeaderModel.book(book(genres = "[]", year = null))
+        val header = header(book(genres = "[]", year = null))
 
         assertEquals(listOf(Fact("16h 10m")), header.chips)
     }
@@ -68,33 +86,33 @@ class DetailHeaderModelTest {
     // #194: no genres, or only blank ones, leave the genre out rather than an empty fact.
     @Test
     fun `blank genres are left out`() {
-        assertEquals(listOf(Fact("16h 10m")), DetailHeaderModel.book(book(genres = """[" ",""]""", year = null)).chips)
+        assertEquals(listOf(Fact("16h 10m")), header(book(genres = """[" ",""]""", year = null)).chips)
         assertEquals(
             listOf(Fact("16h 10m"), Fact("Science Fiction")),
-            DetailHeaderModel.book(book(genres = """[" ","Science Fiction"]""", year = null)).chips
+            header(book(genres = """[" ","Science Fiction"]""", year = null)).chips
         )
     }
 
     @Test
     fun `a finished book says so`() {
-        val header = DetailHeaderModel.book(book(progress = """{"progress":1.0,"currentTime":58200.0,"isFinished":true}"""))
+        val header = header(book(progress = """{"progress":1.0,"currentTime":58200.0,"isFinished":true}"""))
 
         assertEquals(Fact("Finished"), header.chips.last())
     }
 
     @Test
     fun `a book in progress says where it resumes`() {
-        val header = DetailHeaderModel.book(book(progress = """{"progress":0.34,"currentTime":19680.0,"isFinished":false}"""))
+        val header = header(book(progress = """{"progress":0.34,"currentTime":19680.0,"isFinished":false}"""))
 
         assertEquals("Resume at 5h 28m", header.primary)
     }
 
     @Test
     fun `a book not started, or finished, just plays`() {
-        assertEquals("Play", DetailHeaderModel.book(book()).primary)
+        assertEquals("Play", header(book()).primary)
         assertEquals(
             "Play",
-            DetailHeaderModel.book(book(progress = """{"progress":1.0,"currentTime":58200.0,"isFinished":true}""")).primary
+            header(book(progress = """{"progress":1.0,"currentTime":58200.0,"isFinished":true}""")).primary
         )
     }
 
@@ -119,13 +137,13 @@ class DetailHeaderModelTest {
 
     @Test
     fun `the title comes through`() {
-        assertEquals("Project Hail Mary", DetailHeaderModel.book(book()).title)
+        assertEquals("Project Hail Mary", header(book()).title)
     }
 
     // Seen on the stick: 14 seconds in read "Resume at 0m" and "0% in".
     @Test
     fun `a book only seconds in does not claim to resume at zero`() {
-        val header = DetailHeaderModel.book(book(progress = """{"progress":0.00024,"currentTime":14.0,"isFinished":false}"""))
+        val header = header(book(progress = """{"progress":0.00024,"currentTime":14.0,"isFinished":false}"""))
 
         assertEquals("Resume", header.primary)
         assertEquals(Fact("Just started"), header.chips.last())
@@ -135,7 +153,7 @@ class DetailHeaderModelTest {
     // blank line and a lone ellipsis.
     @Test
     fun `the preview runs paragraphs together instead of spending lines on breaks`() {
-        val header = DetailHeaderModel.book(book())
+        val header = header(book())
         val broken = DetailHeaderModel.previewOf("<b>The first novel!</b><br /><br />When a shuttle fails,<p>Pike</p><p>suspects</p>")
 
         assertEquals("<b>The first novel!</b> When a shuttle fails, Pike suspects", broken)
@@ -154,8 +172,8 @@ class DetailHeaderModelTest {
     // #134: the book screen's facts list says how far in, where the chip did.
     @Test
     fun `how far in, as the book screen's facts say it`() {
-        assertEquals("34% in", DetailHeaderModel.progressOf(book(progress = """{"currentTime":19788.0,"progress":0.34,"isFinished":false}""")))
-        assertEquals("Finished", DetailHeaderModel.progressOf(book(progress = """{"currentTime":100.0,"progress":1.0,"isFinished":true}""")))
-        assertEquals(null, DetailHeaderModel.progressOf(book()))
+        assertEquals("34% in", progressOf(book(progress = """{"currentTime":19788.0,"progress":0.34,"isFinished":false}""")))
+        assertEquals("Finished", progressOf(book(progress = """{"currentTime":100.0,"progress":1.0,"isFinished":true}""")))
+        assertEquals(null, progressOf(book()))
     }
 }

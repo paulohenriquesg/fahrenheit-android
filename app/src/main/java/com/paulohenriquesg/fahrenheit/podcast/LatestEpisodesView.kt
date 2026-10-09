@@ -70,7 +70,9 @@ fun LatestEpisodesView(
     load: suspend (String) -> Result<List<RecentPodcastEpisode>> = { id ->
         ApiClient.getBrowseApi()?.let { BrowseRepository(it).recentEpisodes(id) }
             ?: Result.failure(IllegalStateException("not signed in"))
-    }
+    },
+    /** What has been heard (#78), by episode id, from the shared store (#207). */
+    heard: Map<String, EpisodeProgress> = emptyMap()
 ) {
     val context = LocalContext.current
     var episodes by remember { mutableStateOf<List<RecentPodcastEpisode>>(emptyList()) }
@@ -78,23 +80,6 @@ fun LatestEpisodesView(
     var loadFailed by remember { mutableStateOf(false) }
     // The server decides how a date is written and says so at login.
     val serverDateFormat = remember { SharedPreferencesHandler(context).getUserPreferences().dateFormat }
-    // What has been heard (#78): one GET /api/me, read again each time the
-    // screen comes back, e.g. from the player.
-    var heard by remember { mutableStateOf<Map<String, EpisodeProgress>>(emptyMap()) }
-    var resumes by remember { mutableIntStateOf(0) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) resumes++
-        }
-        lifecycle.addObserver(observer)
-        onDispose { lifecycle.removeObserver(observer) }
-    }
-    LaunchedEffect(resumes) {
-        val podcastApi = ApiClient.getPodcastApi() ?: return@LaunchedEffect
-        runCatching { podcastApi.me() }.onSuccess { heard = EpisodeProgress.byEpisode(it.mediaProgress.orEmpty()) }
-    }
-
     LaunchedEffect(libraryId) {
         load(libraryId)
             .onSuccess { episodes = it; loadFailed = false }

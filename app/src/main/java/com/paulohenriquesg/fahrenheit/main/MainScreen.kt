@@ -86,7 +86,9 @@ import com.paulohenriquesg.fahrenheit.ui.elements.AuthorShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.SeriesShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.ShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverProgress
-import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
+import com.paulohenriquesg.fahrenheit.progress.ProgressStore
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.mutableIntStateOf
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsFluid
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsRow
@@ -98,12 +100,14 @@ import com.paulohenriquesg.fahrenheit.utils.StartupTimeline
 fun MainScreen(
     fetchLibraryItems: suspend (String, LibraryQuery) -> List<LibraryItem>,
     fetchPersonalizedView: suspend (String) -> List<Shelf>,
-    fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() },
     /** The playback service's player, while this screen is visible; null when not connected (#107). */
     playback: Player? = null,
     /** Favourites (#180), while signed in. */
-    favourites: () -> Favourites? = { null }
+    favourites: () -> Favourites? = { null },
+    /** Home's state, out of this composable as it is touched (#208). */
+    homeModel: HomeViewModel = viewModel { HomeViewModel(ProgressStore.process) }
 ) {
+    val home by homeModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -435,7 +439,7 @@ fun MainScreen(
                     )
                 }
                 when (view) {
-                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, isLoadingHome, fetchProgress, onSeeAll = { tile ->
+                    MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, isLoadingHome, home.covers, onSeeAll = { tile ->
                         // As though the rail's row had been chosen, so the rail
                         // highlights the screen the tile opened.
                         MainView.forMenuAction(tile.opens)?.let { highlightedMenuItemId = it.menuItemId }
@@ -455,7 +459,7 @@ fun MainScreen(
                     MainView.COLLECTIONS -> CollectionsBrowseView(collectionsList, isLoadingCollections)
                     MainView.STATS -> StatsBrowseView(listeningStats, isLoadingStats)
                     MainView.LATEST -> currentLibrary?.id?.let { id ->
-                        com.paulohenriquesg.fahrenheit.podcast.LatestEpisodesView(libraryId = id)
+                        com.paulohenriquesg.fahrenheit.podcast.LatestEpisodesView(libraryId = id, heard = home.episodes)
                     }
                     MainView.SETTINGS -> SettingsView(
                         theme = ThemeManager.preference(context),
@@ -555,26 +559,12 @@ fun PersonalizedHomeView(
     shelves: List<Shelf>,
     libraryId: String?,
     isLoading: Boolean = false,
-    fetchProgress: suspend () -> List<MediaProgressResponse> = { emptyList() },
+    // The shelves carry no progress: it comes from the shared store (#207),
+    // which the player writes as it reports.
+    progress: CoverProgress = CoverProgress.None,
     onSeeAll: (ShelfSeeAll.Tile) -> Unit = {}
 ) {
     val context = LocalContext.current
-    // The shelves carry no progress, so it comes from GET /api/me: read again
-    // with each new set of shelves and on every return, typically from the
-    // player, so a cover's time left is not the one from before listening.
-    var progress by remember { mutableStateOf(CoverProgress.None) }
-    var resumes by remember { mutableIntStateOf(0) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) resumes++
-        }
-        lifecycle.addObserver(observer)
-        onDispose { lifecycle.removeObserver(observer) }
-    }
-    LaunchedEffect(shelves, resumes) {
-        runCatching { fetchProgress() }.onSuccess { progress = CoverProgress.index(it) }
-    }
     // The shelves Home draws, each with what it does (#147); empty ones and
     // ones it cannot draw are left out.
     val drawn = shelves

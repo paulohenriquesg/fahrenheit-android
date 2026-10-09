@@ -253,4 +253,39 @@ class PlaybackReportingTest {
         assertEquals("e1 closed at its end: $sent", 3600.0, first.single().second, 1.0)
         assertTrue("e2 reported: $sent", second.isNotEmpty() && second.last().second >= 5.0)
     }
+
+    // #207: the store reads the item back from the server once its stop is there,
+    // since whether the end finished it is the server's rule.
+    @Test
+    fun `a stretch's closing report done, the service is told which item`() {
+        val closed = mutableListOf<QueuedFile>()
+        val network = CompletableDeferred<Unit>()
+        val reporting = PlaybackReporting(
+            player,
+            CoroutineScope(Dispatchers.Unconfined),
+            open = { _ ->
+                object : ListeningDelivery {
+                    override suspend fun sync(report: ListeningReport) = Unit
+                    override suspend fun close(report: ListeningReport?) = network.await()
+                }
+            },
+            pause = { awaitCancellation() },
+            now = { player.clock.elapsedRealtime() },
+            closed = { closed += it }
+        )
+        player.addListener(reporting)
+        val guard = LeavingGuard(player, reporting::beforeLeaving)
+        val queue = PlaybackQueue.of(nowPlaying("p1", oneFile, episodeId = "e1"), 0.0) { "https://abs.test$it" }!!
+        guard.setMediaItems(queue.items, queue.index, queue.positionMs)
+        guard.prepare()
+        guard.play()
+        run(player).untilPositionAtLeast(3_000)
+
+        guard.pause()
+        run(player).untilPendingCommandsAreFullyHandled()
+        assertEquals("not while the report is out", emptyList<QueuedFile>(), closed)
+
+        network.complete(Unit)
+        assertEquals(listOf("p1" to "e1"), closed.map { it.itemId to it.episodeId })
+    }
 }

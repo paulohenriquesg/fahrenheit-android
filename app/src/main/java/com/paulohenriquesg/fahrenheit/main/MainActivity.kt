@@ -5,6 +5,7 @@ import com.paulohenriquesg.fahrenheit.player.ControllerSlot
 import androidx.core.content.ContextCompat
 import androidx.media3.session.MediaController
 import android.os.Bundle
+import com.paulohenriquesg.fahrenheit.progress.ProgressResync
 import com.paulohenriquesg.fahrenheit.R
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -69,6 +70,8 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // A sign-in lands here, with the app already in front (#207).
+        ProgressResync.process.request()
         StartupTimeline.app.mark("main started")
 
         mainHandler = MainHandler(this)
@@ -105,7 +108,6 @@ class MainActivity : ComponentActivity() {
                     MainScreen(
                         mainHandler::fetchLibraryItems,
                         mainHandler::fetchPersonalizedView,
-                        mainHandler::fetchProgress,
                         playback = playback,
                         favourites = mainHandler::favourites
                     )

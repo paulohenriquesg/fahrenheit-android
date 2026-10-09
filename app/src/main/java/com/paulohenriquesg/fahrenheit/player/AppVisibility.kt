@@ -14,9 +14,11 @@ class AppVisibility {
     /** The player screen is up: it asks for itself (#142). */
     val playerVisible: Boolean get() = players > 0
 
-    fun started(player: Boolean = false) {
+    /** @return whether this start brought the app to the front: no screen of it was showing. */
+    fun started(player: Boolean = false): Boolean {
         started++
         if (player) players++
+        return started == 1
     }
 
     fun stopped(player: Boolean = false) {

@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.detail
 
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
+import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.podcast.Fact
 import com.paulohenriquesg.fahrenheit.utils.formatDuration
 import kotlin.math.roundToInt
@@ -34,17 +35,16 @@ object DetailHeaderModel {
             .trim()
 
     /** How far in: "34% in", "Just started" or "Finished"; null when not started (#134: also a fact on the book screen). */
-    fun progressOf(item: LibraryItemResponse): String? {
-        val progress = item.userMediaProgress
+    fun progressOf(progress: MediaProgressResponse?): String? {
         if (progress?.isFinished == true) return "Finished"
         progress?.currentTime?.takeIf { it > 0 } ?: return null
         val percent = ((progress.progress ?: return null) * 100).roundToInt()
         return if (percent < 1) "Just started" else "$percent% in"
     }
 
-    fun book(item: LibraryItemResponse): DetailHeaderContent {
+    /** @param progress the book's, from the shared store (#207): the item's own copy is from when the page opened. */
+    fun book(item: LibraryItemResponse, progress: MediaProgressResponse?): DetailHeaderContent {
         val metadata = item.media.metadata
-        val progress = item.userMediaProgress
         val finished = progress?.isFinished == true
         val resumeAt = progress?.currentTime?.takeIf { !finished && it > 0 }
 
@@ -62,7 +62,7 @@ object DetailHeaderModel {
                 item.media.duration?.takeIf { it > 0 }?.let { Fact(formatDuration(it)) },
                 metadata.publishedYear?.takeIf { it.isNotBlank() }?.let { Fact(it) },
                 metadata.genres?.firstOrNull { it.isNotBlank() }?.let { Fact(it) },
-                progressOf(item)?.let { Fact(it) }
+                progressOf(progress)?.let { Fact(it) }
             ),
             // Says where it resumes, rather than a bare "Play".
             // Under a minute in, a position would read "0m".
