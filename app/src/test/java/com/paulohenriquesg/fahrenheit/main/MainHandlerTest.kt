@@ -14,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.shadows.ShadowToast
 
 /** Home's shelves: "could not read them" is not "there are none" (#197). */
 @RunWith(RobolectricTestRunner::class)
@@ -42,6 +43,16 @@ class MainHandlerTest {
         server.enqueue(MockResponse().setResponseCode(500))
 
         assertNull(runBlocking { MainHandler(context).fetchPersonalizedView("lib") })
+    }
+
+    // Coordinator: whether a failure is worth a toast is the caller's call (#197).
+    @Test
+    fun `shelves that cannot be read raise no toast`() {
+        server.enqueue(MockResponse().setResponseCode(500))
+
+        runBlocking { MainHandler(context).fetchPersonalizedView("lib") }
+
+        assertNull(ShadowToast.getLatestToast())
     }
 
     @Test

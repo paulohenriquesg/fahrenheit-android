@@ -17,6 +17,7 @@
 3. **The rail's Home row goes through `HomeReload` too**, so its failure also keeps what is shown.
 4. **No loading state for a reload:** the old shelves stay until the new ones arrive; the shelf and card keys already keep focus on the same item.
 5. **The latest fetch wins** (from review): an older one answering last is dropped.
+6. **A background reload fails silently** (from the coordinator): it keeps the shelves and shows no toast. Only a load the viewer asked for that leaves Home empty says so - the first load, a library switch, or choosing Home with nothing shown. `MainHandler` no longer toasts for shelves; the caller decides.
 
 ## Tasks
 

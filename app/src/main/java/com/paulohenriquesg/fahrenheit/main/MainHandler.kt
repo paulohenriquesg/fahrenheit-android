@@ -30,14 +30,11 @@ class MainHandler(private val context: Context) {
 
     /**
      * Home's shelves, or null when they could not be read (#197): a reload
-     * then keeps the ones shown, where an empty list would blank Home.
+     * then keeps the ones shown, where an empty list would blank Home. No
+     * toast: only the caller knows whether the viewer asked.
      */
-    suspend fun fetchPersonalizedView(libraryId: String): List<Shelf>? {
-        val repository = repository() ?: return null
-        return repository.personalizedShelves(libraryId)
-            .onFailure { report("Failed to load personalized view", it) }
-            .getOrNull()
-    }
+    suspend fun fetchPersonalizedView(libraryId: String): List<Shelf>? =
+        repository()?.personalizedShelves(libraryId)?.getOrNull()
 
     /**
      * Everything the user has started, for the covers on Home (#104). Throws
@@ -52,16 +49,12 @@ class MainHandler(private val context: Context) {
     ): List<T> {
         val repository = repository() ?: return emptyList()
         return block(repository).getOrElse { error ->
-            report(failureMessage, error)
+            Toast.makeText(
+                context,
+                "$failureMessage: ${error.message ?: "network error"}",
+                Toast.LENGTH_SHORT
+            ).show()
             emptyList()
         }
-    }
-
-    private fun report(failureMessage: String, error: Throwable) {
-        Toast.makeText(
-            context,
-            "$failureMessage: ${error.message ?: "network error"}",
-            Toast.LENGTH_SHORT
-        ).show()
     }
 }

@@ -23,14 +23,20 @@ class HomeReloadTest {
         fetched: MutableList<String>,
         shown: MutableList<List<Shelf>>,
         library: () -> String? = { "lib" },
-        answer: suspend (String) -> List<Shelf>? = { fresh }
+        answer: suspend (String) -> List<Shelf>? = { fresh },
+        empty: () -> Boolean = { false }
     ) = HomeReload(
         scope = CoroutineScope(Dispatchers.Unconfined),
         fetch = { id -> fetched += id; answer(id) },
         library = library,
         show = { shown += it },
+        empty = empty,
+        failed = { failures++ },
         window = { windows.receive() }
     )
+
+    /** How many times a failure was said out loud. */
+    private var failures = 0
 
     @Test
     fun `a request fetches the shelves after the window and shows them`() {
@@ -153,6 +159,61 @@ class HomeReloadTest {
         first.complete(Unit)
 
         assertEquals(listOf(fresh), shown)
+    }
+
+    // Coordinator: a TV coming back to Home over a network blip must not toast each time.
+    @Test
+    fun `a reload nobody asked for fails quietly, even on an empty Home`() {
+        val reload = reload(mutableListOf(), mutableListOf(), answer = { null }, empty = { true })
+
+        reload.request()
+        closeWindow()
+
+        assertEquals(0, failures)
+    }
+
+    @Test
+    fun `a load asked for that leaves Home empty says it failed`() {
+        val reload = reload(mutableListOf(), mutableListOf(), answer = { null }, empty = { true })
+
+        reload.request(asked = true)
+        closeWindow()
+
+        assertEquals(1, failures)
+    }
+
+    @Test
+    fun `a load asked for with shelves still shown fails quietly`() {
+        val reload = reload(mutableListOf(), mutableListOf(), answer = { null }, empty = { false })
+
+        reload.request(asked = true)
+        closeWindow()
+
+        assertEquals(0, failures)
+    }
+
+    @Test
+    fun `asked for inside a background window, the failure is still said`() {
+        val reload = reload(mutableListOf(), mutableListOf(), answer = { null }, empty = { true })
+
+        reload.request()
+        reload.request(asked = true)
+        closeWindow()
+
+        assertEquals(1, failures)
+    }
+
+    @Test
+    fun `asked for while hidden, the failure is said when Home shows`() {
+        val reload = reload(mutableListOf(), mutableListOf(), answer = { null }, empty = { true })
+        reload.showing = false
+
+        reload.request(asked = true)
+        reload.request()
+        reload.showing = true
+        closeWindow()
+
+        assertEquals(1, failures)
     }
 
     private fun shelf(id: String) = Shelf(id = id, label = id, labelStringKey = id, type = "book", bookEntities = emptyList())

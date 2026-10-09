@@ -146,6 +146,11 @@ fun MainScreen(
         return
     }
 
+    // Said only for a load the viewer asked for that leaves Home empty (#197).
+    fun sayShelvesFailed() {
+        Toast.makeText(context, context.getString(R.string.home_shelves_failed), Toast.LENGTH_SHORT).show()
+    }
+
     // Detect when returning from LibrarySelectionActivity
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -179,7 +184,7 @@ fun MainScreen(
                 library.clear()
                 isLoadingHome = true
                 newLibrary.id?.let { libraryId ->
-                    shelves = fetchPersonalizedView(libraryId).orEmpty()
+                    shelves = fetchPersonalizedView(libraryId) ?: emptyList<Shelf>().also { sayShelvesFailed() }
                     library.open(libraryId, LibraryQuery.Everything)
                 }
                 isLoadingHome = false
@@ -192,7 +197,14 @@ fun MainScreen(
     // listening may have changed (#197). What is shown stays until the new
     // shelves arrive, and stays if they cannot be read.
     val homeReload = remember {
-        HomeReload(scope, fetchPersonalizedView, library = { currentLibrary?.id }, show = { shelves = it })
+        HomeReload(
+            scope,
+            fetchPersonalizedView,
+            library = { currentLibrary?.id },
+            show = { shelves = it },
+            empty = { shelves.isEmpty() },
+            failed = { sayShelvesFailed() }
+        )
     }
     // Asked for while another view is up, it is made on coming back to Home.
     SideEffect { homeReload.showing = view == MainView.HOME }
@@ -210,7 +222,7 @@ fun MainScreen(
                         currentLibrary = LibraryChoice.pick(libraries, savedLibraryId)
                         currentLibrary?.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
                         currentLibrary?.id?.let { libraryId ->
-                            shelves = fetchPersonalizedView(libraryId).orEmpty()
+                            shelves = fetchPersonalizedView(libraryId) ?: emptyList<Shelf>().also { sayShelvesFailed() }
                             library.open(libraryId, LibraryQuery.Everything)
                         }
                     }
@@ -289,7 +301,7 @@ fun MainScreen(
         when (action) {
             MenuAction.HOME -> {
                 view = MainView.HOME
-                homeReload.request()
+                homeReload.request(asked = true)
             }
             MenuAction.LIBRARY -> {
                 view = MainView.LIBRARY
