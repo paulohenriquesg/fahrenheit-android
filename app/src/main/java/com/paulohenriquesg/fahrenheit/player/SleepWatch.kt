@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import android.os.Bundle
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.SessionCommand
 import kotlin.math.ceil
@@ -70,6 +71,8 @@ class SleepWatch(
     private val timer = SleepTimer()
     private var playingSince: Long? = null
     private var shown: SleepState? = null
+    // What End of chapter's ends belong to: another book or episode has its own.
+    private var timedFile: QueuedFile? = null
 
     val running: Boolean get() = timer.choice != SleepChoice.Off
 
@@ -78,6 +81,7 @@ class SleepWatch(
         when (val choice = SleepCommand.choiceOf(args)) {
             SleepChoice.Off -> timer.off()
             SleepChoice.EndOfChapter -> timer.endOfChapter(SleepCommand.chapterEndsOf(args), position())
+                .also { timedFile = QueuedFile.of(player.currentMediaItem) }
             is SleepChoice.Minutes -> timer.minutes(choice.minutes)
         }
         playingSince = if (player.isPlaying) now() else null
@@ -111,6 +115,20 @@ class SleepWatch(
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         account()
         playingSince = if (isPlaying) now() else null
+    }
+
+    /**
+     * The queue moved on by itself to another episode (#183): its chapter
+     * ended, though the feed's last end may lie past the file's, and the
+     * player does not end with an episode queued after it.
+     */
+    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+        if (timer.choice != SleepChoice.EndOfChapter) return
+        val was = timedFile ?: return
+        if (QueuedFile.of(mediaItem)?.isFor(was.itemId, was.episodeId) == true) return
+        timer.off()
+        player.pause()
+        show()
     }
 
     override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {

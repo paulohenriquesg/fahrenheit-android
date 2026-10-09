@@ -238,6 +238,25 @@ class NowPlayingTest {
             "audioTrack":{"index":1,"startOffset":0.0,"duration":1800.0,"title":"t","contentUrl":"/f/$id","mimeType":"audio/mpeg","codec":"mp3",
               "metadata":{"filename":"a","ext":"mp3","path":"/a","relPath":"a","size":1,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0}}}"""
 
+    // #183: an episode whose file carries chapters gets them as a book does.
+    @Test
+    fun `an episode with chapters carries them`() {
+        val playing = NowPlaying.of(
+            show(episodeJson("e1", 1_000, ""","chapters":[{"id":0,"start":0.0,"end":900.0,"title":"Intro"},{"id":1,"start":900.0,"end":1800.0,"title":"Interview"}]""")),
+            episodeId = "e1", now = now
+        )!!
+
+        assertEquals(listOf("Intro", "Interview"), playing.chapters?.map { it.title })
+        assertEquals(2, ChapterClock.spans(playing.chapters, playing.trackTotal!!).size)
+    }
+
+    @Test
+    fun `an episode with an empty chapter list has none`() {
+        val playing = NowPlaying.of(show(episodeJson("e1", 1_000, ""","chapters":[]""")), episodeId = "e1", now = now)!!
+
+        assertNull(playing.chapters)
+    }
+
     @Test
     fun `an episode says what it is under its title`() {
         val playing = NowPlaying.of(

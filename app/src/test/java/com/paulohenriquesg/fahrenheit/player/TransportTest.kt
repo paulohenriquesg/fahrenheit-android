@@ -385,6 +385,66 @@ class TransportTest {
         compose.onNodeWithContentDescription(compose.activity.getString(R.string.previous_episode)).assertIsEnabled()
     }
 
+    // #183: an episode with chapters skips chapters, and past the first or
+    // last one the outer buttons still reach the episodes either side.
+    private fun showEpisodeWithChapters(at: Double, went: StringBuilder) {
+        player = queuedAt(at)
+        compose.setContent {
+            FahrenheitTheme {
+                MediaPlayerController(
+                    player = player, playback = BookPlayback(player, twoParts), totalTime = twoParts.totalDuration,
+                    chapters = chapters,
+                    episodes = EpisodeSkip(onPrevious = { went.append("<") }, onNext = { went.append(">") })
+                )
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `an episode's next chapter goes to the next chapter`() {
+        val went = StringBuilder()
+        showEpisodeWithChapters(1900.0, went)
+
+        press(compose.activity.getString(R.string.next_chapter))
+        compose.waitForIdle()
+
+        assertEquals("", went.toString())
+        assertEquals(1, player.currentMediaItemIndex)
+    }
+
+    @Test
+    fun `in an episode's last chapter, next goes to the next episode`() {
+        val went = StringBuilder()
+        showEpisodeWithChapters(3700.0, went)
+
+        press(compose.activity.getString(R.string.next_chapter))
+
+        assertEquals(">", went.toString())
+    }
+
+    @Test
+    fun `at the start of an episode's first chapter, previous goes to the previous episode`() {
+        val went = StringBuilder()
+        showEpisodeWithChapters(1.0, went)
+
+        press(compose.activity.getString(R.string.previous_chapter))
+
+        assertEquals("<", went.toString())
+    }
+
+    @Test
+    fun `into an episode's first chapter, previous restarts it`() {
+        val went = StringBuilder()
+        showEpisodeWithChapters(100.0, went)
+
+        press(compose.activity.getString(R.string.previous_chapter))
+        compose.waitForIdle()
+
+        assertEquals("", went.toString())
+        assertEquals(0L, player.currentPosition)
+    }
+
     // Review Focus 4.
     @Test
     fun `a book has no episode buttons`() {

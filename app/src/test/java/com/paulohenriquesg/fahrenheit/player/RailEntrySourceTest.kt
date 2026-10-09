@@ -40,16 +40,16 @@ class RailEntrySourceTest {
     private fun show() {
         player = TestExoPlayerBuilder(compose.activity).setMediaSourceFactory(hourLongFiles()).build()
         compose.setContent {
-            entry = rememberRailEntry(player) { itemId ->
-                asked += itemId
+            entry = rememberRailEntry(player) { itemId, episodeId ->
+                asked += listOfNotNull(itemId, episodeId).joinToString("/")
                 listOf(Chapter(start = 0.0, end = 1800.0, title = "One"), Chapter(start = 1800.0, end = 3600.0, title = "Two"))
             }
         }
         compose.waitForIdle()
     }
 
-    private fun queue(startAt: Double) {
-        val book = NowPlaying("b1", "A Book", TrackTimeline(listOf(TimelineTrack(1, 0.0, 3600.0, "/b1"))), null, null, null, false, null)
+    private fun queue(startAt: Double, episodeId: String? = null) {
+        val book = NowPlaying("b1", "A Book", TrackTimeline(listOf(TimelineTrack(1, 0.0, 3600.0, "/b1"))), null, null, episodeId, episodeId != null, null)
         val queue = PlaybackQueue.of(book, startAt) { "https://abs.test$it" }!!
         compose.runOnUiThread { player.setMediaItems(queue.items, queue.index, queue.positionMs) }
         // The test player tells its listeners on its own clock: let it.
@@ -70,6 +70,15 @@ class RailEntrySourceTest {
         assertEquals("Two", entry!!.chapter)
         assertEquals(false, entry!!.playing)
         assertEquals(listOf("b1"), asked)
+    }
+
+    // #183: an episode with chapters is read as a book with them.
+    @Test fun `a queued episode with chapters names its chapter`() {
+        show()
+        queue(startAt = 2000.0, episodeId = "e1")
+        assertEquals("Two", entry!!.chapter)
+        assertEquals(2, entry!!.chapterNumber)
+        assertEquals(listOf("b1/e1"), asked)
     }
 
     // Stop on the entry clears the queue (#155).
@@ -97,7 +106,7 @@ class RailEntrySourceTest {
 
     @Test fun `no player, no entry`() {
         player = TestExoPlayerBuilder(compose.activity).build()
-        compose.setContent { entry = rememberRailEntry(null) { null } }
+        compose.setContent { entry = rememberRailEntry(null) { _, _ -> null } }
         compose.waitForIdle()
         assertNull(entry)
     }
@@ -109,8 +118,8 @@ class RailEntrySourceTest {
         var visit by mutableStateOf(0)
         compose.setContent {
             key(visit) {
-                entry = rememberRailEntry(player) { itemId ->
-                    asked += itemId
+                entry = rememberRailEntry(player) { itemId, episodeId ->
+                    asked += listOfNotNull(itemId, episodeId).joinToString("/")
                     listOf(Chapter(start = 0.0, end = 1800.0, title = "One"), Chapter(start = 1800.0, end = 3600.0, title = "Two"))
                 }
             }

@@ -68,7 +68,9 @@ data class Episode(
     @SerializedName("duration") val duration: Double? = null,  // From PlayLibraryItemEpisode
     @SerializedName("size") val size: Int? = null,  // From PlayLibraryItemEpisode
     /** The feed's id for this episode; how the server matches it to the feed. */
-    @SerializedName("guid") val guid: String? = null
+    @SerializedName("guid") val guid: String? = null,
+    /** The file's chapters, or else the feed's; empty when it has none (#183). */
+    @SerializedName("chapters") val chapters: List<Chapter>? = null
 )
 
 data class Enclosure(

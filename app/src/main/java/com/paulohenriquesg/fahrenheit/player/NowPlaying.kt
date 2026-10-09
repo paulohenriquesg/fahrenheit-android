@@ -14,7 +14,7 @@ import com.paulohenriquesg.fahrenheit.utils.EpisodeDate
  *
  * @property timeline every file that will play, in order; null when there is
  *   nothing to play. Its length is [trackTotal].
- * @property chapters drawn as marks on the scrubber; null for an episode.
+ * @property chapters drawn as marks on the scrubber; null when there are none.
  * @property goToPodcast whether the player offers a way to the episode's podcast.
  */
 data class NowPlaying(
@@ -118,7 +118,8 @@ data class NowPlaying(
                     TrackTimeline(listOf(TimelineTrack(index = it.index, startOffset = 0.0, duration = it.duration, contentUrl = it.contentUrl)))
                 },
                 mediaDuration = null,
-                chapters = null,
+                // In the file's own time, which is the episode's (#183).
+                chapters = episode.chapters?.takeIf { it.isNotEmpty() },
                 episodeId = episode.id,
                 goToPodcast = true,
                 description = episode.description,

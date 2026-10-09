@@ -52,7 +52,7 @@ import kotlin.math.roundToInt
 
 /**
  * What the now-playing line says: the title, then the chapter and time left
- * in it (a book) or the time left (an episode), as [nowPlayingDetail] writes it.
+ * in it (with chapters) or the time left (without), as [nowPlayingDetail] writes it.
  */
 data class NowPlayingLine(val itemId: String, val title: String, val detail: String?)
 

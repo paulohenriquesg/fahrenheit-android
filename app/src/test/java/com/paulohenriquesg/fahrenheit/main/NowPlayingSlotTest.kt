@@ -55,7 +55,7 @@ class NowPlayingSlotTest {
         player.play()
         compose.setContent {
             FahrenheitTheme {
-                NowPlayingSlot(player, open = true, chaptersOf = { null }, onOpen = {}, onStopped = { stops++ })
+                NowPlayingSlot(player, open = true, chaptersOf = { _, _ -> null }, onOpen = {}, onStopped = { stops++ })
             }
         }
         run(player).untilPendingCommandsAreFullyHandled()
@@ -88,7 +88,7 @@ class NowPlayingSlotTest {
         compose.setContent {
             FahrenheitTheme {
                 Column {
-                    NowPlayingSlot(player, open = true, chaptersOf = { null }, onOpen = {}, onStopped = {
+                    NowPlayingSlot(player, open = true, chaptersOf = { _, _ -> null }, onOpen = {}, onStopped = {
                         stops++
                         section.requestFocus()
                     })
@@ -119,7 +119,7 @@ class NowPlayingSlotTest {
         player.setMediaItems(queue.items, queue.index, queue.positionMs)
         compose.setContent {
             FahrenheitTheme {
-                NowPlayingSlot(player, open = true, chaptersOf = { null }, onOpen = {}, onStopped = { stops++ })
+                NowPlayingSlot(player, open = true, chaptersOf = { _, _ -> null }, onOpen = {}, onStopped = { stops++ })
             }
         }
         run(player).untilPendingCommandsAreFullyHandled()

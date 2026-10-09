@@ -81,7 +81,7 @@ fun NowPlayingBar(entry: RailEntry, onOpen: (RailEntry) -> Unit, onStop: (RailEn
  * focus has moved down the same way.
  */
 @Composable
-fun NowPlayingBarSlot(player: Player?, chaptersOf: suspend (String) -> List<Chapter>?, onOpen: (RailEntry) -> Unit) {
+fun NowPlayingBarSlot(player: Player?, chaptersOf: suspend (itemId: String, episodeId: String?) -> List<Chapter>?, onOpen: (RailEntry) -> Unit) {
     val live = rememberRailEntry(player, chaptersOf)
     val kept = remember { KeptEntry() }
     var focused by remember { mutableStateOf(false) }

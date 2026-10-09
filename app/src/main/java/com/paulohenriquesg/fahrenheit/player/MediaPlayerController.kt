@@ -133,7 +133,7 @@ fun MediaPlayerController(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         // The bar you seek with is the chapter's; the book's sits under it
-        // (#107). A book without chapters, or an episode, has the one bar.
+        // (#107). A book or episode without chapters has the one bar.
         PlaybackBar(
             fraction = chapter?.fraction(currentTime) ?: PlaybackPosition.fraction(currentTime, totalTime),
             modifier = Modifier.fillMaxWidth().testTag(CHAPTER_BAR_TAG),
@@ -192,7 +192,12 @@ fun MediaPlayerController(
         ) {
             if (chapter != null) {
                 TransportButton(
-                    onClick = { ChapterClock.previousTarget(spans, playback.bookPosition())?.let(::seekTo) },
+                    onClick = {
+                        val at = playback.bookPosition()
+                        // At an episode's very start, the episode before it (#183).
+                        val before = episodes?.onPrevious?.takeIf { ChapterClock.atFirstStart(spans, at) }
+                        if (before != null) before() else ChapterClock.previousTarget(spans, at)?.let(::seekTo)
+                    },
                     size = 48.dp,
                     container = TvMaterialTheme.colorScheme.secondaryContainer,
                     content = TvMaterialTheme.colorScheme.onSecondaryContainer
@@ -251,9 +256,12 @@ fun MediaPlayerController(
             }
             if (chapter != null) {
                 TransportButton(
-                    // Nothing after the last chapter: the press does nothing
-                    // rather than leaving a button that cannot take focus.
-                    onClick = { ChapterClock.nextTarget(spans, playback.bookPosition())?.let(::seekTo) },
+                    // Nothing after a book's last chapter: the press does nothing
+                    // rather than leaving a button that cannot take focus. In an
+                    // episode's last chapter, the episode after it (#183).
+                    onClick = {
+                        ChapterClock.nextTarget(spans, playback.bookPosition())?.let(::seekTo) ?: episodes?.onNext?.invoke()
+                    },
                     size = 48.dp,
                     container = TvMaterialTheme.colorScheme.secondaryContainer,
                     content = TvMaterialTheme.colorScheme.onSecondaryContainer

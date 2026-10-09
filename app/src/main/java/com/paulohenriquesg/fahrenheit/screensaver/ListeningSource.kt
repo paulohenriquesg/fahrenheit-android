@@ -26,6 +26,7 @@ import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.login.LoginActivity
+import com.paulohenriquesg.fahrenheit.main.queuedChapters
 import com.paulohenriquesg.fahrenheit.player.Playback
 import com.paulohenriquesg.fahrenheit.player.PlayerSettings
 import com.paulohenriquesg.fahrenheit.player.QueuedFile
@@ -113,9 +114,9 @@ internal class PlaybackListening(private val context: Context) : ListeningSource
     /** As the rail's entry reads it; composed only while the screensaver shows. */
     @Composable
     override fun line(): NowPlayingLine? {
-        val entry = rememberRailEntry(controller, ::chaptersOf) ?: return null
+        val entry = rememberRailEntry(controller, ::queuedChapters) ?: return null
         val detail = nowPlayingDetail(
-            context.resources, entry.chapter, entry.chapterNumber, entry.episodeId != null, entry.leftSeconds
+            context.resources, entry.chapter, entry.chapterNumber, entry.leftSeconds
         )
         return NowPlayingLine(entry.itemId, entry.title, detail)
     }
@@ -127,9 +128,6 @@ internal class PlaybackListening(private val context: Context) : ListeningSource
 /** As the rail reads it: the queued file, and "playing" as asked for, so buffering counts. */
 private fun queuedOf(player: Player): Queued? =
     QueuedFile.of(player.currentMediaItem)?.let { Queued(it.itemId, player.playWhenReady) }
-
-private suspend fun chaptersOf(itemId: String) =
-    ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }?.media?.chapters
 
 /**
  * The wall's covers: those of the series being played, then the covers of
@@ -167,19 +165,17 @@ private const val WALL_COVERS = 40
 private const val WALL_COVER_PX = 240
 
 /**
- * "Chapter 12 · 18 min left in chapter" for a book, "25 min left" for an
- * episode or a book without chapters (#172), in [minutesLeft]'s whole minutes.
+ * "Chapter 12 · 18 min left in chapter" for a book or episode with chapters
+ * (#183), "25 min left" for one without (#172), in [minutesLeft]'s whole minutes.
  */
 internal fun nowPlayingDetail(
     resources: Resources,
     chapter: String?,
     chapterNumber: Int?,
-    episode: Boolean,
     leftSeconds: Double
 ): String {
     val minutes = minutesLeft(leftSeconds)
     val left = resources.getString(R.string.time_left, minutes)
-    if (episode) return left
     val name = chapter ?: chapterNumber?.let { resources.getString(R.string.chapter_number, it) } ?: return left
     return resources.getString(R.string.screensaver_chapter_left, name, minutes)
 }
