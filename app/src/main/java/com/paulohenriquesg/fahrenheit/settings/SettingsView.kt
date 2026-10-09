@@ -1,5 +1,7 @@
 package com.paulohenriquesg.fahrenheit.settings
 
+import com.paulohenriquesg.fahrenheit.screensaver.ListeningScreensaver
+import com.paulohenriquesg.fahrenheit.screensaver.ListeningSource
 import com.paulohenriquesg.fahrenheit.screensaver.ScreensaverStyle
 import com.paulohenriquesg.fahrenheit.player.PlayerSettings
 import androidx.compose.foundation.background
@@ -37,11 +39,24 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Switch
@@ -105,7 +120,8 @@ fun SettingsView(
     onScreensaverMinutes: (Int?) -> Unit = {},
     screensaverStyle: ScreensaverStyle = ScreensaverStyle.Wall,
     onScreensaverStyle: (ScreensaverStyle) -> Unit = {},
-    favourites: FavouritesSetting? = null
+    favourites: FavouritesSetting? = null,
+    screensaver: ListeningSource? = null
 ) {
     // The Favourites panel, over the screen; focus goes back to its row when it closes.
     var favouritesOpen by remember { mutableStateOf(false) }
@@ -117,10 +133,27 @@ fun SettingsView(
             favouritesClosed = false
         }
     }
+    // Try it (#190): the item queued when it was pressed, while the trial shows.
+    var trying by remember { mutableStateOf<String?>(null) }
+    // A key pressed during the trial; its release closes it.
+    var closing by remember { mutableStateOf(false) }
     Box(modifier = modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            // The trial never takes focus, so its keys come here first: every
+            // one is eaten, Back included, and Try it keeps the focus it had.
+            .onPreviewKeyEvent { event ->
+                if (trying == null) return@onPreviewKeyEvent false
+                when (event.type) {
+                    KeyEventType.KeyDown -> closing = true
+                    KeyEventType.KeyUp -> if (closing) {
+                        trying = null
+                        closing = false
+                    }
+                }
+                true
+            }
             .padding(horizontal = Space.screenH, vertical = Space.gap),
         verticalArrangement = Arrangement.spacedBy(Space.gap)
     ) {
@@ -245,19 +278,54 @@ fun SettingsView(
                     title = stringResource(R.string.settings_screensaver_style),
                     subtitle = stringResource(R.string.settings_screensaver_style_subtitle)
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ScreensaverStyle.entries.forEach { style ->
-                            Choice(
-                                label = stringResource(
-                                    when (style) {
-                                        ScreensaverStyle.Wall -> R.string.settings_screensaver_wall
-                                        ScreensaverStyle.Bouncing -> R.string.settings_screensaver_bouncing
-                                    }
-                                ),
-                                selected = style == screensaverStyle,
-                                tag = "screensaver_style_${style.name}",
-                                onClick = { onScreensaverStyle(style) }
-                            )
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            ScreensaverStyle.entries.forEach { style ->
+                                Choice(
+                                    label = stringResource(
+                                        when (style) {
+                                            ScreensaverStyle.Wall -> R.string.settings_screensaver_wall
+                                            ScreensaverStyle.Bouncing -> R.string.settings_screensaver_bouncing
+                                        }
+                                    ),
+                                    selected = style == screensaverStyle,
+                                    tag = "screensaver_style_${style.name}",
+                                    onClick = { onScreensaverStyle(style) }
+                                )
+                            }
+                        }
+                        // The real screensaver needs something queued: a title
+                        // and time left. Without it there is nothing to show.
+                        if (screensaver != null) {
+                            val queued = screensaver.queued()
+                            // A trial of something no longer queued would mix
+                            // one item's art with another's line: closed.
+                            LaunchedEffect(queued?.itemId) {
+                                if (trying != null && trying != queued?.itemId) {
+                                    trying = null
+                                    closing = false
+                                }
+                            }
+                            // Never disabled: a disabled button gives up focus,
+                            // and the queue can empty while Try it holds it. It
+                            // says it is disabled, looks it, and does nothing.
+                            Button(
+                                onClick = { queued?.let { trying = it.itemId } },
+                                modifier = Modifier
+                                    .testTag("screensaver_try_it")
+                                    .alpha(if (queued != null) 1f else 0.5f)
+                                    .semantics { if (queued == null) disabled() }
+                            ) {
+                                Text(
+                                    stringResource(
+                                        if (queued != null) R.string.settings_screensaver_try
+                                        else R.string.settings_screensaver_try_nothing
+                                    )
+                                )
+                            }
                         }
                     }
                 }
@@ -294,7 +362,37 @@ fun SettingsView(
             favouritesClosed = true
         }
     }
+    val trial = trying
+    if (trial != null && screensaver != null) ScreensaverTrial(screensaverStyle, trial, screensaver)
     }
+}
+
+/**
+ * The screensaver as it would run, over the whole screen, rail included. A
+ * popup that never takes focus: keys stay with the screen's window, where the
+ * screensaver's own key gate counts them, and Settings closes it.
+ */
+@Composable
+private fun ScreensaverTrial(style: ScreensaverStyle, itemId: String, source: ListeningSource) {
+    Popup(
+        popupPositionProvider = FullScreen,
+        properties = PopupProperties(focusable = false, clippingEnabled = false)
+    ) {
+        // Black until the now-playing line is known, as the screensaver itself is.
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            ListeningScreensaver(style, itemId, source)
+        }
+    }
+}
+
+/** At the window's top left, so a full-size popup covers it all. */
+private object FullScreen : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize
+    ): IntOffset = IntOffset.Zero
 }
 
 @Composable

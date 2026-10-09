@@ -60,9 +60,9 @@ fun installListeningScreensaver(activity: Activity) {
  * What the playback service has queued, through a controller of this
  * screen's own: connected while the screen is started and let go when it
  * stops, as ControllerSlot does, so a screen in the back stack does not keep
- * the service bound.
+ * the service bound. The overlay holds one, and Settings another for Try it.
  */
-private class PlaybackListening(private val context: Context) : ListeningSource {
+internal class PlaybackListening(private val context: Context) : ListeningSource {
     private var controller by mutableStateOf<MediaController?>(null)
 
     /** From the player's events only: nothing polls while the screensaver waits. */

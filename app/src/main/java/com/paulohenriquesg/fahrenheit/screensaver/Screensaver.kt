@@ -181,13 +181,9 @@ object Screensaver {
             }
         }
 
-        if (decision.show && now != null) {
-            // Only now: the line polls the position, and the art is fetches
-            // and a decode. Gone again when it hides.
-            val art by produceState<WallArt?>(null, now.itemId) { value = source.art(now.itemId) }
-            val line = source.line()
-            if (line != null) ScreensaverScreen(chosen.style, line, art ?: WallArt(emptyList(), null))
-        }
+        // Only now: the line polls the position, and the art is fetches
+        // and a decode. Gone again when it hides.
+        if (decision.show && now != null) ListeningScreensaver(chosen.style, now.itemId, source)
     }
 
     /** Every key, counted, so the overlay settles again at once. */
@@ -217,6 +213,18 @@ object Screensaver {
             return eaten || wrapped.dispatchKeyEvent(event)
         }
     }
+}
+
+/**
+ * The screensaver for [itemId] as [source] tells it: its art fetched once, and
+ * the now-playing line. The overlay draws this, and so does Settings' Try it
+ * (#190), so a trial is the real thing. Nothing until the line is known.
+ */
+@Composable
+fun ListeningScreensaver(style: ScreensaverStyle, itemId: String, source: ListeningSource) {
+    val art by produceState<WallArt?>(null, itemId) { value = source.art(itemId) }
+    val line = source.line()
+    if (line != null) ScreensaverScreen(style, line, art ?: WallArt(emptyList(), null))
 }
 
 /**
