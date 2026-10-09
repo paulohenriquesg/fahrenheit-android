@@ -61,7 +61,7 @@ fun NowPlayingBar(entry: RailEntry, onOpen: (RailEntry) -> Unit, onStop: (RailEn
                 CoverWithRing(entry)
                 Column(Modifier.weight(1f)) {
                     Text(entry.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(leftLine(entry), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    LeftLine(entry)
                 }
             }
         }

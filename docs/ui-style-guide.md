@@ -164,6 +164,9 @@ At the end of the queue - the newest episode, the end of a book - the session
 ends as Stop ends it, and the entry and the bar go (#179). One that goes while
 it holds focus first hands focus on, as Stop does (#53).
 
+The open entry and the bar say "Chapter · N min left" in two texts: only the
+chapter's name is shortened, and the time left always shows (#198).
+
 The cover is a **circle** inside the progress ring (#177): 36 dp in a 44 dp
 ring with a 3 dp stroke, so a 1 dp gap all round. A square's corners ran into
 the arc. Placeholders are clipped the same; the state badge stays at the
