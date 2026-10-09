@@ -9,6 +9,7 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.screensaver.installListeningScreensaver
 import com.paulohenriquesg.fahrenheit.ui.theme.LayoutManager
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemeManager
+import com.paulohenriquesg.fahrenheit.utils.StartupTimeline
 
 open class FahrenheitApplication : Application() {
     /** Our own screensaver while listening, on every screen (#156); off under unit test. */
@@ -21,6 +22,7 @@ open class FahrenheitApplication : Application() {
         ApiClient.initialize(this)
         ThemeManager.initialize(this)
         LayoutManager.initialize(this)
+        StartupTimeline.app.mark("app created")
         // Whether a screen shows: the playback service opens the player only then (#144).
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityStarted(activity: Activity) {

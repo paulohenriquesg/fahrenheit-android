@@ -90,6 +90,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsFluid
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsRow
 import kotlinx.coroutines.launch
+import com.paulohenriquesg.fahrenheit.utils.StartupTimeline
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -199,6 +200,7 @@ fun MainScreen(
         if (libraryApi != null) {
             LibraryRepository(libraryApi).libraries()
                 .onSuccess { fetched ->
+                    StartupTimeline.app.mark("libraries loaded")
                     libraries = fetched
                     if (libraries.isNotEmpty()) {
                         val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
@@ -206,6 +208,7 @@ fun MainScreen(
                         currentLibrary?.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
                         currentLibrary?.id?.let { libraryId ->
                             shelves = fetchPersonalizedView(libraryId)
+                            StartupTimeline.app.mark("home shelves loaded", "${shelves.size} shelves")
                             library.open(libraryId, LibraryQuery.Everything)
                         }
                     }

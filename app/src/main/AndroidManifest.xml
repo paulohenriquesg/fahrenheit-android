@@ -37,7 +37,8 @@
 
         <activity
             android:name="com.paulohenriquesg.fahrenheit.login.LoginActivity"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.Fahrenheit.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />

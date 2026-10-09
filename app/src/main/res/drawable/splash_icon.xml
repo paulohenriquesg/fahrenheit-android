@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The splash's icon (#191). Below API 31 the splash library draws it in a
+     288dp box and rings off everything outside a 192dp circle, so the bare
+     launcher icon came out three times the size of the launch screen's,
+     blurred and with its corners cut. Inset, it is the launch screen's 96dp. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:inset="96dp">
+    <layer-list>
+        <item
+            android:width="96dp"
+            android:height="96dp"
+            android:drawable="@mipmap/ic_launcher" />
+    </layer-list>
+</inset>

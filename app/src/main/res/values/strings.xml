@@ -107,6 +107,10 @@
     <string name="loading_episodes">Loading episodes…</string>
     <string name="loading_series">Loading series…</string>
     <string name="loading_stats">Loading stats…</string>
+    <string name="launch_signing_in">Signing in…</string>
+    <string name="launch_connecting">Connecting to your server…</string>
+    <string name="launch_unreachable">Can\'t reach your server</string>
+    <string name="launch_try_again">Try again</string>
     <string name="login_welcome_back">Welcome back</string>
     <string name="login_where_is_library">Where is your library?</string>
     <string name="login_address_hint">The address of your Audiobookshelf server, starting with http:// or https://</string>

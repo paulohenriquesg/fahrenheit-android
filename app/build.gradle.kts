@@ -183,6 +183,8 @@ dependencies {
 
 
     implementation(libs.androidx.core.ktx)
+    // The logo from the first frame on every API level the app runs on (#191).
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.appcompat)
 
     // Encrypted SharedPreferences for secure token storage
