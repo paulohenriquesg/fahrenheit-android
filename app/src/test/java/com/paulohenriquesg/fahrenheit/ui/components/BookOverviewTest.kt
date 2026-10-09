@@ -381,4 +381,31 @@ class BookOverviewTest {
         assertTrue(scrolls("A Title Far Too Long for Its Card"))
         assertFalse(scrolls("Another Title Too Long to Fit"))
     }
+
+    // #204: "Book 1" is never cut, so the marquee never ran and the title was nowhere on the row.
+    @Test fun `the focused series card reads its number and title, the others only the number`() {
+        show(
+            series = SeriesBooks(
+                listOf(SeriesBook("b1", "The Quiet Signal", "1"), SeriesBook("b2", "The Long Drift", "2"), SeriesBook("b3", "A Late Message", "3")),
+                currentId = "b2"
+            ),
+            landOnDescription = false
+        )
+        compose.onNode(hasContentDescription("The Quiet Signal") and hasClickAction()).performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Book 1 · The Quiet Signal").assert(SemanticsMatcher.expectValue(SeriesLabelScrolls, true))
+        compose.onNodeWithText("Book 1").assertDoesNotExist()
+        compose.onNodeWithText("Book 2").assertExists()
+        compose.onNodeWithText("Book 3").assertExists()
+        compose.onNodeWithText("Book 3 · A Late Message").assertDoesNotExist()
+    }
+
+    // Guards #194's behaviour, which #204 keeps: no number, no "Book" to add.
+    @Test fun `with no number, the focused series card reads its title alone`() {
+        show(landOnDescription = false)
+        compose.onNode(hasContentDescription("A Late Message") and hasClickAction()).performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+        compose.onNodeWithText("A Late Message").assert(SemanticsMatcher.expectValue(SeriesLabelScrolls, true))
+    }
 }

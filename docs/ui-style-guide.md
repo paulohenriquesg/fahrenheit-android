@@ -215,6 +215,7 @@ book screen and About (#137) draw Resume and Mark finished as the default TV
 - **A series row reads as scrollable**: its covers are sized so half the next
   one shows at the right edge (`SeriesRow.coverSize`), and each is labelled
   by its place, "Book 2.5", or its title when the server gives no sequence.
+  The focused card reads "Book 2.5 · <title>" and scrolls it (#204).
 
 ## The player's look, on every full screen
 
