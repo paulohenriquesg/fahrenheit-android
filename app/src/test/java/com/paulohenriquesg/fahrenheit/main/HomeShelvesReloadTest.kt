@@ -161,4 +161,23 @@ class HomeShelvesReloadTest {
 
         assertEquals(1, compose.onAllNodesWithText("An Invented Shelf").fetchSemanticsNodes().size)
     }
+
+    // Review: with the player in front, Home's screen is stopped - its news
+    // waits for the return, which reloads once for both.
+    @Test
+    fun `news while the screen is stopped waits for the return, then one reload`() {
+        show(shelves, shelves, shelves)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+
+        compose.runOnIdle { ProgressStore.process.played("b1", null, position = 10.0, duration = 3480.0) }
+        repeat(3) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(HomeReload.WINDOW_MS)) }
+        assertEquals("nothing while stopped", 1, fetches)
+
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        untilReloaded()
+        repeat(3) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(HomeReload.WINDOW_MS)) }
+        compose.waitForIdle()
+
+        assertEquals(2, fetches)
+    }
 }

@@ -177,6 +177,50 @@ class HomeShelvesModelTest {
     }
 
     @Test
+    fun `news while the screen is stopped is owed until it is up again`() {
+        opened()
+        model.screenUp(false)
+
+        store.played("book", null, position = 10.0, duration = 100.0)
+        closeWindow()
+        assertEquals("not while stopped", emptyList<String>(), fetched)
+
+        model.screenUp(true)
+        closeWindow()
+        assertEquals(listOf("lib"), fetched)
+    }
+
+    @Test
+    fun `Home must be the view and the screen up`() {
+        opened()
+        model.screenUp(false)
+        model.visible(true)
+
+        model.returned()
+        closeWindow()
+
+        assertEquals(emptyList<String>(), fetched)
+    }
+
+    // Review: a reload that filled Home while the open was out is not wiped by the open failing.
+    @Test
+    fun `an open that fails after a reload showed shelves keeps them and says nothing`() {
+        val network = CompletableDeferred<List<Shelf>?>()
+        var calls = 0
+        answer = { if (++calls == 1) network.await() else fresh }
+        model.open("lib")
+        settle()
+
+        model.returned()
+        closeWindow()
+        network.complete(null)
+        settle()
+
+        assertEquals(fresh, model.uiState.value.shelves)
+        assertEquals(0, said)
+    }
+
+    @Test
     fun `the Favourites choice changed refreshes that shelf only`() {
         opened(listOf(shelf("continue-listening"), shelf(FavouritesShelf.ID), shelf("recently-added")))
 

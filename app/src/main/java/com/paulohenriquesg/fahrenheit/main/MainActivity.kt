@@ -86,7 +86,9 @@ class MainActivity : ComponentActivity() {
         if (resyncsProgress) ProgressResync.process.request()
         StartupTimeline.app.mark("main started")
 
-        mainHandler = MainHandler(this)
+        // The application's context: Home's ViewModel keeps this handler's
+        // fetches, and outlives the activity across a recreation.
+        mainHandler = MainHandler(applicationContext)
 
         // Use SharedPreferencesHandler to retrieve user preferences
         val sharedPreferencesHandler = SharedPreferencesHandler(this)

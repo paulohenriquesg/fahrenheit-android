@@ -157,7 +157,12 @@ fun MainScreen(
         // Stopped since the last resume: the first resume is the start-up load's.
         var left = false
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) left = true
+            // And only while the screen is up: news from the player waits for the return.
+            if (event == Lifecycle.Event.ON_START) homeModel.screenUp(true)
+            if (event == Lifecycle.Event.ON_STOP) {
+                left = true
+                homeModel.screenUp(false)
+            }
             if (event == Lifecycle.Event.ON_RESUME) {
                 // Check if library has changed
                 val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
@@ -231,9 +236,8 @@ fun MainScreen(
         if (shelves.isNotEmpty()) StartupTimeline.app.mark("home shelves loaded", "${shelves.size} shelves")
     }
 
-    // Home reloads only while it shows; what comes meanwhile is owed (#197).
-    val screen by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
-    SideEffect { homeModel.visible(view == MainView.HOME && screen.isAtLeast(Lifecycle.State.STARTED)) }
+    // Home reloads only while it is the view; what comes meanwhile is owed (#197).
+    SideEffect { homeModel.visible(view == MainView.HOME) }
 
     // Only a load asked for that leaves Home empty says it failed (#197).
     LaunchedEffect(homeModel) {

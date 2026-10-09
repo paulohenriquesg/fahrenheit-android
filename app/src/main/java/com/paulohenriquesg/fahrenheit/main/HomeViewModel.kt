@@ -45,7 +45,7 @@ data class HomeUiState(
  * Home is [returned] to and when the store says listening started, stopped or
  * finished - what moves an item on or off them. Those reloads go through
  * [HomeReload]: coalesced, owed while Home is not [visible], and never for
- * the worse. A failure worth saying - a load the viewer asked for that leaves
+ * the worse - and owed while the screen is not [screenUp]. A failure worth saying - a load the viewer asked for that leaves
  * Home empty - comes out of [failures], for the screen to say.
  *
  * @param fetchShelves a library's shelves; null when they could not be read.
@@ -93,8 +93,15 @@ class HomeViewModel(
         opening = viewModelScope.launch {
             val read = fetchShelves(libraryId)
             if (library != libraryId) return@launch
-            shelves.value = Shelves(read.orEmpty())
-            if (read == null) said.trySend(Unit)
+            when {
+                read != null -> shelves.value = Shelves(read)
+                // A reload filled Home meanwhile: it stands.
+                shelves.value.list.isNotEmpty() -> shelves.value = shelves.value.copy(loading = false)
+                else -> {
+                    shelves.value = Shelves()
+                    said.trySend(Unit)
+                }
+            }
         }
     }
 
@@ -104,9 +111,19 @@ class HomeViewModel(
     /** Back on the screen after it was stopped - from the player, say. */
     fun returned() = reload.request()
 
-    /** Whether Home is the view, with the screen up. */
+    private var homeIsTheView = true
+    private var screenIsUp = true
+
+    /** Whether Home is the view (not Library, Settings...). */
     fun visible(showing: Boolean) {
-        reload.showing = showing
+        homeIsTheView = showing
+        reload.showing = homeIsTheView && screenIsUp
+    }
+
+    /** Whether the screen is started: with the player in front, news waits for the return. */
+    fun screenUp(up: Boolean) {
+        screenIsUp = up
+        reload.showing = homeIsTheView && screenIsUp
     }
 
     /** The Favourites choice changed (#180): that shelf alone is read again. */
