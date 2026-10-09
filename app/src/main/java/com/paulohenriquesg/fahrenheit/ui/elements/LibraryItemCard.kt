@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.ui.elements
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -48,6 +50,7 @@ import com.paulohenriquesg.fahrenheit.utils.listeningLength
 fun LibraryItemCard(
     item: LibraryItem,
     progress: CoverProgress.Started? = null,
+    finished: Boolean = false,
     onLongClick: ((LibraryItem) -> Unit)? = null,
     onClick: (LibraryItem) -> Unit
 ) {
@@ -83,7 +86,14 @@ fun LibraryItemCard(
                 modifier = Modifier.padding(16.dp)
             ) {
                 val dimmed = LibraryItemDisplay.dimmed(item)
-                Box(modifier = Modifier.alpha(if (dimmed) DIMMED_ALPHA else 1f)) {
+                // A finished episode is dimmed as the podcast page's rows are,
+                // until focus makes it the card being read (#192).
+                val faded = dimmed || (finished && !isFocused)
+                Box(
+                    modifier = Modifier
+                        .alpha(if (faded) DIMMED_ALPHA else 1f)
+                        .semantics { this[LibraryItemCardTags.Dimmed] = faded }
+                ) {
                     CoverImage(
                         itemId = item.id,
                         contentDescription = item.media.metadata.title,
@@ -119,7 +129,20 @@ fun LibraryItemCard(
                     episodeCount != null -> episodeCount
                     else -> LibraryItemDisplay.author(item)
                 }
-                if (secondLine != null) {
+                if (finished) {
+                    // The finished mark leads the line it shares (#192).
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        FinishedTick(Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = secondLine.orEmpty(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else if (secondLine != null) {
                     Text(
                         text = secondLine,
                         style = MaterialTheme.typography.bodyMedium,
@@ -179,4 +202,7 @@ private const val DIMMED_ALPHA = 0.45f
 
 object LibraryItemCardTags {
     const val PROGRESS = "cover-progress"
+
+    /** Whether the cover is drawn dimmed. */
+    val Dimmed = SemanticsPropertyKey<Boolean>("Dimmed")
 }

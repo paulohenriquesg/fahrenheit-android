@@ -55,7 +55,7 @@ fun ShelfRow(
             shelf.entities?.let { entities ->
                 items(entities.size, key = { keys!![it] }) { index ->
                     val item = entities[index]
-                    LibraryItemCard(item = item, progress = progress.of(item), onLongClick = onItemLongClick, onClick = onItemClick)
+                    LibraryItemCard(item = item, progress = progress.of(item), finished = progress.finished(item), onLongClick = onItemLongClick, onClick = onItemClick)
                 }
             }
             if (seeAllTotal != null) {
