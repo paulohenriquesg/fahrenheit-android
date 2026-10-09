@@ -93,7 +93,9 @@ class PodcastViewModelTest {
             return FeedResponse(FeedPodcast(feedEpisodes))
         }
         override suspend fun downloadQueue(libraryId: String) = queue.also { queueReads++ }
+        var refuse = false
         override suspend fun downloadEpisodes(podcastId: String, episodes: List<JsonObject>) {
+            if (refuse) error("refused")
             requested += episodes
         }
     }
@@ -107,6 +109,7 @@ class PodcastViewModelTest {
     }
 
     private val store = ProgressStore()
+    private var clock = 0L
     private var marks = mutableListOf<Triple<String, Boolean, Double?>>()
     private var markAnswer: suspend () -> Boolean = { true }
 
@@ -127,6 +130,7 @@ class PodcastViewModelTest {
         serverFormat = null,
         favourites = favourites,
         progressStore = store,
+        clock = { clock },
         scope = scope
     )
 
@@ -447,5 +451,35 @@ class PodcastViewModelTest {
 
         assertNull(state.favouritesPlaylist)
         assertNull(state.screen.tabs)
+    }
+
+    // #215: an empty queue a few seconds after asking is not a failure.
+    @Test
+    fun `an episode asked for, with nothing in the queue yet, stays requested`() {
+        val api = Api(me = Me(type = "admin"), feedEpisodes = listOf(feedEpisode("g3", "Third Rail", 3)))
+        val model = model(api)
+        val row = model.state.value.screen.rows.first { it.title == "Third Rail" }
+
+        model.download(row)
+        clock = 10_000
+        model.chooseTab(EpisodeTab.All)
+
+        assertEquals(DownloadState.Requested, model.state.value.downloads[row.key])
+    }
+
+    @Test
+    fun `a refused request says so, and the queue watched for another does not take that back`() {
+        val api = Api(me = Me(type = "admin"), feedEpisodes = listOf(feedEpisode("g3", "Third Rail", 3), feedEpisode("g4", "Fourth Wall", 4)))
+        val model = model(api)
+        val refused = model.state.value.screen.rows.first { it.title == "Third Rail" }
+        val other = model.state.value.screen.rows.first { it.title == "Fourth Wall" }
+
+        api.refuse = true
+        model.download(refused)
+        api.refuse = false
+        model.download(other)
+
+        assertEquals(DownloadState.Failed, model.state.value.downloads[refused.key])
+        assertEquals(DownloadState.Requested, model.state.value.downloads[other.key])
     }
 }

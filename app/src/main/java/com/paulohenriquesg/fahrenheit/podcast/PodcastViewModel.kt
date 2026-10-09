@@ -71,6 +71,7 @@ class PodcastViewModel(
     private val serverFormat: String?,
     private val favourites: LibraryFavourites? = null,
     private val progressStore: ProgressStore = ProgressStore.process,
+    private val clock: () -> Long = System::currentTimeMillis,
     scope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -86,11 +87,11 @@ class PodcastViewModel(
     private var heartChange: HeartChange? = null
     private var feedCheck: FeedCheckState = FeedCheckState.Idle
     private var queue = DownloadQueue(null, emptyList())
-    private var misses: Map<String, Int> = emptyMap()
+    private var requests: Map<String, DownloadRequest> = emptyMap()
     private var markFailed = false
     private val marking = EpisodeMarking()
     private val autoDownloads = settingsApi?.let { PodcastDownloads(itemId, DownloadSettings.of(item.media), it) }
-    private val watch = podcastApi?.let { DownloadWatch(it, item.libraryId, itemId) }
+    private val watch = podcastApi?.let { DownloadWatch(it, item.libraryId, itemId, clock) }
     private var watching = false
 
     private val _state = MutableStateFlow(build())
@@ -190,13 +191,13 @@ class PodcastViewModel(
     fun download(row: EpisodeRow) {
         val episode = row.feed ?: return
         val watch = watch ?: return
-        misses = misses + (row.key to 0)
+        requests = requests + (row.key to DownloadRequest.Asked(clock()))
         publish()
         scope.launch {
             if (watch.request(row.key, episode)) {
                 startWatch()
             } else {
-                misses = misses + (row.key to DownloadProgress.MISSES_BEFORE_FAILED)
+                requests = requests + (row.key to DownloadRequest.Refused)
                 publish()
             }
         }
@@ -261,7 +262,12 @@ class PodcastViewModel(
             try {
                 do {
                     watch.watch(
-                        onUpdate = { q, m -> queue = q; misses = m; publish() },
+                        onUpdate = { q, asked ->
+                            queue = q
+                            // The watch knows what it awaits; a refusal is this screen's to remember.
+                            requests = requests.filterValues { it == DownloadRequest.Refused } + asked
+                            publish()
+                        },
                         reload = { reload()?.media?.episodes }
                     )
                 } while (watch.waiting)
@@ -310,7 +316,7 @@ class PodcastViewModel(
             tab = tabs.tab,
             progress = EpisodeMarks.over(EpisodeProgress.index(progress, itemId), marking.marks),
             downloads = screen.rows.mapNotNull { row ->
-                DownloadProgress.state(row, queue, misses[row.key])?.let { row.key to it }
+                DownloadProgress.state(row, queue, requests[row.key], clock())?.let { row.key to it }
             }.toMap(),
             feedCheck = feedCheck.takeIf { isAdmin },
             autoDownloads = settings.takeIf { mayChangeDownloads },
