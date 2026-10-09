@@ -11,6 +11,7 @@ import com.paulohenriquesg.fahrenheit.api.PodcastSettingsApi
 import com.paulohenriquesg.fahrenheit.detail.DetailHeaderModel
 import com.paulohenriquesg.fahrenheit.favourites.HeartChange
 import com.paulohenriquesg.fahrenheit.favourites.LibraryFavourites
+import com.paulohenriquesg.fahrenheit.progress.ProgressStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,7 +51,7 @@ data class PodcastUiState(
 
 /**
  * The podcast page's state (#208): the show, what the user has heard of it
- * (GET /api/me, until there is a shared progress store), the feed for an
+ * (the shared progress store, #207), the feed for an
  * admin, the download queue, the feed check, marks, the library's Favourites
  * and the show's download settings. The page is a function of [state]; its events are the methods here.
  *
@@ -69,6 +70,7 @@ class PodcastViewModel(
     private val now: Long,
     private val serverFormat: String?,
     private val favourites: LibraryFavourites? = null,
+    private val progressStore: ProgressStore = ProgressStore.process,
     scope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -95,26 +97,37 @@ class PodcastViewModel(
     val state: StateFlow<PodcastUiState> = _state.asStateFlow()
 
     init {
+        // What has been heard is the shared store's (#207): the player's
+        // reports and marks, and the server's own copy, all land there.
+        this.scope.launch {
+            progressStore.entries.collect {
+                // Each change is the server's word: playing a finished episode un-finishes it there.
+                marking.settle()
+                publish()
+            }
+        }
         refresh()
     }
 
     private val isAdmin get() = FeedCheck.mayCheck(me?.type, item.media.metadata.feedUrl)
 
-    /** Reads what the user has heard again: on open, and on coming back from the player. */
+    /**
+     * Reads who the user is again, for the admin's actions and the download
+     * settings, and the Favourites playlist: on open, and on coming back.
+     */
     fun refresh() {
         val api = podcastApi ?: return
         scope.launch {
+            val since = progressStore.generation
             try {
-                me = api.me()
+                me = api.me().also { progressStore.readMe(it, since) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 // Offline: what was read before stands.
             }
             asked = true
-            // Each fresh read is the server's word: playing a finished episode un-finishes it there.
-            marking.settle()
-            // So is the playlist: a heart changed in the player shows here (#180).
+            // The playlist too: a heart changed in the player shows here (#180).
             favourites?.let {
                 it.load()
                 tabs.follow(it.episodesOf(itemId))
@@ -136,17 +149,15 @@ class PodcastViewModel(
 
     /** Marks an episode finished or not: shown at once, put back if the server refuses. */
     fun mark(episode: Episode, finished: Boolean) {
-        val keepAt = if (finished) null else EpisodeMarks.keepAt(
-            me?.mediaProgress?.firstOrNull { it.libraryItemId == itemId && it.episodeId == episode.id }
-        )
+        val keepAt = if (finished) null else EpisodeMarks.keepAt(progressStore.of(itemId, episode.id))
         scope.launch {
             val worked = marking.mark(episode.id, finished) {
                 publish()
                 markFinished(episode.id, finished, keepAt)
             }
             when (worked) {
-                // Read again, so the rows and Resume say what the server now holds.
-                true -> refresh()
+                // The service put the mark in the store, which the rows and Resume read (#207).
+                true -> marking.settle()
                 false -> markFailed = true
                 null -> Unit
             }
@@ -284,7 +295,7 @@ class PodcastViewModel(
             favourites = inFavourites,
             favouritesKept = tabs.kept
         )
-        val progress = me?.mediaProgress.orEmpty()
+        val progress = progressStore.entries.value.values.toList()
         val resume = EpisodeProgress.resumable(progress, itemId, onServer = episodes.map { it.id }.toSet())
             ?.let { id -> episodes.firstOrNull { it.id == id } }
         val header = DetailHeaderModel.podcast(item, screen.facts, resumeTitle = resume?.title)

@@ -22,6 +22,8 @@ import com.paulohenriquesg.fahrenheit.favourites.Favourites
 import com.paulohenriquesg.fahrenheit.favourites.HeartChange
 import com.paulohenriquesg.fahrenheit.favourites.LibraryFavourites
 import com.paulohenriquesg.fahrenheit.favourites.MemoryChoice
+import com.paulohenriquesg.fahrenheit.api.ProgressMark
+import com.paulohenriquesg.fahrenheit.progress.ProgressStore
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -104,6 +106,7 @@ class PodcastViewModelTest {
         }
     }
 
+    private val store = ProgressStore()
     private var marks = mutableListOf<Triple<String, Boolean, Double?>>()
     private var markAnswer: suspend () -> Boolean = { true }
 
@@ -123,6 +126,7 @@ class PodcastViewModelTest {
         now = 10,
         serverFormat = null,
         favourites = favourites,
+        progressStore = store,
         scope = scope
     )
 
@@ -259,8 +263,8 @@ class PodcastViewModelTest {
         model.mark(episode, true)
         assertEquals(EpisodeProgress.Heard, model.state.value.progress["s1"])
 
-        // Played on elsewhere meanwhile: the server has it under way, and says so.
-        api.me = Me(type = "user", mediaProgress = listOf(progress("s1", 100.0)))
+        // Played on elsewhere meanwhile: the server has it under way, and the store says so.
+        store.replace(listOf(progress("s1", 100.0)), since = store.generation)
         answer.complete(true)
 
         assertTrue(model.state.value.progress["s1"] is EpisodeProgress.InProgress)
@@ -312,7 +316,7 @@ class PodcastViewModelTest {
     }
 
     @Test
-    fun `a mark shows at once, and the server's word is read again once it is taken`() {
+    fun `a mark shows at once, and once taken the store says it, with no read of the page's own`() {
         val answer = CompletableDeferred<Boolean>()
         markAnswer = { answer.await() }
         val api = Api()
@@ -321,11 +325,25 @@ class PodcastViewModelTest {
 
         model.mark(episode, true)
         assertEquals(EpisodeProgress.Heard, model.state.value.progress["s1"])
-        assertEquals(1, api.meReads)
 
+        // As the playback service does with a mark the server took (#207).
+        store.marked("p1", "s1", ProgressMark(isFinished = true))
         answer.complete(true)
         assertEquals(listOf(Triple("s1", true, null)), marks)
-        assertEquals(2, api.meReads)
+        assertEquals(EpisodeProgress.Heard, model.state.value.progress["s1"])
+        assertEquals(1, api.meReads)
+    }
+
+    // #207: the page reads the shared store, so the player's writes show on Back.
+    @Test
+    fun `an episode finished in the player shows finished, with no read of the page's own`() {
+        val api = Api()
+        val model = model(api)
+
+        store.marked("p1", "s2", ProgressMark(isFinished = true))
+
+        assertEquals(EpisodeProgress.Heard, model.state.value.progress["s2"])
+        assertEquals(1, api.meReads)
     }
 
     @Test
