@@ -229,7 +229,7 @@ class NowPlayingTest {
         assertEquals("The Long Way · Book 1", NowPlaying.of(inSeries("1"), episodeId = null, now = now)!!.withSeriesTotal(1).kicker)
 
     private fun show(vararg episodes: String): LibraryItemResponse = Gson().fromJson(
-        """{"id":"p2","mediaType":"podcast","media":{"metadata":{"title":"A Show","explicit":false},"episodes":[${episodes.joinToString(",")}]}}""",
+        """{"id":"p2","libraryId":"l2","mediaType":"podcast","media":{"metadata":{"title":"A Show","explicit":false},"episodes":[${episodes.joinToString(",")}]}}""",
         LibraryItemResponse::class.java
     )
 
@@ -248,6 +248,10 @@ class NowPlayingTest {
         assertEquals("Season 2 · Episode 295 · 30 min", playing.details)
         assertEquals("A short subtitle", playing.notes)
     }
+
+    @Test
+    fun `an episode carries its podcast's library, so the player can find its Favourites`() =
+        assertEquals("l2", NowPlaying.of(show(episodeJson("e1", 1_000)), episodeId = "e1", now = now)!!.libraryId)
 
     @Test
     fun `an episode knows the ones either side`() {
