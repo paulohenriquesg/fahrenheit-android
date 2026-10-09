@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.graphicsLayer
@@ -185,10 +186,9 @@ fun MediaPlayerController(
             )
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        TransportLine(
+            modifier = Modifier.padding(top = 18.dp),
+            actions = trailing
         ) {
             if (chapter != null) {
                 TransportButton(
@@ -271,8 +271,46 @@ fun MediaPlayerController(
                     Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.next_episode))
                 }
             }
-            Spacer(Modifier.weight(1f))
-            trailing()
+        }
+    }
+}
+
+/**
+ * The transport, and frame C's actions at the right of it. The actions keep
+ * their own width: when they do not fit beside the transport they go under
+ * it, still at the right, rather than squeeze a chip to a sliver (#180).
+ */
+@Composable
+private fun TransportLine(
+    actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
+    modifier: Modifier = Modifier,
+    transport: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+) {
+    val gap = 14.dp
+    Layout(
+        modifier = modifier.fillMaxWidth(),
+        content = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(gap), content = transport)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(gap), content = actions)
+        }
+    ) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val buttons = measurables[0].measure(loose)
+        val chips = measurables[1].measure(loose)
+        val space = gap.roundToPx()
+        val oneLine = buttons.width + space + chips.width
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else oneLine
+        if (oneLine <= width) {
+            val height = maxOf(buttons.height, chips.height)
+            layout(width, height) {
+                buttons.place(0, (height - buttons.height) / 2)
+                chips.place(width - chips.width, (height - chips.height) / 2)
+            }
+        } else {
+            layout(width, buttons.height + space + chips.height) {
+                buttons.place(0, 0)
+                chips.place(width - chips.width, buttons.height + space)
+            }
         }
     }
 }
@@ -343,7 +381,7 @@ private fun SkipIcon(seconds: Int, forward: Boolean, description: String) {
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun TransportButton(
+internal fun TransportButton(
     onClick: () -> Unit,
     size: androidx.compose.ui.unit.Dp,
     container: androidx.compose.ui.graphics.Color,

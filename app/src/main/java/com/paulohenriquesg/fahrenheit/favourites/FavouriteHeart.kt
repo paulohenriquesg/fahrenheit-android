@@ -1,8 +1,5 @@
 package com.paulohenriquesg.fahrenheit.favourites
 
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -15,16 +12,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Button
-import androidx.tv.material3.LocalContentColor
-import androidx.tv.material3.Text
+import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.api.Playlist
+import com.paulohenriquesg.fahrenheit.player.TransportButton
 
-const val FAVOURITE_CHIP_TAG = "player_favourite"
+const val FAVOURITE_BUTTON_TAG = "player_favourite"
 
 /** What a press on the heart did, for the short note that confirms it. */
 sealed interface HeartChange {
@@ -84,23 +78,23 @@ class FavouriteHeart(
     }
 }
 
-/** The heart among the player's actions (frame 1): filled while this is in [playlist]. */
+/**
+ * The heart among the player's actions (frame 1): a round icon button, the
+ * transport's own, filled while this is in [playlist]. No label, so the
+ * actions beside it keep their width on a 1920-wide screen.
+ */
 @Composable
-fun FavouriteChip(filled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, playlist: String = Favourites.NAME) {
-    val state = stringResource(if (filled) R.string.favourite_in else R.string.favourite_not_in, playlist)
-    Button(
+fun FavouriteButton(filled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, playlist: String = Favourites.NAME) {
+    TransportButton(
         onClick = onClick,
-        modifier = modifier
-            .testTag(FAVOURITE_CHIP_TAG)
-            .semantics { stateDescription = state }
+        size = 48.dp,
+        container = MaterialTheme.colorScheme.secondaryContainer,
+        content = MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = modifier.testTag(FAVOURITE_BUTTON_TAG)
     ) {
         Icon(
             if (filled) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            contentDescription = null,
-            tint = LocalContentColor.current,
-            modifier = Modifier.size(20.dp)
+            contentDescription = if (filled) stringResource(R.string.favourite_remove, playlist) else stringResource(R.string.favourite)
         )
-        Spacer(Modifier.width(8.dp))
-        Text(stringResource(R.string.favourite))
     }
 }

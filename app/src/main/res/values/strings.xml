@@ -286,8 +286,7 @@
     <string name="favourites_load_failed">Couldn\'t read your playlists. Check the connection and try again.</string>
     <string name="favourites_change_failed">Couldn\'t change Favourites. Check the connection and try again.</string>
     <string name="favourite">Favourite</string>
-    <string name="favourite_in">In %1$s</string>
-    <string name="favourite_not_in">Not in %1$s</string>
+    <string name="favourite_remove">Remove from %1$s</string>
     <string name="favourite_added">Added to %1$s</string>
     <string name="favourite_removed">Removed from %1$s</string>
     <plurals name="favourites_items">

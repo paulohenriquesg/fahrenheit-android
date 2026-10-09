@@ -1,6 +1,6 @@
 package com.paulohenriquesg.fahrenheit.player
 
-import com.paulohenriquesg.fahrenheit.favourites.FavouriteChip
+import com.paulohenriquesg.fahrenheit.favourites.FavouriteButton
 import com.paulohenriquesg.fahrenheit.favourites.FavouriteHeart
 import com.paulohenriquesg.fahrenheit.favourites.Favourites
 import com.paulohenriquesg.fahrenheit.favourites.FavouritesChoice
@@ -346,19 +346,22 @@ class PlayerActivity : ComponentActivity() {
                                     )
                                 },
                                 trailing = {
-                                    // Frame C's actions; an episode has Go to podcast where a book has Chapters.
-                                    if (playing.goToPodcast) GoToPodcastButton { goToPodcast(itemId) }
-                                    if (spans.isNotEmpty()) ChaptersChip(panels)
-                                    heart?.playlist?.let { playlist ->
-                                        FavouriteChip(
-                                            filled = heart.filled,
-                                            playlist = playlist.name,
-                                            onClick = { scope.launch { heart.toggle()?.let(::confirm) } }
-                                        )
-                                    }
-                                    SpeedChip(rememberPlaybackSpeed(connected), panels)
-                                    SleepChip(sleep, panels)
-                                    AboutChip(panels)
+                                    PlayerActions(
+                                        panels = panels,
+                                        speed = rememberPlaybackSpeed(connected),
+                                        sleep = sleep,
+                                        chapters = spans.isNotEmpty(),
+                                        onGoToPodcast = if (playing.goToPodcast) ({ goToPodcast(itemId) }) else null,
+                                        favourite = heart?.playlist?.let { playlist ->
+                                            {
+                                                FavouriteButton(
+                                                    filled = heart.filled,
+                                                    playlist = playlist.name,
+                                                    onClick = { scope.launch { heart.toggle()?.let(::confirm) } }
+                                                )
+                                            }
+                                        }
+                                    )
                                 }
                             )
                         }
