@@ -86,13 +86,16 @@ class HomeShelvesFailureTest {
                 )
             }
         }
-        compose.waitUntil(5_000) { fetches >= 1 }
+        // Generous bounds, met as soon as they hold: the first MainScreen and
+        // client of a busy test JVM have taken over five seconds.
+        compose.waitUntil(30_000) { server.requestCount >= 1 }
+        compose.waitUntil(30_000) { fetches >= 1 }
         compose.waitForIdle()
     }
 
     /** Until the reload, past its coalescing window, has fetched. */
     private fun untilReloaded() {
-        compose.waitUntil(5_000) { fetches >= 2 }
+        compose.waitUntil(30_000) { fetches >= 2 }
         compose.waitForIdle()
     }
 
