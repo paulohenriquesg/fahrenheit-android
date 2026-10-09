@@ -5,13 +5,14 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import com.paulohenriquesg.fahrenheit.ui.rememberInitialFocus
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
-import com.paulohenriquesg.fahrenheit.detail.FactChip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,6 +42,8 @@ import com.paulohenriquesg.fahrenheit.favourites.EpisodeFavouriteButton
 import com.paulohenriquesg.fahrenheit.ui.elements.RowButton
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
@@ -77,8 +80,12 @@ private val tabNames = mapOf(
  * the server has it; the server's own for anyone else (#76).
  *
  * @param focusFirstRow whether the newest episode takes focus on arrival:
- *   false when the header's primary action already does.
+ *   false when the page's primary action already does.
  * @param date how a row writes its publication date.
+ * @param top the head of the list, which scrolls away: on the podcast page,
+ *   Now playing and the description (#205).
+ * @param rowsLeft where Left from a row goes, rather than to the tab just
+ *   above it, which sits a few dp further left (#205).
  */
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -94,16 +101,15 @@ fun PodcastEpisodesView(
     coverItemId: String? = null,
     date: (EpisodeRow) -> String = { "" },
     focusFirstRow: Boolean = true,
-    title: String = "",
     hearts: EpisodeHearts? = null,
-    header: @Composable () -> Unit = {}
+    rowsLeft: FocusRequester = FocusRequester.Default,
+    top: @Composable () -> Unit = {}
 ) {
-    // One list, header included, so moving down into the episodes pushes the
-    // header off: under a fixed one only about 1.5 rows fitted in 540dp.
+    // One list, its head included, so moving down into the episodes pushes the
+    // head off: under a fixed one only about 1.5 rows fitted in 540dp.
     val listState = rememberLazyListState()
-    val scrolled by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
     // Something must hold focus or the remote does nothing. Usually the
-    // header's primary action has it; failing that, the newest episode.
+    // page's primary action has it; failing that, the newest episode.
     val firstKey = screen.rows.firstOrNull()?.key
     val initialFocus = rememberInitialFocus(enabled = focusFirstRow && firstKey != null, firstKey)
 
@@ -112,42 +118,30 @@ fun PodcastEpisodesView(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.testTag("podcast_list")
     ) {
-        item(key = "header") {
+        item(key = "top") {
             Column(verticalArrangement = Arrangement.spacedBy(Space.gap)) {
-                header()
+                top()
                 screen.note?.let { NoteBox(it) }
             }
         }
-        // Pinned: which podcast, and which filter, stay in view while the
-        // header is gone - and a tab stays one Up away.
-        stickyHeader(key = "pinned") {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (scrolled && title.isNotEmpty()) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.testTag("pinned_title")
-                    )
-                }
-                screen.tabs?.let { tabs ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        tabs.forEach { (each, count) ->
-                            FilterChip(
-                                selected = each == tab,
-                                onClick = { onTab(each) },
-                                modifier = Modifier.testTag("episode_tab_${each.name}")
-                            ) {
-                                Text("${tabNames.getValue(each)} · $count")
-                            }
+        // Pinned: the filter stays in view while the head is gone, and a tab
+        // stays one Up away. The show's name is in the page's left column (#205).
+        screen.tabs?.let { tabs ->
+            stickyHeader(key = "pinned") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    tabs.forEach { (each, count) ->
+                        FilterChip(
+                            selected = each == tab,
+                            onClick = { onTab(each) },
+                            modifier = Modifier.testTag("episode_tab_${each.name}")
+                        ) {
+                            Text("${tabNames.getValue(each)} · $count")
                         }
                     }
                 }
@@ -162,7 +156,9 @@ fun PodcastEpisodesView(
                 progress = row.onServer?.id?.let(progress::get),
                 coverItemId = coverItemId,
                 date = date(row),
-                modifier = if (index == 0) Modifier.focusRequester(initialFocus) else Modifier,
+                modifier = Modifier
+                    .focusProperties { left = rowsLeft }
+                    .then(if (index == 0) Modifier.focusRequester(initialFocus) else Modifier),
                 onMark = row.onServer?.let { episode -> { finished: Boolean -> onMark(episode, finished) } },
                 hearts = hearts,
                 onPress = {
@@ -176,6 +172,9 @@ fun PodcastEpisodesView(
         }
     }
 }
+
+/** Whether a row is drawn dimmed: finished, and not where focus is (#181, #205). */
+val EpisodeRowDimmed = SemanticsPropertyKey<Boolean>("EpisodeRowDimmed")
 
 /** What the right-hand end of a row says. */
 object EpisodeRowLabel {
@@ -260,6 +259,7 @@ private fun EpisodeRowCard(
                 .weight(1f)
                 .padding(horizontal = 4.dp)
                 .testTag("episode_row_${row.key}")
+                .semantics { this[EpisodeRowDimmed] = finished && !rowFocused }
                 .onFocusChanged { focused = it.isFocused },
             colors = CardDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.surface,
@@ -321,7 +321,7 @@ private fun EpisodeRowCard(
                         inProgress?.let { "${formatDuration(it.secondsLeft)} left" },
                         // Marked, not hidden or struck through (#78), in the web app's word (#181).
                         "finished".takeIf { finished }
-                    ).joinToString(" • ")
+                    ).joinToString(" · ")
                     if (meta.isNotEmpty()) {
                         Text(meta, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -330,13 +330,19 @@ private fun EpisodeRowCard(
                 Spacer(Modifier.width(Space.gap))
                 val label = EpisodeRowLabel.of(row.downloaded, state, focused, progress)
                 if (row.downloaded) {
-                    // Playable: an icon, with the word ("Play" / "Resume") as its description.
-                    Icon(
-                        imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = label,
-                        tint = if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(32.dp)
-                    )
+                    // Playable: an icon, with the word ("Play" / "Resume") as its
+                    // description, only where Center would play (#205). The space
+                    // is kept, so focus moves nothing.
+                    Box(Modifier.size(32.dp)) {
+                        if (focused) {
+                            Icon(
+                                imageVector = Icons.Filled.PlayArrow,
+                                contentDescription = label,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
                 } else {
                     Text(
                         text = label,

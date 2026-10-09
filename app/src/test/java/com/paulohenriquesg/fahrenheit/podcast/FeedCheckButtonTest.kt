@@ -23,7 +23,7 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w960dp-h540dp")
-class FeedCheckRowTest {
+class FeedCheckButtonTest {
 
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
@@ -32,7 +32,7 @@ class FeedCheckRowTest {
 
     private fun render(state: FeedCheckState) {
         compose.setContent {
-            FahrenheitTheme { FeedCheckRow(state = state, onCheck = { checks++ }) }
+            FahrenheitTheme { FeedCheckButton(state = state, onCheck = { checks++ }) }
         }
         compose.waitForIdle()
     }
@@ -49,7 +49,7 @@ class FeedCheckRowTest {
         render(FeedCheckState.Idle)
 
         compose.onNodeWithText("Check for new episodes").assertIsDisplayed()
-        compose.onNodeWithText("Downloads up to 3 new episodes to the server").assertIsDisplayed()
+        compose.onNodeWithText("Up to 3 to the server").assertIsDisplayed()
     }
 
     @Test
@@ -75,28 +75,28 @@ class FeedCheckRowTest {
     fun `what was found is counted`() {
         render(FeedCheckState.Found(3))
 
-        compose.onNodeWithText("3 new episodes found. The server is downloading them.").assertIsDisplayed()
+        compose.onNodeWithText("3 new, downloading").assertIsDisplayed()
     }
 
     @Test
-    fun `one episode is not "1 new episodes"`() {
+    fun `one episode is counted as one`() {
         render(FeedCheckState.Found(1))
 
-        compose.onNodeWithText("1 new episode found. The server is downloading it.").assertIsDisplayed()
+        compose.onNodeWithText("1 new, downloading").assertIsDisplayed()
     }
 
     @Test
     fun `nothing new is said as such`() {
         render(FeedCheckState.Found(0))
 
-        compose.onNodeWithText("Nothing new in the feed since the last check.").assertIsDisplayed()
+        compose.onNodeWithText("Nothing new").assertIsDisplayed()
     }
 
     @Test
     fun `a failure is said, and the check can be tried again`() {
         render(FeedCheckState.Failed)
 
-        compose.onNodeWithText("Could not check the feed.").assertIsDisplayed()
+        compose.onNodeWithText("Could not check").assertIsDisplayed()
         press()
 
         assertEquals(1, checks)

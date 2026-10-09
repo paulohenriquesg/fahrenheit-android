@@ -46,7 +46,7 @@ class PodcastScreenModelTest {
         assertEquals(
             listOf(
                 Fact("1 of 3 on the server"),
-                Fact("Feed last checked: 2024-10-27"),
+                Fact("Feed checked 2024-10-27"),
                 Fact("Automatic downloads off", warn = true)
             ),
             m.facts
@@ -69,7 +69,7 @@ class PodcastScreenModelTest {
     fun `a recent check reads as recent, and automatic downloads on is not a warning`() {
         val m = model(lastCheck = now - day / 2, autoDownload = true)
 
-        assertEquals(Fact("Feed last checked: Today"), m.facts[1])
+        assertEquals(Fact("Feed checked Today"), m.facts[1])
         assertEquals(Fact("Automatic downloads on"), m.facts[2])
     }
 

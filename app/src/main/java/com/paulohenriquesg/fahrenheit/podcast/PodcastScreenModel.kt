@@ -98,7 +98,7 @@ object PodcastScreenModel {
         if (at == null || at <= 0) {
             Fact("Feed never checked")
         } else {
-            Fact("Feed last checked: ${EpisodeDate.of(at, now, serverFormat)}")
+            Fact("Feed checked ${EpisodeDate.of(at, now, serverFormat)}")
         }
 
     private fun note(feed: FeedLoad, empty: Boolean): Note? = when (feed) {

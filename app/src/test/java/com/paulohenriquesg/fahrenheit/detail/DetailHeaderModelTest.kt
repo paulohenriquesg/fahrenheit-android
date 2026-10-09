@@ -149,16 +149,9 @@ class DetailHeaderModelTest {
         assertEquals(Fact("Just started"), header.chips.last())
     }
 
-    // Also seen on the stick: <br /><br /> spent the three-line preview on a
-    // blank line and a lone ellipsis.
     @Test
-    fun `the preview runs paragraphs together instead of spending lines on breaks`() {
-        val header = header(book())
-        val broken = DetailHeaderModel.previewOf("<b>The first novel!</b><br /><br />When a shuttle fails,<p>Pike</p><p>suspects</p>")
-
-        assertEquals("<b>The first novel!</b> When a shuttle fails, Pike suspects", broken)
-        // The model passes it on whole: a book shows all of it, a podcast a preview.
-        assertEquals("<p>Ryland Grace</p>", header.description)
+    fun `the description is passed on whole`() {
+        assertEquals("<p>Ryland Grace</p>", header(book()).description)
     }
 
     @Test

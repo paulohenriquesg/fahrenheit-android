@@ -245,13 +245,13 @@
     </plurals>
     <string name="latest_episodes">Latest Episodes</string>
     <string name="check_new_episodes">Check for new episodes</string>
-    <string name="check_new_episodes_limit">Downloads up to %1$d new episodes to the server</string>
+    <string name="check_new_episodes_limit">Up to %1$d to the server</string>
     <string name="check_new_episodes_running">Checking the feed…</string>
-    <string name="check_new_episodes_none">Nothing new in the feed since the last check.</string>
-    <string name="check_new_episodes_failed">Could not check the feed.</string>
+    <string name="check_new_episodes_none">Nothing new</string>
+    <string name="check_new_episodes_failed">Could not check</string>
     <plurals name="check_new_episodes_found">
-        <item quantity="one">%1$d new episode found. The server is downloading it.</item>
-        <item quantity="other">%1$d new episodes found. The server is downloading them.</item>
+        <item quantity="one">%1$d new, downloading</item>
+        <item quantity="other">%1$d new, downloading</item>
     </plurals>
     <string name="resume_further_on">You listened further on %1$s</string>
     <string name="resume_back_on">You went back on %1$s</string>

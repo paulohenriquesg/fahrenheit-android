@@ -30,6 +30,10 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.api.ApiClient
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import com.paulohenriquesg.fahrenheit.podcast.PodcastViewModel
+import com.paulohenriquesg.fahrenheit.podcast.PodcastPage
 import com.paulohenriquesg.fahrenheit.favourites.Favourites
 import com.paulohenriquesg.fahrenheit.favourites.FavouritesChoice
 import com.paulohenriquesg.fahrenheit.favourites.LibraryFavourites
@@ -54,7 +58,6 @@ import com.paulohenriquesg.fahrenheit.podcast.PodcastFeed
 import com.paulohenriquesg.fahrenheit.podcast.PodcastScreenModel
 import com.paulohenriquesg.fahrenheit.utils.EpisodeDate
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheck
-import com.paulohenriquesg.fahrenheit.podcast.FeedCheckRow
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheckState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -151,7 +154,6 @@ class DetailActivity : ComponentActivity() {
     fun DetailScreen(itemId: String) {
         var itemDetail by remember { mutableStateOf<LibraryItemResponse?>(null) }
         var loadFailed by remember { mutableStateOf(false) }
-        var me by remember { mutableStateOf<Me?>(null) }
 
         val context = LocalContext.current
         var marking by remember { mutableStateOf(false) }
@@ -189,16 +191,6 @@ class DetailActivity : ComponentActivity() {
                 ?.takeIf { it.current != null }
         }
 
-        // Who the user is, for the admin check; what they have heard is the store's (#207).
-        val isPodcast = itemDetail?.mediaType == "podcast"
-        LaunchedEffect(isPodcast) {
-            if (!isPodcast) return@LaunchedEffect
-            val podcastApi = ApiClient.getPodcastApi() ?: return@LaunchedEffect
-            val since = ProgressStore.process.generation
-            // Read anyway, so what it says of progress goes in the store too.
-            runCatching { podcastApi.me() }.onSuccess { me = it; ProgressStore.process.readMe(it, since) }
-        }
-
         if (loadFailed) {
             // The previous version showed an empty screen with a toast that
             // was gone by the time anyone looked at it.
@@ -230,7 +222,7 @@ class DetailActivity : ComponentActivity() {
         }
         DetailBody { margin ->
             if (!isBook) {
-                PodcastEpisodes(itemId, item, me, progress.values.toList(), margin, onReloaded = { itemDetail = it }, returns = resumes, nowPlaying = nowPlaying)
+                PodcastEpisodes(itemId, item, margin, nowPlaying = nowPlaying)
             } else {
                 val bookProgress = progress[ProgressKey(itemId, null)]
                 BookDetailView(
@@ -268,231 +260,73 @@ class DetailActivity : ComponentActivity() {
     }
 
     /**
-     * The podcast half of this screen (#76): every episode in the feed for an
-     * admin, marked by whether the server has it, and the server's own for
-     * anyone else. The header is the top of the episode list, so it scrolls
-     * away as the viewer moves into the episodes.
+     * The podcast half of this screen (#76), in the book page's layout (#205):
+     * its state is [PodcastViewModel]'s (#208); here are only where a press
+     * leads and what is said aloud.
      */
     @Composable
     private fun PodcastEpisodes(
         itemId: String,
         item: LibraryItemResponse,
-        me: Me?,
-        progress: List<MediaProgressResponse>,
         margin: PaddingValues,
-        onReloaded: (LibraryItemResponse) -> Unit,
-        returns: Int,
         nowPlaying: @Composable () -> Unit
     ) {
         val context = LocalContext.current
-        val scope = rememberCoroutineScope()
-        var feed by remember { mutableStateOf<FeedLoad>(FeedLoad.Unavailable) }
-        val tabs = remember(itemId) { EpisodeTabChoice() }
-        // The library's Favourites playlist, for the hearts and the tab (#180):
-        // read again on every return, so a heart changed in the player shows.
-        val favourites = remember(item.libraryId) {
-            ApiClient.getPlaylistApi()?.let { LibraryFavourites(Favourites(it, FavouritesChoice(context)), item.libraryId) }
-        }
-        LaunchedEffect(favourites, returns) { favourites?.load() }
-        val inFavourites = favourites?.episodesOf(itemId)
-        LaunchedEffect(inFavourites == null) { tabs.follow(inFavourites) }
-        var feedCheck by remember { mutableStateOf<FeedCheckState>(FeedCheckState.Idle) }
-        var queue by remember { mutableStateOf(DownloadQueue(null, emptyList())) }
-        var misses by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
-        val watch = remember(itemId) {
-            ApiClient.getPodcastApi()?.let { DownloadWatch(it, item.libraryId, itemId) }
-        }
-        var watching by remember { mutableStateOf(false) }
-        val serverFormat = remember { SharedPreferencesHandler(context).getUserPreferences().dateFormat }
-        val media = item.media
-        val feedUrl = media.metadata.feedUrl
-        val isAdmin = FeedCheck.mayCheck(me?.type, feedUrl)
-        // Marks made here show at once, over what was read on open (#181).
-        val marking = remember(itemId) { EpisodeMarking() }
-        // Each change of the store is the server's word: playing a finished episode un-finishes it there.
-        LaunchedEffect(progress) { marking.settle() }
-        val heard = EpisodeMarks.over(EpisodeProgress.index(progress, itemId), marking.marks)
-        // The show's own auto-download settings (#182): offered only to whom the server would take them from.
-        val settingsApi = ApiClient.getPodcastSettingsApi()
-        val autoDownloads = remember(itemId, settingsApi) {
-            settingsApi?.let { PodcastDownloads(itemId, DownloadSettings.of(item.media), it) }
-        }
-        val mayChangeDownloads = autoDownloads != null && DownloadSettings.mayChange(me)
-        var downloadsOpen by remember { mutableStateOf(false) }
-        var downloadsOpened by remember { mutableStateOf(false) }
-        val downloadsButton = remember { FocusRequester() }
-        LaunchedEffect(downloadsOpen) {
-            // Back to the button the panel was opened from.
-            if (!downloadsOpen && downloadsOpened) downloadsButton.requestFocusWhenAttached()
-        }
-        val resumeEpisode = EpisodeProgress.resumable(
-            progress, itemId, onServer = media.episodes.orEmpty().map { it.id }.toSet()
-        )?.let { id -> media.episodes?.firstOrNull { it.id == id } }
-
-        // Read on open, every time: nothing of the feed is stored.
-        LaunchedEffect(isAdmin, feedUrl) {
-            val podcastApi = ApiClient.getPodcastApi()
-            if (!isAdmin || feedUrl.isNullOrBlank() || podcastApi == null) {
-                feed = FeedLoad.Unavailable
-                return@LaunchedEffect
-            }
-            feed = FeedLoad.Loading
-            feed = PodcastFeed(podcastApi).episodes(feedUrl)
-                .fold(onSuccess = { FeedLoad.Loaded(it) }, onFailure = { FeedLoad.Failed })
-        }
-
-        val now = remember(media) { System.currentTimeMillis() }
-        val screen = PodcastScreenModel.of(
-            server = media.episodes.orEmpty(),
-            feed = feed,
-            tab = tabs.tab,
-            lastEpisodeCheck = media.lastEpisodeCheck,
-            autoDownload = media.autoDownloadEpisodes?.let { autoDownloads?.settings?.enabled ?: it },
-            schedule = autoDownloads?.settings?.schedule ?: media.autoDownloadSchedule,
-            now = now,
-            serverFormat = serverFormat,
-            favourites = inFavourites,
-            favouritesKept = tabs.kept
-        )
-        val header = DetailHeaderModel.podcast(item, screen.facts, resumeTitle = resumeEpisode?.title)
-        val reload: suspend () -> LibraryItemResponse? = {
-            ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() }
-                ?.also(onReloaded)
-        }
-        // One watcher at a time; it stops once nothing here is queued or
-        // awaited, and starts again on the next download.
-        fun startWatch() {
-            if (watching || watch == null) return
-            watching = true
-            scope.launch {
-                try {
-                    do {
-                        watch.watch(
-                            onUpdate = { q, m -> queue = q; misses = m },
-                            reload = { reload()?.media?.episodes }
-                        )
-                    } while (watch.waiting)
-                } finally {
-                    watching = false
+        val app = context.applicationContext
+        val now = remember { System.currentTimeMillis() }
+        val serverFormat = remember { SharedPreferencesHandler(app).getUserPreferences().dateFormat }
+        val model = viewModel(key = "podcast:$itemId") {
+            PodcastViewModel(
+                itemId = itemId,
+                item = item,
+                podcastApi = ApiClient.getPodcastApi(),
+                settingsApi = ApiClient.getPodcastSettingsApi(),
+                reloadItem = { ApiClient.getLibraryApi()?.let { LibraryRepository(it).item(itemId).getOrNull() } },
+                markFinished = { episodeId, finished, keepAt ->
+                    // Through the playback service, in case this episode is the one playing.
+                    suspendCancellableCoroutine { done ->
+                        Playback.markFinished(app, itemId, finished, episodeId, keepAt) { done.resume(it) }
+                    }
+                },
+                now = now,
+                serverFormat = serverFormat,
+                // The library's Favourites playlist, for the hearts and the tab (#180).
+                favourites = ApiClient.getPlaylistApi()?.let {
+                    LibraryFavourites(Favourites(it, FavouritesChoice(app)), item.libraryId)
                 }
-            }
+            )
         }
-        // On open too: episodes queued elsewhere show where they are.
-        LaunchedEffect(isAdmin) { if (isAdmin) startWatch() }
-        val downloads = screen.rows.mapNotNull { row ->
-            DownloadProgress.state(row, queue, misses[row.key])?.let { row.key to it }
-        }.toMap()
-
+        val state by model.state.collectAsState()
+        // Coming back, from the player say: what was heard there.
+        LaunchedEffect(resumes) { if (resumes > 1) model.refresh() }
+        LaunchedEffect(state.markFailed) {
+            if (!state.markFailed) return@LaunchedEffect
+            Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
+            model.markFailureShown()
+        }
+        LaunchedEffect(state.heartChange) {
+            val change = state.heartChange ?: return@LaunchedEffect
+            Toast.makeText(context, change.note(context), Toast.LENGTH_SHORT).show()
+            model.heartChangeShown()
+        }
         val play: (Episode) -> Unit = { episode ->
             context.startActivity(playEpisodeIntent(context, itemId, episode.id))
         }
-
-        Box(Modifier.fillMaxSize().padding(margin)) {
-            PodcastEpisodesView(
-                screen = screen,
-                tab = tabs.tab,
-                onTab = { tabs.choose(it, inFavourites) },
-                downloads = downloads,
-                onPlay = play,
-                progress = heard,
-                onMark = { episode, finished ->
-                    val keepAt = if (finished) null else EpisodeMarks.keepAt(
-                        progress.firstOrNull { it.libraryItemId == itemId && it.episodeId == episode.id }
-                    )
-                    scope.launch {
-                        val worked = marking.mark(episode.id, finished) {
-                            // Through the playback service, in case this episode is the one playing.
-                            suspendCancellableCoroutine { done ->
-                                Playback.markFinished(context, itemId, finished, episode.id, keepAt) { done.resume(it) }
-                            }
-                        }
-                        when (worked) {
-                            // The service put the mark in the store, which the rows and Resume read (#207).
-                            true -> marking.settle()
-                            false -> Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
-                            null -> Unit
-                        }
-                    }
-                },
-                onDownload = { row ->
-                    val episode = row.feed ?: return@PodcastEpisodesView
-                    if (watch == null) return@PodcastEpisodesView
-                    misses = misses + (row.key to 0)
-                    scope.launch {
-                        if (watch.request(row.key, episode)) {
-                            startWatch()
-                        } else {
-                            misses = misses + (row.key to DownloadProgress.MISSES_BEFORE_FAILED)
-                        }
-                    }
-                },
-                coverItemId = itemId,
-                hearts = favourites?.playlist?.name?.let { name ->
-                    // Kept while nothing it shows changes, so the rows are not redrawn on every poll.
-                    remember(name, inFavourites) {
-                        EpisodeHearts(name, inFavourites.orEmpty()) { episode ->
-                            scope.launch {
-                                // Null for a press while another is on its way: that one's note will say.
-                                favourites.toggle(itemId, episode.id)?.let { change ->
-                                    Toast.makeText(context, change.note(context), Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        }
-                    }
-                },
-                date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
-                focusFirstRow = header.primary == null,
-                title = media.metadata.title,
-                header = {
-                    DetailHeader(
-                        itemId = itemId,
-                        content = header,
-                        nowPlaying = nowPlaying,
-                        onPrimary = {
-                            (resumeEpisode ?: EpisodeOrder.newestFirst(media.episodes.orEmpty()).firstOrNull())?.let(play)
-                        },
-                        actions = {
-                            if (mayChangeDownloads) {
-                                ActionChip(
-                                    text = "Downloads",
-                                    icon = Icons.Outlined.Settings,
-                                    onClick = { downloadsOpen = true; downloadsOpened = true },
-                                    modifier = Modifier.focusRequester(downloadsButton).testTag("podcast_downloads")
-                                )
-                            }
-                            if (isAdmin) {
-                                FeedCheckRow(state = feedCheck, onCheck = {
-                                    val podcastApi = ApiClient.getPodcastApi() ?: return@FeedCheckRow
-                                    scope.launch {
-                                        FeedCheck(podcastApi).run(
-                                            podcastId = itemId,
-                                            episodesBefore = media.episodes?.size ?: 0,
-                                            onState = {
-                                                feedCheck = it
-                                                // What it found is queued; watch it arrive in the list.
-                                                if (it is FeedCheckState.Found && it.count > 0) startWatch()
-                                            },
-                                            reload = { reload()?.media?.episodes?.size }
-                                        )
-                                    }
-                                })
-                            }
-                        }
-                    )
-                }
-            )
-        }
-        if (downloadsOpen && autoDownloads != null) {
-            DownloadsPanel(
-                settings = autoDownloads.settings,
-                failed = autoDownloads.failed,
-                onChange = { change -> scope.launch { autoDownloads.change(change) } },
-                onClose = {
-                    downloadsOpen = false
-                    autoDownloads.seen()
-                }
-            )
-        }
+        PodcastPage(
+            state = state,
+            margin = margin,
+            onPrimary = { state.primaryEpisode?.let(play) },
+            onTab = model::chooseTab,
+            onPlay = play,
+            onDownload = model::download,
+            onMark = model::mark,
+            onCheckFeed = model::checkFeed,
+            onChangeDownloads = model::changeDownloads,
+            onDownloadsClosed = model::downloadsSeen,
+            onFavourite = model::toggleFavourite,
+            date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
+            nowPlaying = nowPlaying
+        )
     }
 
     companion object {

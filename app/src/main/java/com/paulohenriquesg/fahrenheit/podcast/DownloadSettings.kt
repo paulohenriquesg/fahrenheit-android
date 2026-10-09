@@ -51,6 +51,15 @@ object DownloadSchedule {
  */
 data class DownloadSettings(val enabled: Boolean, val schedule: String?, val keep: Int, val perCheck: Int) {
 
+    /** The Automatic downloads button's second line (#205). */
+    val summary: String
+        get() = if (!enabled) "Off" else when (DownloadSchedule.choiceOf(schedule)) {
+            ScheduleChoice.Hourly -> "On · every hour"
+            ScheduleChoice.Daily -> "On · every day"
+            ScheduleChoice.Weekly -> "On · every week"
+            ScheduleChoice.Custom -> "On"
+        }
+
     fun with(change: DownloadChange): DownloadSettings = when (change) {
         is DownloadChange.Enabled -> copy(enabled = change.on)
         // A schedule that already reads as the choice is left as it is: a

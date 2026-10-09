@@ -57,4 +57,14 @@ class DownloadSettingsTest {
         assertFalse(DownloadSettings.mayChange(Me(type = "guest")))
         assertFalse(DownloadSettings.mayChange(null))
     }
+
+    // The Automatic downloads button's second line (#205).
+    @Test
+    fun `the button's second line says whether, and how often`() {
+        assertEquals("On · every hour", DownloadSettings(true, "0 * * * *", 0, 3).summary)
+        assertEquals("On · every day", DownloadSettings(true, "30 4 * * *", 0, 3).summary)
+        assertEquals("On · every week", DownloadSettings(true, "0 0 * * 1", 0, 3).summary)
+        assertEquals("On", DownloadSettings(true, "*/5 * * * *", 0, 3).summary)
+        assertEquals("Off", DownloadSettings(false, "0 0 * * *", 0, 3).summary)
+    }
 }
