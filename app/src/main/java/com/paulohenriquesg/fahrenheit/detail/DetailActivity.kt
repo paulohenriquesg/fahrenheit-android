@@ -33,6 +33,8 @@ import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeOrder
 import com.paulohenriquesg.fahrenheit.podcast.DownloadProgress
 import com.paulohenriquesg.fahrenheit.podcast.EpisodeProgress
+import com.paulohenriquesg.fahrenheit.podcast.EpisodeMarking
+import com.paulohenriquesg.fahrenheit.podcast.EpisodeMarks
 import com.paulohenriquesg.fahrenheit.api.Me
 import androidx.compose.runtime.mutableIntStateOf
 import com.paulohenriquesg.fahrenheit.podcast.DownloadWatch
@@ -48,6 +50,8 @@ import com.paulohenriquesg.fahrenheit.podcast.FeedCheckRow
 import com.paulohenriquesg.fahrenheit.podcast.FeedCheckState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import android.util.Log
@@ -170,7 +174,9 @@ class DetailActivity : ComponentActivity() {
         // One call for both who the user is (the admin check) and what they
         // have heard (#78); read again on every return, e.g. from the player.
         val isPodcast = itemDetail?.mediaType == "podcast"
-        LaunchedEffect(isPodcast, resumes) {
+        // Bumped after an episode is marked, as the book reads itself again.
+        var meReads by remember { mutableIntStateOf(0) }
+        LaunchedEffect(isPodcast, resumes, meReads) {
             if (!isPodcast) return@LaunchedEffect
             val podcastApi = ApiClient.getPodcastApi() ?: return@LaunchedEffect
             runCatching { podcastApi.me() }.onSuccess { me = it }
@@ -207,7 +213,7 @@ class DetailActivity : ComponentActivity() {
         }
         DetailBody(isBook) { margin ->
             if (!isBook) {
-                PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it }, nowPlaying = nowPlaying)
+                PodcastEpisodes(itemId, item, me, onReloaded = { itemDetail = it }, onMarked = { meReads++ }, nowPlaying = nowPlaying)
             } else {
                 BookDetailView(
                     itemId = itemId,
@@ -260,6 +266,7 @@ class DetailActivity : ComponentActivity() {
         item: LibraryItemResponse,
         me: Me?,
         onReloaded: (LibraryItemResponse) -> Unit,
+        onMarked: () -> Unit,
         nowPlaying: @Composable () -> Unit
     ) {
         val context = LocalContext.current
@@ -277,7 +284,11 @@ class DetailActivity : ComponentActivity() {
         val media = item.media
         val feedUrl = media.metadata.feedUrl
         val isAdmin = FeedCheck.mayCheck(me?.type, feedUrl)
-        val heard = EpisodeProgress.index(me?.mediaProgress.orEmpty(), itemId)
+        // Marks made here show at once, over what was read on open (#181).
+        val marking = remember(itemId) { EpisodeMarking() }
+        // Each fresh read is the server's word: playing a finished episode un-finishes it there.
+        LaunchedEffect(me) { marking.settle() }
+        val heard = EpisodeMarks.over(EpisodeProgress.index(me?.mediaProgress.orEmpty(), itemId), marking.marks)
         val resumeEpisode = EpisodeProgress.resumable(
             me?.mediaProgress.orEmpty(), itemId, onServer = media.episodes.orEmpty().map { it.id }.toSet()
         )?.let { id -> media.episodes?.firstOrNull { it.id == id } }
@@ -344,6 +355,25 @@ class DetailActivity : ComponentActivity() {
             downloads = downloads,
             onPlay = play,
             progress = heard,
+            onMark = { episode, finished ->
+                val keepAt = if (finished) null else EpisodeMarks.keepAt(
+                    me?.mediaProgress?.firstOrNull { it.libraryItemId == itemId && it.episodeId == episode.id }
+                )
+                scope.launch {
+                    val worked = marking.mark(episode.id, finished) {
+                        // Through the playback service, in case this episode is the one playing.
+                        suspendCancellableCoroutine { done ->
+                            Playback.markFinished(context, itemId, finished, episode.id, keepAt) { done.resume(it) }
+                        }
+                    }
+                    when (worked) {
+                        // Read again, so the rows and Resume say what the server now holds.
+                        true -> onMarked()
+                        false -> Toast.makeText(context, context.getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
+                        null -> Unit
+                    }
+                }
+            },
             onDownload = { row ->
                 val episode = row.feed ?: return@PodcastEpisodesView
                 if (watch == null) return@PodcastEpisodesView
