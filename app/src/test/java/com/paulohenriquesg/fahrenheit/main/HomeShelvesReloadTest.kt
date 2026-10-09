@@ -23,6 +23,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import android.os.Looper
@@ -180,4 +181,37 @@ class HomeShelvesReloadTest {
 
         assertEquals(2, fetches)
     }
+
+    // Device check of #214: the reload's new first book sat off-screen, left
+    // of the old first card the keyed row kept in view.
+    @Test
+    fun `a reload that puts a new book first in Continue Listening shows it`() {
+        val before = listOf(continueListening("b1", "b2", "b3", "b4", "b5"))
+        val after = listOf(continueListening("b0", "b1", "b2", "b3", "b4", "b5"))
+        show(before, after)
+        compose.waitUntil(30_000) { compose.onAllNodesWithText("Book b1").fetchSemanticsNodes().isNotEmpty() }
+
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        untilReloaded()
+
+        val first = compose.onAllNodesWithText("Book b0").fetchSemanticsNodes().single().boundsInRoot
+        val old = compose.onAllNodesWithText("Book b1").fetchSemanticsNodes().single().boundsInRoot
+        assertTrue("the new first card is on screen: $first", first.width > 0 && first.left >= 0)
+        assertTrue("ahead of the old first card", first.left < old.left)
+    }
+
+    private fun continueListening(vararg ids: String) = Shelf(
+        id = "continue-listening", label = "Continue Listening", labelStringKey = "",
+        type = "book", bookEntities = ids.map { bookCalled(it) }
+    )
+
+    private fun bookCalled(id: String): LibraryItem = Gson().fromJson(
+        """{"id":"$id","ino":"1","libraryId":"lib","folderId":"f","path":"/p","relPath":"p",
+            "isFile":false,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0,"addedAt":0,"updatedAt":0,
+            "isMissing":false,"isInvalid":false,"mediaType":"book",
+            "media":{"metadata":{"title":"Book $id","authorName":"A Writer"},"tags":[],
+            "numTracks":1,"numAudioFiles":1,"numChapters":0,"duration":3480.0,"size":0}}""",
+        LibraryItem::class.java
+    )
 }
