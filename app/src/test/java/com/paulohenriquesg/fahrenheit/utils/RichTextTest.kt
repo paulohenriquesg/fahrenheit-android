@@ -91,4 +91,24 @@ class RichTextTest {
     fun `text that merely mentions an ampersand is left alone`() {
         assertEquals("rock & roll", RichText.fromHtml("rock & roll").text)
     }
+
+    // #194: some descriptions hold the two characters backslash and n, not a newline.
+    @Test
+    fun `a written backslash-n is a line break`() {
+        assertEquals("one\ntwo", RichText.fromHtml("one\\ntwo").text)
+        assertEquals("one\ntwo", RichText.fromHtml("one\\r\\ntwo").text)
+    }
+
+    @Test
+    fun `two written backslash-n are a paragraph break`() {
+        assertEquals("one\n\ntwo", RichText.fromHtml("one\\n\\ntwo").text)
+        assertEquals("one\n\ntwo", RichText.fromHtml("one\\r\\n\\r\\ntwo").text)
+    }
+
+    @Test
+    fun `an HTML description reads as it did`() {
+        val rendered = RichText.fromHtml("<p>A <b>bold</b> start.</p><p>Then more.</p>")
+        assertEquals("A bold start.\nThen more.", rendered.text)
+        assertEquals(1, rendered.spanStyles.count { it.item.fontWeight == FontWeight.Bold })
+    }
 }

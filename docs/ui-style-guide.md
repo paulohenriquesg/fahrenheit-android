@@ -105,7 +105,9 @@ Anything a device script or a flow needs to reach gets a tag.
 - Every string that came from the server gets `maxLines` and
   `TextOverflow.Ellipsis`. Titles run long and wrap into the next box otherwise.
 - Server descriptions may contain HTML. Render it with `RichText.fromHtml`
-  rather than printing tags or stripping them: emphasis survives (#57).
+  rather than printing tags or stripping them: emphasis survives (#57). It also
+  turns a written `\n` (backslash, n), which some descriptions hold, into a line
+  break, two into a paragraph break (#194).
 - Home's shelf headings are `ShelfHeading`: 16 sp bold (`titleMedium`). At the
   24 sp headline they outweighed the covers they name (#121).
 
@@ -151,6 +153,10 @@ paused or stalled entry comes to rest by itself. While playing it runs on
 continuously, by design; a test whose player position moves with the compose
 clock must move that clock by hand. Where a drift has to run
 for as long as it is shown (`CoverWall`), its tests move the clock by hand.
+
+A label cut by its width may scroll with `basicMarquee` only while its own
+item has focus, and for a few runs: pass `iterations`, never an endless count.
+The book screen's series cards do this (#194).
 
 ## Now playing shows the state
 
@@ -200,6 +206,15 @@ book screen and About (#137) draw Resume and Mark finished as the default TV
   no series or Mark finished; with no description, focus lands on the facts.
 - **A description box that scrolls fades out at the bottom** while there is
   more below, so it reads as scrollable rather than clipped (#178).
+- **The book layout's details sit at the bottom** (#194): the series row and the
+  facts at the bottom margin, the description box filling the height above
+  them. Its focus border is the box's, drawn outside the fade, not the
+  scrolled text's. The title takes three lines; when even that cuts it, the
+  description opens with the full title in bold, or with no description the
+  full title stands where the box would be.
+- **A series row reads as scrollable**: its covers are sized so half the next
+  one shows at the right edge (`SeriesRow.coverSize`), and each is labelled
+  by its place, "Book 2.5", or its title when the server gives no sequence.
 
 ## The player's look, on every full screen
 

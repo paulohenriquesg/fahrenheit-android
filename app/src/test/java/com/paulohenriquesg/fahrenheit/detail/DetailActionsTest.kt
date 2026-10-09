@@ -223,15 +223,17 @@ class DetailActionsTest {
                     ),
                     onPrimary = {},
                     chapters = three,
-                    finished = false
+                    finished = false,
+                    // The book screen's own margin (DetailBody), with three title lines (#194).
+                    padding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
                 )
             }
         }
         compose.waitForIdle()
-        val screen = compose.onRoot().getUnclippedBoundsInRoot()
+        val inside = compose.onRoot().getUnclippedBoundsInRoot().bottom - 16.dp
         listOf("Chapters", "Mark finished").forEach { action ->
             val bounds = compose.onNodeWithText(action).getUnclippedBoundsInRoot()
-            assertTrue("$action ends at ${bounds.bottom}, the screen at ${screen.bottom}", bounds.bottom <= screen.bottom)
+            assertTrue("$action ends at ${bounds.bottom}, the margin at $inside", bounds.bottom <= inside)
         }
     }
 }

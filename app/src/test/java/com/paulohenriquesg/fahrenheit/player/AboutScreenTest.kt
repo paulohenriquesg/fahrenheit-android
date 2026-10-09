@@ -15,12 +15,17 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
 import com.paulohenriquesg.fahrenheit.detail.DESCRIPTION_TAG
+import com.paulohenriquesg.fahrenheit.ui.components.BOOK_LOWER_TAG
 import com.paulohenriquesg.fahrenheit.ui.components.DESCRIPTION_BOX_TAG
 import com.paulohenriquesg.fahrenheit.ui.components.FACTS_TAG
 import com.paulohenriquesg.fahrenheit.ui.components.TITLE_TAG
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -90,6 +95,16 @@ class AboutScreenTest {
         compose.onNodeWithText("The Long Drift", useUnmergedTree = true).assertExists()
         compose.onNodeWithText("Read by").assertIsDisplayed()
         compose.onNodeWithTag(DESCRIPTION_TAG).assertIsFocused()
+    }
+
+    // #194: the details sit at the bottom margin, the description box down to them.
+    @Test fun `an episode's facts sit at the bottom, under the description`() {
+        show(episode, finished = null)
+        val bottom = compose.onRoot().getUnclippedBoundsInRoot().bottom - 40.dp
+        val facts = compose.onNodeWithTag(BOOK_LOWER_TAG).getUnclippedBoundsInRoot()
+        assertEquals(bottom.value, facts.bottom.value, 1f)
+        val box = compose.onNodeWithTag(DESCRIPTION_BOX_TAG).getUnclippedBoundsInRoot()
+        assertTrue("box ends at ${box.bottom}, facts start at ${facts.top}", box.bottom <= facts.top && facts.top - box.bottom <= 24.5.dp)
     }
 
     @Test fun `mark finished is its action`() {

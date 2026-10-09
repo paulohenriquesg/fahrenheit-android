@@ -71,6 +71,7 @@
     <string name="fact_season">Season</string>
     <string name="fact_episode">Episode</string>
     <string name="series_count">%1$s · %2$d books</string>
+    <string name="series_book_number">Book %1$s</string>
     <string name="speed">Speed</string>
     <string name="speed_chip">Speed %1$s</string>
     <string name="speed_note_book">Remembered for this book. The time left in the book counts at this speed.</string>
