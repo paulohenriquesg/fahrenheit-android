@@ -4,6 +4,8 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.performScrollToIndex
@@ -60,7 +62,8 @@ class PodcastEpisodesViewTest {
         tab: EpisodeTab = EpisodeTab.All,
         feed: FeedLoad = FeedLoad.Loaded(feedEpisodes),
         downloads: Map<String, DownloadState> = emptyMap(),
-        progress: Map<String, EpisodeProgress> = emptyMap()
+        progress: Map<String, EpisodeProgress> = emptyMap(),
+        date: (EpisodeRow) -> String = { "" }
     ) {
         val screen = PodcastScreenModel.of(listOf(onServer), feed, tab, null, false, now = 10)
         compose.setContent {
@@ -74,10 +77,10 @@ class PodcastEpisodesViewTest {
                     onDownload = { downloaded = it },
                     progress = progress,
                     onMark = { episode, finished -> marked = episode.id to finished },
-                    title = "The Show",
-                    header = {
-                        // As tall as the real one: a cover and a description.
-                        Text("HEADER", modifier = Modifier.height(260.dp).testTag("podcast_header"))
+                    date = date,
+                    top = {
+                        // As tall as the real one: Now playing and the description card.
+                        Text("TOP", modifier = Modifier.height(200.dp).testTag("podcast_top"))
                     }
                 )
             }
@@ -167,25 +170,23 @@ class PodcastEpisodesViewTest {
     }
 
     @Test
-    fun `on arrival the header is there and the pinned title is not`() {
+    fun `on arrival the top of the list is there`() {
         render()
 
-        compose.onNodeWithTag("podcast_header").assertIsDisplayed()
-        compose.onNodeWithTag("pinned_title").assertDoesNotExist()
+        compose.onNodeWithTag("podcast_top").assertIsDisplayed()
     }
 
+    // The show's name stays in the left column now (#205), so only the tabs pin.
     @Test
-    fun `moving into the list scrolls the header away and keeps the tabs and the name`() {
+    fun `moving into the list scrolls the top away and keeps the tabs`() {
         feedEpisodes = listOf(feed("g1", "Tabstack", 30)) + (1..20).map { feed("x$it", "Episode $it", 29L - it) }
         render()
 
         compose.onNodeWithTag("podcast_list").performScrollToIndex(12)
         compose.waitForIdle()
 
-        compose.onNodeWithTag("podcast_header").assertDoesNotExist()
+        compose.onNodeWithTag("podcast_top").assertDoesNotExist()
         compose.onNodeWithTag("episode_tab_All").assertIsDisplayed()
-        compose.onNodeWithTag("pinned_title").assertIsDisplayed()
-        compose.onNodeWithText("The Show").assertIsDisplayed()
     }
 
     // As the web app says it, in the row's line (#181).
@@ -306,5 +307,36 @@ class PodcastEpisodesViewTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag("episode_row_feed:g2").assertIsFocused()
+    }
+
+    // #205: the play mark says what Center does, so only where Center would do it.
+    @Test
+    fun `the play mark is only on the focused row`() {
+        render()
+        compose.onNodeWithContentDescription("Play").assertIsDisplayed()
+
+        compose.onNodeWithTag("episode_row_feed:g2").performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Play").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a finished row is dimmed until it has focus`() {
+        render(progress = mapOf("s1" to EpisodeProgress.Heard))
+        compose.onNodeWithTag("episode_row_server:s1").assert(SemanticsMatcher.expectValue(EpisodeRowDimmed, false))
+
+        compose.onNodeWithTag("episode_row_feed:g2").performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("episode_row_server:s1").assert(SemanticsMatcher.expectValue(EpisodeRowDimmed, true))
+        compose.onNodeWithTag("episode_row_feed:g2").assert(SemanticsMatcher.expectValue(EpisodeRowDimmed, false))
+    }
+
+    @Test
+    fun `a row's line reads date, then the rest, apart by dots`() {
+        render(progress = mapOf("s1" to EpisodeProgress.Heard), date = { "Yesterday" })
+
+        compose.onNodeWithText("Yesterday · finished").assertIsDisplayed()
     }
 }

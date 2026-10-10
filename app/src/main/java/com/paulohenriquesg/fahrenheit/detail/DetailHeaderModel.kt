@@ -24,16 +24,6 @@ data class DetailHeaderContent(
  */
 object DetailHeaderModel {
 
-    /**
-     * The description for a three-line preview (the podcast header): paragraphs and line breaks run
-     * together, or `<br /><br />` spends the lines on a blank one and a lone
-     * ellipsis. Inline emphasis is kept.
-     */
-    fun previewOf(html: String): String =
-        html.replace(Regex("""(?i)<br\s*/?>|</?p(\s[^>]*)?>"""), " ")
-            .replace(Regex("""\s+"""), " ")
-            .trim()
-
     /** How far in: "34% in", "Just started" or "Finished"; null when not started (#134: also a fact on the book screen). */
     fun progressOf(progress: MediaProgressResponse?): String? {
         if (progress?.isFinished == true) return "Finished"

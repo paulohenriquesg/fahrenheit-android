@@ -40,27 +40,6 @@ class DetailNowPlayingTest {
         BasicText("bar", Modifier.testTag("bar").width(450.dp).height(56.dp))
     }
 
-    // In the header, which scrolls away: a bar fixed above the episodes would
-    // leave even fewer rows in 540dp.
-    @Test fun `on a podcast's screen the bar sits beside the cover, above the title`() {
-        compose.setContent {
-            FahrenheitTheme {
-                DetailHeader(
-                    itemId = "p1",
-                    content = DetailHeaderContent("A Podcast", null, emptyList(), "Play", null),
-                    onPrimary = {},
-                    nowPlaying = bar
-                )
-            }
-        }
-        compose.waitForIdle()
-        val top = compose.onNodeWithTag("bar").getUnclippedBoundsInRoot()
-        val cover = compose.onNodeWithContentDescription("A Podcast").getUnclippedBoundsInRoot()
-        val title = compose.onNodeWithText("A Podcast").getUnclippedBoundsInRoot()
-        assertTrue("bar $top, cover $cover", top.left >= cover.right)
-        assertTrue("bar $top, title $title", top.bottom <= title.top)
-    }
-
     private val three = ChapterClock.spans(
         listOf(Chapter(start = 0.0, end = 600.0, title = "One"), Chapter(start = 600.0, end = 1200.0, title = "Two")),
         total = 1200.0

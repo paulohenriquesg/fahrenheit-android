@@ -161,100 +161,6 @@ fun BookDetailView(
     }
 }
 
-/**
- * The top of a book's or a podcast's screen (frame 3 of docs/mocks/screens.html):
- * cover, title, by-line, facts as chips, actions, then the description.
- *
- * The primary action takes focus on arrival, so one press continues listening;
- * nothing on a TV responds to the remote until something holds focus.
- *
- * @param actions drawn after the primary action, e.g. the admin's feed check.
- * @param nowPlaying what plays, and Stop (#159): above the title, scrolling away
- *   with the header rather than fixed over the episodes.
- */
-@Composable
-fun DetailHeader(
-    itemId: String,
-    content: DetailHeaderContent,
-    onPrimary: () -> Unit,
-    actions: @Composable () -> Unit = {},
-    nowPlaying: @Composable () -> Unit = {}
-) {
-    // Keyed on whether there is a primary action, not its label: the label
-    // changes after Mark finished ("Resume at…" to "Play"), and focus must not
-    // jump off the button just pressed.
-    val initialFocus = rememberInitialFocus(enabled = content.primary != null, itemId, content.primary != null)
-    Row {
-        CoverImage(itemId = itemId, contentDescription = content.title)
-        Spacer(Modifier.width(Space.gap * 2))
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            nowPlaying()
-            Text(
-                text = content.title,
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            content.byline?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            if (content.chips.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    content.chips.forEach { FactChip(it) }
-                }
-            }
-            // Wraps rather than squeezing: in a plain Row a long primary label
-            // left the actions beside it zero width, and their text wrapped one
-            // letter per line - a header taller than the screen.
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(Space.gap),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                content.primary?.let { label ->
-                    Button(
-                        onClick = onPrimary,
-                        modifier = Modifier
-                            .widthIn(max = 420.dp)
-                            .focusRequester(initialFocus)
-                            .testTag(PRIMARY_ACTION_TAG)
-                    ) {
-                        // The phone Icon reads the phone theme's content colour, which is white
-                        // on the white focused button; the TV button's own colour follows focus.
-                        Icon(
-                            Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            tint = LocalContentColor.current,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        // An episode title can be any length.
-                        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-                actions()
-            }
-            content.description?.takeIf { it.isNotBlank() }?.let { description ->
-                // Rendered, not stripped: emphasis survives (#57).
-                val text = remember(description) { RichText.fromHtml(DetailHeaderModel.previewOf(description)) }
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
 /** Between the description box's focus border and its text, so the border never sits on the words (#170). */
 private val DESCRIPTION_PADDING = 12.dp
 
@@ -321,22 +227,5 @@ internal fun FullDescription(
                 }
             }
             .then(if (overflows || alwaysFocusable) Modifier.focusable() else Modifier)
-    )
-}
-
-/** One fact about an item, in a pill; [Fact.warn] for the ones worth acting on. */
-@Composable
-fun FactChip(fact: Fact) {
-    val colour = if (fact.warn) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
-    Text(
-        text = fact.text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = colour,
-        modifier = Modifier
-            .border(
-                BorderStroke(1.dp, if (fact.warn) colour else MaterialTheme.colorScheme.surfaceVariant),
-                RoundedCornerShape(50)
-            )
-            .padding(horizontal = 14.dp, vertical = 6.dp)
     )
 }
