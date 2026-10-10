@@ -86,8 +86,9 @@ fun LibraryItemCard(
                 modifier = Modifier.padding(16.dp)
             ) {
                 val dimmed = LibraryItemDisplay.dimmed(item)
-                // A finished episode is dimmed as the podcast page's rows are,
-                // until focus makes it the card being read (#192).
+                // A finished episode is dimmed, as on the podcast page, until
+                // focus makes it the card being read (#192). The fade is the
+                // grid's, so the covers on Home dim alike.
                 val faded = dimmed || (finished && !isFocused)
                 Box(
                     modifier = Modifier
@@ -197,7 +198,7 @@ private fun CoverProgressBar(fraction: Float, modifier: Modifier = Modifier) {
     }
 }
 
-/** How far an empty podcast's cover fades on the grid (#75). */
+/** How far a cover fades: an empty podcast's (#75), a finished episode's (#192). */
 private const val DIMMED_ALPHA = 0.45f
 
 object LibraryItemCardTags {

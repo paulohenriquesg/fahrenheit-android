@@ -14,6 +14,8 @@ import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -78,6 +80,27 @@ class HomeCoverProgressTest {
         compose.setContent { FahrenheitTheme { PersonalizedHomeView(listOf(newest), "lib", progress = CoverProgress.index(progress)) } }
 
         assertEquals(1, compose.onAllNodesWithContentDescription("Finished", useUnmergedTree = true).fetchSemanticsNodes().size)
+        // On the finished episode's card, not its neighbour's.
+        compose.onNode(hasText("Episode ep-1") and hasContentDescription("Finished")).assertExists()
+        compose.onNode(hasText("Episode ep-2") and hasContentDescription("Finished")).assertDoesNotExist()
+    }
+
+    // Review of #192: in a podcast library the server sends Listen again as
+    // episodes, every one finished; a mark on each would only grey the row.
+    @Test
+    fun `a podcast library's Listen again carries no finished marks`() {
+        val again = Shelf(
+            id = "listen-again", label = "Listen Again", labelStringKey = "LabelListenAgain",
+            type = "episode", bookEntities = listOf(episode("ep-1"), episode("ep-2"))
+        )
+        val progress = listOf("ep-1", "ep-2").map {
+            MediaProgressResponse(libraryItemId = "pod-1", episodeId = it, currentTime = 2400.0, duration = 2400.0, isFinished = true)
+        }
+
+        compose.setContent { FahrenheitTheme { PersonalizedHomeView(listOf(again), "lib", progress = CoverProgress.index(progress)) } }
+
+        compose.onNodeWithText("Episode ep-1").assertIsDisplayed()
+        assertEquals(0, compose.onAllNodesWithContentDescription("Finished", useUnmergedTree = true).fetchSemanticsNodes().size)
     }
 
     private fun episode(id: String): LibraryItem = Gson().fromJson(

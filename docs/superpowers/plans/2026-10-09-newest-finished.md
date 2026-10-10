@@ -17,7 +17,13 @@
 3. Red/green Home: a Newest episodes shelf marks only the finished episode.
 4. Gate, review, PR (Closes #192).
 
+## From review
+
+- A podcast library's Listen again comes as episodes, all finished: it is not marked (`HomeShelves.Behaviour.marksFinished`), or the whole row would grey.
+- The fade is the grid's (0.45), not the podcast rows' (0.55); the comment says so. The "Finished" text stays hardcoded, as it was on the podcast page; strings are for a separate pass.
+
 ## Device check (the coordinator)
 
 - Finish an episode on the stick, return to Home: its card on Newest episodes is dimmed and carries the tick; its neighbours do not.
 - Focus that card: it is no longer dimmed while focused.
+- In a podcast library, Listen again shows no ticks and no greyed covers.

@@ -23,7 +23,9 @@ object HomeShelves {
         val press: Action = Action.Details,
         val longPress: Action? = null,
         /** The screen and library view "See all" opens, or null for no tile. */
-        val seeAll: Pair<MenuAction, LibraryQuery>? = null
+        val seeAll: Pair<MenuAction, LibraryQuery>? = null,
+        /** Whether a finished episode's card is marked as one (#192). */
+        val marksFinished: Boolean = true
     )
 
     private class Row(val id: String, val types: Set<String>, val behaviour: Behaviour)
@@ -36,6 +38,8 @@ object HomeShelves {
         // Plays from where it was, as an episode there does; details a long press away (#124).
         Row("continue-listening", setOf("book"), Behaviour(Style.Covers, Action.Play, Action.Details, MenuAction.LIBRARY to LibraryQuery.InProgress)),
         Row("listen-again", setOf("book"), Behaviour(Style.Covers, seeAll = MenuAction.LIBRARY to LibraryQuery.Finished)),
+        // Every episode on it is finished: a mark on each would only grey the row.
+        Row("listen-again", setOf("episode"), Behaviour(Style.Episodes, marksFinished = false)),
         Row("recently-added", setOf("book", "podcast"), Behaviour(Style.Covers, seeAll = MenuAction.LIBRARY to LibraryQuery.RecentlyAdded)),
         Row("recent-series", setOf("series"), Behaviour(Style.Series, seeAll = MenuAction.SERIES to LibraryQuery.Everything)),
         Row("newest-authors", setOf("authors"), Behaviour(Style.Authors, seeAll = MenuAction.AUTHORS to LibraryQuery.Everything))
