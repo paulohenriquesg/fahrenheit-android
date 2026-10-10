@@ -476,7 +476,7 @@ class PlayerActivity : ComponentActivity() {
      */
     private suspend fun savedProgress(itemId: String, episodeId: String?): MediaProgressResponse? {
         val api = ApiClient.getApiService() ?: return null
-        return SavedProgress.read(episodeId, whyUnreadable = { Log.d(TAG, "Progress unreadable: ${it::class.java.name}") }) {
+        return SavedProgress.read(episodeId, whyUnreadable = { Log.d(TAG, "Progress unreadable: $it") }) {
             val call = if (episodeId != null) api.userGetMediaProgress(itemId, episodeId) else api.userGetMediaProgress(itemId)
             call.awaitResponse()
         }.progressOr {

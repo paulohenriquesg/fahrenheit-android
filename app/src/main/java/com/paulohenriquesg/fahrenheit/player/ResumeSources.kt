@@ -20,7 +20,7 @@ object ResumeSources {
     /** The same, telling "never started" from "could not tell"; signed out cannot tell. */
     suspend fun saved(itemId: String, episodeId: String?): SavedProgress {
         val api = ApiClient.getApiService() ?: return SavedProgress.Unreadable
-        return SavedProgress.read(episodeId, whyUnreadable = { Log.d(TAG, "Progress unreadable: ${it::class.java.name}") }) {
+        return SavedProgress.read(episodeId, whyUnreadable = { Log.d(TAG, "Progress unreadable: $it") }) {
             val call = if (episodeId != null) api.userGetMediaProgress(itemId, episodeId) else api.userGetMediaProgress(itemId)
             call.awaitResponse()
         }
