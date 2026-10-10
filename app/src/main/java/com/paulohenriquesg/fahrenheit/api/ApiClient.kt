@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.api
 
+import android.util.Log
 import android.content.Context
 import com.paulohenriquesg.fahrenheit.progress.ProgressStore
 import com.paulohenriquesg.fahrenheit.auth.toAuthSession
@@ -22,6 +23,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
 
 object ApiClient {
+    /** The most of a reply a debug build logs (#215): a download queue is far smaller. */
+    private const val BODY_LOG_LIMIT = 16_384L
     private var apiService: ApiService? = null
     private var host: String? = null
     private var token: String? = null
@@ -220,6 +223,14 @@ object ApiClient {
     ): OkHttpClient = OkHttpClient.Builder()
         .apply { applyTimeouts() }
         .addInterceptor(loggingInterceptor())
+        .addInterceptor { chain ->
+            val response = chain.proceed(chain.request())
+            val path = chain.request().url.encodedPath
+            if (HttpLoggingPolicy.logsBody(path, BuildConfig.DEBUG)) {
+                Log.d("ApiClient", "$path: ${response.peekBody(BODY_LOG_LIMIT).string()}")
+            }
+            response
+        }
         .addInterceptor { chain ->
             val requestBuilder: Request.Builder = chain.request().newBuilder()
                 .addHeader("Content-Type", "application/json")

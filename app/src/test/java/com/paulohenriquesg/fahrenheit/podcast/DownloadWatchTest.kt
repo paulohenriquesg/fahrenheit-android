@@ -76,31 +76,57 @@ class DownloadWatchTest {
         assertTrue("reloads as downloads leave the queue", reloads >= 2)
     }
 
+    // A clock that moves on by a poll's interval at each pause.
+    private var clock = 0L
+    private val pause: suspend () -> Unit = { clock += 5_000 }
+
     @Test
-    fun `a requested episode that lands is no longer counted as missing`() = runBlocking {
+    fun `a requested episode that lands is no longer awaited`() = runBlocking {
         val api = Api(listOf({ q() }, { q() }))
-        val misses = mutableListOf<Map<String, Int>>()
+        val requests = mutableListOf<Map<String, DownloadRequest>>()
         val holdings = ArrayDeque(listOf(emptyList(), listOf(landedA)))
-        val watch = DownloadWatch(api, "lib", "p")
+        val watch = DownloadWatch(api, "lib", "p", now = { clock })
 
         assertTrue(watch.request("feed:a", feedA))
-        watch.watch(onUpdate = { _, m -> misses += m }, pause = {}) { holdings.removeFirstOrNull() ?: listOf(landedA) }
+        watch.watch(onUpdate = { _, r -> requests += r }, pause = pause) { holdings.removeFirstOrNull() ?: listOf(landedA) }
 
-        assertEquals(mapOf("feed:a" to 1), misses.first())
-        assertEquals(emptyMap<String, Int>(), misses.last())
+        assertEquals(mapOf("feed:a" to DownloadRequest.Asked(at = 0)), requests.first())
+        assertEquals(emptyMap<String, DownloadRequest>(), requests.last())
+    }
+
+    // #215: the device's case - the queue showed nothing, twice, and the
+    // episode was on the server some 10 s after it was asked for.
+    @Test
+    fun `empty queues while the item has not caught up keep it awaited, and the item is read each time`() = runBlocking {
+        val api = Api(emptyList())
+        val requests = mutableListOf<Map<String, DownloadRequest>>()
+        var reloads = 0
+        val watch = DownloadWatch(api, "lib", "p", now = { clock })
+
+        watch.request("feed:a", feedA)
+        watch.watch(onUpdate = { _, r -> requests += r }, pause = pause) {
+            reloads++
+            if (clock >= 10_000) listOf(landedA) else emptyList()
+        }
+
+        assertEquals(3, api.queueCalls)
+        assertEquals(3, reloads)
+        assertEquals(mapOf("feed:a" to DownloadRequest.Asked(at = 0)), requests[1])
+        assertEquals(emptyMap<String, DownloadRequest>(), requests.last())
     }
 
     @Test
-    fun `a requested episode that never shows up is given up on, and watching stops`() = runBlocking {
+    fun `past the window it is still looked for, so a late arrival is seen`() = runBlocking {
         val api = Api(emptyList())
-        val misses = mutableListOf<Map<String, Int>>()
-        val watch = DownloadWatch(api, "lib", "p")
+        val requests = mutableListOf<Map<String, DownloadRequest>>()
+        val watch = DownloadWatch(api, "lib", "p", now = { clock })
+        val late = DownloadProgress.FAIL_AFTER_MS + 30_000
 
         watch.request("feed:a", feedA)
-        watch.watch(onUpdate = { _, m -> misses += m }, pause = {}) { emptyList() }
+        watch.watch(onUpdate = { _, r -> requests += r }, pause = pause) { if (clock >= late) listOf(landedA) else emptyList() }
 
-        assertEquals(DownloadProgress.MISSES_BEFORE_FAILED, misses.last()["feed:a"])
-        assertEquals(DownloadProgress.MISSES_BEFORE_FAILED, api.queueCalls)
+        assertTrue("watched past the window", api.queueCalls > DownloadProgress.FAIL_AFTER_MS / 5_000)
+        assertEquals(emptyMap<String, DownloadRequest>(), requests.last())
     }
 
     @Test
@@ -118,5 +144,25 @@ class DownloadWatchTest {
         DownloadWatch(api, "lib", "p").watch(onUpdate = { queue, _ -> seen += queue }, pause = {}) { emptyList() }
 
         assertEquals(2, seen.size)
+    }
+
+    // Review: kept until it lands, one that never does was polled for as long
+    // as the page lived. After an hour it is given up on - still reported, so
+    // its row keeps saying it failed - and the watch ends.
+    @Test
+    fun `one nowhere to be seen for an hour is given up on, and the watch ends`() = runBlocking {
+        val api = Api(emptyList())
+        val requests = mutableListOf<Map<String, DownloadRequest>>()
+        val watch = DownloadWatch(api, "lib", "p", now = { clock })
+
+        watch.request("feed:a", feedA)
+        // As the page runs it: again for as long as anything is awaited.
+        do {
+            watch.watch(onUpdate = { _, r -> requests += r }, pause = pause) { emptyList() }
+        } while (watch.waiting)
+
+        assertFalse(watch.waiting)
+        assertTrue("stopped near the hour, at $clock", clock in DownloadWatch.GIVE_UP_AFTER_MS..DownloadWatch.GIVE_UP_AFTER_MS + 5_000)
+        assertEquals(mapOf("feed:a" to DownloadRequest.Asked(at = 0)), requests.last())
     }
 }

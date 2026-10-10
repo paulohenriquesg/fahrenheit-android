@@ -38,55 +38,69 @@ class DownloadProgressTest {
     fun `the episode the server is fetching now is downloading`() {
         val queue = DownloadQueue(currentDownload = queued("a"), queue = emptyList())
 
-        assertEquals(DownloadState.Downloading, DownloadProgress.state(row("a"), queue, misses = 0))
+        assertEquals(DownloadState.Downloading, DownloadProgress.state(row("a"), queue, request = DownloadRequest.Asked(at = 0), now = 0))
     }
 
     @Test
     fun `a waiting episode says how many are ahead of it`() {
         val queue = DownloadQueue(currentDownload = queued("x"), queue = listOf(queued("y"), queued("a")))
 
-        assertEquals(DownloadState.Waiting(ahead = 2), DownloadProgress.state(row("a"), queue, misses = 0))
+        assertEquals(DownloadState.Waiting(ahead = 2), DownloadProgress.state(row("a"), queue, request = DownloadRequest.Asked(at = 0), now = 0))
     }
 
     @Test
     fun `next in line, with nothing downloading, is zero ahead`() {
         val queue = DownloadQueue(currentDownload = null, queue = listOf(queued("a")))
 
-        assertEquals(DownloadState.Waiting(ahead = 0), DownloadProgress.state(row("a"), queue, misses = 0))
+        assertEquals(DownloadState.Waiting(ahead = 0), DownloadProgress.state(row("a"), queue, request = DownloadRequest.Asked(at = 0), now = 0))
     }
 
     @Test
     fun `other podcasts' downloads count as ahead, because the server has one queue`() {
         val queue = DownloadQueue(currentDownload = queued("other", podcast = "q"), queue = listOf(queued("a")))
 
-        assertEquals(DownloadState.Waiting(ahead = 1), DownloadProgress.state(row("a"), queue, misses = 0))
+        assertEquals(DownloadState.Waiting(ahead = 1), DownloadProgress.state(row("a"), queue, request = DownloadRequest.Asked(at = 0), now = 0))
     }
 
     @Test
     fun `a queued download is matched by URL when it has no guid`() {
         val queue = DownloadQueue(currentDownload = queued(guid = null, url = "https://cdn/a.mp3"), queue = emptyList())
 
-        assertEquals(DownloadState.Downloading, DownloadProgress.state(row("a"), queue, misses = 0))
+        assertEquals(DownloadState.Downloading, DownloadProgress.state(row("a"), queue, request = DownloadRequest.Asked(at = 0), now = 0))
     }
 
+    private val empty = DownloadQueue(null, emptyList())
+    private val window = DownloadProgress.FAIL_AFTER_MS
+
+    // #215: an episode that lands is downloaded, whatever was said of it before - Failed included.
     @Test
-    fun `an episode on the server needs no state`() {
-        assertNull(DownloadProgress.state(row("a", onServer = true), DownloadQueue(null, emptyList()), misses = 5))
+    fun `an episode on the server needs no state, even one said to have failed`() {
+        assertNull(DownloadProgress.state(row("a", onServer = true), empty, DownloadRequest.Asked(at = 0), now = window * 3))
+        assertNull(DownloadProgress.state(row("a", onServer = true), empty, DownloadRequest.Refused, now = 0))
     }
 
     @Test
     fun `an episode nobody asked for, and nowhere in the queue, has no state`() {
-        assertNull(DownloadProgress.state(row("a"), DownloadQueue(null, emptyList()), misses = null))
+        assertNull(DownloadProgress.state(row("a"), empty, request = null, now = 0))
+    }
+
+    // #215: on the device two empty polls 5 s apart said "failed", and the
+    // server had the episode 10 s after the request.
+    @Test
+    fun `a requested episode missing from the queue is only requested, for a good while`() {
+        listOf(5_000L, 10_000L, window - 1).forEach { now ->
+            assertEquals("at $now", DownloadState.Requested, DownloadProgress.state(row("a"), empty, DownloadRequest.Asked(at = 0), now))
+        }
     }
 
     @Test
-    fun `a requested episode missing from the queue once is not failed yet, since the server may not have queued it`() {
-        assertEquals(DownloadState.Requested, DownloadProgress.state(row("a"), DownloadQueue(null, emptyList()), misses = 1))
+    fun `a requested episode nowhere to be seen once the window has passed has failed`() {
+        assertEquals(DownloadState.Failed, DownloadProgress.state(row("a"), empty, DownloadRequest.Asked(at = 1_000), now = 1_000 + window))
     }
 
     @Test
-    fun `a requested episode that left the queue without arriving has failed`() {
-        assertEquals(DownloadState.Failed, DownloadProgress.state(row("a"), DownloadQueue(null, emptyList()), misses = 2))
+    fun `a request the server refused has failed at once`() {
+        assertEquals(DownloadState.Failed, DownloadProgress.state(row("a"), empty, DownloadRequest.Refused, now = 0))
     }
 
     @Test

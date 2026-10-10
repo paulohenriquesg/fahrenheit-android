@@ -93,7 +93,9 @@ class PodcastViewModelTest {
             return FeedResponse(FeedPodcast(feedEpisodes))
         }
         override suspend fun downloadQueue(libraryId: String) = queue.also { queueReads++ }
+        var refuse = false
         override suspend fun downloadEpisodes(podcastId: String, episodes: List<JsonObject>) {
+            if (refuse) error("refused")
             requested += episodes
         }
     }
@@ -107,6 +109,8 @@ class PodcastViewModelTest {
     }
 
     private val store = ProgressStore()
+    private var clock = 0L
+    private var watchPause: (suspend () -> Unit)? = null
     private var marks = mutableListOf<Triple<String, Boolean, Double?>>()
     private var markAnswer: suspend () -> Boolean = { true }
 
@@ -127,6 +131,8 @@ class PodcastViewModelTest {
         serverFormat = null,
         favourites = favourites,
         progressStore = store,
+        clock = { clock },
+        watchPause = watchPause,
         scope = scope
     )
 
@@ -447,5 +453,63 @@ class PodcastViewModelTest {
 
         assertNull(state.favouritesPlaylist)
         assertNull(state.screen.tabs)
+    }
+
+    // #215: an empty queue a few seconds after asking is not a failure.
+    @Test
+    fun `an episode asked for, with nothing in the queue yet, stays requested`() {
+        val api = Api(me = Me(type = "admin"), feedEpisodes = listOf(feedEpisode("g3", "Third Rail", 3)))
+        val model = model(api)
+        val row = model.state.value.screen.rows.first { it.title == "Third Rail" }
+
+        model.download(row)
+        clock = 10_000
+        model.chooseTab(EpisodeTab.All)
+
+        assertEquals(DownloadState.Requested, model.state.value.downloads[row.key])
+    }
+
+    @Test
+    fun `a refused request says so, and the queue watched for another does not take that back`() {
+        val api = Api(me = Me(type = "admin"), feedEpisodes = listOf(feedEpisode("g3", "Third Rail", 3), feedEpisode("g4", "Fourth Wall", 4)))
+        val model = model(api)
+        val refused = model.state.value.screen.rows.first { it.title == "Third Rail" }
+        val other = model.state.value.screen.rows.first { it.title == "Fourth Wall" }
+
+        api.refuse = true
+        model.download(refused)
+        api.refuse = false
+        model.download(other)
+
+        assertEquals(DownloadState.Failed, model.state.value.downloads[refused.key])
+        assertEquals(DownloadState.Requested, model.state.value.downloads[other.key])
+    }
+
+    // Review: the whole path through the watch, as on the device - the queue
+    // empty throughout, the episode on the server only after the window.
+    @Test
+    fun `an episode that lands after the window goes requested, failed, then downloaded, without reopening`() {
+        val third = feedEpisode("g3", "Third Rail", 3)
+        val landed: LibraryItemResponse = gson.fromJson(
+            gson.toJson(item()).replace(""""episodes":[""", """"episodes":[{"id":"s3","title":"Third Rail","publishedAt":3,"guid":"g3"},"""),
+            LibraryItemResponse::class.java
+        )
+        val seen = mutableMapOf<Long, DownloadState?>()
+        lateinit var model: PodcastViewModel
+        watchPause = {
+            seen[clock] = model.state.value.downloads["feed:g3"]
+            clock += 5_000
+        }
+        val late = DownloadProgress.FAIL_AFTER_MS + 30_000
+        model = model(Api(me = Me(type = "admin"), feedEpisodes = listOf(third)), reload = { if (clock >= late) landed else item() })
+        val row = model.state.value.screen.rows.first { it.title == "Third Rail" }
+
+        model.download(row)
+
+        assertEquals(DownloadState.Requested, seen[10_000])
+        assertEquals(DownloadState.Failed, seen[DownloadProgress.FAIL_AFTER_MS + 5_000])
+        val now = model.state.value.screen.rows.first { it.title == "Third Rail" }
+        assertTrue(now.downloaded)
+        assertNull(model.state.value.downloads[now.key])
     }
 }

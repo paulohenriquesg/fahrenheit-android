@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import com.paulohenriquesg.fahrenheit.api.DownloadQueue
 import com.paulohenriquesg.fahrenheit.api.Episode
 import com.paulohenriquesg.fahrenheit.api.PodcastApi
+import android.os.SystemClock
 import kotlinx.coroutines.delay
 
 /**
@@ -16,20 +17,25 @@ import kotlinx.coroutines.delay
 class DownloadWatch(
     private val api: PodcastApi,
     private val libraryId: String,
-    private val podcastId: String
+    private val podcastId: String,
+    private val now: () -> Long = SystemClock::elapsedRealtime
 ) {
-    /** Episodes asked for here and not yet landed or given up on, by row key. */
+    /**
+     * Episodes asked for here and not yet on the server, by row key. One that
+     * has been nowhere to be seen for long reads as failed but stays here, so
+     * that turning up late still turns its row downloaded (#215).
+     */
     private val pending = mutableMapOf<String, JsonObject>()
 
-    /** Polls in a row each requested episode has been nowhere to be seen. */
-    private val misses = mutableMapOf<String, Int>()
+    /** When each was asked for. */
+    private val asked = mutableMapOf<String, Long>()
 
     /** Asks the server to download [episode]; false when it refused. */
     suspend fun request(key: String, episode: JsonObject): Boolean {
         val accepted = runCatching { api.downloadEpisodes(podcastId, listOf(episode)) }.isSuccess
         if (accepted) {
             pending[key] = episode
-            misses[key] = 0
+            asked[key] = now()
         }
         return accepted
     }
@@ -38,14 +44,16 @@ class DownloadWatch(
     val waiting: Boolean get() = pending.isNotEmpty()
 
     /**
-     * Polls until nothing for this podcast is queued, downloading or awaited.
+     * Polls until nothing for this podcast is queued, downloading or awaited;
+     * while something is awaited the podcast is read again each time, as the
+     * server's queue has been seen empty while it fetched (#215).
      *
-     * @param onUpdate the latest queue, and the misses of requested episodes.
+     * @param onUpdate the latest queue, and the episodes asked for and awaited.
      * @param reload the podcast's episodes, fetched again; null on failure.
      */
     suspend fun watch(
-        onUpdate: (DownloadQueue, Map<String, Int>) -> Unit,
-        pause: suspend () -> Unit = { delay(POLL_INTERVAL_MS) },
+        onUpdate: (DownloadQueue, Map<String, DownloadRequest>) -> Unit,
+        pause: suspend () -> Unit = pollPause,
         reload: suspend () -> List<Episode>?
     ) {
         var wasBusy = false
@@ -59,28 +67,30 @@ class DownloadWatch(
             val episodes = if (wasBusy || pending.isNotEmpty()) reload() else null
             pending.entries.removeAll { (key, feed) ->
                 val landed = episodes?.any { EpisodeList.matches(it, feed) } == true
-                val inQueue = DownloadProgress.queued(queue, feed)
-                when {
-                    landed -> { misses.remove(key); true }
-                    inQueue -> { misses[key] = 0; false }
-                    else -> {
-                        val missed = (misses[key] ?: 0) + 1
-                        misses[key] = missed
-                        missed >= DownloadProgress.MISSES_BEFORE_FAILED
-                    }
-                }
+                if (landed) asked.remove(key)
+                // Given up on, it stays asked - its row keeps saying it failed - but is no longer awaited.
+                landed || now() - (asked[key] ?: 0) >= GIVE_UP_AFTER_MS
             }
-            onUpdate(queue, misses.toMap())
+            onUpdate(queue, asked.mapValues { DownloadRequest.Asked(it.value) })
 
             if (!busy && pending.isEmpty()) return
             wasBusy = busy
         }
     }
 
-    private companion object {
-        const val POLL_INTERVAL_MS = 5_000L
+    companion object {
+        /**
+         * How long a request is looked for (#215): past the failure window it
+         * may still land, but not forever - every poll also reads the podcast.
+         */
+        const val GIVE_UP_AFTER_MS = 3_600_000L
+
+        /** Between polls. */
+        val pollPause: suspend () -> Unit = { delay(POLL_INTERVAL_MS) }
+
+        private const val POLL_INTERVAL_MS = 5_000L
 
         /** An hour: a long queue of other podcasts' episodes can take that. */
-        const val MAX_POLLS = 720
+        private const val MAX_POLLS = 720
     }
 }

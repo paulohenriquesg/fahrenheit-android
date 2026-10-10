@@ -15,4 +15,12 @@ object HttpLoggingPolicy {
      */
     fun level(debugBuild: Boolean): HttpLoggingInterceptor.Level =
         if (debugBuild) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
+
+    /**
+     * Whether a debug build logs this reply whole (#215): the download queue's
+     * was seen empty mid-download, and only its body says what the server sent.
+     * It is small, and says nothing of what anyone listens to.
+     */
+    fun logsBody(path: String, debugBuild: Boolean): Boolean =
+        debugBuild && path.endsWith("/episode-downloads")
 }
