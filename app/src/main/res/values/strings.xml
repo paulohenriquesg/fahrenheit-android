@@ -97,6 +97,7 @@
     <string name="downloading_update">Downloading Update</string>
     <string name="episodes">Episodes</string>
     <string name="home">Home</string>
+    <string name="home_shelves_failed">Could not load Home. Check the connection to your server.</string>
     <string name="host">Host</string>
     <string name="host_icon">Host Icon</string>
     <string name="host_not_configured">Host is not configured. Please log in.</string>

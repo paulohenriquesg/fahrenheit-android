@@ -1,7 +1,13 @@
 package com.paulohenriquesg.fahrenheit.ui.elements
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.focus.onFocusChanged
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,16 +34,26 @@ fun ShelfRow(
     onItemLongClick: ((LibraryItem) -> Unit)? = null,
     onItemClick: (LibraryItem) -> Unit
 ) {
+    val keys = shelf.entities?.let { entities -> StableKeys.of(entities) { e -> e.id } }
+    val row = rememberLazyListState()
+    var holdsFocus by remember { mutableStateOf(false) }
+    // A reload that puts something new first (#197): the keyed row would keep
+    // the old first card in view and leave the new one off-screen to its left.
+    // A row focus is in keeps its focused card instead.
+    LaunchedEffect(keys?.firstOrNull()) {
+        if (!holdsFocus) row.scrollToItem(0)
+    }
     Column {
         ShelfHeading(shelf.label)
         Spacer(modifier = Modifier.height(8.dp))
         LazyRow(
+            state = row,
+            modifier = Modifier.onFocusChanged { holdsFocus = it.hasFocus },
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
             shelf.entities?.let { entities ->
-                val keys = StableKeys.of(entities) { e -> e.id }
-                items(entities.size, key = { keys[it] }) { index ->
+                items(entities.size, key = { keys!![it] }) { index ->
                     val item = entities[index]
                     LibraryItemCard(item = item, progress = progress.of(item), onLongClick = onItemLongClick, onClick = onItemClick)
                 }

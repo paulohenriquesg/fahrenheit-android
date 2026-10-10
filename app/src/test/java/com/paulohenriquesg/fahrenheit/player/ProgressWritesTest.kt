@@ -61,4 +61,16 @@ class ProgressWritesTest {
         assertEquals(true, refused.isFailure)
         assertNull(store.of("book"))
     }
+
+    // #197: Home reloads its shelves on a stop, whether or not the read-back worked.
+    @Test
+    fun `a stretch closed is news, even when the read-back fails`() = runBlocking<Unit> {
+        val writes = ProgressWrites(store) { _, _ -> error("offline") }
+        writes.delivered(episode, 600.0)
+        val playing = store.news.value
+
+        writes.closed(episode)
+
+        assertEquals(playing + 1, store.news.value)
+    }
 }

@@ -30,6 +30,18 @@ class ProgressStore(private val now: () -> Long = System::currentTimeMillis) {
 
     val entries: StateFlow<Map<ProgressKey, MediaProgressResponse>> = all
 
+    private val told = MutableStateFlow(0)
+
+    /**
+     * Counts the times listening started, stopped, or a mark changed whether
+     * something is finished: what moves an item on or off Home's shelves
+     * (#197). Not a resync, nor a page's own read.
+     */
+    val news: StateFlow<Int> = told
+
+    /** Items whose stretch of listening is open: reported on since the last stop. */
+    private val listening = mutableSetOf<ProgressKey>()
+
     /** Counts the writes made here; a read takes it as it begins. */
     var generation: Long = 0
         private set
@@ -70,7 +82,24 @@ class ProgressStore(private val now: () -> Long = System::currentTimeMillis) {
      * item whose position moves; whether the end finishes one is its rule,
      * read back after the stop.
      */
-    fun played(itemId: String, episodeId: String?, position: Double, duration: Double?) = write(itemId, episodeId) { old ->
+    fun played(itemId: String, episodeId: String?, position: Double, duration: Double?) {
+        // The server counts it started from the first report it took.
+        if (listening.add(ProgressKey(itemId, episodeId))) told.value++
+        playedAt(itemId, episodeId, position, duration)
+    }
+
+    /**
+     * A stretch of listening closed, and the item as the server now holds it,
+     * read since [since] - whether the end finished it is its rule; null when
+     * that read failed.
+     */
+    fun stopped(itemId: String, episodeId: String?, progress: MediaProgressResponse?, since: Long) {
+        listening.remove(ProgressKey(itemId, episodeId))
+        progress?.let { read(it, since) }
+        told.value++
+    }
+
+    private fun playedAt(itemId: String, episodeId: String?, position: Double, duration: Double?) = write(itemId, episodeId) { old ->
         val length = duration ?: old?.duration
         (old ?: MediaProgressResponse(libraryItemId = itemId, episodeId = episodeId)).copy(
             currentTime = position,
@@ -85,7 +114,13 @@ class ProgressStore(private val now: () -> Long = System::currentTimeMillis) {
      * there, finishing puts progress at the whole, and un-finishing something
      * finished puts it back at the start.
      */
-    fun marked(itemId: String, episodeId: String?, mark: ProgressMark) = write(itemId, episodeId) { old ->
+    fun marked(itemId: String, episodeId: String?, mark: ProgressMark) {
+        val was = of(itemId, episodeId)?.isFinished == true
+        markedAt(itemId, episodeId, mark)
+        if (of(itemId, episodeId)?.isFinished == true != was) told.value++
+    }
+
+    private fun markedAt(itemId: String, episodeId: String?, mark: ProgressMark) = write(itemId, episodeId) { old ->
         var next = old ?: MediaProgressResponse(libraryItemId = itemId, episodeId = episodeId, currentTime = 0.0)
         mark.isFinished?.let { finished ->
             next = when {
@@ -109,6 +144,7 @@ class ProgressStore(private val now: () -> Long = System::currentTimeMillis) {
     fun clear() {
         clearedAt = ++generation
         written.clear()
+        listening.clear()
         all.value = emptyMap()
     }
 

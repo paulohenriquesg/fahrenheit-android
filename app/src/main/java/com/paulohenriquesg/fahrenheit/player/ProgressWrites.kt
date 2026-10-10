@@ -33,8 +33,9 @@ class ProgressWrites(
             throw e
         } catch (e: Exception) {
             null
-        } ?: return
-        store.read(progress, since)
+        }
+        // A stop is news for Home's shelves (#197), read back or not.
+        store.stopped(file.itemId, file.episodeId, progress, since)
     }
 
     /** Sends a mark with [send], and stores it once the server took it. */
