@@ -1,9 +1,14 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import retrofit2.Response
 import java.io.IOException
@@ -51,6 +56,72 @@ class SavedProgressTest {
     @Test
     fun `no connection is unreadable`() = runBlocking {
         assertEquals(SavedProgress.Unreadable, SavedProgress.read(episodeId = null) { throw IOException("timeout") })
+    }
+
+    @Test
+    fun `no connection is reported, so a device log can say what failed`() = runBlocking {
+        val reported = mutableListOf<String>()
+
+        SavedProgress.read(episodeId = null, whyUnreadable = { reported += it }) { throw IOException("timeout") }
+
+        assertEquals(listOf("java.io.IOException"), reported)
+    }
+
+    @Test
+    fun `a server error is reported with its code`() = runBlocking {
+        val reported = mutableListOf<String>()
+
+        SavedProgress.read(episodeId = null, whyUnreadable = { reported += it }) { error(500) }
+
+        assertEquals(listOf("HTTP 500"), reported)
+    }
+
+    @Test
+    fun `a success with nothing in it is reported`() = runBlocking {
+        val reported = mutableListOf<String>()
+
+        SavedProgress.read(episodeId = null, whyUnreadable = { reported += it }) { Response.success(null) }
+
+        assertEquals(listOf("HTTP 200 with no body"), reported)
+    }
+
+    @Test
+    fun `never started is not reported`() = runBlocking {
+        val reported = mutableListOf<String>()
+
+        SavedProgress.read(episodeId = null, whyUnreadable = { reported += it }) { error(404) }
+
+        assertEquals(emptyList<String>(), reported)
+    }
+
+    // #217: the player's read restarts when playback connects or starts, and the
+    // cancelled one said "couldn't read where you left off" although nothing failed.
+    @Test
+    fun `a cancelled read is cancelled, not unreadable, and nothing is reported`() {
+        val reported = mutableListOf<String>()
+
+        assertThrows(CancellationException::class.java) {
+            runBlocking {
+                SavedProgress.read(episodeId = null, whyUnreadable = { reported += it }) {
+                    throw CancellationException("restarted")
+                }
+            }
+        }
+        assertEquals(emptyList<String>(), reported)
+    }
+
+    @Test
+    fun `a read cancelled mid-fetch never comes back unreadable`() = runBlocking {
+        var result: SavedProgress? = null
+
+        val read = launch(start = CoroutineStart.UNDISPATCHED) {
+            result = SavedProgress.read(episodeId = null) { awaitCancellation() }
+        }
+        read.cancel()
+        read.join()
+
+        // Swallowed, the cancellation let the read carry on and say Unreadable.
+        assertEquals(null, result)
     }
 
     @Test
