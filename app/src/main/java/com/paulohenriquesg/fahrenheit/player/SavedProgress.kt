@@ -1,6 +1,7 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
+import kotlinx.coroutines.CancellationException
 import retrofit2.Response
 
 /**
@@ -18,13 +19,30 @@ sealed interface SavedProgress {
     companion object {
 
         /**
+         * A cancelled read is cancelled, not unreadable (#217): the player's
+         * read restarts when playback connects or starts, and the cancelled one
+         * said the position could not be read although nothing had failed.
+         *
          * @param episodeId the episode asked about, or null for a book.
+         * @param whyUnreadable why a read was unreadable: what was thrown, or the reply's code.
          * @param fetch the request; throwing means the server was not reached.
          */
-        suspend fun read(episodeId: String?, fetch: suspend () -> Response<MediaProgressResponse>): SavedProgress {
-            val response = runCatching { fetch() }.getOrElse { return Unreadable }
+        suspend fun read(
+            episodeId: String?,
+            whyUnreadable: (String) -> Unit = {},
+            fetch: suspend () -> Response<MediaProgressResponse>
+        ): SavedProgress {
+            val response = try {
+                fetch()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                whyUnreadable(e::class.java.name)
+                return Unreadable
+            }
             if (response.code() == 404) return NeverStarted
-            val body = response.body().takeIf { response.isSuccessful } ?: return Unreadable
+            if (!response.isSuccessful) return Unreadable.also { whyUnreadable("HTTP ${response.code()}") }
+            val body = response.body() ?: return Unreadable.also { whyUnreadable("HTTP ${response.code()} with no body") }
             // The server answers for the item when it has nothing for the episode.
             if (episodeId != null && body.episodeId != episodeId) return NeverStarted
             return Found(body)
