@@ -282,6 +282,53 @@ class MainViewModelTest {
         assertEquals(setOf("books"), model.uiState.value.libraryStats.keys)
     }
 
+    // From review: the view can open before the libraries are known.
+    @Test
+    fun `libraries arriving while Switch Library shows have their counts read`() {
+        librariesAnswer = CompletableDeferred()
+        libraryStatsAnswers["books"] = Result.success(LibraryStats(totalItems = 3, totalDuration = 1.0, numAudioTracks = 3))
+        val model = model()
+        model.select(MainView.SWITCH_LIBRARY.menuItemId, MenuAction.SELECT_LIBRARY)
+
+        librariesAnswer.complete(Result.success(listOf(books)))
+
+        assertEquals(setOf("books"), model.uiState.value.libraryStats.keys)
+    }
+
+    @Test
+    fun `leaving Switch Library mid-read reads no more counts`() {
+        val first = CompletableDeferred<Result<LibraryStats>?>()
+        val asked = mutableListOf<String>()
+        val model = MainViewModel(
+            libraries = { Result.success(listOf(books, podcasts)) },
+            fetchLibraryItems = { _, _ -> emptyList() },
+            openHome = {},
+            savedLibrary = { null },
+            saveLibrary = {},
+            libraryStats = { id -> asked += id; if (id == "books") first.await() else null },
+            scope = scope
+        )
+        model.select(MainView.SWITCH_LIBRARY.menuItemId, MenuAction.SELECT_LIBRARY)
+
+        model.goHome()
+        first.complete(Result.success(LibraryStats(totalItems = 3, totalDuration = 1.0, numAudioTracks = 3)))
+
+        assertEquals(listOf("books"), asked)
+        assertTrue(model.uiState.value.libraryStats.isEmpty())
+    }
+
+    @Test
+    fun `choosing the library already open stays on Switch Library`() {
+        val model = model()
+        model.select(MainView.SWITCH_LIBRARY.menuItemId, MenuAction.SELECT_LIBRARY)
+        homeOpened.clear()
+
+        model.chooseLibrary(books)
+
+        assertEquals(MainView.SWITCH_LIBRARY, model.uiState.value.view)
+        assertTrue(homeOpened.isEmpty())
+    }
+
     @Test
     fun `the Library view opens the list for the query asked`() {
         val model = model()

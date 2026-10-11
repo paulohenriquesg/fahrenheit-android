@@ -68,7 +68,8 @@ data class MainUiState(
  *
  * @param openHome Home's shelves for a library, when one is opened.
  * @param savedLibrary the library chosen last, kept across launches.
- * @param scope where the work runs; the ViewModel's own unless a test gives one.
+ * @param scope where the work runs; the ViewModel's own unless a test gives
+ *   one, which that test then cancels: [onCleared] does not.
  */
 class MainViewModel(
     private val libraries: suspend () -> Result<List<Library>>?,
@@ -100,6 +101,8 @@ class MainViewModel(
     private var counts: Job? = null
 
     init {
+        // Built during composition, on Main.immediate: this runs until the read
+        // suspends, so a read that answered at once would open Home mid-composition.
         this.scope.launch { load() }
     }
 

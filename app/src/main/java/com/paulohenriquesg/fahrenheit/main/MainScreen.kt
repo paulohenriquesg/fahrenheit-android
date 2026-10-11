@@ -255,7 +255,7 @@ fun MainScreen(
         val anotherList = action == MenuAction.LIBRARY && query != mainModel.uiState.value.listing.query
         choose()
         when (action) {
-            MenuAction.HOME -> if (currentLibrary?.id != null) homeModel.choseHome()
+            MenuAction.HOME -> if (mainModel.uiState.value.library?.id != null) homeModel.choseHome()
             MenuAction.LIBRARY -> if (anotherList) scope.launch { listState.scrollToItem(0) }
             MenuAction.NARRATORS ->
                 Toast.makeText(context, context.getString(R.string.narrators_view_coming_soon), Toast.LENGTH_SHORT).show()
