@@ -617,7 +617,7 @@ fun PersonalizedHomeView(
                 when (behaviour.style) {
                     HomeShelves.Style.Episodes -> {
                         shelf.bookEntities?.let { books ->
-                            ShelfRow(shelf = shelf, progress = progress, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { item ->
+                            ShelfRow(shelf = shelf, progress = progress, marksFinished = behaviour.marksFinished, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { item ->
                                 val episodeId = item.recentEpisode?.id
                                 val podcastId = item.recentEpisode?.libraryItemId ?: item.id
                                 if (episodeId != null) {

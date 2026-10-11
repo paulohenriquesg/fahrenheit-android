@@ -4,7 +4,9 @@ import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CoverProgressTest {
@@ -79,6 +81,49 @@ class CoverProgressTest {
         )
 
         assertNull(progress.of(book("pod-1")))
+    }
+
+    // #192: Newest episodes lists finished ones too; their cards say so.
+    @Test
+    fun `a finished episode is finished and not started`() {
+        val progress = CoverProgress.index(
+            listOf(MediaProgressResponse(libraryItemId = "pod-1", episodeId = "ep-1", currentTime = 2400.0, duration = 2400.0, isFinished = true))
+        )
+        val card = episodeCard(podcastId = "pod-1", episodeId = "ep-1")
+
+        assertTrue(progress.finished(card))
+        assertNull(progress.of(card))
+    }
+
+    @Test
+    fun `a started episode is not finished, and keeps its fraction and time left`() {
+        val progress = CoverProgress.index(
+            listOf(MediaProgressResponse(libraryItemId = "pod-1", episodeId = "ep-1", currentTime = 600.0, duration = 2400.0))
+        )
+        val card = episodeCard(podcastId = "pod-1", episodeId = "ep-1")
+
+        assertFalse(progress.finished(card))
+        assertEquals(0.25f, progress.of(card)!!.fraction, 0.0001f)
+        assertEquals(1800.0, progress.of(card)!!.secondsLeft, 0.0)
+    }
+
+    @Test
+    fun `one finished episode never marks another of the same podcast`() {
+        val progress = CoverProgress.index(
+            listOf(MediaProgressResponse(libraryItemId = "pod-1", episodeId = "ep-1", currentTime = 2400.0, duration = 2400.0, isFinished = true))
+        )
+
+        assertFalse(progress.finished(episodeCard(podcastId = "pod-1", episodeId = "ep-2")))
+        assertFalse("nor the podcast's own card", progress.finished(book("pod-1")))
+    }
+
+    @Test
+    fun `book cards are left as they were - finished says nothing for them`() {
+        val progress = CoverProgress.index(
+            listOf(MediaProgressResponse(libraryItemId = "book-1", currentTime = 12000.0, duration = 12000.0, isFinished = true))
+        )
+
+        assertFalse(progress.finished(book("book-1")))
     }
 
     @Test

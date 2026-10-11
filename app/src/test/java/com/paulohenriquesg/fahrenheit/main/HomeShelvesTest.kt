@@ -97,6 +97,6 @@ class HomeShelvesTest {
     }
 
     @Test
-    fun `a podcast library's listen again is episodes, with no See all`() =
-        assertEquals(Behaviour(Style.Episodes), HomeShelves.of(books("listen-again", "episode")))
+    fun `a podcast library's listen again is episodes, with no See all and no finished marks`() =
+        assertEquals(Behaviour(Style.Episodes, marksFinished = false), HomeShelves.of(books("listen-again", "episode")))
 }

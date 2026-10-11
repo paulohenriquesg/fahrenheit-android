@@ -13,6 +13,10 @@ import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.api.Shelf
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,6 +65,53 @@ class HomeCoverProgressTest {
 
         compose.onNodeWithText("38 min left").assertIsDisplayed()
     }
+
+    // #192: an episode finished elsewhere is marked on Newest episodes, from the store.
+    @Test
+    fun `a finished episode on Newest episodes carries the finished mark`() {
+        val newest = Shelf(
+            id = "newest-episodes", label = "Newest Episodes", labelStringKey = "LabelNewestEpisodes",
+            type = "episode", bookEntities = listOf(episode("ep-1"), episode("ep-2"))
+        )
+        val progress = listOf(
+            MediaProgressResponse(libraryItemId = "pod-1", episodeId = "ep-1", currentTime = 2400.0, duration = 2400.0, isFinished = true)
+        )
+
+        compose.setContent { FahrenheitTheme { PersonalizedHomeView(listOf(newest), "lib", progress = CoverProgress.index(progress)) } }
+
+        assertEquals(1, compose.onAllNodesWithContentDescription("Finished", useUnmergedTree = true).fetchSemanticsNodes().size)
+        // On the finished episode's card, not its neighbour's.
+        compose.onNode(hasText("Episode ep-1") and hasContentDescription("Finished")).assertExists()
+        compose.onNode(hasText("Episode ep-2") and hasContentDescription("Finished")).assertDoesNotExist()
+    }
+
+    // Review of #192: in a podcast library the server sends Listen again as
+    // episodes, every one finished; a mark on each would only grey the row.
+    @Test
+    fun `a podcast library's Listen again carries no finished marks`() {
+        val again = Shelf(
+            id = "listen-again", label = "Listen Again", labelStringKey = "LabelListenAgain",
+            type = "episode", bookEntities = listOf(episode("ep-1"), episode("ep-2"))
+        )
+        val progress = listOf("ep-1", "ep-2").map {
+            MediaProgressResponse(libraryItemId = "pod-1", episodeId = it, currentTime = 2400.0, duration = 2400.0, isFinished = true)
+        }
+
+        compose.setContent { FahrenheitTheme { PersonalizedHomeView(listOf(again), "lib", progress = CoverProgress.index(progress)) } }
+
+        compose.onNodeWithText("Episode ep-1").assertIsDisplayed()
+        assertEquals(0, compose.onAllNodesWithContentDescription("Finished", useUnmergedTree = true).fetchSemanticsNodes().size)
+    }
+
+    private fun episode(id: String): LibraryItem = Gson().fromJson(
+        """{"id":"pod-1","ino":"1","libraryId":"lib","folderId":"f","path":"/p","relPath":"p",
+            "isFile":false,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0,"addedAt":0,"updatedAt":0,
+            "isMissing":false,"isInvalid":false,"mediaType":"podcast",
+            "media":{"metadata":{"title":"An Invented Show","authorName":"An Invented Host"},"tags":[],
+            "numTracks":0,"numAudioFiles":0,"numChapters":0,"duration":0.0,"size":0},
+            "recentEpisode":{"id":"$id","libraryItemId":"pod-1","title":"Episode $id"}}""",
+        LibraryItem::class.java
+    )
 
     private fun book(id: String, author: String): LibraryItem = Gson().fromJson(
         """{"id":"$id","ino":"1","libraryId":"lib","folderId":"f","path":"/p","relPath":"p",

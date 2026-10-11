@@ -29,6 +29,7 @@ import com.paulohenriquesg.fahrenheit.api.Shelf
 fun ShelfRow(
     shelf: Shelf,
     progress: CoverProgress = CoverProgress.None,
+    marksFinished: Boolean = true,
     seeAllTotal: Int? = null,
     onSeeAll: () -> Unit = {},
     onItemLongClick: ((LibraryItem) -> Unit)? = null,
@@ -55,7 +56,7 @@ fun ShelfRow(
             shelf.entities?.let { entities ->
                 items(entities.size, key = { keys!![it] }) { index ->
                     val item = entities[index]
-                    LibraryItemCard(item = item, progress = progress.of(item), onLongClick = onItemLongClick, onClick = onItemClick)
+                    LibraryItemCard(item = item, progress = progress.of(item), finished = marksFinished && progress.finished(item), onLongClick = onItemLongClick, onClick = onItemClick)
                 }
             }
             if (seeAllTotal != null) {

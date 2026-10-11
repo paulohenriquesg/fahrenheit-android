@@ -11,7 +11,11 @@ import com.paulohenriquesg.fahrenheit.player.PlaybackPosition
  * episodes alike. A card standing for an episode reads that episode's progress,
  * never its podcast's.
  */
-class CoverProgress private constructor(private val started: Map<String, Started>) {
+class CoverProgress private constructor(
+    private val started: Map<String, Started>,
+    /** Episodes heard to the end, by key: Newest episodes lists them too (#192). */
+    private val finishedEpisodes: Set<String> = emptySet()
+) {
 
     /** Played some way into and not finished. */
     data class Started(val fraction: Float, val secondsLeft: Double)
@@ -22,6 +26,15 @@ class CoverProgress private constructor(private val started: Map<String, Started
         return started[key]
     }
 
+    /**
+     * Whether a card's episode is finished (#192). Book cards are not marked:
+     * their shelves (Listen Again) say so already.
+     */
+    fun finished(item: LibraryItem): Boolean {
+        val episode = item.recentEpisode ?: return false
+        return key(episode.libraryItemId ?: item.id, episode.id) in finishedEpisodes
+    }
+
     companion object {
         val None = CoverProgress(emptyMap())
 
@@ -29,7 +42,12 @@ class CoverProgress private constructor(private val started: Map<String, Started
             progress.mapNotNull { p ->
                 val itemId = p.libraryItemId ?: return@mapNotNull null
                 started(p)?.let { key(itemId, p.episodeId) to it }
-            }.toMap()
+            }.toMap(),
+            progress.mapNotNull { p ->
+                val itemId = p.libraryItemId ?: return@mapNotNull null
+                val episodeId = p.episodeId ?: return@mapNotNull null
+                key(itemId, episodeId).takeIf { p.isFinished == true }
+            }.toSet()
         )
 
         private fun key(itemId: String, episodeId: String?) = if (episodeId == null) itemId else "$itemId/$episodeId"

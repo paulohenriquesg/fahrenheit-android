@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
@@ -31,6 +30,7 @@ import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material3.Icon
+import com.paulohenriquesg.fahrenheit.ui.elements.FinishedTick
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -285,11 +285,7 @@ private fun EpisodeRowCard(
                 // what the play icon at the end of the row says.
                 Box(modifier = Modifier.size(24.dp)) {
                     when {
-                        finished -> Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = "Finished",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        finished -> FinishedTick()
                         !row.downloaded -> Icon(
                             imageVector = Icons.Outlined.Download,
                             contentDescription = "Not on the server",

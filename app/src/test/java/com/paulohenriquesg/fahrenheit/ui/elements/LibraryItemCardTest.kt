@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
@@ -109,5 +110,35 @@ class LibraryItemCardTest {
 
         compose.onNode(hasTestTag(CoverTags.PLACEHOLDER), useUnmergedTree = true)
             .assert(SemanticsMatcher.expectValue(CoverPlaceholderLines, listOf("An Invented Book", "An Invented Author")))
+    }
+
+    private val episode: LibraryItem = Gson().fromJson(
+        """{"id":"pod-1","ino":"1","libraryId":"lib","folderId":"f","path":"/p","relPath":"p",
+            "isFile":false,"mtimeMs":0,"ctimeMs":0,"birthtimeMs":0,"addedAt":0,"updatedAt":0,
+            "isMissing":false,"isInvalid":false,"mediaType":"podcast",
+            "media":{"metadata":{"title":"An Invented Show","authorName":"An Invented Host"},"tags":[],"numTracks":0,
+            "numAudioFiles":0,"numChapters":0,"duration":0.0,"size":0,"numEpisodes":0},
+            "recentEpisode":{"id":"ep-1","libraryItemId":"pod-1","title":"An Invented Episode"}}""",
+        LibraryItem::class.java
+    )
+
+    private val dimmed = SemanticsMatcher.expectValue(LibraryItemCardTags.Dimmed, true)
+
+    // #192: the podcast page's own mark, dimmed as its rows are.
+    @Test
+    fun `a finished episode's card shows the finished mark and is dimmed`() {
+        compose.setContent { FahrenheitTheme { LibraryItemCard(episode, finished = true) {} } }
+
+        compose.onNodeWithContentDescription("Finished", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNode(dimmed, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `an unplayed episode's card shows neither`() {
+        compose.setContent { FahrenheitTheme { LibraryItemCard(episode) {} } }
+
+        compose.onNodeWithContentDescription("Finished", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNode(dimmed, useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText("An Invented Host").assertIsDisplayed()
     }
 }
