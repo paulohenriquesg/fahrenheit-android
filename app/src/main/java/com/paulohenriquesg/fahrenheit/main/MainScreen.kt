@@ -106,9 +106,14 @@ fun MainScreen(
     /** Favourites (#180), while signed in. */
     favourites: () -> Favourites? = { null },
     /** Home's state, out of this composable as it is touched (#208). */
-    homeModel: HomeViewModel = viewModel { HomeViewModel(ProgressStore.process, fetchPersonalizedView) }
+    homeModel: HomeViewModel = viewModel { HomeViewModel(ProgressStore.process, fetchPersonalizedView) },
+    /** The shell's state: libraries, the view, the rail's highlight, the browse lists (#208). */
+    mainModel: MainViewModel = LocalContext.current.let { context ->
+        viewModel { MainViewModel.of(context, fetchLibraryItems, homeModel::open) }
+    }
 ) {
     val home by homeModel.uiState.collectAsStateWithLifecycle()
+    val main by mainModel.uiState.collectAsStateWithLifecycle()
     val shelves = home.shelves
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -116,28 +121,10 @@ fun MainScreen(
     val sharedPreferencesHandler = remember { SharedPreferencesHandler(context) }
     val userPreferences = sharedPreferencesHandler.getUserPreferences()
     val username = userPreferences.username
-    var libraries by remember { mutableStateOf(listOf<Library>()) }
-    var libraryStats by remember { mutableStateOf(mapOf<String, LibraryStats>()) }
-    // The library list, and which view of it: the whole library from the
-    // rail, or the one a Home shelf's "See all" stands for (#146).
-    val library = remember { LibraryList(scope, fetchLibraryItems) }
-    var currentLibrary by remember { mutableStateOf<Library?>(null) }
+    val currentLibrary = main.library
+    val view = main.view
     val listState = rememberLazyListState()
     val isRowLayout by LayoutManager.isRowLayout  // Use LayoutManager instead of local state
-
-    var view by remember { mutableStateOf(MainView.HOME) }
-    // Which menu row the drawer highlights and focuses when reopened. Kept
-    // apart from `view` because rows like Settings open another screen and
-    // still take the highlight; changing that is a focus change for a TV, not
-    // a refactor.
-    var highlightedMenuItemId by remember { mutableStateOf(MainView.HOME.menuItemId) }
-    var shouldRefreshLibrary by remember { mutableStateOf(false) }
-    var seriesList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Series>()) }
-    var collectionsList by remember { mutableStateOf(listOf<com.paulohenriquesg.fahrenheit.api.Collection>()) }
-    var isLoadingSeries by remember { mutableStateOf(false) }
-    var isLoadingCollections by remember { mutableStateOf(false) }
-    var isLoadingStats by remember { mutableStateOf(false) }
-    var listeningStats by remember { mutableStateOf<com.paulohenriquesg.fahrenheit.api.ListeningStatsResponse?>(null) }
 
     val apiClient = ApiClient.getApiService()
     if (apiClient == null) {
@@ -164,71 +151,16 @@ fun MainScreen(
                 homeModel.screenUp(false)
             }
             if (event == Lifecycle.Event.ON_RESUME) {
-                // Check if library has changed
-                val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
-                if (savedLibraryId != null && savedLibraryId != currentLibrary?.id) {
-                    shouldRefreshLibrary = true
-                } else if (left) {
-                    // Back from the player, say: the shelves are read again (#197),
-                    // Favourites among them, which the heart may have changed (#180).
-                    homeModel.returned()
-                }
+                // A library chosen meanwhile is opened, Home with it; otherwise,
+                // back from the player, say: the shelves are read again (#197),
+                // Favourites among them, which the heart may have changed (#180).
+                if (!mainModel.followSavedLibrary() && left) homeModel.returned()
                 left = false
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    // Handle library refresh when needed
-    LaunchedEffect(shouldRefreshLibrary, libraries) {
-        if (shouldRefreshLibrary && libraries.isNotEmpty()) {
-            val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
-            val newLibrary = libraries.find { it.id == savedLibraryId }
-            if (newLibrary != null && newLibrary.id != currentLibrary?.id) {
-                currentLibrary = newLibrary
-                view = MainView.HOME
-                highlightedMenuItemId = MainView.HOME.menuItemId
-
-                // Drop what belongs to the library being left: Home showed its
-                // shelves for the second or two the fetch took.
-                library.clear()
-                newLibrary.id?.let { libraryId ->
-                    homeModel.open(libraryId)
-                    library.open(libraryId, LibraryQuery.Everything)
-                }
-            }
-            shouldRefreshLibrary = false
-        }
-    }
-
-    // Fetch libraries from the API
-    LaunchedEffect(Unit) {
-        val libraryApi = ApiClient.getLibraryApi()
-        if (libraryApi != null) {
-            LibraryRepository(libraryApi).libraries()
-                .onSuccess { fetched ->
-                    StartupTimeline.app.mark("libraries loaded")
-                    libraries = fetched
-                    if (libraries.isNotEmpty()) {
-                        val savedLibraryId = sharedPreferencesHandler.getSelectedLibraryId()
-                        currentLibrary = LibraryChoice.pick(libraries, savedLibraryId)
-                        currentLibrary?.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
-                        currentLibrary?.id?.let { libraryId ->
-                            homeModel.open(libraryId)
-                            library.open(libraryId, LibraryQuery.Everything)
-                        }
-                    }
-                }
-                .onFailure {
-                    Toast.makeText(
-                        context,
-                        "Failed to load libraries: ${it.message ?: "network error"}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
         }
     }
 
@@ -246,20 +178,9 @@ fun MainScreen(
         }
     }
 
-    // Counts for the Switch Library tiles, asked for each time that view opens
-    // and never in its way: a tile without them says what kind of library it is.
-    LaunchedEffect(view, libraries) {
-        if (view != MainView.SWITCH_LIBRARY) return@LaunchedEffect
-        val repository = ApiClient.getLibraryApi()?.let(::LibraryRepository) ?: return@LaunchedEffect
-        libraries.mapNotNull { it.id }.forEach { id ->
-            repository.stats(id).onSuccess { libraryStats = libraryStats + (id to it) }
-        }
-    }
-
-    // Function to scroll to the first item
-    fun scrollToFirstItem() {
-        scope.launch {
-            listState.scrollToItem(0)
+    LaunchedEffect(mainModel) {
+        mainModel.librariesFailed.collect { why ->
+            Toast.makeText(context, "Failed to load libraries: $why", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -268,7 +189,7 @@ fun MainScreen(
     // have, and RIGHT goes from there into the content.
     val initialFocus = rememberInitialFocus(
         enabled = true,
-        view, shelves, library.items, seriesList, collectionsList, listeningStats
+        view, shelves, main.listing.items, main.series, main.collections, main.listeningStats
     )
 
     var updateCheck by remember { mutableStateOf<UpdateCheck>(UpdateCheck.Idle) }
@@ -290,7 +211,7 @@ fun MainScreen(
         favourites()?.let { kept ->
             FavouritesSetting(
                 libraryId = libraryId,
-                libraryName = currentLibrary?.name.orEmpty(),
+                libraryName = currentLibrary.name.orEmpty(),
                 chosen = favouritesChosen,
                 load = { kept.playlists(libraryId) },
                 choose = { pick ->
@@ -306,10 +227,7 @@ fun MainScreen(
 
     // Back walks up a level: content -> rail -> Home -> out (#125).
     var railHasFocus by remember { mutableStateOf(false) }
-    MainBackHandler(view = view, railHasFocus = railHasFocus, rail = initialFocus) {
-        view = MainView.HOME
-        highlightedMenuItemId = MainView.HOME.menuItemId
-    }
+    MainBackHandler(view = view, railHasFocus = railHasFocus, rail = initialFocus, onGoHome = mainModel::goHome)
 
     // Get menu items for current library type
     val menuItems = remember(currentLibrary?.mediaType) {
@@ -331,84 +249,25 @@ fun MainScreen(
         (context as? Activity)?.finish()
     }
 
-    fun handleMenuAction(action: MenuAction, libraryId: String?, query: LibraryQuery = LibraryQuery.Everything) {
+    // The model changes the view; what is left here acts on the screen itself.
+    fun handleMenuAction(action: MenuAction, query: LibraryQuery, choose: () -> Unit) {
+        // A different view opens at its top, not where the last one was.
+        val anotherList = action == MenuAction.LIBRARY && query != mainModel.uiState.value.listing.query
+        choose()
         when (action) {
-            MenuAction.HOME -> {
-                view = MainView.HOME
-                if (libraryId != null) homeModel.choseHome()
-            }
-            MenuAction.LIBRARY -> {
-                view = MainView.LIBRARY
-                // A different view opens at its top, not where the last one was.
-                if (query != library.query) scope.launch { listState.scrollToItem(0) }
-                libraryId?.let { id -> library.open(id, query) }
-            }
-            MenuAction.SERIES -> {
-                view = MainView.SERIES
-                seriesList = emptyList()  // Clear old data
-                isLoadingSeries = true
-                if (libraryId != null) {
-                    scope.launch {
-                        ApiClient.getBrowseApi()?.let { api ->
-                            BrowseRepository(api).series(libraryId)
-                                .onSuccess { seriesList = it.sortedWith(Alphabetical.byName { s -> s.name }) }
-                        }
-                        isLoadingSeries = false
-                    }
-                } else {
-                    isLoadingSeries = false
-                }
-            }
-            MenuAction.COLLECTIONS -> {
-                view = MainView.COLLECTIONS
-                collectionsList = emptyList()  // Clear old data
-                isLoadingCollections = true
-                if (libraryId != null) {
-                    scope.launch {
-                        ApiClient.getBrowseApi()?.let { api ->
-                            BrowseRepository(api).collections(libraryId)
-                                .onSuccess { collectionsList = it.sortedWith(Alphabetical.byName { c -> c.name }) }
-                        }
-                        isLoadingCollections = false
-                    }
-                } else {
-                    isLoadingCollections = false
-                }
-            }
-            MenuAction.AUTHORS -> {
-                view = MainView.AUTHORS
-            }
-            MenuAction.NARRATORS -> {
+            MenuAction.HOME -> if (currentLibrary?.id != null) homeModel.choseHome()
+            MenuAction.LIBRARY -> if (anotherList) scope.launch { listState.scrollToItem(0) }
+            MenuAction.NARRATORS ->
                 Toast.makeText(context, context.getString(R.string.narrators_view_coming_soon), Toast.LENGTH_SHORT).show()
-            }
-            MenuAction.STATS -> {
-                view = MainView.STATS
-                listeningStats = null  // Clear old data
-                isLoadingStats = true
-                scope.launch {
-                    ApiClient.getBrowseApi()?.let { api ->
-                        BrowseRepository(api).listeningStats().onSuccess { listeningStats = it }
-                    }
-                    isLoadingStats = false
-                }
-            }
-            MenuAction.LATEST -> {
-                view = MainView.LATEST
-            }
-            MenuAction.SELECT_LIBRARY -> {
-                view = MainView.SWITCH_LIBRARY
-            }
-            MenuAction.SETTINGS -> {
-                view = MainView.SETTINGS
-            }
             MenuAction.LOGOUT -> signOut()
+            else -> Unit
         }
     }
 
     NavigationRail(
         items = menuItems,
         secondary = MenuConfig.commonItems,
-        selectedId = highlightedMenuItemId,
+        selectedId = main.highlighted,
         firstFocus = initialFocus,
         onRailFocusChanged = { railHasFocus = it },
         // What the playback service has queued: the way back to the player (#107).
@@ -426,8 +285,7 @@ fun MainScreen(
             }
         },
         onSelect = { menuItem ->
-            highlightedMenuItemId = menuItem.id
-            handleMenuAction(menuItem.action, currentLibrary?.id)
+            handleMenuAction(menuItem.action, LibraryQuery.Everything) { mainModel.select(menuItem.id, menuItem.action) }
         },
         content = {
             Box(
@@ -456,24 +314,21 @@ fun MainScreen(
                 }
                 when (view) {
                     MainView.HOME -> PersonalizedHomeView(shelves, currentLibrary?.id, home.loading, home.covers, onSeeAll = { tile ->
-                        // As though the rail's row had been chosen, so the rail
-                        // highlights the screen the tile opened.
-                        MainView.forMenuAction(tile.opens)?.let { highlightedMenuItemId = it.menuItemId }
-                        handleMenuAction(tile.opens, currentLibrary?.id, tile.query)
+                        handleMenuAction(tile.opens, tile.query) { mainModel.seeAll(tile.opens, tile.query) }
                     })
                     MainView.LIBRARY -> LibraryBrowseView(
                         name = currentLibrary?.name,
-                        itemLabel = if (libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts",
-                        items = library.items,
+                        itemLabel = if (main.libraries.find { it.name == currentLibrary?.name }?.mediaType == "book") "books" else "podcasts",
+                        items = main.listing.items,
                         rowLayout = isRowLayout,
                         listState = listState,
-                        query = library.query,
-                        loading = library.loading
+                        query = main.listing.query,
+                        loading = main.listing.loading
                     )
-                    MainView.SERIES -> SeriesBrowseView(seriesList, isLoadingSeries)
+                    MainView.SERIES -> SeriesBrowseView(main.series, main.seriesLoading)
                     MainView.AUTHORS -> AuthorsBrowseView(currentLibrary?.id)
-                    MainView.COLLECTIONS -> CollectionsBrowseView(collectionsList, isLoadingCollections)
-                    MainView.STATS -> StatsBrowseView(listeningStats, isLoadingStats)
+                    MainView.COLLECTIONS -> CollectionsBrowseView(main.collections, main.collectionsLoading)
+                    MainView.STATS -> StatsBrowseView(main.listeningStats, main.statsLoading)
                     MainView.LATEST -> currentLibrary?.id?.let { id ->
                         com.paulohenriquesg.fahrenheit.podcast.LatestEpisodesView(libraryId = id, heard = home.episodes)
                     }
@@ -532,17 +387,10 @@ fun MainScreen(
                         favourites = favouritesSetting
                     )
                     MainView.SWITCH_LIBRARY -> SwitchLibraryView(
-                        libraries = libraries,
+                        libraries = main.libraries,
                         currentId = currentLibrary?.id,
-                        stats = libraryStats,
-                        onSelect = { chosen ->
-                            // Save and ask for a refresh, and nothing else: the
-                            // refresh compares the saved library with the current
-                            // one, so setting the current one here first made them
-                            // equal and the shelves were never fetched again.
-                            chosen.id?.let { sharedPreferencesHandler.saveSelectedLibraryId(it) }
-                            shouldRefreshLibrary = true
-                        }
+                        stats = main.libraryStats,
+                        onSelect = mainModel::chooseLibrary
                     )
                 }
             }
