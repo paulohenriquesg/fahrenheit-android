@@ -20,6 +20,7 @@ import com.paulohenriquesg.fahrenheit.favourites.FavouritesChoice
 import com.paulohenriquesg.fahrenheit.favourites.HeartChange
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
@@ -101,8 +102,8 @@ data class PlayerUiState(
  * @param heartOf the heart for a library's item, or null with no server.
  * @param serverFormat the account's date format, for an episode's date.
  * @param clock elapsed time, for how long the cover's colour is waited for.
- * @param scope where the work runs; the ViewModel's own unless a test gives
- *   one, which that test then cancels: [onCleared] does not.
+ * @param scope where the work runs; the ViewModel's own, posted to the main
+ *   thread, unless a test gives one, which that test then cancels: [onCleared] does not.
  */
 class PlayerViewModel(
     private val itemId: String,
@@ -124,7 +125,10 @@ class PlayerViewModel(
     scope: CoroutineScope? = null
 ) : ViewModel() {
 
-    private val scope = scope ?: viewModelScope
+    // Posted, never run in place, as the screen's effects were: a begin set off
+    // by the controller's own callback (the queue moving on) runs after it,
+    // not inside it, and the item's load starts after onCreate.
+    private val scope = scope ?: CoroutineScope(viewModelScope.coroutineContext + Dispatchers.Main)
     private val state = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = state.asStateFlow()
 
@@ -271,8 +275,11 @@ class PlayerViewModel(
      */
     fun remotePlay(down: Boolean): Boolean = prompt?.onKey(down) ?: false
 
-    fun answerResume(moveThere: Boolean) {
-        prompt?.answer(moveThere)
+    /** @return whether there was a question to answer, so focus goes back to Play only after one. */
+    fun answerResume(moveThere: Boolean): Boolean {
+        val asking = prompt?.takeIf { it.offer != null } ?: return false
+        asking.answer(moveThere)
+        return true
     }
 
     /** The service marks it, once the closing report is in ([FinishMarker]). */

@@ -95,7 +95,8 @@ class PlayerViewModelTest {
         item: LibraryItemResponse? = book(),
         episodeId: String? = null,
         start: PlayerStart = PlayerStart(autoPlay = false, knowledge = knowledge),
-        askThenPlay: Boolean = false
+        askThenPlay: Boolean = false,
+        scope: CoroutineScope? = this.scope
     ) = PlayerViewModel(
         itemId = item?.id ?: "b1",
         episodeId = episodeId,
@@ -121,8 +122,14 @@ class PlayerViewModelTest {
 
     private fun PlayerViewModel.heard() = also { model -> scope.launch { model.notices.collect { said += it } } }
 
-    /** Delivers what the player has to say: its listeners are called on its looper. */
-    private fun idle() = shadowOf(Looper.getMainLooper()).idle()
+    /**
+     * Lets the test player handle what it was told, on its own thread, and
+     * deliver what it has to say to its listeners on the main looper.
+     */
+    private fun idle() {
+        run(player).untilPendingCommandsAreFullyHandled()
+        shadowOf(Looper.getMainLooper()).idle()
+    }
 
     // A book in two files, and a show with two episodes, the second newer.
 
@@ -291,6 +298,66 @@ class PlayerViewModelTest {
         assertTrue(model.uiState.value.ready)
     }
 
+    // The reattach path where begin hands over to the episode the queue moved on to (#108).
+    @Test
+    fun `coming back after the queue moved on shows the episode playing, and begins with that one`() {
+        autoAdvance = true
+        model(item = show, episodeId = "e1").connect(link)
+        player.seekTo(1, 0)
+        idle()
+        reads.clear()
+
+        // The screen recreated on e1, as the intent still says.
+        val model = model(item = show, episodeId = "e1", start = PlayerStart(autoPlay = false, resumed = true, knowledge = knowledge))
+        model.connect(link)
+
+        assertEquals("e2", model.uiState.value.nowPlaying?.episodeId)
+        assertTrue(model.uiState.value.ready)
+        // Reattached to e2: nothing read for e1, and e1 is gone from the queue.
+        assertTrue(reads.none { it.second == "e1" })
+        assertEquals(1, player.mediaItemCount)
+        assertEquals("e2", QueuedFile.of(player.currentMediaItem)?.episodeId)
+    }
+
+    // As the screen's effects did, a frame later: not inside the controller's own callback (review).
+    @Test
+    fun `following the queue begins again after the player's callback, not inside it`() {
+        autoAdvance = true
+        val model = model(item = show, episodeId = "e1", scope = null)
+        idle()
+        model.connect(link)
+        idle()
+        assertEquals(2, player.mediaItemCount)
+        var queuedDuringCallback = -1
+        player.addListener(object : Player.Listener {
+            override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                queuedDuringCallback = player.mediaItemCount
+            }
+        })
+
+        player.seekTo(1, 0)
+        assertEquals(2, queuedDuringCallback)
+        idle()
+
+        assertEquals("e2", model.uiState.value.nowPlaying?.episodeId)
+        assertEquals(1, player.mediaItemCount)
+    }
+
+    @Test
+    fun `the end is watched for the episode followed to`() {
+        autoAdvance = true
+        val model = model(item = show, episodeId = "e1").heard()
+        model.connect(link)
+        idle()
+        player.seekTo(1, 0)
+        idle()
+
+        player.clearMediaItems()
+        idle()
+
+        assertEquals(listOf<PlayerNotice>(PlayerNotice.QueueEnded), said)
+    }
+
     @Test
     fun `with auto-advance, the next episode is queued at its own saved position, read before this one's`() {
         autoAdvance = true
@@ -404,6 +471,33 @@ class PlayerViewModelTest {
         model.answerResume(moveThere = false)
 
         assertTrue(player.playWhenReady)
+    }
+
+    @Test
+    fun `the Play it was opened for is spent once, and coming back again asks without playing`() {
+        queuedElsewhereSince()
+        val model = model(askThenPlay = true)
+        model.connect(link)
+        model.answerResume(moveThere = false)
+        player.pause()
+        model.disconnect()
+        serverNow = MediaProgressResponse(currentTime = 5200.0, lastUpdate = 20_000L)
+
+        model.connect(link)
+        model.answerResume(moveThere = false)
+
+        assertFalse(player.playWhenReady)
+    }
+
+    // The focus nudge back to Play follows an answer, not a press on nothing.
+    @Test
+    fun `an answer is taken only while the question shows`() {
+        queuedElsewhereSince()
+        val model = model()
+        model.connect(link)
+
+        assertTrue(model.answerResume(moveThere = false))
+        assertFalse(model.answerResume(moveThere = false))
     }
 
     @Test

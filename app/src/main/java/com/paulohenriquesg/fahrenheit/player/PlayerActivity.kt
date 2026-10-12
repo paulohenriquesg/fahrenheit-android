@@ -2,39 +2,27 @@ package com.paulohenriquesg.fahrenheit.player
 
 import com.paulohenriquesg.fahrenheit.favourites.FavouriteButton
 import com.paulohenriquesg.fahrenheit.favourites.note
-import com.paulohenriquesg.fahrenheit.favourites.FavouriteHeart
-import com.paulohenriquesg.fahrenheit.favourites.Favourites
-import com.paulohenriquesg.fahrenheit.favourites.FavouritesChoice
 import com.paulohenriquesg.fahrenheit.favourites.HeartChange
 import androidx.compose.runtime.mutableIntStateOf
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
 import android.view.KeyEvent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.SystemClock
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.LaunchedEffect
-import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.compose.runtime.mutableDoubleStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -45,14 +33,8 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
-import com.paulohenriquesg.fahrenheit.api.ApiClient
-import com.paulohenriquesg.fahrenheit.api.LibraryRepository
-import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
-import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
-import kotlinx.coroutines.async
-import retrofit2.awaitResponse
 
 /**
  * The one player, for a book or a podcast episode (#73).
@@ -155,7 +137,7 @@ class PlayerActivity : ComponentActivity() {
 
     @androidx.compose.runtime.Composable
     private fun Player(model: PlayerViewModel) {
-        val state by model.uiState.collectAsState()
+        val state by model.uiState.collectAsStateWithLifecycle()
         val playing = state.nowPlaying
         val connected = state.player
         val playback = state.playback
@@ -236,8 +218,8 @@ class PlayerActivity : ComponentActivity() {
                                     episode = playing.episodeId != null
                                 ),
                                 now = System.currentTimeMillis(),
-                                onContinue = { model.answerResume(moveThere = true); focusPlayAgain++ },
-                                onStay = { model.answerResume(moveThere = false); focusPlayAgain++ }
+                                onContinue = { if (model.answerResume(moveThere = true)) focusPlayAgain++ },
+                                onStay = { if (model.answerResume(moveThere = false)) focusPlayAgain++ }
                             )
                         }
                         PlayerPanelHost(panels) { panel ->
