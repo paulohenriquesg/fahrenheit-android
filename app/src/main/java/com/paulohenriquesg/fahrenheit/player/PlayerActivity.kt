@@ -24,6 +24,11 @@ import androidx.compose.runtime.LaunchedEffect
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,13 +66,11 @@ import retrofit2.awaitResponse
  * it playing (#155); Stop on the rail's Now playing entry ends it.
  */
 class PlayerActivity : ComponentActivity() {
-    private var controller by mutableStateOf<MediaController?>(null)
-    private var connectFailed by mutableStateOf(false)
-    /** The sleep timer as the service reports it; null when none runs. */
-    private var sleep by mutableStateOf<SleepState?>(null)
+    /** The screen's state (#221); null only when there was no item to open. */
+    private var model: PlayerViewModel? = null
     private val sleepReports = object : MediaController.Listener {
         override fun onExtrasChanged(controller: MediaController, extras: Bundle) {
-            sleep = SleepCommand.state(extras)
+            model?.extrasChanged(extras)
         }
     }
     private val connection by lazy {
@@ -75,15 +78,9 @@ class PlayerActivity : ComponentActivity() {
             connect = { Playback.connect(this, sleepReports) },
             release = { it.release() },
             executor = ContextCompat.getMainExecutor(this),
-            onChange = {
-                controller = it
-                connectFailed = it == null
-                sleep = it?.let { connected -> SleepCommand.state(connected.sessionExtras) }
-            }
+            onChange = { model?.connect(it?.let(::ControllerLink)) }
         )
     }
-    private val speeds by lazy { SpeedMemory(this) }
-    private lateinit var start: PlayerStart
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,14 +93,37 @@ class PlayerActivity : ComponentActivity() {
             finish()
             return
         }
+        // Kept across a configuration change, which then starts nothing anew.
         // auto_play is a request to start, once: not again when this screen
-        // comes back, and not after a configuration change recreates it.
-        askThenPlay = asksThenPlays(intent) && savedInstanceState == null
-        start = PlayerStart(
-            autoPlay = autoPlay && savedInstanceState == null,
-            startAt = startAtOf(intent)?.takeIf { savedInstanceState == null },
-            resumed = savedInstanceState != null
-        )
+        // comes back, and not after the process was recreated with it.
+        val shown = ViewModelProvider(this, viewModelFactory {
+            initializer {
+                PlayerViewModel.of(
+                    this@PlayerActivity,
+                    itemId,
+                    episodeId,
+                    start = PlayerStart(
+                        autoPlay = autoPlay && savedInstanceState == null,
+                        startAt = startAtOf(intent)?.takeIf { savedInstanceState == null },
+                        resumed = savedInstanceState != null
+                    ),
+                    askThenPlay = asksThenPlays(intent) && savedInstanceState == null
+                )
+            }
+        })[PlayerViewModel::class.java]
+        model = shown
+        lifecycleScope.launch {
+            shown.notices.collect { notice ->
+                when (notice) {
+                    PlayerNotice.ProgressUnreadable ->
+                        Toast.makeText(this@PlayerActivity, getString(R.string.progress_unreadable), Toast.LENGTH_LONG).show()
+                    PlayerNotice.MarkFinishedFailed ->
+                        Toast.makeText(this@PlayerActivity, getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
+                    is PlayerNotice.Favourite -> confirm(notice.change)
+                    PlayerNotice.QueueEnded -> closeAtQueueEnd(this@PlayerActivity)
+                }
+            }
+        }
 
         setContent {
             FahrenheitTheme {
@@ -115,7 +135,7 @@ class PlayerActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
-                    Player(itemId, episodeId)
+                    Player(shown)
                 }
             }
         }
@@ -129,207 +149,37 @@ class PlayerActivity : ComponentActivity() {
     // Leaving, by Back or Home, keeps playing (#155): the controller only lets go.
     override fun onStop() {
         connection.close()
-        controller = null
+        model?.disconnect()
         super.onStop()
     }
 
     @androidx.compose.runtime.Composable
-    private fun Player(itemId: String, episodeId: String?) {
-        var nowPlaying by remember { mutableStateOf<NowPlaying?>(null) }
-        var failed by remember { mutableStateOf(false) }
-        var currentTime by remember { mutableDoubleStateOf(0.0) }
-        var wash by remember { mutableStateOf<Color?>(null) }
-        // The item as loaded, and the episode shown: with auto-advance the
-        // queue moves on by itself, and the screen follows it (#108).
-        var loaded by remember { mutableStateOf<LibraryItemResponse?>(null) }
-        var shownEpisode by remember { mutableStateOf(episodeId) }
-        val serverFormat = remember { SharedPreferencesHandler(this@PlayerActivity).getUserPreferences().dateFormat }
-
-        LaunchedEffect(itemId, episodeId) {
-            // The cover's colour, worked out alongside the item: the screen
-            // waits for it so it does not open black and then change, but
-            // only for what is left of WASH_WAIT_MS once the item is here, so
-            // it does not delay playing either. A slow one fades in later.
-            val started = SystemClock.elapsedRealtime()
-            val colour = async { washOrNothing { coverWashOf(coverBitmap(this@PlayerActivity, itemId)) } }
-            val api = ApiClient.getLibraryApi()
-            val item = api?.let { LibraryRepository(it).item(itemId).getOrNull() }
-            loaded = item
-            val playing = item?.let { NowPlaying.of(it, episodeId, System.currentTimeMillis(), serverFormat) }
-            if (playing != null) {
-                wash = washBeforeShowing(
-                    waitMs = WASH_WAIT_MS - (SystemClock.elapsedRealtime() - started),
-                    colour = colour,
-                    late = { wash = it }
-                )
-            } else {
-                colour.cancel()
-            }
-            nowPlaying = playing
-            failed = nowPlaying == null
-        }
-
-        // The queue moved on to the next episode: show that one, from the item
-        // already loaded - no request, and no "Loading" in between.
-        // Keyed on the item too: a move made before it loaded is followed once it has.
-        LaunchedEffect(shownEpisode, loaded) {
-            if (shownEpisode == nowPlaying?.episodeId) return@LaunchedEffect
-            val item = loaded ?: return@LaunchedEffect
-            NowPlaying.of(item, shownEpisode, System.currentTimeMillis(), serverFormat)?.let { nowPlaying = it }
-        }
-
-        val playing = nowPlaying
-        val connected = controller
-        DisposableEffect(connected) {
-            val follow = object : androidx.media3.common.Player.Listener {
-                override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
-                    shownEpisode = EpisodeFollow.shown(QueuedFile.of(mediaItem), itemId, shownEpisode)
-                }
-            }
-            connected?.addListener(follow)
-            onDispose { connected?.removeListener(follow) }
-        }
-        // Played to the end: nothing left to show (#179). Keyed on the episode
-        // shown, which follows auto-advance, so the end is the last one's.
-        DisposableEffect(connected, itemId, shownEpisode) {
-            val watch = connected?.let { QueueEndWatch(it, itemId, shownEpisode) { closeAtQueueEnd(this@PlayerActivity) } }
-            watch?.let { connected.addListener(it) }
-            onDispose { watch?.let { connected.removeListener(it) } }
-        }
-        // Keyed on the item, not the episode: following a move is not a new start.
-        var ready by remember(connected, playing?.itemId) { mutableStateOf(false) }
-        // Which position to continue from, when the server's is newer and from
-        // elsewhere (#90); asked on coming back to a paused item, and on Play.
-        val scope = rememberCoroutineScope()
-        // Set when the screen came back to this item queued already; asked once the prompt exists.
-        var reattached by remember(connected, playing?.itemId, playing?.episodeId) { mutableStateOf(false) }
+    private fun Player(model: PlayerViewModel) {
+        val state by model.uiState.collectAsState()
+        val playing = state.nowPlaying
+        val connected = state.player
+        val playback = state.playback
         // After an answer the question's focused button is gone: Play takes focus.
         var focusPlayAgain by remember { mutableIntStateOf(0) }
-        val resumeCheck = remember {
-            ResumeCheck(
-                progress = ResumeSources::progress,
-                latestSession = ResumeSources::latestSession,
-                thisDevice = PlaybackDevice.info(this).deviceId.orEmpty()
-            )
-        }
-        val listening = remember(connected, playing) {
-            if (connected == null || playing == null) null
-            else ListeningControls(connected, itemId, playing.chapters, playing.trackTotal ?: 0.0, speeds, playing.episodeId, connected::sendCustomCommand)
-        }
-        LaunchedEffect(connected, playing) {
-            if (connected == null || playing == null) return@LaunchedEffect
-            // Before anything plays, or the first moments play at the last book's speed.
-            listening?.applyRememberedSpeed()
-            // The saved position is read when it is needed, not when the
-            // screen opened: by then it may have been listened past elsewhere.
-            // Coming back after the queue moved on with the screen closed: show
-            // the episode playing, and begin again with that (#108).
-            start.follows(connected, playing)?.let {
-                shownEpisode = it
-                return@LaunchedEffect
-            }
-            // With auto-advance on, the next newer episode follows this one, from
-            // where it was left (#108).
-            val next = playing.next?.takeIf { playerSettings.playNextEpisode }
-                ?.let { ref -> loaded?.let { NowPlaying.of(it, ref.id, System.currentTimeMillis(), serverFormat) } }
-            val nextStartAt = next?.let {
-                ResumePoint.decide(savedProgress(itemId, it.episodeId), it.trackTotal, it.mediaDuration).positionSeconds
-            } ?: 0.0
-            val reattaching = QueuedFile.of(connected.currentMediaItem)?.isFor(itemId, playing.episodeId) == true
-            ready = start.begin(
-                connected,
-                playing,
-                progress = { savedProgress(itemId, playing.episodeId) },
-                resolveUrl = { ApiClient.generateFullUrl(it) },
-                next = next,
-                nextStartAt = nextStartAt
-            )
-            if (!ready) failed = true
-            // A start chosen on the opening screen is not questioned.
-            if (ready && reattaching && !start.choseStart) reattached = true
-        }
-        // Above the screen's states, so a mark made in this visit survives Home and back.
-        var finished by rememberFinished(connected, playing?.finished)
-        var marking by remember(playing) { mutableStateOf(false) }
         // A panel left open when the screen went away does not come back over it.
         val panels = rememberPlayerPanels(connected)
-        val playback = remember(connected, playing) {
-            val timeline = playing?.timeline
-            if (connected == null || timeline == null) null else BookPlayback(connected, timeline)
-        }
         val spans = remember(playing) { ChapterClock.spans(playing?.chapters, playing?.trackTotal ?: 0.0) }
-        // The rest of the series, for About and "Book N of M"; kept apart
-        // from nowPlaying, whose change would start playback over.
-        var series by remember(playing) { mutableStateOf<SeriesBooks?>(null) }
-        LaunchedEffect(playing?.series, playing?.libraryId) {
-            val ref = playing?.series ?: return@LaunchedEffect
-            val libraryId = playing.libraryId ?: return@LaunchedEffect
-            val api = ApiClient.getLibraryApi() ?: return@LaunchedEffect
-            // Said in the log when it fails: the row simply not being there hid
-            // a reply the app could not read (device check, #130).
-            series = LibraryRepository(api).seriesBooks(libraryId, ref.id)
-                .onFailure { Log.w(TAG, "Couldn't read the series ${ref.id}", it) }
-                .getOrNull()
-                ?.let { SeriesBooks.of(it, currentId = itemId) }
-                ?.also { if (it.current == null) Log.w(TAG, "The series ${ref.id} does not list $itemId") }
-                ?.takeIf { it.current != null }
-        }
-        // The heart, while the library has a Favourites playlist (#180).
-        val heart = remember(playing?.libraryId, playing?.itemId, playing?.episodeId) {
-            val shown = playing
-            val libraryId = shown?.libraryId
-            val kept = ApiClient.getPlaylistApi()?.let { Favourites(it, FavouritesChoice(this@PlayerActivity)) }
-            if (shown == null || libraryId == null || kept == null) null
-            else FavouriteHeart(kept, libraryId, shown.itemId, shown.episodeId)
-        }
-        LaunchedEffect(heart) { heart?.load() }
-        // Keyed on the episode too: an answer must not seek one episode to another's position.
-        val prompt = remember(connected, playing?.itemId, playing?.episodeId, playback) {
-            val player = connected
-            val shown = playing
-            val at = playback
-            if (player == null || shown == null || at == null) null
-            else ResumePrompt(
-                scope = scope,
-                check = { resumeCheck.offer(itemId, shown.episodeId, at.bookPosition(), playing = false) },
-                playWhenReady = { player.playWhenReady },
-                play = { player.play() },
-                seek = { at.seekToBookTime(it) },
-                answered = {
-                    resumeCheck.answered(itemId, shown.episodeId, it)
-                    focusPlayAgain++
-                }
-            )
-        }
-        LaunchedEffect(prompt, reattached) {
-            if (!reattached) return@LaunchedEffect
-            reattached = false
-            prompt?.onReattach(playAfter = askThenPlay)
-            // The press it was opened for is spent.
-            askThenPlay = false
-        }
-        // The remote's Play reaches the screen before the media session: from a
-        // pause it asks first too, and while the question shows it waits.
-        DisposableEffect(prompt) {
-            remotePlay = { down -> prompt?.onKey(down) ?: false }
-            onDispose { remotePlay = null }
-        }
         when {
-            failed || connectFailed -> Text(
+            state.failed || state.connectFailed -> Text(
                 text = stringResource(R.string.item_load_failed),
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(16.dp)
             )
-            playing == null || connected == null || !ready -> Text(
+            playing == null || connected == null || !state.ready -> Text(
                 text = stringResource(R.string.loading),
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(16.dp)
             )
             else -> {
                 PlayerScreen(
-                    nowPlaying = series?.let { playing.withSeriesTotal(it.total) } ?: playing,
-                    currentTime = currentTime,
-                    wash = wash,
+                    nowPlaying = state.series?.let { playing.withSeriesTotal(it.total) } ?: playing,
+                    currentTime = state.currentTime,
+                    wash = state.wash,
                     transport = {
                         // ready implies a timeline: PlayerStart refuses a NowPlaying without one.
                         val timeline = playing.timeline
@@ -343,8 +193,8 @@ class PlayerActivity : ComponentActivity() {
                                 // read is enough: Settings is reached only by leaving the player.
                                 skipBack = playerSettings.skipBackSeconds,
                                 skipForward = playerSettings.skipForwardSeconds,
-                                onCurrentTimeUpdate = { currentTime = it },
-                                onPlay = { if (prompt != null) prompt.onPlay() else connected.play() },
+                                onCurrentTimeUpdate = model::timeUpdated,
+                                onPlay = model::play,
                                 focusPlayAgain = focusPlayAgain,
                                 // An episode's outer buttons open the episodes either side (#108).
                                 episodes = playing.episodeId?.let {
@@ -357,15 +207,15 @@ class PlayerActivity : ComponentActivity() {
                                     PlayerActions(
                                         panels = panels,
                                         speed = rememberPlaybackSpeed(connected),
-                                        sleep = sleep,
+                                        sleep = state.sleep,
                                         chapters = spans.isNotEmpty(),
-                                        onGoToPodcast = if (playing.goToPodcast) ({ goToPodcast(itemId) }) else null,
-                                        favourite = heart?.playlist?.let { playlist ->
+                                        onGoToPodcast = if (playing.goToPodcast) ({ goToPodcast(playing.itemId) }) else null,
+                                        favourite = state.favourite?.let { heart ->
                                             {
                                                 FavouriteButton(
                                                     filled = heart.filled,
-                                                    playlist = playlist.name,
-                                                    onClick = { scope.launch { heart.toggle()?.let(::confirm) } }
+                                                    playlist = heart.playlist,
+                                                    onClick = model::toggleFavourite
                                                 )
                                             }
                                         }
@@ -375,7 +225,7 @@ class PlayerActivity : ComponentActivity() {
                         }
                     },
                     overlay = {
-                        prompt?.offer?.let { asked ->
+                        state.offer?.let { asked ->
                             ResumeChoice(
                                 asked,
                                 item = ResumeItem(
@@ -386,15 +236,15 @@ class PlayerActivity : ComponentActivity() {
                                     episode = playing.episodeId != null
                                 ),
                                 now = System.currentTimeMillis(),
-                                onContinue = { prompt.answer(moveThere = true) },
-                                onStay = { prompt.answer(moveThere = false) }
+                                onContinue = { model.answerResume(moveThere = true); focusPlayAgain++ },
+                                onStay = { model.answerResume(moveThere = false); focusPlayAgain++ }
                             )
                         }
                         PlayerPanelHost(panels) { panel ->
                             when (panel) {
                                 PlayerPanel.Chapters -> ChaptersPanel(
                                     spans = spans,
-                                    at = playback?.bookPosition() ?: currentTime,
+                                    at = playback?.bookPosition() ?: state.currentTime,
                                     onChoose = { playback?.seekToBookTime(it) },
                                     onClose = panels::close
                                 )
@@ -402,31 +252,22 @@ class PlayerActivity : ComponentActivity() {
                                     val playInstead: (SeriesBook) -> Unit = { other ->
                                         switchTo(this@PlayerActivity, connected, other.itemId)
                                     }
-                                    val mark: (Boolean) -> Unit = { done ->
-                                        // The service marks it, once the closing report is in (FinishMarker).
-                                        marking = true
-                                        listening?.markFinished(done) { worked ->
-                                            marking = false
-                                            if (worked) finished = done
-                                            else Toast.makeText(this@PlayerActivity, getString(R.string.mark_finished_failed), Toast.LENGTH_LONG).show()
-                                        }
-                                    }
                                     // A book's and an episode's About alike: the one book layout over the wash (#134, #178).
                                     AboutScreen(
-                                        nowPlaying = playing, wash = wash, series = series, finished = finished, marking = marking,
-                                        onPlayInstead = playInstead, onMarkFinished = mark, onClose = panels::close
+                                        nowPlaying = playing, wash = state.wash, series = state.series, finished = state.finished, marking = state.marking,
+                                        onPlayInstead = playInstead, onMarkFinished = model::markFinished, onClose = panels::close
                                     )
                                 }
                                 PlayerPanel.Speed -> SpeedPanel(
                                     current = rememberPlaybackSpeed(connected),
-                                    onChoose = { listening?.chooseSpeed(it) },
+                                    onChoose = model::chooseSpeed,
                                     onClose = panels::close,
                                     forShow = playing.goToPodcast
                                 )
                                 PlayerPanel.Sleep -> SleepPanel(
-                                    sleep = sleep,
-                                    chapters = listening?.hasChapters == true,
-                                    onChoose = { listening?.chooseSleep(it) },
+                                    sleep = state.sleep,
+                                    chapters = spans.isNotEmpty(),
+                                    onChoose = model::chooseSleep,
                                     onClose = panels::close
                                 )
                             }
@@ -437,19 +278,13 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
-    /** Opened by a Play from outside the player: ask, then play (#144). Once. */
-    private var askThenPlay = false
-
-    /** Set while the player screen shows: takes the remote's Play from a pause (#90). */
-    private var remotePlay: ((down: Boolean) -> Boolean)? = null
-
     // Keys the screen leaves alone come here before the window hands media keys
-    // to the media session, so Play can ask first.
+    // to the media session, so Play can ask first (#90).
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean =
-        (isPlayKey(keyCode) && remotePlay?.invoke(true) == true) || super.onKeyDown(keyCode, event)
+        (isPlayKey(keyCode) && model?.remotePlay(true) == true) || super.onKeyDown(keyCode, event)
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean =
-        (isPlayKey(keyCode) && remotePlay?.invoke(false) == true) || super.onKeyUp(keyCode, event)
+        (isPlayKey(keyCode) && model?.remotePlay(false) == true) || super.onKeyUp(keyCode, event)
 
     private fun isPlayKey(keyCode: Int) =
         keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
@@ -469,27 +304,8 @@ class PlayerActivity : ComponentActivity() {
         switchTo(this, controller, itemId, episodeId)
     }
 
-    /**
-     * Where the listener left off; null starts from the beginning. When the
-     * server could not be read that is said, since playing on will save the
-     * new position over whatever it holds.
-     */
-    private suspend fun savedProgress(itemId: String, episodeId: String?): MediaProgressResponse? {
-        val api = ApiClient.getApiService() ?: return null
-        return SavedProgress.read(episodeId, whyUnreadable = { Log.d(TAG, "Progress unreadable: $it") }) {
-            val call = if (episodeId != null) api.userGetMediaProgress(itemId, episodeId) else api.userGetMediaProgress(itemId)
-            call.awaitResponse()
-        }.progressOr {
-            Toast.makeText(this, getString(R.string.progress_unreadable), Toast.LENGTH_LONG).show()
-        }
-    }
-
     companion object {
-        private const val TAG = "PlayerActivity"
         private const val EXTRA_ITEM_ID = "item_id"
-
-        /** How long the player waits for its cover's colour before it shows anyway. */
-        private const val WASH_WAIT_MS = 1_500L
         private const val EXTRA_EPISODE_ID = "episode_id"
         private const val EXTRA_AUTO_PLAY = "auto_play"
         private const val EXTRA_START_AT = "start_at"

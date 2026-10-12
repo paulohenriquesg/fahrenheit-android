@@ -113,25 +113,3 @@ object FinishCommand {
     fun keepAtOf(args: Bundle): Double? = if (args.containsKey(KEEP_AT)) args.getDouble(KEEP_AT) else null
     fun finishedOf(args: Bundle): Boolean = args.getBoolean(FINISHED)
 }
-
-/**
- * Whether the book is finished, as About shows it; null for an episode.
- *
- * Playing a finished book moves its position, which the server takes as
- * un-finishing it, so starting to play does the same here.
- */
-@Composable
-fun rememberFinished(player: Player?, initial: Boolean?): MutableState<Boolean?> {
-    // Kept across a new connection (Home and back): only new item facts reset it.
-    val finished = remember(initial) { mutableStateOf(initial) }
-    DisposableEffect(player, finished) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (isPlaying && finished.value == true) finished.value = false
-            }
-        }
-        player?.addListener(listener)
-        onDispose { player?.removeListener(listener) }
-    }
-    return finished
-}

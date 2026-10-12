@@ -18,6 +18,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * @param playWhenReady whether the player is set to play: what it is doing
  *   then is newer than anything the server holds.
  * @param timeoutMs how long Play waits for the server before it plays anyway.
+ * @param shown told as the question appears and goes, for a screen state that carries it (#221).
  */
 class ResumePrompt(
     private val scope: CoroutineScope,
@@ -26,7 +27,8 @@ class ResumePrompt(
     private val play: () -> Unit,
     private val seek: (Double) -> Unit,
     private val answered: (ResumeOffer) -> Unit,
-    private val timeoutMs: Long = 1_500
+    private val timeoutMs: Long = 1_500,
+    private val shown: (ResumeOffer?) -> Unit = {}
 ) {
     /** The question showing, if any. */
     var offer: ResumeOffer? by mutableStateOf(null)
@@ -77,6 +79,7 @@ class ResumePrompt(
         // Staying sends nothing: reports start only when playback moves.
         answered(asked)
         offer = null
+        shown(null)
         if (playAfterAnswer) play()
     }
 
@@ -92,6 +95,7 @@ class ResumePrompt(
             } else {
                 playAfterAnswer = playAfter
                 offer = found
+                shown(found)
             }
         }
     }
