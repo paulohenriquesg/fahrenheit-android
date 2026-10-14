@@ -66,6 +66,10 @@ class PlayerViewModelTest {
         // State written outside any composition (ResumePrompt, the heart); left
         // pending, it keeps later Compose tests in this JVM from going idle.
         Snapshot.sendApplyNotifications()
+        // That write also asked Compose's UI dispatcher, shared by the whole
+        // sandbox, to run on the main looper. Dropped at the looper's reset, it
+        // never asks again, and later Compose tests spin, never idle (#221).
+        shadowOf(Looper.getMainLooper()).idle()
     }
 
     // The server and the service, faked.
