@@ -347,9 +347,10 @@ class MainViewModelTest {
     fun `a row that opens no view takes the highlight and leaves the view`() {
         val model = model()
 
-        model.select("narrators", MenuAction.NARRATORS)
+        // Sign out; Narrators was one too until it became a view (#230).
+        model.select("logout", MenuAction.LOGOUT)
 
-        assertEquals("narrators", model.uiState.value.highlighted)
+        assertEquals("logout", model.uiState.value.highlighted)
         assertEquals(MainView.HOME, model.uiState.value.view)
     }
 
