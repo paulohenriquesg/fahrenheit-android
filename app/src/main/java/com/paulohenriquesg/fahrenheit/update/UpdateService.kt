@@ -26,8 +26,6 @@ object UpdateService {
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
 
-    private var currentDownloadJob: (() -> Unit)? = null
-
     /**
      * Download APK from the given URL to cache directory
      * @param context Application context
@@ -189,17 +187,6 @@ object UpdateService {
             Log.e(TAG, "APK validation error: ${e.message}", e)
             return Result.failure(e)
         }
-    }
-
-    /**
-     * Cancel ongoing download
-     * @param context Application context
-     */
-    fun cancelDownload(context: Context) {
-        Log.d(TAG, "Cancelling download")
-        currentDownloadJob?.invoke()
-        _downloadState.value = DownloadState.Cancelled
-        cleanupOldApk(context)
     }
 
     /**
