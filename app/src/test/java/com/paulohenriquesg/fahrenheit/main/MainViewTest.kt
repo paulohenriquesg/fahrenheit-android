@@ -27,6 +27,8 @@ class MainViewTest {
         assertEquals(MainView.SWITCH_LIBRARY, MainView.forMenuAction(MenuAction.SELECT_LIBRARY))
         // Also an Activity of its own until now, so the rail went away with it.
         assertEquals(MainView.LATEST, MainView.forMenuAction(MenuAction.LATEST))
+        // "Coming soon" until #230, a grid like Authors now.
+        assertEquals(MainView.NARRATORS, MainView.forMenuAction(MenuAction.NARRATORS))
     }
 
     // These open another screen or do something in place; the view behind them
@@ -34,7 +36,6 @@ class MainViewTest {
     @Test
     fun `menu choices that leave the view alone`() {
         assertNull(MainView.forMenuAction(MenuAction.LOGOUT))
-        assertNull(MainView.forMenuAction(MenuAction.NARRATORS))
     }
 
     @Test
@@ -48,5 +49,6 @@ class MainViewTest {
         assertEquals("settings", MainView.SETTINGS.menuItemId)
         assertEquals("select_library", MainView.SWITCH_LIBRARY.menuItemId)
         assertEquals("latest", MainView.LATEST.menuItemId)
+        assertEquals("narrators", MainView.NARRATORS.menuItemId)
     }
 }

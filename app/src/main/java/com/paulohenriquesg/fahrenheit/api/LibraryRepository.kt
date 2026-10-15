@@ -48,6 +48,14 @@ class LibraryRepository(private val api: LibraryApi) {
             .results.filter { it.media.numTracks > 0 }
     }
 
+    /**
+     * The books [name] reads (#230): the server knows a narrator only as a
+     * name on books. Expanded, so each book carries its series' sequence.
+     */
+    suspend fun narratorBooks(libraryId: String, name: String): Result<List<LibraryItem>> = runCatching {
+        api.getLibraryItems(libraryId, filter = itemsFilter("narrators", name)).results
+    }
+
     suspend fun personalizedShelves(libraryId: String): Result<List<Shelf>> = runCatching {
         api.getPersonalizedView(libraryId)
     }

@@ -21,6 +21,10 @@ class BrowseRepository(private val api: BrowseApi) {
         api.getLibraryAuthors(libraryId).authors
     }
 
+    suspend fun narrators(libraryId: String): Result<List<Narrator>> = runCatching {
+        api.getLibraryNarrators(libraryId).narrators.orEmpty()
+    }
+
     suspend fun listeningStats(): Result<ListeningStatsResponse> = runCatching {
         api.getListeningStats()
     }

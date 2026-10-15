@@ -134,7 +134,11 @@
     <string name="login_error_server">The server could not sign you in (error %1$d). Try again in a moment.</string>
     <string name="login_error_unexpected">Signing in did not work. Try again.</string>
     <string name="login_error_unusable_session">Signed in, but the server address could not be used. Check the address.</string>
-    <string name="narrators_view_coming_soon">Narrators view - Coming soon</string>
+    <string name="narrators">Narrators</string>
+    <string name="no_narrators_found">No narrators found</string>
+    <string name="person_continue">Continue %s</string>
+    <string name="person_about">About</string>
+    <string name="person_more">More ›</string>
     <string name="no_authors_found">No authors found</string>
     <string name="no_collections_found">No collections found</string>
     <string name="latest_caught_up">You\'re all caught up</string>
@@ -220,6 +224,26 @@
     <string name="switch_library_tile_line">%1$s \u00b7 %2$s</string>
     <string name="switch_library_add">Add a library</string>
     <string name="switch_library_add_where">On the server, not here</string>
+    <plurals name="person_books">
+        <item quantity="one">%s book</item>
+        <item quantity="other">%s books</item>
+    </plurals>
+    <plurals name="person_series">
+        <item quantity="one">%s series</item>
+        <item quantity="other">%s series</item>
+    </plurals>
+    <plurals name="person_reads">
+        <item quantity="one">Reads %s book</item>
+        <item quantity="other">Reads %s books</item>
+    </plurals>
+    <plurals name="person_shelf_series">
+        <item quantity="one">%1$s · %2$s book</item>
+        <item quantity="other">%1$s · %2$s books</item>
+    </plurals>
+    <plurals name="person_shelf_other">
+        <item quantity="one">Other books · %s</item>
+        <item quantity="other">Other books · %s</item>
+    </plurals>
     <plurals name="switch_library_books">
         <item quantity="one">%s book</item>
         <item quantity="other">%s books</item>

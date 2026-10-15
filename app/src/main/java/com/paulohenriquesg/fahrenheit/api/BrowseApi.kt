@@ -27,6 +27,9 @@ interface BrowseApi {
         @Query("minified") minified: Int = 1
     ): AuthorsResponse
 
+    @GET("api/libraries/{libraryId}/narrators")
+    suspend fun getLibraryNarrators(@Path("libraryId") libraryId: String): NarratorsResponse
+
     @GET("api/me/listening-stats")
     suspend fun getListeningStats(): ListeningStatsResponse
 
@@ -39,7 +42,8 @@ interface BrowseApi {
     @GET("api/authors/{authorId}")
     suspend fun getAuthor(
         @Path("authorId") authorId: String,
-        @Query("include") include: String = "items"
+        // The server's own author page call: the books, and the series with each book's sequence.
+        @Query("include") include: String = "items,series"
     ): AuthorDetailResponse
 
     @GET("api/libraries/{libraryId}/search")

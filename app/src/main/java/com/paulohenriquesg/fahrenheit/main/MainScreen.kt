@@ -109,6 +109,8 @@ fun MainScreen(
     favourites: () -> Favourites? = { null },
     /** Settings' Install: the activity asks the update question over Home (#229). */
     onInstallUpdate: (AvailableUpdate) -> Unit = {},
+    openSection: String? = null,
+    onSectionOpened: () -> Unit = {},
     /** Home's state, out of this composable as it is touched (#208). */
     homeModel: HomeViewModel = viewModel { HomeViewModel(ProgressStore.process, fetchPersonalizedView) },
     /** The shell's state: libraries, the view, the rail's highlight, the browse lists (#208). */
@@ -261,11 +263,18 @@ fun MainScreen(
         when (action) {
             MenuAction.HOME -> if (mainModel.uiState.value.library?.id != null) homeModel.choseHome()
             MenuAction.LIBRARY -> if (anotherList) scope.launch { listState.scrollToItem(0) }
-            MenuAction.NARRATORS ->
-                Toast.makeText(context, context.getString(R.string.narrators_view_coming_soon), Toast.LENGTH_SHORT).show()
             MenuAction.LOGOUT -> signOut()
             else -> Unit
         }
+    }
+
+    // A section chosen from the side menu on another screen (#230), applied
+    // as the rail's own choice once the library's menu has it.
+    LaunchedEffect(openSection, menuItems) {
+        val asked = openSection ?: return@LaunchedEffect
+        val item = (menuItems + MenuConfig.commonItems).firstOrNull { it.id == asked } ?: return@LaunchedEffect
+        handleMenuAction(item.action, LibraryQuery.Everything) { mainModel.select(item.id, item.action) }
+        onSectionOpened()
     }
 
     NavigationRail(
@@ -331,6 +340,7 @@ fun MainScreen(
                     )
                     MainView.SERIES -> SeriesBrowseView(main.series, main.seriesLoading)
                     MainView.AUTHORS -> AuthorsBrowseView(currentLibrary?.id)
+                    MainView.NARRATORS -> NarratorsBrowseView(currentLibrary?.id)
                     MainView.COLLECTIONS -> CollectionsBrowseView(main.collections, main.collectionsLoading)
                     MainView.STATS -> StatsBrowseView(main.listeningStats, main.statsLoading)
                     MainView.LATEST -> currentLibrary?.id?.let { id ->

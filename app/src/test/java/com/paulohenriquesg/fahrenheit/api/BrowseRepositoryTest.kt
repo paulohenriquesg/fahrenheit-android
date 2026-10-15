@@ -38,6 +38,8 @@ class BrowseRepositoryTest {
         override suspend fun getLibraryAuthors(libraryId: String, limit: Int, minified: Int) =
             authors?.invoke() ?: error("no authors configured")
 
+        override suspend fun getLibraryNarrators(libraryId: String) = error("no narrators configured")
+
         override suspend fun getListeningStats() =
             stats?.invoke() ?: error("no stats configured")
 
