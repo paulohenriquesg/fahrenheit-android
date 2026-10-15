@@ -88,6 +88,7 @@ import com.paulohenriquesg.fahrenheit.main.queuedChapters
 import androidx.core.content.ContextCompat
 import androidx.media3.session.MediaController
 import com.paulohenriquesg.fahrenheit.player.PlayerActivity
+import com.paulohenriquesg.fahrenheit.player.PlayerPreview
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 
@@ -217,7 +218,7 @@ class DetailActivity : ComponentActivity() {
         val nowPlaying: @Composable () -> Unit = {
             NowPlayingBarSlot(playback, chaptersOf = ::queuedChapters) {
                 // The player reattaches to what is queued, where it is.
-                context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId))
+                context.startActivity(PlayerActivity.reopenIntent(context, it))
             }
         }
         DetailBody { margin ->
@@ -228,10 +229,10 @@ class DetailActivity : ComponentActivity() {
                 BookDetailView(
                     itemId = itemId,
                     content = DetailHeaderModel.book(item, bookProgress),
-                    onPrimary = { context.startActivity(playBookIntent(context, itemId)) },
+                    onPrimary = { context.startActivity(playBookIntent(context, itemId, PlayerPreview.of(item))) },
                     chapters = remember(item) { ChapterClock.spans(item.media.chapters, item.media.duration ?: 0.0) },
                     at = bookProgress?.currentTime ?: 0.0,
-                    onChapter = { start -> context.startActivity(playChapterIntent(context, itemId, start)) },
+                    onChapter = { start -> context.startActivity(playChapterIntent(context, itemId, start, PlayerPreview.of(item))) },
                     padding = margin,
                     facts = remember(item, bookProgress) {
                         AboutFacts.book(item.media.metadata, item.media.duration) +
@@ -310,7 +311,9 @@ class DetailActivity : ComponentActivity() {
             model.heartChangeShown()
         }
         val play: (Episode) -> Unit = { episode ->
-            context.startActivity(playEpisodeIntent(context, itemId, episode.id))
+            context.startActivity(
+                playEpisodeIntent(context, itemId, episode.id, PlayerPreview.episode(itemId, episode.title, item.media.metadata.title))
+            )
         }
         PodcastPage(
             state = state,
@@ -343,12 +346,12 @@ class DetailActivity : ComponentActivity() {
          * The book's Play. Starts playing, as Home's podcast shelves do: the
          * press was already a request to play (#122).
          */
-        fun playBookIntent(context: Context, itemId: String): Intent =
-            PlayerActivity.createIntent(context, itemId, autoPlay = true)
+        fun playBookIntent(context: Context, itemId: String, preview: PlayerPreview? = null): Intent =
+            PlayerActivity.createIntent(context, itemId, autoPlay = true, preview = preview)
 
         /** An episode chosen from the list, or the header's Play/Resume. Starts playing (#122). */
-        fun playEpisodeIntent(context: Context, itemId: String, episodeId: String): Intent =
-            PlayerActivity.createIntent(context, itemId, episodeId, autoPlay = true)
+        fun playEpisodeIntent(context: Context, itemId: String, episodeId: String, preview: PlayerPreview? = null): Intent =
+            PlayerActivity.createIntent(context, itemId, episodeId, autoPlay = true, preview = preview)
 
         /**
          * Where an un-finished book should stay, rather than the start the
@@ -362,8 +365,8 @@ class DetailActivity : ComponentActivity() {
         }
 
         /** A chapter chosen from the book's Chapters: the player opens there and plays (#105). */
-        fun playChapterIntent(context: Context, itemId: String, start: Double): Intent =
-            PlayerActivity.createIntent(context, itemId, autoPlay = true, startAt = start)
+        fun playChapterIntent(context: Context, itemId: String, start: Double, preview: PlayerPreview? = null): Intent =
+            PlayerActivity.createIntent(context, itemId, autoPlay = true, startAt = start, preview = preview)
     }
 }
 

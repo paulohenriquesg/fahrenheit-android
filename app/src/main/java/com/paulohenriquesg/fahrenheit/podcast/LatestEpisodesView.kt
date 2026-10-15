@@ -8,6 +8,7 @@ import androidx.compose.ui.res.stringResource
 import android.content.Context
 import android.content.Intent
 import com.paulohenriquesg.fahrenheit.player.PlayerActivity
+import com.paulohenriquesg.fahrenheit.player.PlayerPreview
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -352,7 +353,11 @@ private fun ArtProgress(fraction: Float, modifier: Modifier = Modifier) {
  * the podcast's screen, leaving the viewer to find the episode again.
  */
 fun latestEpisodeIntent(context: Context, episode: RecentPodcastEpisode): Intent =
-    PlayerActivity.createIntent(context, episode.libraryItemId, episode.id, autoPlay = true)
+    PlayerActivity.createIntent(
+        context, episode.libraryItemId, episode.id, autoPlay = true,
+        // What the row shows, for the player's loading frame (#223).
+        preview = PlayerPreview.episode(episode.libraryItemId, episode.title, episode.podcast?.metadata?.title)
+    )
 
 object EpisodeCardTags {
     const val PROGRESS = "episode-progress"

@@ -147,13 +147,11 @@ class PlaybackService : MediaSessionService() {
             },
             play = { session?.player?.play() },
             openPlayer = openPlayer@{
-                val file = QueuedFile.of(session?.player?.currentMediaItem) ?: return@openPlayer false
+                val item = session?.player?.currentMediaItem
+                val file = QueuedFile.of(item) ?: return@openPlayer false
                 if (!AppVisibility.process.visible) return@openPlayer false
                 // It asks as it comes back to the item, and plays after the answer.
-                startActivity(
-                    PlayerActivity.createIntent(this, file.itemId, file.episodeId, askThenPlay = true)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
+                startActivity(PlayerActivity.outsidePlayIntent(this, file, item?.mediaMetadata?.title?.toString()))
                 true
             }
         )

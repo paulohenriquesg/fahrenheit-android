@@ -51,6 +51,35 @@ class PlayerIntentTest {
         assertNull(PlayerActivity.startAtOf(PlayerActivity.createIntent(context, "b1")))
     }
 
+    // #223 entry points 3 and 6: Now playing reattaches, and hands over its title.
+    @Test
+    fun `Now playing reopens the player on what is queued, with its title`() {
+        val entry = RailEntry("p1", "e1", "An Invented Episode", playing = true, progress = 0.5f, chapter = null, leftSeconds = 60.0)
+
+        val intent = PlayerActivity.reopenIntent(context, entry)
+
+        assertEquals("p1", intent.getStringExtra("item_id"))
+        assertEquals("e1", intent.getStringExtra("episode_id"))
+        assertFalse(intent.getBooleanExtra("auto_play", true))
+        assertEquals("An Invented Episode", PlayerActivity.previewOf(intent)?.title)
+    }
+
+    // #223 entry point 9: the notification's Play knows only what the session holds.
+    @Test
+    fun `a Play from outside hands over the queued title, or nothing`() {
+        val file = QueuedFile("p1", "e1", startOffset = 0.0, bookTotal = 600.0)
+
+        val titled = PlayerActivity.outsidePlayIntent(context, file, "An Invented Episode")
+        val untitled = PlayerActivity.outsidePlayIntent(context, file, null)
+
+        assertTrue(PlayerActivity.asksThenPlays(titled))
+        assertEquals("p1", titled.getStringExtra("item_id"))
+        assertEquals("e1", titled.getStringExtra("episode_id"))
+        assertTrue((titled.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+        assertEquals("An Invented Episode", PlayerActivity.previewOf(titled)?.title)
+        assertNull(PlayerActivity.previewOf(untitled))
+    }
+
     // #144: opened by a Play from outside, to ask and then play.
     @Test
     fun `a Play from outside travels with the intent`() {

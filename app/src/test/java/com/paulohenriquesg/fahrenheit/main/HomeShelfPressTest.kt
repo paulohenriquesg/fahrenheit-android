@@ -76,6 +76,9 @@ class HomeShelfPressTest {
         assertEquals("pod-1", started.getStringExtra("item_id"))
         assertEquals("ep-1", started.getStringExtra("episode_id"))
         assertTrue(started.getBooleanExtra("auto_play", false))
+        // #223 entry point 2: the card's title and show, for the loading frame.
+        assertEquals("An Invented Episode", PlayerActivity.previewOf(started)?.title)
+        assertEquals("An Invented Show", PlayerActivity.previewOf(started)?.kicker)
     }
 
     @Test

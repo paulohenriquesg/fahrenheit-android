@@ -34,6 +34,7 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
+import com.paulohenriquesg.fahrenheit.ui.elements.coverUrlOf
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 
 /**
@@ -94,6 +95,8 @@ class PlayerActivity : ComponentActivity() {
             }
         })[PlayerViewModel::class.java]
         model = shown
+        // Shown until the item is ready; after a recreation the intent still holds it.
+        val preview = previewOf(intent)
         lifecycleScope.launch {
             shown.notices.collect { notice ->
                 when (notice) {
@@ -117,7 +120,7 @@ class PlayerActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
-                    Player(shown)
+                    Player(shown, itemId, preview)
                 }
             }
         }
@@ -136,127 +139,114 @@ class PlayerActivity : ComponentActivity() {
     }
 
     @androidx.compose.runtime.Composable
-    private fun Player(model: PlayerViewModel) {
+    private fun Player(model: PlayerViewModel, itemId: String, preview: PlayerPreview?) {
         val state by model.uiState.collectAsStateWithLifecycle()
-        val playing = state.nowPlaying
-        val connected = state.player
         val playback = state.playback
         // After an answer the question's focused button is gone: Play takes focus.
         var focusPlayAgain by remember { mutableIntStateOf(0) }
         // A panel left open when the screen went away does not come back over it.
-        val panels = rememberPlayerPanels(connected)
-        val spans = remember(playing) { ChapterClock.spans(playing?.chapters, playing?.trackTotal ?: 0.0) }
-        when {
-            state.failed || state.connectFailed -> Text(
-                text = stringResource(R.string.item_load_failed),
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(16.dp)
-            )
-            playing == null || connected == null || !state.ready -> Text(
-                text = stringResource(R.string.loading),
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(16.dp)
-            )
-            else -> {
-                PlayerScreen(
-                    nowPlaying = state.series?.let { playing.withSeriesTotal(it.total) } ?: playing,
-                    currentTime = state.currentTime,
-                    wash = state.wash,
-                    transport = {
-                        // ready implies a timeline: PlayerStart refuses a NowPlaying without one.
-                        val timeline = playing.timeline
-                        if (timeline != null && playback != null) {
-                            MediaPlayerController(
-                                player = connected,
-                                playback = playback,
-                                totalTime = timeline.totalDuration,
-                                chapters = playing.chapters,
-                                // The lengths set in Settings (#107), as the remote's keys use them. A plain
-                                // read is enough: Settings is reached only by leaving the player.
-                                skipBack = playerSettings.skipBackSeconds,
-                                skipForward = playerSettings.skipForwardSeconds,
-                                onCurrentTimeUpdate = model::timeUpdated,
-                                onPlay = model::play,
-                                focusPlayAgain = focusPlayAgain,
-                                // An episode's outer buttons open the episodes either side (#108).
-                                episodes = playing.episodeId?.let {
-                                    EpisodeSkip(
-                                        onPrevious = playing.previous?.let { other -> { goToEpisode(connected, other.id) } },
-                                        onNext = playing.next?.let { other -> { goToEpisode(connected, other.id) } }
-                                    )
-                                },
-                                trailing = {
-                                    PlayerActions(
-                                        panels = panels,
-                                        speed = rememberPlaybackSpeed(connected),
-                                        sleep = state.sleep,
-                                        chapters = spans.isNotEmpty(),
-                                        onGoToPodcast = if (playing.goToPodcast) ({ goToPodcast(playing.itemId) }) else null,
-                                        favourite = state.favourite?.let { heart ->
-                                            {
-                                                FavouriteButton(
-                                                    filled = heart.filled,
-                                                    playlist = heart.playlist,
-                                                    onClick = model::toggleFavourite
-                                                )
-                                            }
-                                        }
-                                    )
-                                }
-                            )
-                        }
-                    },
-                    overlay = {
-                        state.offer?.let { asked ->
-                            ResumeChoice(
-                                asked,
-                                item = ResumeItem(
-                                    itemId = playing.itemId,
-                                    title = playing.title,
-                                    length = playing.trackTotal ?: 0.0,
-                                    chapters = spans,
-                                    episode = playing.episodeId != null
-                                ),
-                                now = System.currentTimeMillis(),
-                                onContinue = { if (model.answerResume(moveThere = true)) focusPlayAgain++ },
-                                onStay = { if (model.answerResume(moveThere = false)) focusPlayAgain++ }
-                            )
-                        }
-                        PlayerPanelHost(panels) { panel ->
-                            when (panel) {
-                                PlayerPanel.Chapters -> ChaptersPanel(
-                                    spans = spans,
-                                    at = playback?.bookPosition() ?: state.currentTime,
-                                    onChoose = { playback?.seekToBookTime(it) },
-                                    onClose = panels::close
+        val panels = rememberPlayerPanels(state.player)
+        val spans = remember(state.nowPlaying) { ChapterClock.spans(state.nowPlaying?.chapters, state.nowPlaying?.trackTotal ?: 0.0) }
+        // Its own layout from the first frame, with what the opening screen knew (#223).
+        PlayerStage(state, itemId, preview) { playing, connected ->
+            PlayerScreen(
+                nowPlaying = state.series?.let { playing.withSeriesTotal(it.total) } ?: playing,
+                currentTime = state.currentTime,
+                wash = state.wash,
+                transport = {
+                    // ready implies a timeline: PlayerStart refuses a NowPlaying without one.
+                    val timeline = playing.timeline
+                    if (timeline != null && playback != null) {
+                        MediaPlayerController(
+                            player = connected,
+                            playback = playback,
+                            totalTime = timeline.totalDuration,
+                            chapters = playing.chapters,
+                            // The lengths set in Settings (#107), as the remote's keys use them. A plain
+                            // read is enough: Settings is reached only by leaving the player.
+                            skipBack = playerSettings.skipBackSeconds,
+                            skipForward = playerSettings.skipForwardSeconds,
+                            onCurrentTimeUpdate = model::timeUpdated,
+                            onPlay = model::play,
+                            focusPlayAgain = focusPlayAgain,
+                            // An episode's outer buttons open the episodes either side (#108).
+                            episodes = playing.episodeId?.let {
+                                EpisodeSkip(
+                                    onPrevious = playing.previous?.let { other -> { goToEpisode(connected, other, playing.show) } },
+                                    onNext = playing.next?.let { other -> { goToEpisode(connected, other, playing.show) } }
                                 )
-                                PlayerPanel.About -> {
-                                    val playInstead: (SeriesBook) -> Unit = { other ->
-                                        switchTo(this@PlayerActivity, connected, other.itemId)
-                                    }
-                                    // A book's and an episode's About alike: the one book layout over the wash (#134, #178).
-                                    AboutScreen(
-                                        nowPlaying = playing, wash = state.wash, series = state.series, finished = state.finished, marking = state.marking,
-                                        onPlayInstead = playInstead, onMarkFinished = model::markFinished, onClose = panels::close
-                                    )
-                                }
-                                PlayerPanel.Speed -> SpeedPanel(
-                                    current = rememberPlaybackSpeed(connected),
-                                    onChoose = model::chooseSpeed,
-                                    onClose = panels::close,
-                                    forShow = playing.goToPodcast
-                                )
-                                PlayerPanel.Sleep -> SleepPanel(
+                            },
+                            trailing = {
+                                PlayerActions(
+                                    panels = panels,
+                                    speed = rememberPlaybackSpeed(connected),
                                     sleep = state.sleep,
                                     chapters = spans.isNotEmpty(),
-                                    onChoose = model::chooseSleep,
-                                    onClose = panels::close
+                                    onGoToPodcast = if (playing.goToPodcast) ({ goToPodcast(playing.itemId) }) else null,
+                                    favourite = state.favourite?.let { heart ->
+                                        {
+                                            FavouriteButton(
+                                                filled = heart.filled,
+                                                playlist = heart.playlist,
+                                                onClick = model::toggleFavourite
+                                            )
+                                        }
+                                    }
                                 )
                             }
+                        )
+                    }
+                },
+                overlay = {
+                    state.offer?.let { asked ->
+                        ResumeChoice(
+                            asked,
+                            item = ResumeItem(
+                                itemId = playing.itemId,
+                                title = playing.title,
+                                length = playing.trackTotal ?: 0.0,
+                                chapters = spans,
+                                episode = playing.episodeId != null
+                            ),
+                            now = System.currentTimeMillis(),
+                            onContinue = { if (model.answerResume(moveThere = true)) focusPlayAgain++ },
+                            onStay = { if (model.answerResume(moveThere = false)) focusPlayAgain++ }
+                        )
+                    }
+                    PlayerPanelHost(panels) { panel ->
+                        when (panel) {
+                            PlayerPanel.Chapters -> ChaptersPanel(
+                                spans = spans,
+                                at = playback?.bookPosition() ?: state.currentTime,
+                                onChoose = { playback?.seekToBookTime(it) },
+                                onClose = panels::close
+                            )
+                            PlayerPanel.About -> {
+                                val playInstead: (SeriesBook) -> Unit = { other ->
+                                    switchTo(this@PlayerActivity, connected, other.itemId, preview = PlayerPreview.book(other.itemId, other.title, null))
+                                }
+                                // A book's and an episode's About alike: the one book layout over the wash (#134, #178).
+                                AboutScreen(
+                                    nowPlaying = playing, wash = state.wash, series = state.series, finished = state.finished, marking = state.marking,
+                                    onPlayInstead = playInstead, onMarkFinished = model::markFinished, onClose = panels::close
+                                )
+                            }
+                            PlayerPanel.Speed -> SpeedPanel(
+                                current = rememberPlaybackSpeed(connected),
+                                onChoose = model::chooseSpeed,
+                                onClose = panels::close,
+                                forShow = playing.goToPodcast
+                            )
+                            PlayerPanel.Sleep -> SleepPanel(
+                                sleep = state.sleep,
+                                chapters = spans.isNotEmpty(),
+                                onChoose = model::chooseSleep,
+                                onClose = panels::close
+                            )
                         }
                     }
-                )
-            }
+                }
+            )
         }
     }
 
@@ -281,9 +271,9 @@ class PlayerActivity : ComponentActivity() {
     private val playerSettings by lazy { PlayerSettings(this) }
 
     /** Previous or Next episode: this one stops, and the other opens, playing (see [switchTo]). */
-    private fun goToEpisode(controller: androidx.media3.common.Player, episodeId: String) {
+    private fun goToEpisode(controller: androidx.media3.common.Player, episode: EpisodeRef, show: String?) {
         val itemId = intent.getStringExtra(EXTRA_ITEM_ID) ?: return
-        switchTo(this, controller, itemId, episodeId)
+        switchTo(this, controller, itemId, episode.id, PlayerPreview.episode(itemId, episode.title, show))
     }
 
     companion object {
@@ -296,6 +286,7 @@ class PlayerActivity : ComponentActivity() {
         /**
          * @param episodeId the episode to play, for a podcast; null for a book.
          * @param startAt where to start, in whole-book seconds, over the saved position (#105).
+         * @param preview what the opening screen shows of it, for the loading frame (#223).
          */
         /** Opened by a Play from outside the player (#144): ask, then play. */
         fun asksThenPlays(intent: Intent): Boolean = intent.getBooleanExtra(EXTRA_ASK_THEN_PLAY, false)
@@ -306,7 +297,8 @@ class PlayerActivity : ComponentActivity() {
             episodeId: String? = null,
             autoPlay: Boolean = false,
             startAt: Double? = null,
-            askThenPlay: Boolean = false
+            askThenPlay: Boolean = false,
+            preview: PlayerPreview? = null
         ): Intent =
             Intent(context, PlayerActivity::class.java).apply {
                 putExtra(EXTRA_ITEM_ID, itemId)
@@ -314,7 +306,26 @@ class PlayerActivity : ComponentActivity() {
                 putExtra(EXTRA_AUTO_PLAY, autoPlay)
                 startAt?.let { putExtra(EXTRA_START_AT, it) }
                 if (askThenPlay) putExtra(EXTRA_ASK_THEN_PLAY, true)
+                preview?.writeTo(this)
             }
+
+        /** Now playing, in the rail or the bar: the player reattaches to what is queued, where it is. */
+        fun reopenIntent(context: Context, entry: RailEntry): Intent =
+            createIntent(context, entry.itemId, entry.episodeId, preview = PlayerPreview.of(entry))
+
+        /**
+         * A Play from outside with the app in view (#144), from the playback
+         * service: it asks as it comes back to the item, and plays after the
+         * answer. [title] is what the session holds, all it knows of the item.
+         */
+        fun outsidePlayIntent(context: Context, file: QueuedFile, title: String?): Intent =
+            createIntent(
+                context, file.itemId, file.episodeId, askThenPlay = true,
+                preview = title?.takeIf { it.isNotBlank() }?.let { PlayerPreview(it, coverUrl = coverUrlOf(file.itemId)) }
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+        /** What the opening screen handed over for the loading frame (#223); null for nothing. */
+        fun previewOf(intent: Intent): PlayerPreview? = PlayerPreview.from(intent)
 
         /**
          * "Go to podcast". Clears back to the podcast's screen when the player
@@ -330,11 +341,18 @@ class PlayerActivity : ComponentActivity() {
         /**
          * About's "Play <title> instead?", or Previous and Next episode
          * (#108): this book or episode stops - its closing
-         * report going to it - before the other opens and plays.
+         * report going to it - before the other opens and plays, with
+         * [preview] - what this screen knows of the other - while it loads (#223).
          */
-        internal fun switchTo(player: android.app.Activity, controller: androidx.media3.common.Player, itemId: String, episodeId: String? = null) {
+        internal fun switchTo(
+            player: android.app.Activity,
+            controller: androidx.media3.common.Player,
+            itemId: String,
+            episodeId: String? = null,
+            preview: PlayerPreview? = null
+        ) {
             Playback.end(controller)
-            player.startActivity(createIntent(player, itemId, episodeId, autoPlay = true))
+            player.startActivity(createIntent(player, itemId, episodeId, autoPlay = true, preview = preview))
             player.finish()
         }
 

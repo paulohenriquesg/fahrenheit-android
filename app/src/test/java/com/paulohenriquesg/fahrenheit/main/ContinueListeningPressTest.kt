@@ -93,6 +93,8 @@ class ContinueListeningPressTest {
         assertEquals("book-1", intent.getStringExtra("item_id"))
         assertNull(intent.getStringExtra("episode_id"))
         assertTrue(intent.getBooleanExtra("auto_play", false))
+        // #223 entry point 1: the card's title, for the loading frame.
+        assertEquals("An Invented Book", PlayerActivity.previewOf(intent)?.title)
     }
 
     @Test

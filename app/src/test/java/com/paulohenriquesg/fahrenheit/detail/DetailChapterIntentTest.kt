@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.paulohenriquesg.fahrenheit.player.PlayerActivity
+import com.paulohenriquesg.fahrenheit.player.PlayerPreview
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import com.google.gson.Gson
@@ -26,6 +27,14 @@ class DetailChapterIntentTest {
         assertEquals("b1", intent.getStringExtra("item_id"))
         assertTrue(intent.getBooleanExtra("auto_play", false))
         assertEquals(1800.0, PlayerActivity.startAtOf(intent)!!, 0.0)
+    }
+
+    // #223 entry point 5.
+    @Test
+    fun `a chapter hands over the book's preview`() {
+        val book = PlayerPreview("An Invented Book", kicker = "An Invented Writer")
+
+        assertEquals(book, PlayerActivity.previewOf(DetailActivity.playChapterIntent(context, "b1", start = 1800.0, preview = book)))
     }
 
     private fun book(currentTime: Double?, duration: Double = 3600.0): LibraryItemResponse = Gson().fromJson(

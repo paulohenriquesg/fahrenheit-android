@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,7 +70,8 @@ fun PlayerScreen(
     }
     val chapter = ChapterClock.at(spans, currentTime)?.title?.takeIf { it.isNotBlank() }
 
-    val washed = Modifier.coverWash(wash)
+    // In over 300 ms, as the buttons replace the loading frame's spinner (#223).
+    val washed = Modifier.coverWash(wash, fadeIn = true)
     Box(Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -206,13 +208,18 @@ fun GoToPodcastButton(onClick: () -> Unit) {
  * see [CoverWash]); the background alone when there is none, or under the
  * light theme. A colour that arrives after the screen showed fades in.
  * The player and its About (#134) share it.
+ *
+ * @param fadeIn start from the plain background and fade the wash in over
+ *   300 ms, as the player does when it replaces its loading frame (#223).
  */
 @Composable
-fun Modifier.coverWash(wash: Color?): Modifier {
+fun Modifier.coverWash(wash: Color?, fadeIn: Boolean = false): Modifier {
     val background = MaterialTheme.colorScheme.background
+    var arrived by remember { mutableStateOf(!fadeIn) }
+    LaunchedEffect(Unit) { arrived = true }
     val shown by animateColorAsState(
-        wash?.takeIf { CoverWash.appliesOn(background) } ?: background,
-        animationSpec = tween(700),
+        wash?.takeIf { arrived && CoverWash.appliesOn(background) } ?: background,
+        animationSpec = tween(if (fadeIn) WASH_FADE_IN_MS else WASH_LATE_MS),
         label = "wash"
     )
     return drawWithCache {
@@ -228,3 +235,6 @@ fun Modifier.coverWash(wash: Color?): Modifier {
         }
     }
 }
+
+private const val WASH_FADE_IN_MS = 300
+private const val WASH_LATE_MS = 700

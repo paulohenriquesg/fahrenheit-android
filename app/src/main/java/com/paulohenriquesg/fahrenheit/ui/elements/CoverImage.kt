@@ -38,6 +38,13 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 import kotlin.math.abs
 
 /**
+ * Where an item's cover is fetched. Every screen asks with this one URL, which
+ * is Coil's memory-cache key, so the player's loading frame (#223) can be
+ * served what the opening screen already decoded.
+ */
+fun coverUrlOf(itemId: String): String? = ApiClient.generateFullUrl("/api/items/$itemId/cover")
+
+/**
  * An item's cover, drawn as the server's own web client draws it (#149).
  *
  * - No cover: a placeholder with the title in the middle and the author near
@@ -64,7 +71,7 @@ fun CoverImage(
     title: String? = null,
     author: String? = null,
     hasCover: Boolean = true,
-    url: String? = ApiClient.generateFullUrl("/api/items/$itemId/cover")
+    url: String? = coverUrlOf(itemId)
 ) {
     Box(modifier = Modifier.size(size)) {
         if (!hasCover) {

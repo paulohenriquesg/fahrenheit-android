@@ -3,6 +3,7 @@ package com.paulohenriquesg.fahrenheit.detail
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.paulohenriquesg.fahrenheit.player.PlayerActivity
+import com.paulohenriquesg.fahrenheit.player.PlayerPreview
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,6 +31,16 @@ class DetailPlayIntentTest {
         assertEquals(PlayerActivity::class.java.name, intent.component?.className)
         assertEquals("b1", intent.getStringExtra("item_id"))
         assertTrue(intent.getBooleanExtra("auto_play", false))
+    }
+
+    // #223 entry point 4: the loading frame shows what this screen showed.
+    @Test
+    fun `Play hands over the book's or episode's preview`() {
+        val book = PlayerPreview("An Invented Book", kicker = "An Invented Writer")
+        val episode = PlayerPreview("An Invented Episode", kicker = "An Invented Show")
+
+        assertEquals(book, PlayerActivity.previewOf(DetailActivity.playBookIntent(context, "b1", book)))
+        assertEquals(episode, PlayerActivity.previewOf(DetailActivity.playEpisodeIntent(context, "p1", "e1", episode)))
     }
 
     @Test

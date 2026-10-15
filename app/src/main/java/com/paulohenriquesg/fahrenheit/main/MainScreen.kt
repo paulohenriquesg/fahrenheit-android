@@ -81,6 +81,7 @@ import com.paulohenriquesg.fahrenheit.ui.components.ScreenTitle
 import com.paulohenriquesg.fahrenheit.navigation.MenuAction
 import com.paulohenriquesg.fahrenheit.navigation.MenuConfig
 import com.paulohenriquesg.fahrenheit.player.PlayerActivity
+import com.paulohenriquesg.fahrenheit.player.PlayerPreview
 import com.paulohenriquesg.fahrenheit.search.SearchActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.elements.AuthorShelfRow
@@ -279,7 +280,7 @@ fun MainScreen(
                     open = open,
                     chaptersOf = ::queuedChapters,
                     // The player reattaches to what is queued, where it is.
-                    onOpen = { context.startActivity(PlayerActivity.createIntent(context, it.itemId, it.episodeId)) },
+                    onOpen = { context.startActivity(PlayerActivity.reopenIntent(context, it)) },
                     // Stop's button goes with the entry: focus to the section, or the remote has nothing (#53).
                     onStopped = { runCatching { initialFocus.requestFocus() } }
                 )
@@ -464,7 +465,7 @@ fun PersonalizedHomeView(
                                 val episodeId = item.recentEpisode?.id
                                 val podcastId = item.recentEpisode?.libraryItemId ?: item.id
                                 if (episodeId != null) {
-                                    val intent = PlayerActivity.createIntent(context, podcastId, episodeId, autoPlay = true)
+                                    val intent = PlayerActivity.createIntent(context, podcastId, episodeId, autoPlay = true, preview = PlayerPreview.of(item))
                                     context.startActivity(intent)
                                 } else {
                                     val intent = com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(context, item.id)
@@ -480,7 +481,7 @@ fun PersonalizedHomeView(
                                     // A book whose audio has gone would only reach
                                     // a player that cannot start; its details say why.
                                     action == HomeShelves.Action.Play && item.media.numAudioFiles > 0 ->
-                                        context.startActivity(PlayerActivity.createIntent(context, item.id, autoPlay = true))
+                                        context.startActivity(PlayerActivity.createIntent(context, item.id, autoPlay = true, preview = PlayerPreview.of(item)))
                                     else ->
                                         context.startActivity(com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(context, item.id))
                                 }
