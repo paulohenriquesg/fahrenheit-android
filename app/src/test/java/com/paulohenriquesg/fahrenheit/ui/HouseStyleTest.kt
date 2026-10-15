@@ -89,6 +89,81 @@ class HouseStyleTest {
         assertEquals(emptyList<String>(), offenders)
     }
 
+    /**
+     * Screens whose loading state is still a bare loading line, each with the
+     * issue that converts it. That lane takes its entry off. A key is a whole
+     * file, or a file and the one string it may still show. A bare spinner is
+     * beyond this rule: AuthorDetailScreen's goes in #225.
+     */
+    private val bareLoadingAllowed = mapOf(
+        "com/paulohenriquesg/fahrenheit/detail/DetailActivity.kt" to "#225",
+        "com/paulohenriquesg/fahrenheit/player/PlayerActivity.kt" to "#223",
+        // Stats was not among #224's screens; it needs an issue of its own.
+        "com/paulohenriquesg/fahrenheit/main/BrowseViews.kt R.string.loading_stats" to "none yet"
+    )
+
+    /** Each `R.string.loading*` [lines] use, as "<path> <string>" and its line. */
+    private fun loadingTexts(path: String, lines: List<String>): List<Pair<String, Int>> {
+        val loading = Regex("""R\.string\.loading\w*""")
+        return lines.flatMapIndexed { index, line ->
+            loading.findAll(line).map { "$path ${it.value}" to index + 1 }.toList()
+        }
+    }
+
+    private fun bareLoadingOffenders(path: String, lines: List<String>): List<String> =
+        loadingTexts(path, lines)
+            .filter { (use, _) -> path !in bareLoadingAllowed && use !in bareLoadingAllowed }
+            .map { (use, line) -> "$use:$line" }
+
+    @Test
+    fun `no screen waits behind a bare loading line`() {
+        // A loading line on an empty screen gave the screen no shape until
+        // everything arrived at once (#224). A screen draws its own layout
+        // from the first frame, with still placeholders where data is to come;
+        // see "Loading" in docs/ui-style-guide.md.
+        val offenders = sources.flatMap { file ->
+            bareLoadingOffenders(file.relativeTo(File("src/main/java")).path, file.readLines())
+        }
+        assertEquals(emptyList<String>(), offenders)
+    }
+
+    @Test
+    fun `every loading allow-list entry still excuses something`() {
+        // The lane that converts a screen takes its entry off; one left behind
+        // would let that screen bring a loading line back unnoticed.
+        val uses = sources.flatMap { file ->
+            val path = file.relativeTo(File("src/main/java")).path
+            loadingTexts(path, file.readLines()).map { (use, _) -> use }
+        }
+        val stale = bareLoadingAllowed.keys.filter { key ->
+            uses.none { use -> use == key || use.startsWith("$key ") }
+        }
+        assertEquals(emptyList<String>(), stale)
+    }
+
+    @Test
+    fun `the loading rule catches a screen that brings one back`() {
+        val screen = listOf(
+            "if (isLoading) {",
+            "    Text(text = stringResource(R.string.loading_series))",
+            "}"
+        )
+        assertEquals(
+            listOf("com/paulohenriquesg/fahrenheit/main/SomeView.kt R.string.loading_series:2"),
+            bareLoadingOffenders("com/paulohenriquesg/fahrenheit/main/SomeView.kt", screen)
+        )
+        // An allowed file's own exception covers that string only.
+        assertEquals(
+            listOf("com/paulohenriquesg/fahrenheit/main/BrowseViews.kt R.string.loading:1"),
+            bareLoadingOffenders("com/paulohenriquesg/fahrenheit/main/BrowseViews.kt", listOf("Text(stringResource(R.string.loading))"))
+        )
+        // A string that merely ends in "loading" is not one of them.
+        assertEquals(
+            emptyList<String>(),
+            bareLoadingOffenders("com/paulohenriquesg/fahrenheit/main/SomeView.kt", listOf("Notice(stringResource(R.string.favourites_loading))"))
+        )
+    }
+
     @Test
     fun `every String format passes a Locale`() {
         // The default locale renders digits in the device's own numerals, so a

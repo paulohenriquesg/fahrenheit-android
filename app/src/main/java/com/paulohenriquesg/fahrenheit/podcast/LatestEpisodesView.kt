@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
+import com.paulohenriquesg.fahrenheit.ui.elements.RowsPlaceholder
 import com.paulohenriquesg.fahrenheit.api.BrowseRepository
 import com.paulohenriquesg.fahrenheit.api.RecentEpisodesResponse
 import com.paulohenriquesg.fahrenheit.api.RecentPodcastEpisode
@@ -96,16 +97,7 @@ fun LatestEpisodesView(
 
         Box(modifier = Modifier.fillMaxSize()) {
             if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.loading_episodes),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                RowsPlaceholder()
             } else if (loadFailed) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

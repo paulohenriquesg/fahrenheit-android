@@ -93,6 +93,10 @@ import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import com.paulohenriquesg.fahrenheit.search.SearchActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.elements.AuthorShelfRow
+import com.paulohenriquesg.fahrenheit.ui.elements.CoverRowPlaceholder
+import com.paulohenriquesg.fahrenheit.ui.elements.GridPlaceholder
+import com.paulohenriquesg.fahrenheit.ui.elements.GridPlaceholderLook
+import androidx.compose.foundation.layout.PaddingValues
 import com.paulohenriquesg.fahrenheit.ui.elements.SeriesShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.ShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemsFluid
@@ -126,16 +130,7 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
         )
 
         if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.loading_series),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            GridPlaceholder(GridPlaceholderLook.Groups)
         } else if (seriesList.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -175,7 +170,12 @@ fun SeriesBrowseView(seriesList: List<com.paulohenriquesg.fahrenheit.api.Series>
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun AuthorsBrowseView(libraryId: String?) {
+fun AuthorsBrowseView(
+    libraryId: String?,
+    load: suspend (String) -> Result<List<com.paulohenriquesg.fahrenheit.api.Author>>? = { id ->
+        ApiClient.getBrowseApi()?.let { BrowseRepository(it).authors(id) }
+    }
+) {
     val context = LocalContext.current
     var authors by remember { mutableStateOf<List<com.paulohenriquesg.fahrenheit.api.Author>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -184,11 +184,9 @@ fun AuthorsBrowseView(libraryId: String?) {
     LaunchedEffect(libraryId) {
         android.util.Log.d("AuthorsBrowseView", "Starting to fetch authors for libraryId: $libraryId")
         if (libraryId != null) {
-            ApiClient.getBrowseApi()?.let { api ->
-                BrowseRepository(api).authors(libraryId)
-                    .onSuccess { authors = it.sortedWith(Alphabetical.byName { a -> a.name }) }
-                    .onFailure { android.util.Log.e("AuthorsBrowseView", "Failure: ${it.message}", it) }
-            }
+            load(libraryId)
+                ?.onSuccess { authors = it.sortedWith(Alphabetical.byName { a -> a.name }) }
+                ?.onFailure { android.util.Log.e("AuthorsBrowseView", "Failure: ${it.message}", it) }
             isLoading = false
         } else {
             android.util.Log.e("AuthorsBrowseView", "libraryId is null!")
@@ -207,16 +205,7 @@ fun AuthorsBrowseView(libraryId: String?) {
         )
 
         if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.loading_authors),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            GridPlaceholder(GridPlaceholderLook.People)
         } else if (authors.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -267,16 +256,7 @@ fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.a
         )
 
         if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.loading_collections),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            GridPlaceholder(GridPlaceholderLook.Groups)
         } else if (collectionsList.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -351,6 +331,7 @@ fun LibraryBrowseView(
     query: LibraryQuery = LibraryQuery.Everything,
     loading: Boolean = false
 ) {
+    val stillLoading = loading && items.isEmpty()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -369,19 +350,22 @@ fun LibraryBrowseView(
                 LibraryQuery.Finished -> stringResource(R.string.library_finished)
             }
             Text(
-                // Loading, the count would be "0" and read as an answer.
+                // Loading, the count would be "0" and read as an answer; the
+                // placeholders below say it is on its way (#224).
                 text = listOfNotNull(
                     view,
-                    if (loading && items.isEmpty()) stringResource(R.string.loading) else "(${items.size} $itemLabel)"
+                    "(${items.size} $itemLabel)".takeUnless { stillLoading }
                 ).joinToString("  "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        if (rowLayout) {
-            LibraryItemsRow(items, listState)
-        } else {
-            LibraryItemsFluid(items)
+        when {
+            // As each layout pads its own cards, so they replace these in place.
+            stillLoading && rowLayout -> CoverRowPlaceholder(Modifier.padding(16.dp), PaddingValues(), spacing = 0.dp)
+            stillLoading -> GridPlaceholder(GridPlaceholderLook.Covers, Modifier.padding(16.dp))
+            rowLayout -> LibraryItemsRow(items, listState)
+            else -> LibraryItemsFluid(items)
         }
     }
 }

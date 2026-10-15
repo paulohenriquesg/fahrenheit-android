@@ -86,6 +86,31 @@ does not. Keys that can repeat (podcast shelves list a library item once per
 in-progress episode) go through `StableKeys.of`, which makes them unique by
 construction — duplicate keys crashed the app on launch (#55).
 
+## Loading
+
+A screen never shows a loading message alone on an empty screen: it had no
+shape until everything arrived at once (#224). It draws its own layout from
+the first frame.
+
+- What the opening screen already knows - a cover, a title, a name - is handed
+  over and shown at once.
+- What still has to load is a still grey shape of the size it will be, in the
+  covers' placeholder tone (`CoverPlaceholderTone`). No shimmer, no animation
+  (see Animation), and it cannot take focus, so focus stays where it is - on
+  the rail, for a section - until real cards arrive.
+- A spinner only where something is starting and its controls are not there
+  yet, such as the player's "Starting…".
+- Ready replaces the shapes in place, and focus lands where it always has.
+- Failure and empty states are their own: placeholders stand in only while a
+  load is in flight.
+
+`ui/elements/Placeholders.kt` is the one component: `PlaceholderShape`, and
+the layouts built from it - `ShelvesPlaceholder` (Home), `GridPlaceholder`
+(Library, Series, Collections, and Authors with round photos) and
+`RowsPlaceholder` (Latest Episodes). `HouseStyleTest` fails a screen that shows
+a `R.string.loading*` text; the screens not yet converted are on its
+allow-list, each with the issue that converts it.
+
 ## Test ids, so a script can name things
 
 A screen's root carries `Modifier.semantics { testTagsAsResourceId = true }`, which turns every
@@ -287,6 +312,7 @@ palette (see `docs/mocks/README.md`).
 | `settings.html` | Settings and Switch Library as sections, the theme choice, checking for updates |
 | `stats.html` | the stats screen, before and after |
 | `podcast-actions.html` | Favourites (the Settings choice, the player's heart, the Home shelf), episode row actions, the show's Downloads panel |
+| `list-placeholders.html` | Home, the browse grids and Latest Episodes while they load: still grey cards in the shape of what is coming |
 
 ## Colour
 
