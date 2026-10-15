@@ -3,7 +3,9 @@ package com.paulohenriquesg.fahrenheit.update
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -83,6 +85,9 @@ object UpdateService {
                 try {
                     var read: Int
                     while (inputStream.read(buffer).also { read = it } != -1) {
+                        // Cancel stops the download here: a blocking read does
+                        // not notice a cancelled coroutine by itself.
+                        ensureActive()
                         outputStream.write(buffer, 0, read)
                         bytesRead += read
 
@@ -90,7 +95,7 @@ object UpdateService {
                         if (contentLength > 0) {
                             val progress = ((bytesRead * 100) / contentLength).toInt()
                             if (progress != lastProgress) {
-                                _downloadState.value = DownloadState.Downloading(progress)
+                                _downloadState.value = DownloadState.Downloading(progress, bytesRead, contentLength)
                                 lastProgress = progress
                                 Log.d(TAG, "Download progress: $progress%")
                             }
@@ -119,6 +124,11 @@ object UpdateService {
                 Log.d(TAG, "APK download and validation successful")
                 Result.success(apkFile.absolutePath)
 
+            } catch (e: CancellationException) {
+                Log.d(TAG, "Download cancelled")
+                cleanupOldApk(context)
+                _downloadState.value = DownloadState.Cancelled
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Download error: ${e.message}", e)
                 val error = "Download failed: ${e.message}"
@@ -217,7 +227,8 @@ object UpdateService {
  */
 sealed class DownloadState {
     object Idle : DownloadState()
-    data class Downloading(val progress: Int) : DownloadState()
+    /** [bytesTotal] is 0 when the server does not say. */
+    data class Downloading(val progress: Int, val bytesDone: Long = 0L, val bytesTotal: Long = 0L) : DownloadState()
     data class Complete(val apkPath: String) : DownloadState()
     data class Error(val message: String) : DownloadState()
     object Cancelled : DownloadState()

@@ -3,7 +3,12 @@ package com.paulohenriquesg.fahrenheit.update
 import android.content.Context
 import android.content.pm.PackageInfo
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okio.Buffer
@@ -17,6 +22,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 /**
  * What the updater will and will not hand to the system installer.
@@ -147,5 +153,27 @@ class UpdateServiceTest {
 
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull()?.message.orEmpty().contains("Package name mismatch"))
+    }
+
+    // The dialog's Cancel (#229): the download stops where it is, and leaves
+    // nothing for the installer.
+    @Test
+    fun `cancelling a download stops it and leaves no file`() = runBlocking {
+        val (body, sha) = apkBody()
+        server.enqueue(MockResponse().setBody(body).throttleBody(64 * 1024L, 50, TimeUnit.MILLISECONDS))
+        apkAtCacheParsesAs(context.packageName)
+
+        val job = launch(Dispatchers.Default) {
+            UpdateService.downloadApk(context, server.url("/app-release.apk").toString(), sha)
+        }
+        val started = withTimeout(10_000) {
+            UpdateService.downloadState.first { it is DownloadState.Downloading && it.bytesDone > 0 }
+        } as DownloadState.Downloading
+        job.cancelAndJoin()
+
+        assertEquals("the total is the body's length", 1_500_000L, started.bytesTotal)
+        assertEquals(DownloadState.Cancelled, UpdateService.downloadState.value)
+        assertFalse("a cancelled download must not be left on disk",
+            File(context.cacheDir, "fahrenheit_update.apk").exists())
     }
 }
