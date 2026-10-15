@@ -331,8 +331,9 @@ class PlayerActivity : ComponentActivity() {
          * "Go to podcast". Clears back to the podcast's screen when the player
          * was opened from it, rather than stacking a second copy on top.
          */
-        fun podcastIntent(context: Context, podcastId: String): Intent =
-            DetailActivity.createIntent(context, podcastId).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        fun podcastIntent(context: Context, podcastId: String, title: String? = null): Intent =
+            DetailActivity.createIntent(context, podcastId, PlayerPreview.show(podcastId, title), podcast = true)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
         /** The start position the intent asks for (see [PlayerStart]); null for the saved one. */
         internal fun startAtOf(intent: Intent): Double? =

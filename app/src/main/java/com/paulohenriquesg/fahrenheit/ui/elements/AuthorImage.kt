@@ -20,6 +20,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.paulohenriquesg.fahrenheit.api.ApiClient
 
+/** Where an author's photo is fetched: one URL, Coil's memory-cache key, as [coverUrlOf] for covers. */
+fun authorPhotoUrlOf(authorId: String): String? = ApiClient.generateFullUrl("/api/authors/$authorId/image")
+
 @Composable
 fun AuthorImage(
     authorId: String,
@@ -29,7 +32,7 @@ fun AuthorImage(
     size: androidx.compose.ui.unit.Dp = 200.dp
 ) {
     val context = LocalContext.current
-    val imageUrl = ApiClient.generateFullUrl("/api/authors/$authorId/image")
+    val imageUrl = authorPhotoUrlOf(authorId)
 
     Box(
         modifier = modifier

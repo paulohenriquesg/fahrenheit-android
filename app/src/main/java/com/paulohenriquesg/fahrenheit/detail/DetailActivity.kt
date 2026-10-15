@@ -74,6 +74,7 @@ import com.paulohenriquesg.fahrenheit.podcast.DownloadsPanel
 import com.paulohenriquesg.fahrenheit.podcast.PodcastDownloads
 import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 import com.paulohenriquesg.fahrenheit.api.Episode
+import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import android.util.Log
@@ -336,11 +337,29 @@ class DetailActivity : ComponentActivity() {
         private const val TAG = "DetailActivity"
         private const val EXTRA_ITEM_ID = "item_id"
 
-        fun createIntent(context: Context, itemId: String): Intent {
+        private const val EXTRA_PODCAST = "podcast"
+
+        /**
+         * The item's page. [preview] is what the opening screen shows of it,
+         * drawn while the item loads (#225), and [podcast] which page's frame
+         * to draw; with neither, a book's frame of grey shapes.
+         */
+        fun createIntent(context: Context, itemId: String, preview: PlayerPreview? = null, podcast: Boolean = false): Intent {
             return Intent(context, DetailActivity::class.java).apply {
                 putExtra(EXTRA_ITEM_ID, itemId)
+                putExtra(EXTRA_PODCAST, podcast)
+                preview?.writeTo(this)
             }
         }
+
+        /** A card's item: what the card shows, and whether it is a podcast. */
+        fun intentFor(context: Context, item: LibraryItem): Intent =
+            createIntent(context, item.id, PlayerPreview.page(item), podcast = item.mediaType == "podcast")
+
+        /** What the opening screen handed over; null for nothing. */
+        fun previewOf(intent: Intent): PlayerPreview? = PlayerPreview.from(intent)
+
+        fun podcastOf(intent: Intent): Boolean = intent.getBooleanExtra(EXTRA_PODCAST, false)
 
         /**
          * The book's Play. Starts playing, as Home's podcast shelves do: the
