@@ -70,8 +70,9 @@ const val PODCAST_DESCRIPTION_TAG = "podcast_description"
  * wrapped to three lines and Resume cut the episode's name. Here each is its
  * label on one line and its state on another, as the mock draws them.
  */
-private val COLUMN_WIDTH = 240.dp
-private val COLUMN_GAP = 40.dp
+/** The show's column and the gap beside it; the page's loading frame (#225) keeps them. */
+internal val PODCAST_COLUMN_WIDTH = 240.dp
+internal val PODCAST_COLUMN_GAP = 40.dp
 private val DESCRIPTION_SHAPE = RoundedCornerShape(12.dp)
 private val DESCRIPTION_FADE = 32.dp
 
@@ -123,7 +124,7 @@ fun PodcastPage(
     }
 
     Box(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxSize().padding(margin), horizontalArrangement = Arrangement.spacedBy(COLUMN_GAP)) {
+        Row(Modifier.fillMaxSize().padding(margin), horizontalArrangement = Arrangement.spacedBy(PODCAST_COLUMN_GAP)) {
             LeftColumn(
                 state = state,
                 primary = Modifier.focusRequester(primaryFocus),
@@ -203,7 +204,7 @@ private fun LeftColumn(
     onCheckFeed: () -> Unit,
     onDownloads: () -> Unit
 ) {
-    Column(Modifier.width(COLUMN_WIDTH).fillMaxHeight().testTag(PODCAST_LEFT_TAG)) {
+    Column(Modifier.width(PODCAST_COLUMN_WIDTH).fillMaxHeight().testTag(PODCAST_LEFT_TAG)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             // The cover gives way, never an action: three buttons, two of them two
             // lines, under a long title do not fit beside a whole-width cover.

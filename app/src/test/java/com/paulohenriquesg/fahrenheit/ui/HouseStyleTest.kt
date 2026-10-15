@@ -96,7 +96,6 @@ class HouseStyleTest {
      * beyond this rule: AuthorDetailScreen's goes in #225.
      */
     private val bareLoadingAllowed = mapOf(
-        "com/paulohenriquesg/fahrenheit/detail/DetailActivity.kt" to "#225",
         // Stats was not among #224's screens; it needs an issue of its own.
         "com/paulohenriquesg/fahrenheit/main/BrowseViews.kt R.string.loading_stats" to "none yet"
     )

@@ -142,7 +142,7 @@ class DetailActivity : ComponentActivity() {
                     shape = RectangleShape
                 ) {
                     if (itemId != null) {
-                        DetailScreen(itemId)
+                        DetailScreen(itemId, previewOf(intent), podcastOf(intent))
                     } else {
                         Toast.makeText(this@DetailActivity, getString(R.string.item_id_is_missing), Toast.LENGTH_SHORT).show()
                         finish()
@@ -152,8 +152,12 @@ class DetailActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * [preview] and [podcast]: what the opening card showed, and which page's
+     * frame to draw with it while the item loads (#225).
+     */
     @Composable
-    fun DetailScreen(itemId: String) {
+    fun DetailScreen(itemId: String, preview: PlayerPreview?, podcast: Boolean) {
         var itemDetail by remember { mutableStateOf<LibraryItemResponse?>(null) }
         var loadFailed by remember { mutableStateOf(false) }
 
@@ -193,36 +197,14 @@ class DetailActivity : ComponentActivity() {
                 ?.takeIf { it.current != null }
         }
 
-        if (loadFailed) {
-            // The previous version showed an empty screen with a toast that
-            // was gone by the time anyone looked at it.
-            Text(
-                text = stringResource(R.string.item_load_failed),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(16.dp)
-            )
-            return
-        }
-
-        val item = itemDetail
-        if (item == null) {
-            Text(
-                text = stringResource(R.string.loading),
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(16.dp)
-            )
-            return
-        }
-
-        val isBook = item.mediaType != "podcast"
         val nowPlaying: @Composable () -> Unit = {
             NowPlayingBarSlot(playback, chaptersOf = ::queuedChapters) {
                 // The player reattaches to what is queued, where it is.
                 context.startActivity(PlayerActivity.reopenIntent(context, it))
             }
         }
-        DetailBody { margin ->
+        DetailStage(itemId, preview, podcast, itemDetail, loadFailed) { item, margin ->
+            val isBook = item.mediaType != "podcast"
             if (!isBook) {
                 PodcastEpisodes(itemId, item, margin, nowPlaying = nowPlaying)
             } else {
@@ -241,7 +223,7 @@ class DetailActivity : ComponentActivity() {
                     },
                     series = seriesBooks,
                     seriesName = seriesRef?.name,
-                    onSeriesBook = { context.startActivity(createIntent(context, it.itemId)) },
+                    onSeriesBook = { context.startActivity(createIntent(context, it.itemId, PlayerPreview.of(it))) },
                     nowPlaying = nowPlaying,
                     finished = bookProgress?.isFinished == true,
                     marking = marking,
