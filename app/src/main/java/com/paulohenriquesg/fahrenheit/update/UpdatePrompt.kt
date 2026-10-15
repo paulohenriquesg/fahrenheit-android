@@ -108,6 +108,8 @@ fun UpdateOffer(
     var job by remember { mutableStateOf<Job?>(null) }
 
     fun start() {
+        // Whatever an earlier download left in the service is not this one's.
+        downloads.reset()
         started = true
         job = scope.launch { downloads.download(update) }
     }

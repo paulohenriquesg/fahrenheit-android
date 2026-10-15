@@ -15,6 +15,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -134,13 +135,16 @@ class MainActivity : ComponentActivity() {
                         onInstallUpdate = { updateOffer = it }
                     )
                     updateOffer?.let { offer ->
-                        UpdateOffer(
-                            update = offer,
-                            downloads = remember { UpdateDownloads.Service(applicationContext) },
-                            onIgnore = { AppUpdates.checker(this@MainActivity).ignore(offer) },
-                            onInstall = { AppUpdates.handOver(this@MainActivity, it, offer.versionCode) },
-                            onDone = { updateOffer = null }
-                        )
+                        // A different version is a new question, from the start.
+                        key(offer.versionCode) {
+                            UpdateOffer(
+                                update = offer,
+                                downloads = remember { UpdateDownloads.Service(applicationContext) },
+                                onIgnore = { AppUpdates.checker(this@MainActivity).ignore(offer) },
+                                onInstall = { AppUpdates.handOver(this@MainActivity, it, offer.versionCode) },
+                                onDone = { updateOffer = null }
+                            )
+                        }
                     }
                 }
             }

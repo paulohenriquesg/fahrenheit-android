@@ -52,11 +52,13 @@ class UpdatePromptTest {
         var started = 0
         var cancelled = 0
         var progress: DownloadState = DownloadState.Downloading(42, 0, 0)
+        /** As the service on its IO thread: nothing written yet after Yes. */
+        var slowStart = false
 
         override suspend fun download(update: AvailableUpdate) {
             started++
-            state.value = progress
             try {
+                if (!slowStart) state.value = progress
                 awaitCancellation()
             } catch (e: CancellationException) {
                 cancelled++
@@ -255,5 +257,32 @@ class UpdatePromptTest {
 
         assertTrue(installed.isEmpty())
         assertFalse(ignored > 0)
+    }
+
+    // The download service outlives a dialog. What an earlier one left there -
+    // a finished or failed download - is not this dialog's (from review).
+    @Test
+    fun `Yes after an earlier dialog's finished download does not install it`() {
+        downloads.state.value = DownloadState.Complete("/cache/earlier.apk")
+        downloads.slowStart = true
+        show()
+
+        press("update_yes")
+
+        assertTrue(installed.isEmpty())
+        assertEquals(0, done)
+        compose.onNodeWithTag("update_cancel").assertIsFocused()
+    }
+
+    @Test
+    fun `Yes after an earlier dialog's failure shows the download, not the failure`() {
+        downloads.state.value = DownloadState.Error("Download failed with HTTP 503")
+        downloads.slowStart = true
+        show()
+
+        press("update_yes")
+
+        compose.onNodeWithTag("update_retry").assertDoesNotExist()
+        compose.onNodeWithTag("update_cancel").assertIsFocused()
     }
 }

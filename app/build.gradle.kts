@@ -167,8 +167,6 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.palette)
 
-    // handle markdown rendering
-
     // handle media controls and player
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.datasource.okhttp)

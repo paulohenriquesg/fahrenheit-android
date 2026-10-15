@@ -176,4 +176,43 @@ class UpdateServiceTest {
         assertFalse("a cancelled download must not be left on disk",
             File(context.cacheDir, "fahrenheit_update.apk").exists())
     }
+
+    // A stalled connection blocks a read for up to the read timeout: Cancel
+    // must not wait that out (from review).
+    @Test
+    fun `cancelling a stalled download stops it at once`() = runBlocking {
+        val (body, sha) = apkBody()
+        server.enqueue(MockResponse().setBody(body).throttleBody(1, 30, TimeUnit.SECONDS))
+
+        val job = launch(Dispatchers.Default) {
+            UpdateService.downloadApk(context, server.url("/app-release.apk").toString(), sha)
+        }
+        // The request is out and the body is stalled.
+        withTimeout(10_000) { while (server.requestCount == 0) kotlinx.coroutines.delay(20) }
+        kotlinx.coroutines.delay(300)
+
+        withTimeout(5_000) { job.cancelAndJoin() }
+
+        assertEquals(DownloadState.Cancelled, UpdateService.downloadState.value)
+    }
+
+    // Without a Content-Length the bytes still count, for "MB of MB" against
+    // the manifest's size (from review).
+    @Test
+    fun `a download with no length still reports the bytes done`() = runBlocking {
+        val (body, sha) = apkBody()
+        server.enqueue(
+            MockResponse().setChunkedBody(body, 64 * 1024).throttleBody(256 * 1024L, 50, TimeUnit.MILLISECONDS)
+        )
+
+        val job = launch(Dispatchers.Default) {
+            UpdateService.downloadApk(context, server.url("/app-release.apk").toString(), sha)
+        }
+        val progress = withTimeout(10_000) {
+            UpdateService.downloadState.first { it is DownloadState.Downloading && it.bytesDone > 0 }
+        } as DownloadState.Downloading
+        job.cancelAndJoin()
+
+        assertEquals(0L, progress.bytesTotal)
+    }
 }
