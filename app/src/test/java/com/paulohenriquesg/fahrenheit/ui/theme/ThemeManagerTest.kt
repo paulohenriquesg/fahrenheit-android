@@ -1,17 +1,30 @@
 package com.paulohenriquesg.fahrenheit.ui.theme
 
 import android.content.Context
+import android.os.Looper
+import androidx.compose.runtime.snapshots.Snapshot
 import android.content.res.Configuration
 import androidx.test.core.app.ApplicationProvider
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 class ThemeManagerTest {
+
+    // ThemeManager's theme is Compose state, written here outside any
+    // composition: drained before the looper resets, or a later Compose test
+    // in this JVM never goes idle (see #221's lesson).
+    @After
+    fun drainSnapshotWrites() {
+        Snapshot.sendApplyNotifications()
+        shadowOf(Looper.getMainLooper()).idle()
+    }
 
     private val context: Context = ApplicationProvider.getApplicationContext()
 
