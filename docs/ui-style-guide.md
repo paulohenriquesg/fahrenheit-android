@@ -179,6 +179,12 @@ continuously, by design; a test whose player position moves with the compose
 clock must move that clock by hand. Where a drift has to run
 for as long as it is shown (`CoverWall`), its tests move the clock by hand.
 
+The player's loading frame (#223) is the one place that waits on screen with
+motion: its bar sweeps and a spinner turns until the item is ready, and both
+go with the frame. They are an infinite transition, which the Compose test
+runtime cancels, so they cannot hang a test; tests still pass
+`animated = false` to `PlayerLoading` and `PlayerStage` and draw it still.
+
 A label cut by its width may scroll with `basicMarquee` only while its own
 item has focus, and for a few runs: pass `iterations`, never an endless count.
 The book screen's series cards do this (#194).
@@ -306,6 +312,7 @@ palette (see `docs/mocks/README.md`).
 | `login.html` | sign-in above the Fire TV keyboard: server discovery, a returning user, errors, the filled/outlined buttons |
 | `screens.html` | the navigation rail, Home and its shelf headings, item detail, the first player, search |
 | `player.html` | the player (layout C is the one built), the Speed/Sleep/Chapters panel, About, episodes, Now playing in the rail |
+| `player-loading.html` | opening the player: the loading frame with and without what the opening screen knew, then ready |
 | `book-screen.html` | the book screen and About as one layout (option 1 is the one built) |
 | `podcast.html` | the podcast screen: every episode, downloads, admin and not, the header that scrolls away |
 | `latest-episodes.html` | Latest Episodes grouped by day, and its empty state |

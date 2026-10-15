@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,30 +71,30 @@ fun PlayerScreen(
     }
     val chapter = ChapterClock.at(spans, currentTime)?.title?.takeIf { it.isNotBlank() }
 
-    val washed = Modifier.coverWash(wash)
+    // In over 300 ms, as the buttons replace the loading frame's spinner (#223).
+    val washed = Modifier.coverWash(wash, fadeIn = true)
     Box(Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .then(washed)
-                .padding(horizontal = 60.dp, vertical = 32.dp),
-            verticalArrangement = Arrangement.Center
+                .then(PlayerLayout.padding),
+            verticalArrangement = Arrangement.Top
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(36.dp)
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(PlayerLayout.coverGap)
             ) {
-                CoverImage(itemId = nowPlaying.itemId, contentDescription = nowPlaying.title, size = 250.dp)
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    nowPlaying.kicker?.let {
-                        Text(
-                            text = it.uppercase(),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                CoverImage(itemId = nowPlaying.itemId, contentDescription = nowPlaying.title, size = PlayerLayout.cover)
+                Column(modifier = PlayerLayout.textColumn(this), verticalArrangement = Arrangement.spacedBy(PlayerLayout.lineGap)) {
+                    // Its line is kept when there is none, so the title never moves (#223).
+                    Text(
+                        text = nowPlaying.kicker?.uppercase().orEmpty(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     MarqueeText(
                         text = nowPlaying.title,
                         isFocused = titleFocused,
@@ -206,13 +208,20 @@ fun GoToPodcastButton(onClick: () -> Unit) {
  * see [CoverWash]); the background alone when there is none, or under the
  * light theme. A colour that arrives after the screen showed fades in.
  * The player and its About (#134) share it.
+ *
+ * @param fadeIn start from the plain background and fade the wash in over
+ *   300 ms, as the player does when it replaces its loading frame (#223).
+ *   A colour that arrives later fades in over the same 300 ms; About, which
+ *   opens over the player, keeps the slower 700 ms.
  */
 @Composable
-fun Modifier.coverWash(wash: Color?): Modifier {
+fun Modifier.coverWash(wash: Color?, fadeIn: Boolean = false): Modifier {
     val background = MaterialTheme.colorScheme.background
+    var arrived by remember { mutableStateOf(!fadeIn) }
+    LaunchedEffect(Unit) { arrived = true }
     val shown by animateColorAsState(
-        wash?.takeIf { CoverWash.appliesOn(background) } ?: background,
-        animationSpec = tween(700),
+        wash?.takeIf { arrived && CoverWash.appliesOn(background) } ?: background,
+        animationSpec = tween(if (fadeIn) WASH_FADE_IN_MS else WASH_LATE_MS),
         label = "wash"
     )
     return drawWithCache {
@@ -227,4 +236,25 @@ fun Modifier.coverWash(wash: Color?): Modifier {
             drawRect(glow)
         }
     }
+}
+
+private const val WASH_FADE_IN_MS = 300
+private const val WASH_LATE_MS = 700
+
+/**
+ * Where the player puts things, shared by the loading frame and the loaded
+ * player so nothing moves when one replaces the other (#223): anchored at a
+ * fixed top rather than centred, so whatever the loaded item adds - a
+ * series above the title, a book's second bar, an episode's "Up next" -
+ * grows downward, and the text beside the cover starts at a fixed inset from
+ * its top. The top is where a typical loaded player sat when it was centred.
+ */
+internal object PlayerLayout {
+    val cover = 250.dp
+    val coverGap = 36.dp
+    val lineGap = 8.dp
+    val padding = Modifier.padding(start = 60.dp, end = 60.dp, top = 56.dp, bottom = 32.dp)
+
+    /** Beside the cover: the rest of the row, from a fixed inset below the cover's top. */
+    fun textColumn(row: RowScope): Modifier = with(row) { Modifier.weight(1f).padding(top = 28.dp) }
 }

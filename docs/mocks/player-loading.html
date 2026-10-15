@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Player Loading</title>
+<style>
+  :root { --surface:#1E1E1E; --on:#E6E1E5; --muted:#CAC4D0; --primary:#D0BCFF; --on-primary:#381E72; --variant:#2B2930; --chip:#3B3548; }
+  body { margin:0; background:#050506; color:var(--on); font-family:Roboto, system-ui, sans-serif; padding:32px 16px; }
+  .page { max-width:1240px; margin:0 auto; }
+  h1 { font-size:28px; margin:0 0 8px; } h2 { font-size:22px; margin:40px 0 8px; }
+  p.why { color:var(--muted); font-size:15px; line-height:1.55; max-width:920px; margin:0 0 14px; }
+  .shell { width:100%; aspect-ratio:16/9; container-type:inline-size; border-radius:12px; overflow:hidden; box-shadow:0 0 0 1px #333; }
+  .tv { position:relative; width:1920px; height:1080px; transform-origin:0 0; transform:scale(calc(100cqw / 1920px)); overflow:hidden; background:#121212; }
+  .wash { position:absolute; inset:0; background: radial-gradient(circle at 18% 30%, var(--w,#24406B) 0, transparent 60%), linear-gradient(var(--w2,#1B2A44), #121212 75%); }
+  .frame { position:absolute; inset:0; padding:64px 120px; display:flex; flex-direction:column; justify-content:center; }
+  .top { display:flex; gap:72px; align-items:center; }
+  .cv { width:480px; height:480px; flex:none; border-radius:16px; display:grid; place-items:center; color:#fff; font-weight:900; font-size:44px; text-align:center; line-height:1.1; }
+  .kick { font-size:26px; color:var(--primary); font-weight:700; letter-spacing:.5px; }
+  .title { font-size:64px; font-weight:500; line-height:1.2; margin:14px 0; }
+  .meta { font-size:30px; color:var(--muted); }
+  .ghost { height:28px; border-radius:8px; background:#2a2730; margin-top:22px; }
+  .bar { position:relative; height:12px; border-radius:6px; background:#3a3640; margin:80px 0 18px; overflow:hidden; }
+  .bar .fill { position:absolute; left:0; top:0; bottom:0; background:var(--primary); border-radius:6px; }
+  .bar .sweep { position:absolute; top:0; bottom:0; width:22%; left:30%; background:linear-gradient(90deg,transparent,#8f86a6,transparent); }
+  .times { display:flex; justify-content:space-between; font-size:30px; color:var(--muted); }
+  .row { display:flex; gap:28px; align-items:center; margin-top:40px; height:112px; }
+  .round { width:92px; height:92px; border-radius:50%; background:var(--chip); display:grid; place-items:center; font-size:34px; }
+  .round.big { width:112px; height:112px; outline:5px solid #fff; outline-offset:2px; background:#E6E1E5; color:#121212; }
+  .pill { height:84px; padding:0 40px; border-radius:42px; background:var(--chip); display:flex; align-items:center; font-size:28px; }
+  .spin { width:64px; height:64px; border-radius:50%; border:7px solid #3a3640; border-top-color:var(--primary); }
+  .status { font-size:32px; color:var(--muted); }
+  .old { position:absolute; left:24px; top:24px; font-size:30px; color:var(--on); }
+  .note { font-size:14px; color:var(--muted); margin-top:8px; }
+</style></head>
+<body><div class="page">
+<h1>Opening the player: its own layout from the first frame</h1>
+<p class="why">Today the player opens to a black screen with a small "Loading…" at the top left until the controller connects and the item has loaded. The screen that opens the player already shows the cover and the title, so it hands them over and the player draws its real layout straight away: cover, title and the line under it, with a spinner and "Starting…" where the buttons will be. When the item is ready the buttons replace the spinner in place, and the cover's colours fade in behind. Nothing moves.</p>
+
+<h2>Today</h2>
+<div class="shell"><div class="tv" style="background:#000"><div class="old">Loading…</div></div></div>
+
+<h2>1. Loading: what the opening screen already knew</h2>
+<p class="why">Cover and title come with the request. The kicker (podcast name or author) shows when the opening screen had it. The bar has no position yet, so it shows a slow sweep instead of a fill. No buttons yet, so nothing can take focus by mistake. The background is the plain player background: the cover's wash is only known once the cover's colours are read.</p>
+<div class="shell"><div class="tv">
+  <div class="frame">
+    <div class="top">
+      <div class="cv" style="background:linear-gradient(150deg,#C2562E,#3A1408)">THE<br>LIGHTHOUSE<br>HOUR</div>
+      <div style="flex:1">
+        <div class="kick">THE LIGHTHOUSE HOUR</div>
+        <div class="title">Episode 212 – Keepers of the Northern Coast</div>
+        <div class="ghost" style="width:70%"></div>
+        <div class="ghost" style="width:55%"></div>
+      </div>
+    </div>
+    <div class="bar"><div class="sweep"></div></div>
+    <div class="times"><span>&nbsp;</span><span>&nbsp;</span></div>
+    <div class="row"><div class="spin"></div><div class="status">Starting…</div></div>
+  </div>
+</div></div>
+
+<h2>2. Ready: the same frame, filled in</h2>
+<p class="why">The description replaces the grey lines, the bar gets its position and times, the buttons take the spinner's place with focus on Play, and the cover's wash fades in over about 300 ms.</p>
+<div class="shell"><div class="tv" style="--w:#7A3418; --w2:#3A1A0E">
+  <div class="wash"></div>
+  <div class="frame">
+    <div class="top">
+      <div class="cv" style="background:linear-gradient(150deg,#C2562E,#3A1408)">THE<br>LIGHTHOUSE<br>HOUR</div>
+      <div style="flex:1">
+        <div class="kick">THE LIGHTHOUSE HOUR · 03/10/2026</div>
+        <div class="title">Episode 212 – Keepers of the Northern Coast</div>
+        <div class="meta">1 h 12 min</div>
+        <div class="meta" style="margin-top:18px">Three generations of keepers on the coast road, and the night the lamp went out…</div>
+      </div>
+    </div>
+    <div class="bar"><div class="fill" style="width:18%"></div></div>
+    <div class="times"><span>13 min 04 s</span><span>59 min left of 1 h 12 min</span></div>
+    <div class="row">
+      <div class="round">⏮</div><div class="round">↺</div><div class="round big">❚❚</div><div class="round">↻</div><div class="round">⏭</div>
+      <div class="pill">Go to podcast</div><div class="pill">♡</div><div class="pill">Speed 1×</div><div class="pill">Sleep</div><div class="pill">About</div>
+    </div>
+  </div>
+</div></div>
+
+<h2>3. Opened with nothing handed over</h2>
+<p class="why">A few ways in carry no title or cover (the playback notification, a restored screen). Then the loading frame keeps the same layout with a cover placeholder and grey title lines, rather than falling back to the black screen.</p>
+<div class="shell"><div class="tv">
+  <div class="frame">
+    <div class="top">
+      <div class="cv" style="background:#2a2730;color:#5d5868;font-size:120px">♪</div>
+      <div style="flex:1">
+        <div class="ghost" style="width:40%;height:30px"></div>
+        <div class="ghost" style="width:90%;height:64px;margin-top:26px"></div>
+        <div class="ghost" style="width:60%;height:64px"></div>
+      </div>
+    </div>
+    <div class="bar"><div class="sweep"></div></div>
+    <div class="times"><span>&nbsp;</span><span>&nbsp;</span></div>
+    <div class="row"><div class="spin"></div><div class="status">Starting…</div></div>
+  </div>
+</div></div>
+<p class="note">Titles and covers here are invented.</p>
+</div></body></html>

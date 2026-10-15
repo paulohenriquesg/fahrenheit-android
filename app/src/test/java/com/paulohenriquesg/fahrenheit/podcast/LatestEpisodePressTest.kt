@@ -36,4 +36,13 @@ class LatestEpisodePressTest {
         assertEquals("ep-7", intent.getStringExtra("episode_id"))
         assertEquals(true, intent.getBooleanExtra("auto_play", false))
     }
+
+    // #223 entry point 7: the row's title and show, for the loading frame.
+    @Test
+    fun `an episode hands the player its title and show`() {
+        val preview = PlayerActivity.previewOf(latestEpisodeIntent(ApplicationProvider.getApplicationContext(), episode))
+
+        assertEquals("Episode 7", preview?.title)
+        assertEquals("The Show", preview?.kicker)
+    }
 }

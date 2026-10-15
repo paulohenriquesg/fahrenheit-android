@@ -49,13 +49,14 @@ class PlayerActivityTest {
         val queue = PlaybackQueue.of(book, 0.0) { "https://abs.test$it" }!!
         playing.setMediaItems(queue.items, queue.index, queue.positionMs)
 
-        PlayerActivity.switchTo(player, playing, "b3")
+        PlayerActivity.switchTo(player, playing, "b3", preview = PlayerPreview("Another Invented Book"))
 
         assertEquals(0, playing.mediaItemCount)
         val started = shadowOf(player).nextStartedActivity
         assertEquals(PlayerActivity::class.java.name, started.component?.className)
         assertEquals("b3", started.getStringExtra("item_id"))
         assertTrue(started.getBooleanExtra("auto_play", false))
+        assertEquals("Another Invented Book", PlayerActivity.previewOf(started)?.title)
         assertTrue(player.isFinishing)
         playing.release()
     }
@@ -66,12 +67,14 @@ class PlayerActivityTest {
         val player = screen.create().get()
         val playing = TestExoPlayerBuilder(player).build()
 
-        PlayerActivity.switchTo(player, playing, "p1", episodeId = "e3")
+        PlayerActivity.switchTo(player, playing, "p1", episodeId = "e3", preview = PlayerPreview("An Invented Episode", kicker = "An Invented Show"))
 
         val started = shadowOf(player).nextStartedActivity
         assertEquals("p1", started.getStringExtra("item_id"))
         assertEquals("e3", started.getStringExtra("episode_id"))
         assertTrue(started.getBooleanExtra("auto_play", false))
+        // #223 entry point 8: the other episode's title and show, for its loading frame.
+        assertEquals(PlayerPreview("An Invented Episode", kicker = "An Invented Show"), PlayerActivity.previewOf(started))
         playing.release()
     }
 
