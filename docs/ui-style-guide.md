@@ -107,9 +107,18 @@ the first frame.
 `ui/elements/Placeholders.kt` is the one component: `PlaceholderShape`, and
 the layouts built from it - `ShelvesPlaceholder` (Home), `GridPlaceholder`
 (Library, Series, Collections, and Authors with round photos) and
-`RowsPlaceholder` (Latest Episodes). `HouseStyleTest` fails a screen that shows
-a `R.string.loading*` text; the screens not yet converted are on its
-allow-list, each with the issue that converts it.
+`RowsPlaceholder` (Latest Episodes). The book, podcast and author pages draw
+their own frame (`DetailLoading`, `AuthorStage`; #225) and Stats its board's
+shape (`StatsPlaceholder`).
+
+What is handed over travels in the intent as a `PlayerPreview` (title, line
+under it, cover URL): the player's (#223), the book and podcast pages'
+(`DetailActivity.intentFor` for a card) and the author page's, where the
+cover is the photo. A screen opened with nothing handed over draws grey
+shapes for those too, never a blank screen.
+
+`HouseStyleTest` fails a screen that shows a `R.string.loading*` text; its
+allow-list is empty since #225.
 
 ## Test ids, so a script can name things
 
@@ -320,6 +329,7 @@ palette (see `docs/mocks/README.md`).
 | `stats.html` | the stats screen, before and after |
 | `podcast-actions.html` | Favourites (the Settings choice, the player's heart, the Home shelf), episode row actions, the show's Downloads panel |
 | `list-placeholders.html` | Home, the browse grids and Latest Episodes while they load: still grey cards in the shape of what is coming |
+| `detail-loading.html` | the book, podcast and author pages while they load: what the card showed, in place, and grey shapes for the rest |
 
 ## Colour
 

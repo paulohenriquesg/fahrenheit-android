@@ -1,5 +1,7 @@
 package com.paulohenriquesg.fahrenheit.login
 
+import com.paulohenriquesg.fahrenheit.auth.SessionRole
+
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -46,7 +48,13 @@ class LoginActivity : ComponentActivity() {
         val tokenBefore = ApiClient.getToken()
         sessionChecks++
         StartupTimeline.app.mark("session check started")
-        val result = SessionCheck { withContext(Dispatchers.IO) { api.me() } }.run()
+        // The same read keeps the user's role for screens drawn before their data (#225).
+        val result = SessionCheck {
+            withContext(Dispatchers.IO) {
+                val me = api.me()
+                SharedPreferencesHandler(this@LoginActivity).saveSessionRole(SessionRole.of(me))
+            }
+        }.run()
         val refreshed = ApiClient.getToken() != tokenBefore
         // The first check's verdict, then, if it took retries, when one got through.
         StartupTimeline.app.mark("session check done", "$result, token refreshed=$refreshed")

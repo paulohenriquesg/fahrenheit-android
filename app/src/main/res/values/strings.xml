@@ -105,10 +105,8 @@
     <string name="later">Later</string>
     <string name="launching_installer">Launching installer…</string>
     <string name="listening_statistics">Listening Statistics</string>
-    <string name="loading">Loading…</string>
     <!-- The player's loading frame, where the buttons will be (#223). -->
     <string name="player_starting">Starting…</string>
-    <string name="loading_stats">Loading stats…</string>
     <string name="launch_signing_in">Signing in…</string>
     <string name="launch_connecting">Connecting to your server…</string>
     <string name="launch_unreachable">Can\'t reach your server</string>

@@ -1,9 +1,11 @@
 package com.paulohenriquesg.fahrenheit.player
 
 import android.content.Intent
+import com.paulohenriquesg.fahrenheit.api.Author
 import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.ui.elements.LibraryItemDisplay
+import com.paulohenriquesg.fahrenheit.ui.elements.authorPhotoUrlOf
 import com.paulohenriquesg.fahrenheit.ui.elements.coverUrlOf
 
 /**
@@ -11,7 +13,8 @@ import com.paulohenriquesg.fahrenheit.ui.elements.coverUrlOf
  * player's loading frame (#223; frame 1 of docs/mocks/player-loading.html):
  * the title, the line above it (the author, or the podcast's name) and the
  * cover. Only for that frame: once the item has loaded, the player draws
- * what it loaded.
+ * what it loaded. The book, podcast and author pages' loading frames take it
+ * too (#225), an author's photo as its cover.
  *
  * @param kicker above the title: an episode's show. A book's is its series,
  *   which the opening screens do not show, so it has none here.
@@ -79,6 +82,28 @@ data class PlayerPreview(
             val authors = metadata.authors.orEmpty().joinToString(", ") { it.name }.takeIf { it.isNotEmpty() }
             return book(item.id, metadata.title, authors ?: metadata.authorName)
         }
+
+        /**
+         * A card opening the item's own page (#225): its own title - a
+         * podcast's name, not the newest episode a Home card leads with - and
+         * a book's author under it. A podcast's line under its name is the
+         * page's own, so it has none here.
+         */
+        fun page(item: LibraryItem): PlayerPreview? {
+            val podcast = item.mediaType == "podcast"
+            val cover = if (item.media.coverPath != null) coverUrlOf(item.id) else null
+            return of(item.media.metadata.title, null, cover, if (podcast) null else LibraryItemDisplay.author(item))
+        }
+
+        /** A book of the series, on the book page: the title its card shows. */
+        fun of(book: SeriesBook): PlayerPreview? = of(book.title, null, coverUrlOf(book.itemId))
+
+        /** "Go to podcast": the show's name and cover. */
+        fun show(podcastId: String, title: String?): PlayerPreview? = of(title, null, coverUrlOf(podcastId))
+
+        /** An author's card: the name, and the photo only when the server has one. */
+        fun author(author: Author): PlayerPreview? =
+            of(author.name, null, author.imagePath?.let { authorPhotoUrlOf(author.id) })
 
         /** Now playing, in the rail or the bar: the title it shows. */
         fun of(entry: RailEntry): PlayerPreview? = of(entry.title, null, coverUrlOf(entry.itemId))

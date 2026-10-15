@@ -43,6 +43,7 @@ import com.paulohenriquesg.fahrenheit.api.LibraryRepository
 import com.paulohenriquesg.fahrenheit.api.SearchResults
 import com.paulohenriquesg.fahrenheit.author.AuthorDetailActivity
 import com.paulohenriquesg.fahrenheit.detail.DetailActivity
+import com.paulohenriquesg.fahrenheit.player.PlayerPreview
 import com.paulohenriquesg.fahrenheit.ui.Space
 import com.paulohenriquesg.fahrenheit.ui.StableKeys
 import com.paulohenriquesg.fahrenheit.ui.elements.AuthorCard
@@ -92,8 +93,8 @@ fun SearchScreen() {
         results = searchResults,
         failed = searchFailed,
         mediaType = library?.mediaType,
-        onItemClick = { context.startActivity(DetailActivity.createIntent(context, it.id)) },
-        onAuthorClick = { context.startActivity(AuthorDetailActivity.createIntent(context, it.id)) }
+        onItemClick = { context.startActivity(DetailActivity.intentFor(context, it)) },
+        onAuthorClick = { context.startActivity(AuthorDetailActivity.createIntent(context, it.id, PlayerPreview.author(it))) }
     )
 }
 

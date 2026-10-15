@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.collectAsState
 import com.paulohenriquesg.fahrenheit.podcast.PodcastViewModel
 import com.paulohenriquesg.fahrenheit.podcast.PodcastPage
+import com.paulohenriquesg.fahrenheit.podcast.PodcastSlots
 import com.paulohenriquesg.fahrenheit.favourites.Favourites
 import com.paulohenriquesg.fahrenheit.favourites.FavouritesChoice
 import com.paulohenriquesg.fahrenheit.favourites.LibraryFavourites
@@ -74,6 +75,7 @@ import com.paulohenriquesg.fahrenheit.podcast.DownloadsPanel
 import com.paulohenriquesg.fahrenheit.podcast.PodcastDownloads
 import com.paulohenriquesg.fahrenheit.ui.requestFocusWhenAttached
 import com.paulohenriquesg.fahrenheit.api.Episode
+import com.paulohenriquesg.fahrenheit.api.LibraryItem
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.api.MediaProgressResponse
 import android.util.Log
@@ -141,7 +143,7 @@ class DetailActivity : ComponentActivity() {
                     shape = RectangleShape
                 ) {
                     if (itemId != null) {
-                        DetailScreen(itemId)
+                        DetailScreen(itemId, previewOf(intent), podcastOf(intent))
                     } else {
                         Toast.makeText(this@DetailActivity, getString(R.string.item_id_is_missing), Toast.LENGTH_SHORT).show()
                         finish()
@@ -151,8 +153,12 @@ class DetailActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * [preview] and [podcast]: what the opening card showed, and which page's
+     * frame to draw with it while the item loads (#225).
+     */
     @Composable
-    fun DetailScreen(itemId: String) {
+    fun DetailScreen(itemId: String, preview: PlayerPreview?, podcast: Boolean) {
         var itemDetail by remember { mutableStateOf<LibraryItemResponse?>(null) }
         var loadFailed by remember { mutableStateOf(false) }
 
@@ -192,38 +198,18 @@ class DetailActivity : ComponentActivity() {
                 ?.takeIf { it.current != null }
         }
 
-        if (loadFailed) {
-            // The previous version showed an empty screen with a toast that
-            // was gone by the time anyone looked at it.
-            Text(
-                text = stringResource(R.string.item_load_failed),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(16.dp)
-            )
-            return
-        }
-
-        val item = itemDetail
-        if (item == null) {
-            Text(
-                text = stringResource(R.string.loading),
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(16.dp)
-            )
-            return
-        }
-
-        val isBook = item.mediaType != "podcast"
         val nowPlaying: @Composable () -> Unit = {
             NowPlayingBarSlot(playback, chaptersOf = ::queuedChapters) {
                 // The player reattaches to what is queued, where it is.
                 context.startActivity(PlayerActivity.reopenIntent(context, it))
             }
         }
-        DetailBody { margin ->
+        // The role kept with the session: an admin's buttons keep their places from the first frame.
+        val slots = remember { PodcastSlots.of(SharedPreferencesHandler(context.applicationContext).getSessionRole()) }
+        DetailStage(itemId, preview, podcast, itemDetail, loadFailed, slots) { item, margin ->
+            val isBook = item.mediaType != "podcast"
             if (!isBook) {
-                PodcastEpisodes(itemId, item, margin, nowPlaying = nowPlaying)
+                PodcastEpisodes(itemId, item, margin, slots, nowPlaying = nowPlaying)
             } else {
                 val bookProgress = progress[ProgressKey(itemId, null)]
                 BookDetailView(
@@ -240,7 +226,7 @@ class DetailActivity : ComponentActivity() {
                     },
                     series = seriesBooks,
                     seriesName = seriesRef?.name,
-                    onSeriesBook = { context.startActivity(createIntent(context, it.itemId)) },
+                    onSeriesBook = { context.startActivity(createIntent(context, it.itemId, PlayerPreview.of(it))) },
                     nowPlaying = nowPlaying,
                     finished = bookProgress?.isFinished == true,
                     marking = marking,
@@ -270,6 +256,7 @@ class DetailActivity : ComponentActivity() {
         itemId: String,
         item: LibraryItemResponse,
         margin: PaddingValues,
+        slots: PodcastSlots,
         nowPlaying: @Composable () -> Unit
     ) {
         val context = LocalContext.current
@@ -328,7 +315,8 @@ class DetailActivity : ComponentActivity() {
             onDownloadsClosed = model::downloadsSeen,
             onFavourite = model::toggleFavourite,
             date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
-            nowPlaying = nowPlaying
+            nowPlaying = nowPlaying,
+            reserve = slots
         )
     }
 
@@ -336,11 +324,29 @@ class DetailActivity : ComponentActivity() {
         private const val TAG = "DetailActivity"
         private const val EXTRA_ITEM_ID = "item_id"
 
-        fun createIntent(context: Context, itemId: String): Intent {
+        private const val EXTRA_PODCAST = "podcast"
+
+        /**
+         * The item's page. [preview] is what the opening screen shows of it,
+         * drawn while the item loads (#225), and [podcast] which page's frame
+         * to draw; with neither, a book's frame of grey shapes.
+         */
+        fun createIntent(context: Context, itemId: String, preview: PlayerPreview? = null, podcast: Boolean = false): Intent {
             return Intent(context, DetailActivity::class.java).apply {
                 putExtra(EXTRA_ITEM_ID, itemId)
+                putExtra(EXTRA_PODCAST, podcast)
+                preview?.writeTo(this)
             }
         }
+
+        /** A card's item: what the card shows, and whether it is a podcast. */
+        fun intentFor(context: Context, item: LibraryItem): Intent =
+            createIntent(context, item.id, PlayerPreview.page(item), podcast = item.mediaType == "podcast")
+
+        /** What the opening screen handed over; null for nothing. */
+        fun previewOf(intent: Intent): PlayerPreview? = PlayerPreview.from(intent)
+
+        fun podcastOf(intent: Intent): Boolean = intent.getBooleanExtra(EXTRA_PODCAST, false)
 
         /**
          * The book's Play. Starts playing, as Home's podcast shelves do: the

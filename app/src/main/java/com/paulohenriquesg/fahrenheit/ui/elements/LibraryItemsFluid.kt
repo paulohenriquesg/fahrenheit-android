@@ -32,7 +32,7 @@ fun LibraryItemsFluid(libraryItems: List<LibraryItem>) {
             LibraryItemCard(
                 item = item,
                 onClick = { clickedItem ->
-                    val intent = DetailActivity.createIntent(context, clickedItem.id)
+                    val intent = DetailActivity.intentFor(context, clickedItem)
                     context.startActivity(intent)
                 }
             )

@@ -182,7 +182,7 @@ class PlayerActivity : ComponentActivity() {
                                     speed = rememberPlaybackSpeed(connected),
                                     sleep = state.sleep,
                                     chapters = spans.isNotEmpty(),
-                                    onGoToPodcast = if (playing.goToPodcast) ({ goToPodcast(playing.itemId) }) else null,
+                                    onGoToPodcast = if (playing.goToPodcast) ({ goToPodcast(playing.itemId, playing.show) }) else null,
                                     favourite = state.favourite?.let { heart ->
                                         {
                                             FavouriteButton(
@@ -261,7 +261,7 @@ class PlayerActivity : ComponentActivity() {
     private fun isPlayKey(keyCode: Int) =
         keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
 
-    private fun goToPodcast(podcastId: String) = leaveForPodcast(this, podcastId)
+    private fun goToPodcast(podcastId: String, show: String?) = leaveForPodcast(this, podcastId, show)
 
     /** The short note after the heart (frame 1). */
     private fun confirm(change: HeartChange) {
@@ -331,8 +331,9 @@ class PlayerActivity : ComponentActivity() {
          * "Go to podcast". Clears back to the podcast's screen when the player
          * was opened from it, rather than stacking a second copy on top.
          */
-        fun podcastIntent(context: Context, podcastId: String): Intent =
-            DetailActivity.createIntent(context, podcastId).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        fun podcastIntent(context: Context, podcastId: String, title: String? = null): Intent =
+            DetailActivity.createIntent(context, podcastId, PlayerPreview.show(podcastId, title), podcast = true)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
         /** The start position the intent asks for (see [PlayerStart]); null for the saved one. */
         internal fun startAtOf(intent: Intent): Double? =
@@ -367,8 +368,8 @@ class PlayerActivity : ComponentActivity() {
          * "Go to podcast" leaves the player for the podcast's screen; the
          * episode plays on, as it does after Back (#155).
          */
-        internal fun leaveForPodcast(player: android.app.Activity, podcastId: String) {
-            player.startActivity(podcastIntent(player, podcastId))
+        internal fun leaveForPodcast(player: android.app.Activity, podcastId: String, show: String? = null) {
+            player.startActivity(podcastIntent(player, podcastId, show))
             player.finish()
         }
     }

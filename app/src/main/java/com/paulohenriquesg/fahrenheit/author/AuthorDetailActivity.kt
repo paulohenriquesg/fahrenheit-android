@@ -11,17 +11,22 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.compose.ui.Modifier
 import androidx.tv.material3.MaterialTheme
+import com.paulohenriquesg.fahrenheit.player.PlayerPreview
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 
 class AuthorDetailActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_AUTHOR_ID = "author_id"
 
-        fun createIntent(context: Context, authorId: String): Intent {
+        /** [preview]: the name and photo the card shows, drawn while the author loads (#225). */
+        fun createIntent(context: Context, authorId: String, preview: PlayerPreview? = null): Intent {
             return Intent(context, AuthorDetailActivity::class.java).apply {
                 putExtra(EXTRA_AUTHOR_ID, authorId)
+                preview?.writeTo(this)
             }
         }
+
+        fun previewOf(intent: Intent): PlayerPreview? = PlayerPreview.from(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,7 +45,7 @@ class AuthorDetailActivity : ComponentActivity() {
                     colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
                     shape = RectangleShape,
                 ) {
-                    AuthorDetailScreen(authorId = authorId)
+                    AuthorDetailScreen(authorId = authorId, preview = previewOf(intent))
                 }
             }
         }

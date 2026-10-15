@@ -74,7 +74,7 @@ class BookGroupActivity : ComponentActivity() {
                     BookGroupDetailContent(
                         group = group,
                         emptyMessage = stringResource(kind.emptyMessage),
-                        onBookClick = { book -> startActivity(DetailActivity.createIntent(this@BookGroupActivity, book.id)) }
+                        onBookClick = { book -> startActivity(DetailActivity.intentFor(this@BookGroupActivity, book)) }
                     )
                 }
             }

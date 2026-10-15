@@ -98,6 +98,13 @@ internal object SeriesRow {
 
 private val DESCRIPTION_SHAPE = RoundedCornerShape(12.dp)
 
+/** The book's column - cover, title, actions - and the gap beside it; the page's loading frame (#225) keeps them. */
+object BookColumn {
+    val width = 180.dp
+    val gap = 40.dp
+    val spacing = 10.dp
+}
+
 /** How many times a focused series card's cut label scrolls by before it rests. */
 private const val LABEL_RUNS = 3
 
@@ -154,10 +161,10 @@ fun BookOverview(
     val row = series?.takeIf { it.total > 1 }
     // Three lines, and when even that cuts it, the description opens with it in full (#194).
     var titleCut by remember(title) { mutableStateOf(false) }
-    Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(40.dp)) {
+    Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(BookColumn.gap)) {
         Column(
             Modifier
-                .width(180.dp)
+                .width(BookColumn.width)
                 // Right from the actions goes to the description: they sit under
                 // the cover, below the description's box, where the remote's own
                 // search would find the series row instead.
@@ -165,10 +172,10 @@ fun BookOverview(
                     val toDescription = text != null && event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight
                     if (toDescription) runCatching { descriptionFocus.requestFocus() }.isSuccess else false
                 },
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(BookColumn.spacing)
         ) {
             // Room for three actions under a long title, at a larger font too.
-            CoverImage(itemId = itemId, contentDescription = title, size = 180.dp)
+            CoverImage(itemId = itemId, contentDescription = title, size = BookColumn.width)
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,

@@ -39,7 +39,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import androidx.compose.ui.text.TextLayoutResult
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Rule
+import android.os.Looper
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.paulohenriquesg.fahrenheit.detail.DetailLoading
+import com.paulohenriquesg.fahrenheit.player.PlayerPreview
+import org.robolectric.Shadows.shadowOf
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -118,6 +126,46 @@ class PodcastPageTest {
         }
         compose.waitForIdle()
     }
+
+    // #225: the loading frame keeps the cover and name where the page puts them,
+    // for a listener and for an admin, whose buttons' places the frame keeps
+    // from the stored role.
+    @Test
+    fun `a listener's cover and name do not move when the frame gives way to the page`() =
+        assertFrameHolds(state(admin = false, settings = null), PodcastSlots.NONE)
+
+    @Test
+    fun `nor an admin's, with the feed check and downloads under Resume`() =
+        assertFrameHolds(state(), PodcastSlots(feedCheck = true, downloads = true))
+
+    @Test
+    fun `nor an admin's when the show has no feed, so no feed check, though its place was kept`() =
+        assertFrameHolds(state(admin = false), PodcastSlots(feedCheck = true, downloads = true))
+
+    private fun assertFrameHolds(page: PodcastUiState, slots: PodcastSlots) {
+        var ready by mutableStateOf(false)
+        compose.setContent {
+            FahrenheitTheme {
+                if (ready) {
+                    PodcastPage(page, margin, {}, {}, {}, {}, { _, _ -> }, {}, {}, {}, reserve = slots)
+                } else {
+                    DetailLoading("p1", PlayerPreview("The Show", coverUrl = "https://abs.test/api/items/p1/cover"), podcast = true, margin = margin, slots = slots)
+                }
+            }
+        }
+        compose.waitForIdle()
+        val title = compose.onNodeWithText("The Show").getUnclippedBoundsInRoot()
+        val cover = compose.onNodeWithContentDescription("The Show").getUnclippedBoundsInRoot()
+
+        compose.runOnIdle { ready = true }
+        compose.waitForIdle()
+
+        assertEquals(title.top, compose.onNodeWithText("The Show").getUnclippedBoundsInRoot().top)
+        assertEquals(cover, compose.onNodeWithContentDescription("The Show").getUnclippedBoundsInRoot())
+    }
+
+    @After
+    fun drain() = shadowOf(Looper.getMainLooper()).idle()
 
     private fun press(tag: String) {
         compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.OnClick)

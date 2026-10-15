@@ -468,7 +468,7 @@ fun PersonalizedHomeView(
                                     val intent = PlayerActivity.createIntent(context, podcastId, episodeId, autoPlay = true, preview = PlayerPreview.of(item))
                                     context.startActivity(intent)
                                 } else {
-                                    val intent = com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(context, item.id)
+                                    val intent = com.paulohenriquesg.fahrenheit.detail.DetailActivity.intentFor(context, item)
                                     context.startActivity(intent)
                                 }
                             }
@@ -483,7 +483,7 @@ fun PersonalizedHomeView(
                                     action == HomeShelves.Action.Play && item.media.numAudioFiles > 0 ->
                                         context.startActivity(PlayerActivity.createIntent(context, item.id, autoPlay = true, preview = PlayerPreview.of(item)))
                                     else ->
-                                        context.startActivity(com.paulohenriquesg.fahrenheit.detail.DetailActivity.createIntent(context, item.id))
+                                        context.startActivity(com.paulohenriquesg.fahrenheit.detail.DetailActivity.intentFor(context, item))
                                 }
                             }
                             ShelfRow(
@@ -498,7 +498,7 @@ fun PersonalizedHomeView(
                     HomeShelves.Style.Authors -> {
                         shelf.authorEntities?.let { authors ->
                             AuthorShelfRow(shelf = shelf, authors = authors, seeAllTotal = seeAll?.total, onSeeAll = { seeAll?.let { onSeeAll(it) } }) { author ->
-                                val intent = com.paulohenriquesg.fahrenheit.author.AuthorDetailActivity.createIntent(context, author.id)
+                                val intent = com.paulohenriquesg.fahrenheit.author.AuthorDetailActivity.createIntent(context, author.id, PlayerPreview.author(author))
                                 context.startActivity(intent)
                             }
                         }

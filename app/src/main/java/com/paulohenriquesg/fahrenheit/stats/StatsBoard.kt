@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -38,6 +39,7 @@ import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.ui.Border
 import com.paulohenriquesg.fahrenheit.ui.Radius
 import com.paulohenriquesg.fahrenheit.ui.Space
+import com.paulohenriquesg.fahrenheit.ui.elements.PlaceholderShape
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
 
 private val CoverSize = 44.dp
@@ -322,3 +324,35 @@ private fun Sessions(sessions: List<SessionRow>) {
         }
     }
 }
+
+object StatsTags {
+    const val PLACEHOLDER = "stats_placeholder"
+}
+
+/**
+ * The board while the stats load (#225, from #226): still grey boxes where
+ * the five figures, the two panels and the sessions go. Nothing takes focus.
+ */
+@Composable
+fun StatsPlaceholder(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(StatsTags.PLACEHOLDER),
+        verticalArrangement = Arrangement.spacedBy(Space.gap)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.gap)) {
+            repeat(5) { PlaceholderShape(Modifier.weight(1f).height(TILE_HEIGHT)) }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.gap)) {
+            PlaceholderShape(Modifier.weight(1.15f).height(PANEL_HEIGHT))
+            PlaceholderShape(Modifier.weight(1f).height(PANEL_HEIGHT))
+        }
+        PlaceholderShape(Modifier.fillMaxWidth().height(SESSIONS_HEIGHT))
+    }
+}
+
+/** A figure's tile: its padding, the label and the value. */
+private val TILE_HEIGHT = 86.dp
+private val PANEL_HEIGHT = 160.dp
+private val SESSIONS_HEIGHT = 120.dp

@@ -136,6 +136,26 @@ class AuthRepositoryTest {
             assertEquals("my-api-key", session.accessToken)
         }
 
+    // #225: what the podcast page's loading frame needs to know of the user.
+    @Test
+    fun `a login brings the user's type and update permission`() = runBlocking {
+        val api = FakeAuthApi(loginResponse = TestFixtures.createMockLoginResponse(accessToken = "a"))
+
+        val session = AuthRepository(api).login("u", "p", "http://abs.local")
+
+        assertEquals(SessionRole("root", mayUpdate = true), session.role)
+    }
+
+    @Test
+    fun `an API key sign-in brings them too`() = runBlocking {
+        val api = FakeAuthApi()
+        api.authorizeResponse = TestFixtures.createMockLoginResponse()
+
+        val session = AuthRepository(api).signInWithApiKey("my-api-key")
+
+        assertEquals(SessionRole("root", mayUpdate = true), session.role)
+    }
+
     @Test
     fun `the API key is sent as a bearer token`() = runBlocking {
         val api = FakeAuthApi()
