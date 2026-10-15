@@ -2,6 +2,7 @@ package com.paulohenriquesg.fahrenheit.ui.components
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -218,51 +219,21 @@ fun BookOverview(
             }
             text?.let {
                 val scroll = rememberScrollState()
-                var focused by remember { mutableStateOf(false) }
-                // More below fades the text out at the bottom rather than cutting
-                // it mid-line, which read as clipped, not scrollable (#178).
-                val fades by remember { derivedStateOf { scroll.canScrollForward } }
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        // Down to the series and facts at the bottom: it scrolls.
-                        .weight(1f)
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), DESCRIPTION_SHAPE)
-                        // Focus is the box's border, outside the fade: on the text
-                        // it scrolled and faded out of view at the bottom (#194).
-                        .onFocusChanged { focused = it.hasFocus }
-                        .then(if (focused) Modifier.border(FocusBorder.focus, MaterialTheme.colorScheme.primary, DESCRIPTION_SHAPE) else Modifier)
-                        .semantics { this[DescriptionFadesOut] = fades }
-                        // The text fades, not the box behind it.
-                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            if (fades) {
-                                val from = size.height - DESCRIPTION_FADE.toPx()
-                                drawRect(
-                                    Brush.verticalGradient(listOf(Color.Black, Color.Transparent), startY = from, endY = size.height),
-                                    blendMode = BlendMode.DstIn
-                                )
-                            }
-                        }
-                        // Down past the end of the description goes to this book in
-                        // the series, not whichever cover sits under its middle.
-                        .onPreviewKeyEvent { event ->
-                            val toThisBook = row != null && event.type == KeyEventType.KeyDown &&
-                                event.key == Key.DirectionDown && !scroll.canScrollForward
-                            if (toThisBook) runCatching { thisBook.requestFocus() }.isSuccess else false
-                        }
-                        .verticalScroll(scroll)
-                        .testTag(DESCRIPTION_BOX_TAG)
-                        .padding(12.dp)
-                ) {
-                    FullDescription(
-                        it, scroll,
-                        modifier = Modifier.focusRequester(descriptionFocus),
-                        alwaysFocusable = true,
-                        heading = title.takeIf { titleCut }
-                    )
-                }
+                DescriptionBox(
+                    it,
+                    focus = descriptionFocus,
+                    // Down to the series and facts at the bottom: it scrolls.
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    heading = title.takeIf { titleCut },
+                    scroll = scroll,
+                    // Down past the end of the description goes to this book in
+                    // the series, not whichever cover sits under its middle.
+                    keys = Modifier.onPreviewKeyEvent { event ->
+                        val toThisBook = row != null && event.type == KeyEventType.KeyDown &&
+                            event.key == Key.DirectionDown && !scroll.canScrollForward
+                        if (toThisBook) runCatching { thisBook.requestFocus() }.isSuccess else false
+                    }
+                )
             }
             if (row != null || facts.isNotEmpty()) {
                 Row(Modifier.testTag(BOOK_LOWER_TAG), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
@@ -293,6 +264,61 @@ fun BookOverview(
                 }
             }
         }
+    }
+}
+
+/**
+ * A description in the book page's box (#178, #194): it holds focus, Down
+ * scrolls it, and while there is more below it fades out at the bottom. The
+ * author's bio opens in it too (#230).
+ *
+ * @param heading opens the text in bold: a title too long for its own place.
+ * @param keys the caller's key handling, ahead of the scroll's.
+ */
+@Composable
+internal fun DescriptionBox(
+    text: String,
+    focus: FocusRequester,
+    modifier: Modifier = Modifier,
+    heading: String? = null,
+    scroll: ScrollState = rememberScrollState(),
+    keys: Modifier = Modifier
+) {
+    var focused by remember { mutableStateOf(false) }
+    // More below fades the text out at the bottom rather than cutting
+    // it mid-line, which read as clipped, not scrollable (#178).
+    val fades by remember { derivedStateOf { scroll.canScrollForward } }
+    Box(
+        modifier
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), DESCRIPTION_SHAPE)
+            // Focus is the box's border, outside the fade: on the text
+            // it scrolled and faded out of view at the bottom (#194).
+            .onFocusChanged { focused = it.hasFocus }
+            .then(if (focused) Modifier.border(FocusBorder.focus, MaterialTheme.colorScheme.primary, DESCRIPTION_SHAPE) else Modifier)
+            .semantics { this[DescriptionFadesOut] = fades }
+            // The text fades, not the box behind it.
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                if (fades) {
+                    val from = size.height - DESCRIPTION_FADE.toPx()
+                    drawRect(
+                        Brush.verticalGradient(listOf(Color.Black, Color.Transparent), startY = from, endY = size.height),
+                        blendMode = BlendMode.DstIn
+                    )
+                }
+            }
+            .then(keys)
+            .verticalScroll(scroll)
+            .testTag(DESCRIPTION_BOX_TAG)
+            .padding(12.dp)
+    ) {
+        FullDescription(
+            text, scroll,
+            modifier = Modifier.focusRequester(focus),
+            alwaysFocusable = true,
+            heading = heading
+        )
     }
 }
 

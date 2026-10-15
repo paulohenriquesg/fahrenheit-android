@@ -34,9 +34,15 @@ class AuthorLoadingTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private fun show(preview: PlayerPreview?, author: AuthorDetailResponse? = null, loading: Boolean = true, error: String? = null) {
+    private fun show(
+        preview: PlayerPreview?,
+        author: AuthorDetailResponse? = null,
+        loading: Boolean = true,
+        error: String? = null,
+        narrator: Boolean = false
+    ) {
         compose.setContent {
-            FahrenheitTheme { AuthorStage("a1", preview, loading, error, author, onBookClick = {}) }
+            FahrenheitTheme { PersonStage(preview, narrator, loading, error, author?.let { PersonPage.author(it) }) }
         }
         compose.waitForIdle()
     }
@@ -70,8 +76,19 @@ class AuthorLoadingTest {
         show(null)
 
         compose.onNodeWithTag(AuthorLoadingTags.FRAME).assertExists()
-        // "Books", the grid's own heading, is the one word known before the author is.
-        compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).assertCountEquals(1)
+        // Not a word is known before the author is: the rows' headings are its series (#230).
+        compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).assertCountEquals(0)
+        assertNoSpinnerAndNothingFocusable()
+    }
+
+    @Test
+    fun `a narrator's frame shows the name and initials, the rest grey`() {
+        show(PlayerPreview("A Reader"), narrator = true)
+
+        compose.onNodeWithTag(AuthorLoadingTags.FRAME).assertExists()
+        compose.onNodeWithText("A Reader").assertExists()
+        compose.onNodeWithText("AR").assertExists()
+        assertTrue(compose.onAllNodesWithTag(PlaceholderTags.SHAPE).fetchSemanticsNodes().isNotEmpty())
         assertNoSpinnerAndNothingFocusable()
     }
 
