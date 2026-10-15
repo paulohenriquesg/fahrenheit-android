@@ -43,8 +43,7 @@ class SharedPreferencesHandler(context: Context) {
             dateFormat = sharedPreferences.getString("date_format", null),
             lastUpdateCheck = sharedPreferences.getLong("last_update_check", 0L),
             // -1 stands for "never": SharedPreferences has no nullable Int.
-            updateSnoozeVersionCode = sharedPreferences.getInt("update_snooze_version_code", -1).takeIf { it > 0 },
-            updateSnoozeAt = sharedPreferences.getLong("update_snooze_at", -1L).takeIf { it > 0 },
+            updateIgnoredVersionCode = sharedPreferences.getInt("update_ignored_version_code", -1).takeIf { it > 0 },
             pendingInstallVersionCode = sharedPreferences.getInt("pending_install_version_code", -1).takeIf { it > 0 },
             updateCheckEnabled = sharedPreferences.getBoolean("update_check_enabled", true),
             selectedLibraryId = sharedPreferences.getString("selected_library_id", null)
@@ -61,8 +60,10 @@ class SharedPreferencesHandler(context: Context) {
             putBoolean("is_row_layout", userPreferences.isRowLayout)
             putString("date_format", userPreferences.dateFormat)
             putLong("last_update_check", userPreferences.lastUpdateCheck)
-            putInt("update_snooze_version_code", userPreferences.updateSnoozeVersionCode ?: -1)
-            putLong("update_snooze_at", userPreferences.updateSnoozeAt ?: -1L)
+            putInt("update_ignored_version_code", userPreferences.updateIgnoredVersionCode ?: -1)
+            // The one-day snooze #229 replaced: dropped wherever it was left.
+            remove("update_snooze_version_code")
+            remove("update_snooze_at")
             putInt("pending_install_version_code", userPreferences.pendingInstallVersionCode ?: -1)
             putBoolean("update_check_enabled", userPreferences.updateCheckEnabled)
             putString("selected_library_id", userPreferences.selectedLibraryId)

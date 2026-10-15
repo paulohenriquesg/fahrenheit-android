@@ -1,6 +1,8 @@
 package com.paulohenriquesg.fahrenheit.update
 
 import android.content.Context
+import android.widget.Toast
+import com.paulohenriquesg.fahrenheit.R
 import com.paulohenriquesg.fahrenheit.BuildConfig
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import kotlinx.coroutines.Dispatchers
@@ -33,13 +35,30 @@ object AppUpdates {
             fetchManifest = { fetch(MANIFEST_URL) },
             installedVersionCode = { BuildConfig.VERSION_CODE },
             language = { deviceLanguage(app) },
-            snoozeStore = PreferencesSnoozeStore(app),
-            now = System::currentTimeMillis
+            ignoreStore = PreferencesIgnoreStore(app)
         )
     }
 
     fun isEnabled(context: Context): Boolean =
         SharedPreferencesHandler(context).getUserPreferences().updateCheckEnabled
+
+    /**
+     * Gives a checked APK to Android's installer, whose screen takes over
+     * from here. Without the install permission, opens the setting instead.
+     */
+    fun handOver(context: Context, apkPath: String, versionCode: Int) {
+        if (!InstallationHelper.canInstallPackages(context)) {
+            Toast.makeText(context, context.getString(R.string.install_permission_needed), Toast.LENGTH_LONG).show()
+            InstallationHelper.openInstallPermissionSettings(context)
+            return
+        }
+        val result = InstallationHelper.installApk(context, apkPath)
+        if (result.isSuccess) {
+            recordPendingInstall(context, versionCode)
+        } else {
+            Toast.makeText(context, context.getString(R.string.update_did_not_install), Toast.LENGTH_LONG).show()
+        }
+    }
 
     /** Notes the version handed to the installer, to check next launch that it landed. */
     fun recordPendingInstall(context: Context, versionCode: Int) {

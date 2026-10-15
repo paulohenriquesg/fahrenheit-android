@@ -59,7 +59,6 @@
         <activity android:name=".search.SearchActivity" />
         <activity android:name=".author.AuthorDetailActivity" />
         <activity android:name=".group.BookGroupActivity" />
-        <activity android:name=".update.UpdateActivity" />
 
         <!-- FileProvider for APK installation -->
         <provider

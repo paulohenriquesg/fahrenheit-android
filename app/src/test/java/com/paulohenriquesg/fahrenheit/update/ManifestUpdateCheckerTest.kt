@@ -12,53 +12,50 @@ class ManifestUpdateCheckerTest {
           "versions": [ { "versionCode": 12, "versionName": "v0.0.12", "changelog": ["Fixes"] } ] }
     """.trimIndent()
 
-    private class FakeSnooze(var versionCode: Int? = null, var at: Long? = null) : SnoozeStore {
-        override fun snoozedVersionCode() = versionCode
-        override fun snoozedAt() = at
-        override fun snooze(versionCode: Int, at: Long) {
-            this.versionCode = versionCode; this.at = at
+    private class FakeIgnore(var versionCode: Int? = null) : IgnoreStore {
+        override fun ignoredVersionCode() = versionCode
+        override fun ignore(versionCode: Int) {
+            this.versionCode = versionCode
         }
     }
+
+    private fun manifest(versionCode: Int) = manifestJson.replace("12", versionCode.toString())
 
     private fun checker(
         fetch: suspend () -> String? = { manifestJson },
         installed: Int = 10,
-        snooze: SnoozeStore = FakeSnooze(),
-        now: Long = 1_000_000L
-    ) = ManifestUpdateChecker(fetch, { installed }, { "en" }, snooze) { now }
+        ignored: IgnoreStore = FakeIgnore()
+    ) = ManifestUpdateChecker(fetch, { installed }, { "en" }, ignored)
 
     @Test
-    fun `offers an update when nothing is snoozed`() = runBlocking {
+    fun `offers an update when nothing is ignored`() = runBlocking {
         assertEquals(12, checker().check()?.versionCode)
     }
 
+    // No stores nothing, so the next launch asks about the same version.
     @Test
-    fun `stays quiet for a day after the user chooses later`() = runBlocking {
-        val snooze = FakeSnooze(versionCode = 12, at = 1_000_000L)
+    fun `offers the same version again on every launch until it is ignored`() = runBlocking {
+        val ignore = FakeIgnore()
 
-        assertNull(checker(snooze = snooze, now = 1_000_000L + 23 * 3600_000L).check())
+        assertEquals(12, checker(ignored = ignore).check()?.versionCode)
+        assertEquals(12, checker(ignored = ignore).check()?.versionCode)
+        assertNull(ignore.ignoredVersionCode())
     }
 
     @Test
-    fun `asks again once the day has passed`() = runBlocking {
-        val snooze = FakeSnooze(versionCode = 12, at = 1_000_000L)
-
-        assertEquals(12, checker(snooze = snooze, now = 1_000_000L + 25 * 3600_000L).check()?.versionCode)
+    fun `an ignored version is never offered on launch again`() = runBlocking {
+        assertNull(checker(ignored = FakeIgnore(versionCode = 12)).check())
     }
 
-    // Snoozing one version must not hide the next one.
+    // Ignoring one version must not hide the next one.
     @Test
-    fun `a snooze on an older version does not hide a newer one`() = runBlocking {
-        val snooze = FakeSnooze(versionCode = 11, at = 1_000_000L)
-
-        assertEquals(12, checker(snooze = snooze, now = 1_000_000L).check()?.versionCode)
+    fun `a newer release than the ignored one is offered`() = runBlocking {
+        assertEquals(13, checker(fetch = { manifest(13) }, ignored = FakeIgnore(versionCode = 12)).check()?.versionCode)
     }
 
     @Test
-    fun `a check the user asked for ignores the snooze`() = runBlocking {
-        val snooze = FakeSnooze(versionCode = 12, at = 1_000_000L)
-
-        val result = checker(snooze = snooze, now = 1_000_000L).checkNow()
+    fun `a check the user asked for still offers an ignored version`() = runBlocking {
+        val result = checker(ignored = FakeIgnore(versionCode = 12)).checkNow()
 
         assertEquals(12, (result as CheckResult.Available).update.versionCode)
     }
@@ -90,13 +87,13 @@ class ManifestUpdateCheckerTest {
     }
 
     @Test
-    fun `choosing later records the snooze`() = runBlocking {
-        val snooze = FakeSnooze()
-        val c = checker(snooze = snooze)
+    fun `ignoring records that version`() = runBlocking {
+        val ignore = FakeIgnore()
+        val c = checker(ignored = ignore)
 
-        c.snooze(c.check()!!)
+        c.ignore(c.check()!!)
 
-        assertEquals(12, snooze.snoozedVersionCode())
-        assertEquals(1_000_000L, snooze.snoozedAt())
+        assertEquals(12, ignore.ignoredVersionCode())
+        assertNull(c.check())
     }
 }

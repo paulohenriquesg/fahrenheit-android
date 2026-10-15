@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Update Prompt</title>
+<style>
+  :root { --bg:#121212; --surface:#1E1E1E; --on:#E6E1E5; --muted:#CAC4D0; --primary:#D0BCFF; --on-primary:#381E72; --ghost:#2a2730; --card:#1f1e23; }
+  body { margin:0; background:#050506; color:var(--on); font-family:Roboto, system-ui, sans-serif; padding:32px 16px; }
+  .page { max-width:1240px; margin:0 auto; }
+  h1 { font-size:28px; margin:0 0 8px; } h2 { font-size:22px; margin:40px 0 8px; }
+  p.why { color:var(--muted); font-size:15px; line-height:1.55; max-width:920px; margin:0 0 14px; }
+  .shell { width:100%; aspect-ratio:16/9; container-type:inline-size; border-radius:12px; overflow:hidden; box-shadow:0 0 0 1px #333; }
+  .tv { position:relative; width:1920px; height:1080px; transform-origin:0 0; transform:scale(calc(100cqw / 1920px)); overflow:hidden; background:var(--bg); display:flex; }
+  .rail { width:500px; padding:46px 28px; flex:none; }
+  .ri { height:100px; border-radius:50px; display:flex; align-items:center; gap:30px; padding:0 40px; font-size:34px; margin-bottom:16px; }
+  .ri.on { background:#3a3640; }
+  .ri i { font-style:normal; width:44px; text-align:center; }
+  .main { flex:1; padding:46px 40px 0 30px; min-width:0; }
+  .h1 { font-size:58px; margin-bottom:40px; } .sh { font-size:32px; font-weight:700; margin-bottom:26px; }
+  .cards { display:flex; gap:44px; }
+  .card { width:390px; height:420px; border-radius:20px; background:var(--card); padding:34px; box-sizing:border-box; flex:none; }
+  .card .c { height:260px; border-radius:10px; }
+  .scrim { position:absolute; inset:0; background:rgba(0,0,0,.6); }
+  .dlg { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:1000px; background:#2B2930; border-radius:28px; padding:56px 60px 44px; box-shadow:0 30px 90px rgba(0,0,0,.6); }
+  .dlg h3 { font-size:44px; margin:0 0 22px; font-weight:600; }
+  .dlg p { font-size:32px; color:var(--muted); margin:0 0 50px; line-height:1.4; }
+  .btns { display:flex; align-items:center; gap:20px; }
+  .btn { font-size:30px; font-weight:600; padding:22px 40px; border-radius:40px; color:var(--on); border:3px solid transparent; }
+  .btn.text { color:var(--muted); }
+  .btn.out { border-color:#938F99; }
+  .btn.pri { background:var(--primary); color:var(--on-primary); }
+  .btn.focus { outline:5px solid #fff; outline-offset:4px; }
+  .grow { flex:1; }
+  .bar { height:14px; border-radius:7px; background:#3a3640; overflow:hidden; margin:10px 0 18px; }
+  .bar i { display:block; height:100%; width:42%; background:var(--primary); border-radius:7px; }
+  .meta { display:flex; justify-content:space-between; font-size:26px; color:var(--muted); margin-bottom:44px; }
+  .sys { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:700px; background:#fff; color:#222; border-radius:6px; overflow:hidden; box-shadow:0 30px 90px rgba(0,0,0,.6); }
+  .sys .top { padding:40px; font-size:28px; line-height:1.45; } .sys .top b { display:block; font-size:32px; margin-bottom:16px; }
+  .sys .bot { background:#3a4a50; padding:26px 40px; display:flex; justify-content:flex-end; gap:40px; font-size:28px; color:#5fd3c4; font-weight:600; }
+  .note { font-size:14px; color:var(--muted); margin-top:8px; }
+  table.cmp { border-collapse:collapse; font-size:15px; color:var(--muted); margin:8px 0 0; } table.cmp td, table.cmp th { border:1px solid #333; padding:6px 10px; text-align:left; }
+</style></head>
+<body><div class="page">
+<h1>Updates: a question over Home, not a page</h1>
+<p class="why">When a newer release is published, the app asks once on launch, in a small dialog over Home: <b>"New version! Version v0.1.1 found. Update?"</b>, with <b>Ignore</b>, <b>No</b> and <b>Yes</b>. Yes downloads it in the same dialog with a progress bar, then hands over to Android's own "install an update?" screen. No asks again on the next launch. Ignore never asks about that version again; the next release asks as usual, and Settings → Check for updates still offers an ignored version. The full-screen update page and its "Later" (a one-day snooze) go.</p>
+
+<h2>1. On launch, when a newer release exists</h2>
+<p class="why">Focus starts on <b>No</b>, so a stray OK press does nothing harmful. Right moves to Yes. Back means No.</p>
+<div class="shell"><div class="tv">
+  <div class="rail"><div class="ri on"><i>⌂</i>Home</div><div class="ri"><i>✦</i>Latest</div><div class="ri"><i>▤</i>Library</div><div class="ri" style="margin-top:50px"><i>⇄</i>Switch Library</div><div class="ri"><i>⚙</i>Settings</div></div>
+  <div class="main"><div class="h1">Home</div><div class="sh">Continue Listening</div>
+    <div class="cards"><div class="card"><div class="c" style="background:linear-gradient(150deg,#C2562E,#3A1408)"></div></div><div class="card"><div class="c" style="background:linear-gradient(150deg,#3E6FB0,#14233D)"></div></div><div class="card"><div class="c" style="background:linear-gradient(150deg,#3D6B4A,#1A301F)"></div></div></div></div>
+  <div class="scrim"></div>
+  <div class="dlg">
+    <h3>New version!</h3>
+    <p>Version v0.1.1 found. Update?</p>
+    <div class="btns"><div class="btn text">Ignore</div><div class="grow"></div><div class="btn out focus">No</div><div class="btn pri">Yes</div></div>
+  </div>
+</div></div>
+
+<h2>2. Yes: downloading, in the same dialog</h2>
+<p class="why">The dialog stays where it was and shows the download. Cancel stops it and closes the dialog (the same as No). A failed download says so in the dialog, with Retry and Close.</p>
+<div class="shell"><div class="tv">
+  <div class="rail"><div class="ri on"><i>⌂</i>Home</div><div class="ri"><i>✦</i>Latest</div><div class="ri"><i>▤</i>Library</div></div>
+  <div class="main"><div class="h1">Home</div></div>
+  <div class="scrim"></div>
+  <div class="dlg">
+    <h3>Downloading v0.1.1</h3>
+    <div class="bar"><i></i></div>
+    <div class="meta"><span>11.4 MB of 27.2 MB</span><span>42%</span></div>
+    <div class="btns"><div class="grow"></div><div class="btn out focus">Cancel</div></div>
+  </div>
+</div></div>
+
+<h2>3. Android takes over</h2>
+<p class="why">Once the download is checked against the published checksum, Android's own installer asks to install the update; existing data stays. This screen belongs to Android, not to the app.</p>
+<div class="shell"><div class="tv">
+  <div class="main" style="padding-left:80px"><div class="h1">Home</div></div>
+  <div class="scrim"></div>
+  <div class="sys"><div class="top"><b>Fahrenheit</b>Do you want to install an update to this existing application? Your existing data will not be lost.</div><div class="bot"><span>CANCEL</span><span>INSTALL</span></div></div>
+</div></div>
+
+<h2>What changes from today</h2>
+<table class="cmp">
+<tr><th></th><th>Today</th><th>This mock</th></tr>
+<tr><td>Where it asks</td><td>a full-screen "Update available" page</td><td>a dialog over Home</td></tr>
+<tr><td>Choices</td><td>Later (hides the version for a day) · Download &amp; install</td><td>Ignore (that version, for good) · No (until next launch) · Yes</td></tr>
+<tr><td>"What's new"</td><td>shown on the page</td><td>not shown in the prompt</td></tr>
+<tr><td>Download</td><td>its own page with progress and Cancel</td><td>inside the dialog, with progress and Cancel</td></tr>
+<tr><td>Settings → Check for updates</td><td>answers in its row</td><td>unchanged; it also offers an ignored version</td></tr>
+</table>
+<p class="note">Version numbers are samples.</p>
+</div></body></html>

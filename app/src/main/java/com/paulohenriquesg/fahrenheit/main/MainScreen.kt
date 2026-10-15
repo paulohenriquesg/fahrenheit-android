@@ -7,7 +7,7 @@ import com.paulohenriquesg.fahrenheit.screensaver.PlaybackListening
 import com.paulohenriquesg.fahrenheit.settings.SettingsView
 import com.paulohenriquesg.fahrenheit.settings.UpdateCheck
 import com.paulohenriquesg.fahrenheit.player.PlaybackDevice
-import com.paulohenriquesg.fahrenheit.update.UpdateActivity
+import com.paulohenriquesg.fahrenheit.update.AvailableUpdate
 import com.paulohenriquesg.fahrenheit.library.SwitchLibraryView
 import com.paulohenriquesg.fahrenheit.ui.theme.ThemeManager
 import com.paulohenriquesg.fahrenheit.BuildConfig
@@ -107,6 +107,8 @@ fun MainScreen(
     playback: Player? = null,
     /** Favourites (#180), while signed in. */
     favourites: () -> Favourites? = { null },
+    /** Settings' Install: the activity asks the update question over Home (#229). */
+    onInstallUpdate: (AvailableUpdate) -> Unit = {},
     /** Home's state, out of this composable as it is touched (#208). */
     homeModel: HomeViewModel = viewModel { HomeViewModel(ProgressStore.process, fetchPersonalizedView) },
     /** The shell's state: libraries, the view, the rail's highlight, the browse lists (#208). */
@@ -344,14 +346,12 @@ fun MainScreen(
                         onCheckUpdates = {
                             updateCheck = UpdateCheck.Checking
                             scope.launch {
-                                // Asked for, so it answers even while snoozed,
+                                // Asked for, so it offers an ignored version too,
                                 // and a failure says so.
                                 updateCheck = UpdateCheck.from(AppUpdates.checker(context).checkNow())
                             }
                         },
-                        onInstall = { update ->
-                            context.startActivity(UpdateActivity.createIntent(context, update))
-                        },
+                        onInstall = onInstallUpdate,
                         username = username,
                         server = sharedPreferencesHandler.getUserPreferences().host,
                         onSignOut = { signOut() },

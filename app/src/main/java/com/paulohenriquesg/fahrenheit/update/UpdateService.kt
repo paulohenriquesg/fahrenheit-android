@@ -3,7 +3,12 @@ package com.paulohenriquesg.fahrenheit.update
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,11 +25,10 @@ object UpdateService {
     private const val MIN_APK_SIZE = 1_000_000L // 1 MB minimum
     private const val DOWNLOAD_TIMEOUT_SECONDS = 60L
     private const val BUFFER_SIZE = 8192
+    private const val UNKNOWN_LENGTH_STEP = 256 * 1024L
 
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
-
-    private var currentDownloadJob: (() -> Unit)? = null
 
     /**
      * Download APK from the given URL to cache directory
@@ -55,71 +59,104 @@ object UpdateService {
                     .url(downloadUrl)
                     .build()
 
-                // Execute download
-                val response = client.newCall(request).execute()
-
-                if (!response.isSuccessful) {
-                    val error = "Download failed with HTTP ${response.code}"
-                    Log.e(TAG, error)
-                    _downloadState.value = DownloadState.Error(error)
-                    return@withContext Result.failure(Exception(error))
+                // Execute download. A read blocked on a stalled connection
+                // waits out the timeout: cancelling the call ends it at once.
+                val call = client.newCall(request)
+                val canceller = launch {
+                    try {
+                        awaitCancellation()
+                    } finally {
+                        call.cancel()
+                    }
                 }
-
-                val body = response.body
-
-                val contentLength = body.contentLength()
-                Log.d(TAG, "Download size: ${contentLength / 1024 / 1024} MB")
-
-                // Prepare output file
-                val apkFile = File(context.cacheDir, APK_FILE_NAME)
-                val outputStream = FileOutputStream(apkFile)
-
-                // Stream download with progress tracking
-                val inputStream = body.byteStream()
-                val buffer = ByteArray(BUFFER_SIZE)
-                var bytesRead: Long = 0
-                var lastProgress = 0
-
                 try {
-                    var read: Int
-                    while (inputStream.read(buffer).also { read = it } != -1) {
-                        outputStream.write(buffer, 0, read)
-                        bytesRead += read
+                    val response = call.execute()
 
-                        // Calculate and emit progress
-                        if (contentLength > 0) {
-                            val progress = ((bytesRead * 100) / contentLength).toInt()
-                            if (progress != lastProgress) {
-                                _downloadState.value = DownloadState.Downloading(progress)
-                                lastProgress = progress
-                                Log.d(TAG, "Download progress: $progress%")
+                    if (!response.isSuccessful) {
+                        val error = "Download failed with HTTP ${response.code}"
+                        Log.e(TAG, error)
+                        _downloadState.value = DownloadState.Error(error)
+                        return@withContext Result.failure(Exception(error))
+                    }
+
+                    val body = response.body
+
+                    val contentLength = body.contentLength()
+                    Log.d(TAG, "Download size: ${contentLength / 1024 / 1024} MB")
+
+                    // Prepare output file
+                    val apkFile = File(context.cacheDir, APK_FILE_NAME)
+                    val outputStream = FileOutputStream(apkFile)
+
+                    // Stream download with progress tracking
+                    val inputStream = body.byteStream()
+                    val buffer = ByteArray(BUFFER_SIZE)
+                    var bytesRead: Long = 0
+                    var lastProgress = 0
+                    var lastReported = 0L
+
+                    try {
+                        var read: Int
+                        while (inputStream.read(buffer).also { read = it } != -1) {
+                            // Cancel stops the download here: a blocking read does
+                            // not notice a cancelled coroutine by itself.
+                            ensureActive()
+                            outputStream.write(buffer, 0, read)
+                            bytesRead += read
+
+                            // Calculate and emit progress
+                            if (contentLength > 0) {
+                                val progress = ((bytesRead * 100) / contentLength).toInt()
+                                if (progress != lastProgress) {
+                                    _downloadState.value = DownloadState.Downloading(progress, bytesRead, contentLength)
+                                    lastProgress = progress
+                                    Log.d(TAG, "Download progress: $progress%")
+                                }
+                            } else if (bytesRead - lastReported >= UNKNOWN_LENGTH_STEP) {
+                                // No length from the server: the bytes still count.
+                                _downloadState.value = DownloadState.Downloading(0, bytesRead, 0)
+                                lastReported = bytesRead
                             }
                         }
+                    } finally {
+                        outputStream.close()
+                        inputStream.close()
                     }
+
+                    Log.d(TAG, "Download complete. File size: ${apkFile.length() / 1024 / 1024} MB")
+
+                    // Validate downloaded APK
+                    val validationResult = validateApk(context, apkFile.absolutePath, expectedSha256)
+                    if (validationResult.isFailure) {
+                        val error = validationResult.exceptionOrNull()?.message
+                            ?: "APK validation failed"
+                        Log.e(TAG, error)
+                        _downloadState.value = DownloadState.Error(error)
+                        apkFile.delete()
+                        return@withContext Result.failure(Exception(error))
+                    }
+
+                    // A Cancel during the checks: never hand this one over.
+                    ensureActive()
+                    _downloadState.value = DownloadState.Complete(apkFile.absolutePath)
+                    Log.d(TAG, "APK download and validation successful")
+                    Result.success(apkFile.absolutePath)
                 } finally {
-                    outputStream.close()
-                    inputStream.close()
+                    canceller.cancel()
                 }
 
-                Log.d(TAG, "Download complete. File size: ${apkFile.length() / 1024 / 1024} MB")
-
-                // Validate downloaded APK
-                val validationResult = validateApk(context, apkFile.absolutePath, expectedSha256)
-                if (validationResult.isFailure) {
-                    val error = validationResult.exceptionOrNull()?.message
-                        ?: "APK validation failed"
-                    Log.e(TAG, error)
-                    _downloadState.value = DownloadState.Error(error)
-                    apkFile.delete()
-                    return@withContext Result.failure(Exception(error))
-                }
-
-                // Success!
-                _downloadState.value = DownloadState.Complete(apkFile.absolutePath)
-                Log.d(TAG, "APK download and validation successful")
-                Result.success(apkFile.absolutePath)
-
+            } catch (e: CancellationException) {
+                Log.d(TAG, "Download cancelled")
+                cleanupOldApk(context)
+                _downloadState.value = DownloadState.Cancelled
+                throw e
             } catch (e: Exception) {
+                // A cancelled call fails its read: that is the cancel, not an error.
+                if (!isActive) {
+                    cleanupOldApk(context)
+                    _downloadState.value = DownloadState.Cancelled
+                    throw CancellationException("Download cancelled", e)
+                }
                 Log.e(TAG, "Download error: ${e.message}", e)
                 val error = "Download failed: ${e.message}"
                 _downloadState.value = DownloadState.Error(error)
@@ -182,17 +219,6 @@ object UpdateService {
     }
 
     /**
-     * Cancel ongoing download
-     * @param context Application context
-     */
-    fun cancelDownload(context: Context) {
-        Log.d(TAG, "Cancelling download")
-        currentDownloadJob?.invoke()
-        _downloadState.value = DownloadState.Cancelled
-        cleanupOldApk(context)
-    }
-
-    /**
      * Reset download state to Idle
      */
     fun resetState() {
@@ -217,7 +243,8 @@ object UpdateService {
  */
 sealed class DownloadState {
     object Idle : DownloadState()
-    data class Downloading(val progress: Int) : DownloadState()
+    /** [bytesTotal] is 0 when the server does not say. */
+    data class Downloading(val progress: Int, val bytesDone: Long = 0L, val bytesTotal: Long = 0L) : DownloadState()
     data class Complete(val apkPath: String) : DownloadState()
     data class Error(val message: String) : DownloadState()
     object Cancelled : DownloadState()

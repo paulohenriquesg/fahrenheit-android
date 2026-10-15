@@ -29,8 +29,8 @@ title does not move as you switch sections (#82):
 - Outside any scroller, so it stays put while the content scrolls under it.
 - Shown in every state, loading and empty included.
 
-Item titles next to a cover (detail screens and players), Login and the Update
-screen are not sections and keep their own.
+Item titles next to a cover (detail screens and players) and Login are not
+sections and keep their own.
 
 ## Focus
 
@@ -268,6 +268,16 @@ book screen and About (#137) draw Resume and Mark finished as the default TV
   by its place, "Book 2.5", or its title when the server gives no sequence.
   The focused card reads "Book 2.5 · <title>" and scrolls it (#204).
 
+## A question over Home
+
+The update question (#229, `UpdateOffer`) is a small dialog over Home, not a
+page: Ignore, No and Yes, with focus on **No** so a stray OK does nothing, and
+Back as No. What Yes starts - the download, a failure - stays in the same
+dialog, and Back there is Cancel or Close. It is a `Dialog`, its own window:
+Home's own focus requests behind it, as shelves arrive, cannot take focus
+from it. It is only asked while Home is in front (`offerOnHome`), never over
+the player.
+
 ## The player's look, on every full screen
 
 Every full screen should look like the player: a **cover or the cover wash
@@ -284,8 +294,8 @@ covers, gets a soft field in the theme's own colours.
 
 Known gaps — only the player, `AboutScreen` and Login do this today. Settings,
 the library lists (Library, Series, Collections, Authors, Narrators, Latest
-Episodes, Switch Library), Home, Stats, Search, the book, podcast, author and
-series/collection screens, and the Update screen are still a flat `background`.
+Episodes, Switch Library), Home, Stats, Search, the book, podcast, author
+and series/collection screens are still a flat `background`.
 
 ## Covers
 
@@ -328,6 +338,7 @@ palette (see `docs/mocks/README.md`).
 | `settings.html` | Settings and Switch Library as sections, the theme choice, checking for updates |
 | `stats.html` | the stats screen, before and after |
 | `podcast-actions.html` | Favourites (the Settings choice, the player's heart, the Home shelf), episode row actions, the show's Downloads panel |
+| `update-prompt.html` | the update question over Home (Ignore / No / Yes), the download in the same dialog, Android's installer |
 | `list-placeholders.html` | Home, the browse grids and Latest Episodes while they load: still grey cards in the shape of what is coming |
 | `detail-loading.html` | the book, podcast and author pages while they load: what the card showed, in place, and grey shapes for the rest |
 

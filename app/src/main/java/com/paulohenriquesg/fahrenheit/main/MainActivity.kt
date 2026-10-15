@@ -15,6 +15,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,7 +36,10 @@ import androidx.lifecycle.lifecycleScope
 import com.paulohenriquesg.fahrenheit.update.AppUpdates
 import com.paulohenriquesg.fahrenheit.update.PendingInstall
 import kotlinx.coroutines.launch
-import com.paulohenriquesg.fahrenheit.update.UpdateActivity
+import com.paulohenriquesg.fahrenheit.update.AvailableUpdate
+import com.paulohenriquesg.fahrenheit.update.UpdateDownloads
+import com.paulohenriquesg.fahrenheit.update.UpdateOffer
+import com.paulohenriquesg.fahrenheit.update.offerOnHome
 import com.paulohenriquesg.fahrenheit.utils.StartupTimeline
 
 class MainActivity : ComponentActivity() {
@@ -47,6 +51,9 @@ class MainActivity : ComponentActivity() {
      * so there is one source of truth.
      */
     private var playback by mutableStateOf<MediaController?>(null)
+
+    /** The update question over Home, from the launch check or Settings' Install (#229). */
+    private var updateOffer by mutableStateOf<AvailableUpdate?>(null)
     private val connection by lazy {
         ControllerSlot(
             connect = { Playback.connect(this) },
@@ -100,11 +107,12 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this@MainActivity, getString(R.string.update_did_not_install), Toast.LENGTH_LONG).show()
         }
 
-        // Only from here: a player screen must never be interrupted by this.
+        // Only from here, and only while Home is in front: a player screen
+        // must never be interrupted by this.
         if (AppUpdates.isEnabled(this)) {
             lifecycleScope.launch {
-                AppUpdates.checker(this@MainActivity).check()?.let { update ->
-                    startActivity(UpdateActivity.createIntent(this@MainActivity, update))
+                offerOnHome(lifecycle, check = { AppUpdates.checker(this@MainActivity).check() }) {
+                    updateOffer = it
                 }
             }
         }
@@ -123,8 +131,21 @@ class MainActivity : ComponentActivity() {
                         mainHandler::fetchLibraryItems,
                         mainHandler::fetchPersonalizedView,
                         playback = playback,
-                        favourites = mainHandler::favourites
+                        favourites = mainHandler::favourites,
+                        onInstallUpdate = { updateOffer = it }
                     )
+                    updateOffer?.let { offer ->
+                        // A different version is a new question, from the start.
+                        key(offer.versionCode) {
+                            UpdateOffer(
+                                update = offer,
+                                downloads = remember { UpdateDownloads.Service(applicationContext) },
+                                onIgnore = { AppUpdates.checker(this@MainActivity).ignore(offer) },
+                                onInstall = { AppUpdates.handOver(this@MainActivity, it, offer.versionCode) },
+                                onDone = { updateOffer = null }
+                            )
+                        }
+                    }
                 }
             }
         }

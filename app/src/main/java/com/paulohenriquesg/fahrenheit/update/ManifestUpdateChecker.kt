@@ -1,10 +1,9 @@
 package com.paulohenriquesg.fahrenheit.update
 
-/** Remembers the version the user pushed away, and when. */
-interface SnoozeStore {
-    fun snoozedVersionCode(): Int?
-    fun snoozedAt(): Long?
-    fun snooze(versionCode: Int, at: Long)
+/** Remembers the version the user chose Ignore on. */
+interface IgnoreStore {
+    fun ignoredVersionCode(): Int?
+    fun ignore(versionCode: Int)
 }
 
 /** The answer to a check the user asked for, where a failure must say so. */
@@ -17,30 +16,28 @@ sealed interface CheckResult {
 /**
  * Decides whether to offer an update, with nothing Android-specific attached.
  *
- * "Later" hides one version for a day rather than for good: a version skipped
- * forever also skips every fix in it, and the next release is a separate
- * decision.
+ * "Ignore" hides that version from the launch check for good; the next release
+ * is a separate decision and asks as usual (#229). "No" stores nothing.
  */
 class ManifestUpdateChecker(
     private val fetchManifest: suspend () -> String?,
     private val installedVersionCode: () -> Int,
     private val language: () -> String,
-    private val snoozeStore: SnoozeStore,
-    private val now: () -> Long
+    private val ignoreStore: IgnoreStore
 ) {
     /**
-     * The update to offer, or null. Quiet about failures, and respects a
-     * snooze: this is the check nobody asked for.
+     * The update to offer, or null. Quiet about failures, and passes over an
+     * ignored version: this is the check nobody asked for.
      */
     suspend fun check(): AvailableUpdate? {
         val result = fetchAndPlan() as? CheckResult.Available ?: return null
-        if (isSnoozed(result.update.versionCode)) return null
+        if (isIgnored(result.update.versionCode)) return null
         return result.update
     }
 
     /**
-     * A check the user asked for: it answers even while a snooze is running,
-     * and a failure says so rather than passing for "nothing new".
+     * A check the user asked for: it offers an ignored version too, and a
+     * failure says so rather than passing for "nothing new".
      */
     suspend fun checkNow(): CheckResult = fetchAndPlan()
 
@@ -59,15 +56,10 @@ class ManifestUpdateChecker(
         return CheckResult.Available(update)
     }
 
-    fun snooze(update: AvailableUpdate) = snoozeStore.snooze(update.versionCode, now())
+    fun ignore(update: AvailableUpdate) = ignoreStore.ignore(update.versionCode)
 
-    private fun isSnoozed(versionCode: Int): Boolean {
-        if (snoozeStore.snoozedVersionCode() != versionCode) return false
-        val at = snoozeStore.snoozedAt() ?: return false
-        return now() - at < SNOOZE_MS
-    }
-
-    private companion object {
-        const val SNOOZE_MS = 24 * 60 * 60 * 1000L
+    private fun isIgnored(versionCode: Int): Boolean {
+        val ignored = ignoreStore.ignoredVersionCode() ?: return false
+        return versionCode <= ignored
     }
 }
