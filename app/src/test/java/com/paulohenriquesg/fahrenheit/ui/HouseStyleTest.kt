@@ -92,13 +92,10 @@ class HouseStyleTest {
     /**
      * Screens whose loading state is still a bare loading line, each with the
      * issue that converts it. That lane takes its entry off. A key is a whole
-     * file, or a file and the one string it may still show. A bare spinner is
-     * beyond this rule: AuthorDetailScreen's goes in #225.
+     * file, or a file and the one string it may still show. Empty since
+     * #225 converted the last of them; a bare spinner is beyond this rule.
      */
-    private val bareLoadingAllowed = mapOf(
-        // Stats was not among #224's screens; it needs an issue of its own.
-        "com/paulohenriquesg/fahrenheit/main/BrowseViews.kt R.string.loading_stats" to "none yet"
-    )
+    private val bareLoadingAllowed = mapOf<String, String>()
 
     /** Each `R.string.loading*` [lines] use, as "<path> <string>" and its line. */
     private fun loadingTexts(path: String, lines: List<String>): List<Pair<String, Int>> {

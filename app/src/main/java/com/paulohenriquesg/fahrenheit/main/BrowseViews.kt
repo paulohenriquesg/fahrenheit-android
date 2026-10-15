@@ -308,7 +308,7 @@ fun StatsBrowseView(stats: com.paulohenriquesg.fahrenheit.api.ListeningStatsResp
             modifier = Modifier.padding(bottom = Space.gap)
         )
         when {
-            isLoading -> CenteredNote(stringResource(R.string.loading_stats))
+            isLoading -> com.paulohenriquesg.fahrenheit.stats.StatsPlaceholder()
             stats == null -> CenteredNote(stringResource(R.string.no_statistics_available))
             else -> com.paulohenriquesg.fahrenheit.stats.StatsBoard(
                 summary = com.paulohenriquesg.fahrenheit.stats.StatsSummary.of(stats)
