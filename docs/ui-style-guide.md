@@ -107,9 +107,18 @@ the first frame.
 `ui/elements/Placeholders.kt` is the one component: `PlaceholderShape`, and
 the layouts built from it - `ShelvesPlaceholder` (Home), `GridPlaceholder`
 (Library, Series, Collections, and Authors with round photos) and
-`RowsPlaceholder` (Latest Episodes). `HouseStyleTest` fails a screen that shows
-a `R.string.loading*` text; the screens not yet converted are on its
-allow-list, each with the issue that converts it.
+`RowsPlaceholder` (Latest Episodes). The book, podcast and author pages draw
+their own frame (`DetailLoading`, `AuthorStage`; #225) and Stats its board's
+shape (`StatsPlaceholder`).
+
+What is handed over travels in the intent as a `PlayerPreview` (title, line
+under it, cover URL): the player's (#223), the book and podcast pages'
+(`DetailActivity.intentFor` for a card) and the author page's, where the
+cover is the photo. A screen opened with nothing handed over draws grey
+shapes for those too, never a blank screen.
+
+`HouseStyleTest` fails a screen that shows a `R.string.loading*` text; its
+allow-list is empty since #225.
 
 ## Test ids, so a script can name things
 
