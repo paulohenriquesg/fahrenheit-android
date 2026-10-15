@@ -38,7 +38,7 @@ class PlayerPreviewTest {
 
     @Test
     fun `a preview with every field travels with the intent`() {
-        val preview = PlayerPreview("An Invented Book", kicker = "A. Writer", coverUrl = "https://abs.test/api/items/b1/cover")
+        val preview = PlayerPreview("An Invented Book", kicker = "A Series", coverUrl = "https://abs.test/api/items/b1/cover", byline = "A. Writer")
 
         assertEquals(preview, roundTrip(preview))
     }
@@ -48,6 +48,7 @@ class PlayerPreviewTest {
         assertEquals(PlayerPreview("An Invented Book"), roundTrip(PlayerPreview("An Invented Book")))
         assertEquals(PlayerPreview("T", kicker = "K"), roundTrip(PlayerPreview("T", kicker = "K")))
         assertEquals(PlayerPreview("T", coverUrl = "u"), roundTrip(PlayerPreview("T", coverUrl = "u")))
+        assertEquals(PlayerPreview("T", byline = "B"), roundTrip(PlayerPreview("T", byline = "B")))
     }
 
     @Test
@@ -58,7 +59,8 @@ class PlayerPreviewTest {
 
     @Test
     fun `a book hands over its title and author, and its cover only when it has one`() {
-        assertEquals(PlayerPreview("T", kicker = "A", coverUrl = "https://abs.test/api/items/b1/cover"), PlayerPreview.book("b1", "T", "A"))
+        // The author goes under the title, where the ready player draws it; its kicker is the series.
+        assertEquals(PlayerPreview("T", coverUrl = "https://abs.test/api/items/b1/cover", byline = "A"), PlayerPreview.book("b1", "T", "A"))
         assertEquals(PlayerPreview("T"), PlayerPreview.book("b1", "T", null, hasCover = false))
     }
 
@@ -82,7 +84,7 @@ class PlayerPreviewTest {
             "numTracks":1,"numAudioFiles":1,"numChapters":0,"duration":0.0,"size":0}"""
         )
 
-        assertEquals(PlayerPreview("An Invented Book", kicker = "An Invented Writer"), PlayerPreview.of(book))
+        assertEquals(PlayerPreview("An Invented Book", byline = "An Invented Writer"), PlayerPreview.of(book))
         assertEquals(
             "https://abs.test/api/items/pod-1/cover",
             PlayerPreview.of(book.copy(media = book.media.copy(coverPath = "/c.jpg")))?.coverUrl
@@ -112,7 +114,7 @@ class PlayerPreviewTest {
         )
 
         assertEquals(
-            PlayerPreview("An Invented Book", kicker = "An Invented Writer", coverUrl = "https://abs.test/api/items/b1/cover"),
+            PlayerPreview("An Invented Book", coverUrl = "https://abs.test/api/items/b1/cover", byline = "An Invented Writer"),
             PlayerPreview.of(item)
         )
     }
@@ -132,6 +134,6 @@ class PlayerPreviewTest {
     fun `a blank title or kicker is none`() {
         assertNull(PlayerPreview.book("b1", " ", "A"))
         assertNull(PlayerPreview.episode("p1", null, "S"))
-        assertEquals(null, PlayerPreview.book("b1", "T", " ")?.kicker)
+        assertEquals(null, PlayerPreview.book("b1", "T", " ")?.byline)
     }
 }

@@ -283,14 +283,14 @@ class PlayerActivity : ComponentActivity() {
         private const val EXTRA_START_AT = "start_at"
         private const val EXTRA_ASK_THEN_PLAY = "ask_then_play"
 
+        /** Opened by a Play from outside the player (#144): ask, then play. */
+        fun asksThenPlays(intent: Intent): Boolean = intent.getBooleanExtra(EXTRA_ASK_THEN_PLAY, false)
+
         /**
          * @param episodeId the episode to play, for a podcast; null for a book.
          * @param startAt where to start, in whole-book seconds, over the saved position (#105).
          * @param preview what the opening screen shows of it, for the loading frame (#223).
          */
-        /** Opened by a Play from outside the player (#144): ask, then play. */
-        fun asksThenPlays(intent: Intent): Boolean = intent.getBooleanExtra(EXTRA_ASK_THEN_PLAY, false)
-
         fun createIntent(
             context: Context,
             itemId: String,

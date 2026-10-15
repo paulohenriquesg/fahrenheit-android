@@ -48,6 +48,13 @@ class PlayerLoadingTest {
     }
 
     @Test
+    fun `a book's author is drawn under its title`() {
+        show(PlayerPreview("An Invented Book", byline = "An Invented Writer"))
+
+        compose.onNodeWithText("An Invented Writer").assertExists()
+    }
+
+    @Test
     fun `with no preview, placeholders hold the layout instead of Loading on black`() {
         show(null)
 

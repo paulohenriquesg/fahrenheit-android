@@ -13,31 +13,46 @@ import com.paulohenriquesg.fahrenheit.ui.elements.coverUrlOf
  * cover. Only for that frame: once the item has loaded, the player draws
  * what it loaded.
  *
+ * @param kicker above the title: an episode's show. A book's is its series,
+ *   which the opening screens do not show, so it has none here.
+ * @param byline under the title: a book's author, where the player draws it.
  * @param coverUrl the cover the opening screen asked for; null when the item
  *   has none, and the frame draws the placeholder with [title] on it.
  */
-data class PlayerPreview(val title: String, val kicker: String? = null, val coverUrl: String? = null) {
+data class PlayerPreview(
+    val title: String,
+    val kicker: String? = null,
+    val coverUrl: String? = null,
+    val byline: String? = null
+) {
 
     internal fun writeTo(intent: Intent) {
         intent.putExtra(EXTRA_TITLE, title)
         kicker?.let { intent.putExtra(EXTRA_KICKER, it) }
         coverUrl?.let { intent.putExtra(EXTRA_COVER_URL, it) }
+        byline?.let { intent.putExtra(EXTRA_BYLINE, it) }
     }
 
     companion object {
         private const val EXTRA_TITLE = "preview_title"
         private const val EXTRA_KICKER = "preview_kicker"
         private const val EXTRA_COVER_URL = "preview_cover_url"
+        private const val EXTRA_BYLINE = "preview_byline"
 
         /** Null when the intent carries none, as from a screen that knew nothing. */
         internal fun from(intent: Intent): PlayerPreview? {
             val title = intent.getStringExtra(EXTRA_TITLE) ?: return null
-            return PlayerPreview(title, intent.getStringExtra(EXTRA_KICKER), intent.getStringExtra(EXTRA_COVER_URL))
+            return PlayerPreview(
+                title,
+                intent.getStringExtra(EXTRA_KICKER),
+                intent.getStringExtra(EXTRA_COVER_URL),
+                intent.getStringExtra(EXTRA_BYLINE)
+            )
         }
 
-        /** A book: its author above the title; no cover asked for when it says it has none. */
+        /** A book: its author under the title; no cover asked for when it says it has none. */
         fun book(itemId: String, title: String?, author: String?, hasCover: Boolean = true): PlayerPreview? =
-            of(title, author, if (hasCover) coverUrlOf(itemId) else null)
+            of(title, null, if (hasCover) coverUrlOf(itemId) else null, author)
 
         /** An episode: its show above the title, and the show's cover, as the player draws it. */
         fun episode(podcastId: String, title: String?, show: String?, hasCover: Boolean = true): PlayerPreview? =
@@ -68,7 +83,9 @@ data class PlayerPreview(val title: String, val kicker: String? = null, val cove
         /** Now playing, in the rail or the bar: the title it shows. */
         fun of(entry: RailEntry): PlayerPreview? = of(entry.title, null, coverUrlOf(entry.itemId))
 
-        private fun of(title: String?, kicker: String?, coverUrl: String?): PlayerPreview? =
-            title?.takeIf { it.isNotBlank() }?.let { PlayerPreview(it, kicker?.takeIf { k -> k.isNotBlank() }, coverUrl) }
+        private fun of(title: String?, kicker: String?, coverUrl: String?, byline: String? = null): PlayerPreview? =
+            title?.takeIf { it.isNotBlank() }?.let {
+                PlayerPreview(it, kicker?.takeIf { k -> k.isNotBlank() }, coverUrl, byline?.takeIf { b -> b.isNotBlank() })
+            }
     }
 }

@@ -211,6 +211,8 @@ fun GoToPodcastButton(onClick: () -> Unit) {
  *
  * @param fadeIn start from the plain background and fade the wash in over
  *   300 ms, as the player does when it replaces its loading frame (#223).
+ *   A colour that arrives later fades in over the same 300 ms; About, which
+ *   opens over the player, keeps the slower 700 ms.
  */
 @Composable
 fun Modifier.coverWash(wash: Color?, fadeIn: Boolean = false): Modifier {

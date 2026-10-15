@@ -62,9 +62,12 @@ class PlayerWashFadeTest {
         val first = corner()
 
         compose.mainClock.advanceTimeBy(400)
+        val at400 = corner()
+        compose.mainClock.advanceTimeBy(1000)
         val settled = corner()
 
         assertTrue("opens on the plain background, not $first", near(first, background))
-        assertTrue("the wash has come in by 400 ms", !near(settled, background))
+        assertTrue("the wash has come in", !near(settled, background))
+        assertTrue("in about 300 ms: settled by 400 ms, not still at $at400", near(at400, settled))
     }
 }

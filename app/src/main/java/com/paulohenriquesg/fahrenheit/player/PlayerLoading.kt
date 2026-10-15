@@ -29,7 +29,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
@@ -148,8 +151,17 @@ fun PlayerLoading(itemId: String, preview: PlayerPreview?, animated: Boolean = t
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    GreyLine(0.7f, 14.dp)
-                    GreyLine(0.55f, 14.dp)
+                    // The byline and the chapter line's places, so the title stays put on ready.
+                    preview.byline?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    } ?: GreyLine(0.7f, 18.dp)
+                    GreyLine(0.55f, 22.dp)
                 } else {
                     GreyLine(0.4f, 14.dp)
                     GreyLine(0.9f, 32.dp)
@@ -220,11 +232,14 @@ private fun SweepBar(motion: State<Float>) {
         val width = size.width * BAND
         // From fully off the left edge to fully off the right.
         val left = -width + (size.width + width) * motion.value
-        drawRect(
-            Brush.horizontalGradient(listOf(Color.Transparent, band, Color.Transparent), startX = left, endX = left + width),
-            Offset(left.coerceAtLeast(0f), top),
-            Size((left + width).coerceAtMost(size.width) - left.coerceAtLeast(0f), barHeight)
-        )
+        // Inside the track's rounded ends.
+        clipPath(Path().apply { addRoundRect(RoundRect(0f, top, size.width, top + barHeight, radius)) }) {
+            drawRect(
+                Brush.horizontalGradient(listOf(Color.Transparent, band, Color.Transparent), startX = left, endX = left + width),
+                Offset(left, top),
+                Size(width, barHeight)
+            )
+        }
     }
 }
 
