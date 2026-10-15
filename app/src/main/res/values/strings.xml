@@ -134,7 +134,6 @@
     <string name="login_error_server">The server could not sign you in (error %1$d). Try again in a moment.</string>
     <string name="login_error_unexpected">Signing in did not work. Try again.</string>
     <string name="login_error_unusable_session">Signed in, but the server address could not be used. Check the address.</string>
-    <string name="narrators_view_coming_soon">Narrators view - Coming soon</string>
     <string name="narrators">Narrators</string>
     <string name="no_narrators_found">No narrators found</string>
     <string name="person_continue">Continue %s</string>

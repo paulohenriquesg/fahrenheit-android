@@ -4,6 +4,8 @@ import com.paulohenriquesg.fahrenheit.player.Playback
 import com.paulohenriquesg.fahrenheit.player.ControllerSlot
 import androidx.core.content.ContextCompat
 import androidx.media3.session.MediaController
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import com.paulohenriquesg.fahrenheit.progress.ProgressResync
 import com.paulohenriquesg.fahrenheit.FahrenheitApplication
@@ -43,6 +45,30 @@ import com.paulohenriquesg.fahrenheit.update.offerOnHome
 import com.paulohenriquesg.fahrenheit.utils.StartupTimeline
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        private const val EXTRA_SECTION = "section"
+
+        /**
+         * Back to this screen on a section, chosen from the side menu on
+         * another screen (#230): the screen there is is brought back, with
+         * what was opened over it closed, rather than a second one started.
+         */
+        fun sectionIntent(context: Context, sectionId: String): Intent =
+            Intent(context, MainActivity::class.java)
+                .putExtra(EXTRA_SECTION, sectionId)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+        fun sectionOf(intent: Intent): String? = intent.getStringExtra(EXTRA_SECTION)
+    }
+
+    /** A section asked for by [sectionIntent], until the screen has opened it. */
+    private var openSection by mutableStateOf<String?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        sectionOf(intent)?.let { openSection = it }
+    }
+
     private lateinit var mainHandler: MainHandler
 
     /**
@@ -96,6 +122,7 @@ class MainActivity : ComponentActivity() {
         // The application's context: Home's ViewModel keeps this handler's
         // fetches, and outlives the activity across a recreation.
         mainHandler = MainHandler(applicationContext)
+        openSection = sectionOf(intent)
 
         // Use SharedPreferencesHandler to retrieve user preferences
         val sharedPreferencesHandler = SharedPreferencesHandler(this)
@@ -132,7 +159,9 @@ class MainActivity : ComponentActivity() {
                         mainHandler::fetchPersonalizedView,
                         playback = playback,
                         favourites = mainHandler::favourites,
-                        onInstallUpdate = { updateOffer = it }
+                        onInstallUpdate = { updateOffer = it },
+                        openSection = openSection,
+                        onSectionOpened = { openSection = null }
                     )
                     updateOffer?.let { offer ->
                         // A different version is a new question, from the start.

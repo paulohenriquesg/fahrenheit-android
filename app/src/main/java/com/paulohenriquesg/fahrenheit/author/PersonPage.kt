@@ -261,7 +261,7 @@ private fun countLine(page: PersonPage): String {
 
 /** A count grouped as the device writes numbers, as `SwitchLibraryView` does (#115). */
 @Composable
-private fun count(@PluralsRes id: Int, n: Int, vararg before: Any): String {
+internal fun count(@PluralsRes id: Int, n: Int, vararg before: Any): String {
     val locale = LocalConfiguration.current.locales[0]
     val formatted = remember(locale, n) { NumberFormat.getIntegerInstance(locale).format(n) }
     return pluralStringResource(id, n, *before, formatted)

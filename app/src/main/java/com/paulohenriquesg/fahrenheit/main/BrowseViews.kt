@@ -242,6 +242,75 @@ fun AuthorsBrowseView(
     }
 }
 
+/**
+ * The Narrators section (#230): a grid like Authors, with round initials - the
+ * server keeps no narrator photos. A narrator opens their page.
+ */
+@Composable
+fun NarratorsBrowseView(
+    libraryId: String?,
+    load: suspend (String) -> Result<List<com.paulohenriquesg.fahrenheit.api.Narrator>>? = { id ->
+        ApiClient.getBrowseApi()?.let { BrowseRepository(it).narrators(id) }
+    }
+) {
+    val context = LocalContext.current
+    var narrators by remember { mutableStateOf<List<com.paulohenriquesg.fahrenheit.api.Narrator>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(libraryId) {
+        if (libraryId != null) {
+            load(libraryId)
+                ?.onSuccess { narrators = it.sortedWith(Alphabetical.byName { n -> n.name }) }
+                ?.onFailure { android.util.Log.e("NarratorsBrowseView", "Failure: ${it.message}", it) }
+        }
+        isLoading = false
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = Space.screenH, vertical = Space.gap)
+    ) {
+        ScreenTitle(
+            text = stringResource(R.string.narrators),
+            modifier = Modifier.padding(bottom = Space.gap)
+        )
+
+        if (isLoading) {
+            GridPlaceholder(GridPlaceholderLook.People)
+        } else if (narrators.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.no_narrators_found),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 180.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                val narratorKeys = StableKeys.of(narrators) { n -> n.id }
+                items(narrators.size, key = { narratorKeys[it] }) { index ->
+                    val narrator = narrators[index]
+                    com.paulohenriquesg.fahrenheit.ui.elements.NarratorCard(
+                        narrator = narrator,
+                        onClick = {
+                            libraryId ?: return@NarratorCard
+                            context.startActivity(
+                                com.paulohenriquesg.fahrenheit.author.AuthorDetailActivity.narratorIntent(context, libraryId, narrator.name)
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun CollectionsBrowseView(collectionsList: List<com.paulohenriquesg.fahrenheit.api.Collection>, isLoading: Boolean) {
