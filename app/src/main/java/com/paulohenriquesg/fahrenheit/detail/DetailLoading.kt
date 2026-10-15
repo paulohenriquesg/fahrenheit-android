@@ -32,6 +32,13 @@ import com.paulohenriquesg.fahrenheit.player.PlayerPreview
 import com.paulohenriquesg.fahrenheit.podcast.PODCAST_COLUMN_GAP
 import com.paulohenriquesg.fahrenheit.podcast.PODCAST_COLUMN_WIDTH
 import com.paulohenriquesg.fahrenheit.podcast.PodcastSlots
+import com.paulohenriquesg.fahrenheit.podcast.FactsSlot
+import com.paulohenriquesg.fahrenheit.podcast.FeedCheckSlot
+import com.paulohenriquesg.fahrenheit.podcast.DownloadsSlot
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.paulohenriquesg.fahrenheit.ui.components.BookColumn
 import com.paulohenriquesg.fahrenheit.ui.components.TITLE_TAG
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
@@ -56,6 +63,7 @@ object DetailLoadingTags {
  * with the item and the screen's margin.
  *
  * @param podcast which page's frame to draw before the item says what it is.
+ * @param slots the admin's buttons a podcast's frame keeps places for.
  */
 @Composable
 fun DetailStage(
@@ -64,6 +72,7 @@ fun DetailStage(
     podcast: Boolean,
     item: LibraryItemResponse?,
     failed: Boolean,
+    slots: PodcastSlots = PodcastSlots.NONE,
     ready: @Composable (LibraryItemResponse, PaddingValues) -> Unit
 ) {
     when {
@@ -75,7 +84,7 @@ fun DetailStage(
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(16.dp)
         )
-        item == null -> DetailBody { margin -> DetailLoading(itemId, preview, podcast, margin) }
+        item == null -> DetailBody { margin -> DetailLoading(itemId, preview, podcast, margin, slots) }
         else -> DetailBody { margin -> ready(item, margin) }
     }
 }
@@ -84,7 +93,7 @@ fun DetailStage(
 @Composable
 fun DetailLoading(itemId: String, preview: PlayerPreview?, podcast: Boolean, margin: PaddingValues, slots: PodcastSlots = PodcastSlots.NONE) {
     val frame = Modifier.fillMaxSize().padding(margin).testTag(DetailLoadingTags.FRAME)
-    if (podcast) PodcastFrame(itemId, preview, frame) else BookFrame(itemId, preview, frame)
+    if (podcast) PodcastFrame(itemId, preview, slots, frame) else BookFrame(itemId, preview, frame)
 }
 
 /** As `BookOverview` lays a book out: the column, then the description over the series. */
@@ -118,19 +127,31 @@ private fun BookFrame(itemId: String, preview: PlayerPreview?, modifier: Modifie
     }
 }
 
-/** As `PodcastPage` lays a show out: the column, then the note, the tabs and the episodes. */
+/**
+ * As `PodcastPage` lays a show out: the column, then the note, the tabs and the
+ * episodes. The column is the page's own, place for place - the byline a line
+ * high, Resume, an admin's buttons where [slots] keeps them, the facts' three
+ * lines - so the cover gives way just as much and the name does not move.
+ */
 @Composable
-private fun PodcastFrame(itemId: String, preview: PlayerPreview?, modifier: Modifier) {
+private fun PodcastFrame(itemId: String, preview: PlayerPreview?, slots: PodcastSlots, modifier: Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(PODCAST_COLUMN_GAP)) {
-        Column(Modifier.width(PODCAST_COLUMN_WIDTH).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            // The cover gives way, as on the page.
-            BoxWithConstraints(Modifier.weight(1f, fill = false)) {
-                Cover(itemId, preview, min(maxWidth, maxHeight))
+        Column(Modifier.width(PODCAST_COLUMN_WIDTH).fillMaxHeight()) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                BoxWithConstraints(Modifier.weight(1f, fill = false)) {
+                    Cover(itemId, preview, min(maxWidth, maxHeight))
+                }
+                Title(preview, maxLines = 2)
+                Box(Modifier.clearAndSetSemantics {}, contentAlignment = Alignment.CenterStart) {
+                    Text(" ", style = MaterialTheme.typography.bodyMedium, maxLines = 1, modifier = Modifier.alpha(0f))
+                    PlaceholderShape(Modifier.fillMaxWidth(0.6f).height(14.dp))
+                }
+                Spacer(Modifier.height(6.dp))
+                PlaceholderShape(Modifier.fillMaxWidth().height(BUTTON_HEIGHT))
+                if (slots.feedCheck) FeedCheckSlot(grey = true)
+                if (slots.downloads) DownloadsSlot(grey = true)
             }
-            Title(preview, maxLines = 2)
-            PlaceholderShape(Modifier.fillMaxWidth(0.6f).height(14.dp))
-            Spacer(Modifier.height(6.dp))
-            ButtonPlaceholders()
+            Box(Modifier.padding(top = 10.dp)) { FactsSlot() }
         }
         Column(Modifier.weight(1f).fillMaxHeight().clipToBounds(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PlaceholderShape(Modifier.fillMaxWidth().height(96.dp))

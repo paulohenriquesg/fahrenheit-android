@@ -29,14 +29,17 @@ sealed interface FeedCheckState {
  *
  * Says how much it will fetch before it fetches it: every episode costs disk
  * on the server.
+ *
+ * @param enabled false only for an unseen copy that keeps its place (#225).
  */
 @Composable
-fun FeedCheckButton(state: FeedCheckState, onCheck: () -> Unit, modifier: Modifier = Modifier) {
-    // Never disabled: a disabled button gives up focus, and on a TV the
-    // focus would jump somewhere the viewer did not put it. A press during
-    // a check is ignored instead.
+fun FeedCheckButton(state: FeedCheckState, onCheck: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    // Never disabled where it is seen: a disabled button gives up focus, and
+    // on a TV the focus would jump somewhere the viewer did not put it. A
+    // press during a check is ignored instead.
     Button(
         onClick = { if (state != FeedCheckState.Checking) onCheck() },
+        enabled = enabled,
         modifier = modifier.testTag(FEED_CHECK_TAG)
     ) {
         Column {

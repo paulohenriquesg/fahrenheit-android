@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -128,6 +129,7 @@ fun PodcastPage(
         Row(Modifier.fillMaxSize().padding(margin), horizontalArrangement = Arrangement.spacedBy(PODCAST_COLUMN_GAP)) {
             LeftColumn(
                 state = state,
+                reserve = reserve,
                 primary = Modifier.focusRequester(primaryFocus),
                 downloads = Modifier.focusRequester(downloadsButton),
                 onPrimary = onPrimary,
@@ -199,6 +201,7 @@ fun PodcastPage(
 @Composable
 private fun LeftColumn(
     state: PodcastUiState,
+    reserve: PodcastSlots,
     primary: Modifier,
     downloads: Modifier,
     onPrimary: () -> Unit,
@@ -238,34 +241,49 @@ private fun LeftColumn(
             }
             state.feedCheck?.let { FeedCheckButton(state = it, onCheck = onCheckFeed) }
             state.autoDownloads?.let { settings ->
-                Button(onClick = onDownloads, modifier = downloads.testTag(PODCAST_DOWNLOADS_TAG)) {
-                    Icon(Icons.Outlined.Download, contentDescription = null, tint = LocalContentColor.current, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Column {
-                        Text("Automatic downloads", maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            settings.summary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = LocalContentColor.current.copy(alpha = 0.8f),
-                            maxLines = 1
-                        )
-                    }
+                DownloadsButton(settings.summary, onClick = onDownloads, modifier = downloads.testTag(PODCAST_DOWNLOADS_TAG))
+            }
+            // Places the loading frame kept for an admin's buttons this show
+            // turned out not to need: kept here too, unseen, at the end, so
+            // the cover and name do not move (#225).
+            if (reserve.feedCheck && state.feedCheck == null) FeedCheckSlot(grey = false)
+            if (reserve.downloads && state.autoDownloads == null) DownloadsSlot(grey = false)
+        }
+        // At least three lines' height, as the loading frame keeps, with the facts at the bottom.
+        Box(Modifier.padding(top = 10.dp)) {
+            FactsSlot()
+            Column(
+                Modifier.align(Alignment.BottomStart).testTag(PODCAST_FACTS_TAG),
+                verticalArrangement = Arrangement.spacedBy(FACT_SPACING)
+            ) {
+                state.screen.facts.forEach { fact ->
+                    Text(
+                        fact.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (fact.warn) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
-        Column(
-            Modifier.padding(top = 10.dp).testTag(PODCAST_FACTS_TAG),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            state.screen.facts.forEach { fact ->
-                Text(
-                    fact.text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (fact.warn) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+    }
+}
+
+/** Automatic downloads (#182), with how they are set as its second line. */
+@Composable
+internal fun DownloadsButton(summary: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    Button(onClick = onClick, enabled = enabled, modifier = modifier) {
+        Icon(Icons.Outlined.Download, contentDescription = null, tint = LocalContentColor.current, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(8.dp))
+        Column {
+            Text("Automatic downloads", maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                summary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = LocalContentColor.current.copy(alpha = 0.8f),
+                maxLines = 1
+            )
         }
     }
 }

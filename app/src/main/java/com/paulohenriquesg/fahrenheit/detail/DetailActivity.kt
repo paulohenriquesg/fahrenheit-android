@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.collectAsState
 import com.paulohenriquesg.fahrenheit.podcast.PodcastViewModel
 import com.paulohenriquesg.fahrenheit.podcast.PodcastPage
+import com.paulohenriquesg.fahrenheit.podcast.PodcastSlots
 import com.paulohenriquesg.fahrenheit.favourites.Favourites
 import com.paulohenriquesg.fahrenheit.favourites.FavouritesChoice
 import com.paulohenriquesg.fahrenheit.favourites.LibraryFavourites
@@ -203,10 +204,12 @@ class DetailActivity : ComponentActivity() {
                 context.startActivity(PlayerActivity.reopenIntent(context, it))
             }
         }
-        DetailStage(itemId, preview, podcast, itemDetail, loadFailed) { item, margin ->
+        // The role kept with the session: an admin's buttons keep their places from the first frame.
+        val slots = remember { PodcastSlots.of(SharedPreferencesHandler(context.applicationContext).getSessionRole()) }
+        DetailStage(itemId, preview, podcast, itemDetail, loadFailed, slots) { item, margin ->
             val isBook = item.mediaType != "podcast"
             if (!isBook) {
-                PodcastEpisodes(itemId, item, margin, nowPlaying = nowPlaying)
+                PodcastEpisodes(itemId, item, margin, slots, nowPlaying = nowPlaying)
             } else {
                 val bookProgress = progress[ProgressKey(itemId, null)]
                 BookDetailView(
@@ -253,6 +256,7 @@ class DetailActivity : ComponentActivity() {
         itemId: String,
         item: LibraryItemResponse,
         margin: PaddingValues,
+        slots: PodcastSlots,
         nowPlaying: @Composable () -> Unit
     ) {
         val context = LocalContext.current
@@ -311,7 +315,8 @@ class DetailActivity : ComponentActivity() {
             onDownloadsClosed = model::downloadsSeen,
             onFavourite = model::toggleFavourite,
             date = { row -> EpisodeDate.of(row.publishedAt, now, serverFormat) },
-            nowPlaying = nowPlaying
+            nowPlaying = nowPlaying,
+            reserve = slots
         )
     }
 
