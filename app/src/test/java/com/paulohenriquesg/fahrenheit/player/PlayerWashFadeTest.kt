@@ -42,7 +42,8 @@ class PlayerWashFadeTest {
         val view = compose.activity.window.decorView
         val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         compose.runOnUiThread { view.draw(Canvas(bitmap)) }
-        return Color(bitmap.getPixel(view.width / 2, view.height / 4))
+        // The top-right margin: nothing is drawn there but the wash.
+        return Color(bitmap.getPixel(view.width - 20, 20))
     }
 
     private fun near(a: Color, b: Color) =

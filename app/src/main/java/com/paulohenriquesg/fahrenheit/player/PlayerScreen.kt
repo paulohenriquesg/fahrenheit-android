@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -77,24 +78,23 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .then(washed)
-                .padding(horizontal = 60.dp, vertical = 32.dp),
-            verticalArrangement = Arrangement.Center
+                .then(PlayerLayout.padding),
+            verticalArrangement = Arrangement.Top
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(36.dp)
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(PlayerLayout.coverGap)
             ) {
-                CoverImage(itemId = nowPlaying.itemId, contentDescription = nowPlaying.title, size = 250.dp)
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    nowPlaying.kicker?.let {
-                        Text(
-                            text = it.uppercase(),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                CoverImage(itemId = nowPlaying.itemId, contentDescription = nowPlaying.title, size = PlayerLayout.cover)
+                Column(modifier = PlayerLayout.textColumn(this), verticalArrangement = Arrangement.spacedBy(PlayerLayout.lineGap)) {
+                    // Its line is kept when there is none, so the title never moves (#223).
+                    Text(
+                        text = nowPlaying.kicker?.uppercase().orEmpty(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     MarqueeText(
                         text = nowPlaying.title,
                         isFocused = titleFocused,
@@ -240,3 +240,21 @@ fun Modifier.coverWash(wash: Color?, fadeIn: Boolean = false): Modifier {
 
 private const val WASH_FADE_IN_MS = 300
 private const val WASH_LATE_MS = 700
+
+/**
+ * Where the player puts things, shared by the loading frame and the loaded
+ * player so nothing moves when one replaces the other (#223): anchored at a
+ * fixed top rather than centred, so whatever the loaded item adds - a
+ * series above the title, a book's second bar, an episode's "Up next" -
+ * grows downward, and the text beside the cover starts at a fixed inset from
+ * its top. The top is where a typical loaded player sat when it was centred.
+ */
+internal object PlayerLayout {
+    val cover = 250.dp
+    val coverGap = 36.dp
+    val lineGap = 8.dp
+    val padding = Modifier.padding(start = 60.dp, end = 60.dp, top = 56.dp, bottom = 32.dp)
+
+    /** Beside the cover: the rest of the row, from a fixed inset below the cover's top. */
+    fun textColumn(row: RowScope): Modifier = with(row) { Modifier.weight(1f).padding(top = 28.dp) }
+}

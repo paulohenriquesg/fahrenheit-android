@@ -104,20 +104,20 @@ fun PlayerLoading(itemId: String, preview: PlayerPreview?, animated: Boolean = t
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 60.dp, vertical = 32.dp)
+            .then(PlayerLayout.padding)
             .testTag(PlayerLoadingTags.FRAME),
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(36.dp)
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(PlayerLayout.coverGap)
         ) {
             if (preview != null) {
                 // The opening screen's own request: same URL, so Coil may already hold it.
                 CoverImage(
                     itemId = itemId,
                     contentDescription = preview.title,
-                    size = COVER,
+                    size = PlayerLayout.cover,
                     title = preview.title,
                     hasCover = preview.coverUrl != null,
                     url = preview.coverUrl
@@ -125,7 +125,7 @@ fun PlayerLoading(itemId: String, preview: PlayerPreview?, animated: Boolean = t
             } else {
                 Box(
                     modifier = Modifier
-                        .size(COVER)
+                        .size(PlayerLayout.cover)
                         .background(CoverPlaceholderTone.of(MaterialTheme.colorScheme))
                         .testTag(PlayerLoadingTags.COVER_PLACEHOLDER),
                     contentAlignment = Alignment.Center
@@ -133,17 +133,16 @@ fun PlayerLoading(itemId: String, preview: PlayerPreview?, animated: Boolean = t
                     Text("♪", style = MaterialTheme.typography.displayLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = PlayerLayout.textColumn(this), verticalArrangement = Arrangement.spacedBy(PlayerLayout.lineGap)) {
                 if (preview != null) {
-                    preview.kicker?.let {
-                        Text(
-                            text = it.uppercase(),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    // The kicker's line, kept when empty as the player keeps it.
+                    Text(
+                        text = preview.kicker?.uppercase().orEmpty(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Text(
                         text = preview.title,
                         style = MaterialTheme.typography.headlineLarge,
@@ -187,8 +186,6 @@ fun PlayerLoading(itemId: String, preview: PlayerPreview?, animated: Boolean = t
         }
     }
 }
-
-private val COVER = 250.dp
 
 /** One clock for the sweep and the spinner, 0..1 each lap; still at 0.3 when not [animated]. */
 @Composable
