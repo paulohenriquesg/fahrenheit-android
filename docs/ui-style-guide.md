@@ -320,6 +320,7 @@ palette (see `docs/mocks/README.md`).
 | `stats.html` | the stats screen, before and after |
 | `podcast-actions.html` | Favourites (the Settings choice, the player's heart, the Home shelf), episode row actions, the show's Downloads panel |
 | `list-placeholders.html` | Home, the browse grids and Latest Episodes while they load: still grey cards in the shape of what is coming |
+| `detail-loading.html` | the book, podcast and author pages while they load: what the card showed, in place, and grey shapes for the rest |
 
 ## Colour
 
