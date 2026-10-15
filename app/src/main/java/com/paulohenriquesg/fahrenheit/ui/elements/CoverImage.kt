@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.ui.elements
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -88,18 +89,7 @@ private fun FetchedCover(url: String?, contentDescription: String?, size: Dp, ti
     val sidePx = with(LocalDensity.current) { size.roundToPx() }
     // The token is a key: a screen open past its hour asks again with the new one.
     val token = ApiClient.getToken()
-    val request = remember(url, sidePx, token) {
-        ImageRequest.Builder(context)
-            .data(url)
-            .addHeader("Authorization", "Bearer ${token ?: ""}")
-            // Decoded whole at the size drawn: the painter would otherwise wait
-            // for a draw to learn its size, and Scale.FIT keeps a wide cover
-            // whole for the fitted layer.
-            .size(sidePx)
-            .scale(Scale.FIT)
-            .crossfade(true)
-            .build()
-    }
+    val request = remember(url, sidePx, token) { coverRequest(context, url, sidePx, token) }
     // One painter drawn twice: two AsyncImages would fetch the cover twice.
     val painter = rememberAsyncImagePainter(request)
 
@@ -140,6 +130,21 @@ private fun FetchedCover(url: String?, contentDescription: String?, size: Dp, ti
             .then(if (painter.state is AsyncImagePainter.State.Success) Modifier.testTag(CoverTags.LOADED) else Modifier)
     )
 }
+
+internal fun coverRequest(context: Context, url: String?, sidePx: Int, token: String?): ImageRequest =
+    ImageRequest.Builder(context)
+        .data(url)
+        .addHeader("Authorization", "Bearer ${token ?: ""}")
+        // Decoded whole at the size drawn: the painter would otherwise wait
+        // for a draw to learn its size, and Scale.FIT keeps a wide cover
+        // whole for the fitted layer.
+        .size(sidePx)
+        .scale(Scale.FIT)
+        // Another screen's copy, at its own size, stands in until this size is
+        // decoded: the memory cache serves only the size asked for (#225).
+        .placeholderMemoryCacheKey(url)
+        .crossfade(true)
+        .build()
 
 /** As the web client judges it: within 15% of square needs no backdrop. */
 private fun Size.isNearlySquare(): Boolean =

@@ -39,7 +39,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import androidx.compose.ui.text.TextLayoutResult
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Rule
+import android.os.Looper
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.paulohenriquesg.fahrenheit.detail.DetailLoading
+import com.paulohenriquesg.fahrenheit.player.PlayerPreview
+import org.robolectric.Shadows.shadowOf
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -118,6 +126,38 @@ class PodcastPageTest {
         }
         compose.waitForIdle()
     }
+
+    // #225: the loading frame keeps the cover and name where the page puts them.
+    @Test
+    // Only for a listener: an admin's two more buttons depend on the server
+    // (the user's role, the feed), which the frame drawn before it cannot know,
+    // and under them the cover gives way.
+    fun `the cover and name do not move when the loading frame gives way to the page`() = assertFrameHolds(state(admin = false, settings = null))
+
+    private fun assertFrameHolds(page: PodcastUiState) {
+        var ready by mutableStateOf(false)
+        compose.setContent {
+            FahrenheitTheme {
+                if (ready) {
+                    PodcastPage(page, margin, {}, {}, {}, {}, { _, _ -> }, {}, {}, {})
+                } else {
+                    DetailLoading("p1", PlayerPreview("The Show", coverUrl = "https://abs.test/api/items/p1/cover"), podcast = true, margin = margin)
+                }
+            }
+        }
+        compose.waitForIdle()
+        val title = compose.onNodeWithText("The Show").getUnclippedBoundsInRoot()
+        val cover = compose.onNodeWithContentDescription("The Show").getUnclippedBoundsInRoot()
+
+        compose.runOnIdle { ready = true }
+        compose.waitForIdle()
+
+        assertEquals(title.top, compose.onNodeWithText("The Show").getUnclippedBoundsInRoot().top)
+        assertEquals(cover, compose.onNodeWithContentDescription("The Show").getUnclippedBoundsInRoot())
+    }
+
+    @After
+    fun drain() = shadowOf(Looper.getMainLooper()).idle()
 
     private fun press(tag: String) {
         compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.OnClick)

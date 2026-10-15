@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.ui.elements
 
+import android.content.Context
 import androidx.compose.foundation.layout.Box
 import com.paulohenriquesg.fahrenheit.R
 import androidx.compose.ui.res.stringResource
@@ -23,6 +24,15 @@ import com.paulohenriquesg.fahrenheit.api.ApiClient
 /** Where an author's photo is fetched: one URL, Coil's memory-cache key, as [coverUrlOf] for covers. */
 fun authorPhotoUrlOf(authorId: String): String? = ApiClient.generateFullUrl("/api/authors/$authorId/image")
 
+internal fun authorPhotoRequest(context: Context, url: String?, token: String?): ImageRequest =
+    ImageRequest.Builder(context)
+        .data(url)
+        .addHeader("Authorization", "Bearer ${token ?: ""}")
+        // The Authors card's smaller copy stands in while the page's loads (#225).
+        .placeholderMemoryCacheKey(url)
+        .crossfade(true)
+        .build()
+
 @Composable
 fun AuthorImage(
     authorId: String,
@@ -40,11 +50,7 @@ fun AuthorImage(
             .height(size)
     ) {
         AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(imageUrl)
-                .addHeader("Authorization", "Bearer ${ApiClient.getToken() ?: ""}")
-                .crossfade(true)
-                .build(),
+            model = authorPhotoRequest(context, imageUrl, ApiClient.getToken()),
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
             modifier = Modifier
