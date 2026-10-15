@@ -28,7 +28,7 @@ fun LibraryItemsRow(libraryItems: List<LibraryItem>, listState: LazyListState) {
         items(libraryItems.size, key = { keys[it] }) { index ->
             val item = libraryItems[index]
             LibraryItemCard(item) { clickedItem ->
-                val intent = DetailActivity.createIntent(context, clickedItem.id)
+                val intent = DetailActivity.intentFor(context, clickedItem)
                 context.startActivity(intent)
             }
         }

@@ -1,5 +1,6 @@
 package com.paulohenriquesg.fahrenheit.detail
 
+import androidx.activity.ComponentActivity
 import androidx.test.core.app.ApplicationProvider
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.ApiClient
@@ -19,7 +20,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 
 /**
  * What the opening screen hands the book, podcast and author pages for their
@@ -119,6 +122,18 @@ class DetailPreviewTest {
 
         assertEquals(PlayerPreview("An Invented Show", coverUrl = "https://abs.test/api/items/p1/cover"), DetailActivity.previewOf(intent))
         assertTrue(DetailActivity.podcastOf(intent))
+    }
+
+    @Test
+    fun `leaving the player for the podcast hands over the show it was playing`() {
+        // Any Activity will do as the player here: the real one is not built under Robolectric.
+        val player = Robolectric.buildActivity(ComponentActivity::class.java).create().get()
+
+        PlayerActivity.leaveForPodcast(player, "p1", "An Invented Show")
+
+        val started = shadowOf(player).nextStartedActivity
+        assertEquals("An Invented Show", DetailActivity.previewOf(started)?.title)
+        assertTrue(DetailActivity.podcastOf(started))
     }
 
     @Test

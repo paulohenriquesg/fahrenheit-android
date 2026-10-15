@@ -17,6 +17,7 @@ import com.paulohenriquesg.fahrenheit.group.BookGroupActivity
 import com.paulohenriquesg.fahrenheit.player.PlayerActivity
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -87,6 +88,9 @@ class HomeShelfPressTest {
 
         assertEquals(DetailActivity::class.java.name, started.component?.className)
         assertEquals("pod-1", started.getStringExtra("item_id"))
+        // #225: the card's name, for the podcast page's loading frame.
+        assertEquals("An Invented Show", DetailActivity.previewOf(started)?.title)
+        assertTrue(DetailActivity.podcastOf(started))
     }
 
     @Test
@@ -95,6 +99,9 @@ class HomeShelfPressTest {
 
         assertEquals(DetailActivity::class.java.name, started.component?.className)
         assertEquals("b1", started.getStringExtra("item_id"))
+        // #225: the card's title, for the book page's loading frame.
+        assertEquals("An Invented Book", DetailActivity.previewOf(started)?.title)
+        assertFalse(DetailActivity.podcastOf(started))
     }
 
     @Test
@@ -117,6 +124,8 @@ class HomeShelfPressTest {
 
         assertEquals(DetailActivity::class.java.name, started.component?.className)
         assertEquals("pod-1", started.getStringExtra("item_id"))
+        assertEquals("An Invented Show", DetailActivity.previewOf(started)?.title)
+        assertTrue(DetailActivity.podcastOf(started))
     }
 
     @Test
@@ -130,6 +139,8 @@ class HomeShelfPressTest {
 
         assertEquals(AuthorDetailActivity::class.java.name, started.component?.className)
         assertEquals("a1", started.getStringExtra("author_id"))
+        // #225: the card's name, for the author page's loading frame.
+        assertEquals("An Invented Writer", AuthorDetailActivity.previewOf(started)?.title)
     }
 
     @Test

@@ -230,7 +230,9 @@ fun AuthorsBrowseView(
                     com.paulohenriquesg.fahrenheit.ui.elements.AuthorCard(
                         author = author,
                         onClick = {
-                            val intent = com.paulohenriquesg.fahrenheit.author.AuthorDetailActivity.createIntent(context, author.id)
+                            val intent = com.paulohenriquesg.fahrenheit.author.AuthorDetailActivity.createIntent(
+                                context, author.id, com.paulohenriquesg.fahrenheit.player.PlayerPreview.author(author)
+                            )
                             context.startActivity(intent)
                         }
                     )
