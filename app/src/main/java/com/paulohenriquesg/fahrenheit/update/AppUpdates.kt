@@ -33,8 +33,7 @@ object AppUpdates {
             fetchManifest = { fetch(MANIFEST_URL) },
             installedVersionCode = { BuildConfig.VERSION_CODE },
             language = { deviceLanguage(app) },
-            snoozeStore = PreferencesSnoozeStore(app),
-            now = System::currentTimeMillis
+            ignoreStore = PreferencesIgnoreStore(app)
         )
     }
 

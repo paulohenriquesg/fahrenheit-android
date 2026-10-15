@@ -14,9 +14,8 @@ data class UserPreferences(
     /** How the server writes dates, from the login response. */
     val dateFormat: String? = null,
     val lastUpdateCheck: Long = 0L,
-    /** Version the user pushed away, and when: it stays quiet for a day. */
-    val updateSnoozeVersionCode: Int? = null,
-    val updateSnoozeAt: Long? = null,
+    /** Version the user chose Ignore on: the launch check never offers it again. */
+    val updateIgnoredVersionCode: Int? = null,
     /** Version handed to the system installer, to check it landed next launch. */
     val pendingInstallVersionCode: Int? = null,
     val updateCheckEnabled: Boolean = true,

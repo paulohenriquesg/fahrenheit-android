@@ -68,7 +68,7 @@ class SharedPreferencesHandlerTest {
             token = "test-token",
             darkTheme = true,
             lastUpdateCheck = 123456789L,
-            updateSnoozeVersionCode = 11,
+            updateIgnoredVersionCode = 11,
             updateCheckEnabled = false,
             selectedLibraryId = "library-789"
         )
@@ -83,7 +83,7 @@ class SharedPreferencesHandlerTest {
         assertEquals("test-token", retrieved.token)
         assertEquals(true, retrieved.darkTheme)
         assertEquals(123456789L, retrieved.lastUpdateCheck)
-        assertEquals(11, retrieved.updateSnoozeVersionCode)
+        assertEquals(11, retrieved.updateIgnoredVersionCode)
         assertEquals(false, retrieved.updateCheckEnabled)
         assertEquals("library-789", retrieved.selectedLibraryId)
     }
@@ -99,7 +99,7 @@ class SharedPreferencesHandlerTest {
         assertEquals("", result.token)
         assertEquals(false, result.darkTheme)
         assertEquals(0L, result.lastUpdateCheck)
-        assertNull(result.updateSnoozeVersionCode)
+        assertNull(result.updateIgnoredVersionCode)
         assertEquals(true, result.updateCheckEnabled) // default is true
         assertNull(result.selectedLibraryId)
     }
@@ -114,7 +114,7 @@ class SharedPreferencesHandlerTest {
             token = "test-token",
             darkTheme = true,
             lastUpdateCheck = 123456789L,
-            updateSnoozeVersionCode = 11,
+            updateIgnoredVersionCode = 11,
             updateCheckEnabled = false,
             selectedLibraryId = "library-456"
         )

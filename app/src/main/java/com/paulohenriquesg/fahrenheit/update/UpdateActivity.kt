@@ -51,7 +51,7 @@ class UpdateActivity : ComponentActivity() {
                     update = update,
                     onDismiss = { finish() },
                     onLater = {
-                        AppUpdates.checker(this).snooze(update)
+                        AppUpdates.checker(this).ignore(update)
                         Toast.makeText(this, getString(R.string.update_snoozed), Toast.LENGTH_SHORT).show()
                         finish()
                     }
