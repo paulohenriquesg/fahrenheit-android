@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -43,6 +44,7 @@ import com.paulohenriquesg.fahrenheit.ui.Radius
 object PlaceholderTags {
     const val SHAPE = "placeholder"
     const val ROUND = "placeholder-round"
+    const val HEADING = "placeholder-heading"
 }
 
 /** One grey shape, in the covers' placeholder tone, so it reads as "a cover is coming". */
@@ -61,7 +63,15 @@ fun PlaceholderShape(modifier: Modifier = Modifier, round: Boolean = false) {
 fun ShelvesPlaceholder() {
     Column(modifier = Modifier.fillMaxSize().clipToBounds()) {
         repeat(SHELVES) {
-            PlaceholderShape(Modifier.width(160.dp).height(18.dp))
+            // A line of the real heading's text, unseen, so the bar takes its
+            // height and the covers below do not move when the shelves arrive.
+            Box(
+                modifier = Modifier.clearAndSetSemantics { testTag = PlaceholderTags.HEADING },
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Box(Modifier.alpha(0f)) { ShelfHeading(" ") }
+                PlaceholderShape(Modifier.width(160.dp).height(16.dp))
+            }
             Spacer(modifier = Modifier.height(8.dp))
             CoverRowPlaceholder()
             Spacer(modifier = Modifier.height(24.dp))

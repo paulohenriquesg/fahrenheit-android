@@ -10,7 +10,7 @@ to convert there.
 
 ## One component: `ui/elements/Placeholders.kt`
 
-- `PlaceholderShape(modifier, shape)`: a box filled with
+- `PlaceholderShape(modifier, round)`: a box filled with
   `CoverPlaceholderTone.of(colorScheme)`, semantics cleared to a test tag
   (`PlaceholderTags.SHAPE`). Not focusable, no animation.
 - Layouts built from it, each sized as the real card:
@@ -30,15 +30,18 @@ to convert there.
 - `SeriesBrowseView`, `CollectionsBrowseView`, `AuthorsBrowseView`:
   loading -> `GridPlaceholder`. Empty and failure unchanged.
 - `LibraryBrowseView`: loading with no items -> `GridPlaceholder(Covers)`; the
-  title's trailing text drops "Loading…" and shows no count while loading.
+  title's trailing text drops "Loading…" and shows no count while loading. In
+  rows, a `CoverRowPlaceholder` padded as `LibraryItemsRow`.
 - `LatestEpisodesView`: loading -> `RowsPlaceholder`.
 
 ## Rule and guide
 
 - `HouseStyleTest`: a `R.string.loading*` reference outside the allow-list
   fails. Allow-list, each with the issue that converts it: `DetailActivity`
-  (#225), `AuthorDetailScreen` (#225), `PlayerActivity` (#223, if not merged),
-  and Stats' `loading_stats` (not in #224's list; flagged in the PR).
+  (#225), `PlayerActivity` (#223, if not merged), and Stats' `loading_stats`
+  (not in #224's list; flagged in the PR). An entry that no longer excuses
+  anything fails too, so `AuthorDetailScreen` (a spinner, not a string; #225)
+  is not on it.
 - The rule's matcher is a function the test also feeds a bare-loading sample,
   so the rule is shown to fail.
 - Delete `loading_series`, `loading_authors`, `loading_collections`,

@@ -12,7 +12,9 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.isFocusable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.tv.material3.MaterialTheme
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
 import org.junit.Assert.assertEquals
@@ -85,6 +87,23 @@ class PlaceholdersTest {
         compose.waitForIdle()
 
         compose.onAllNodesWithTag(PlaceholderTags.ROUND).assertCountEquals(0)
+    }
+
+    @Test
+    fun `a shelf's heading takes the height of the real one, so the covers do not move`() {
+        compose.setContent {
+            FahrenheitTheme {
+                androidx.compose.foundation.layout.Row {
+                    ShelfHeading("An Invented Shelf")
+                    ShelvesPlaceholder()
+                }
+            }
+        }
+        compose.waitForIdle()
+
+        val real = compose.onNodeWithText("An Invented Shelf").getUnclippedBoundsInRoot().let { it.bottom - it.top }
+        val placeholder = compose.onAllNodesWithTag(PlaceholderTags.HEADING)[0].getUnclippedBoundsInRoot().let { it.bottom - it.top }
+        assertEquals(real.value, placeholder.value, 0.5f)
     }
 
     // The window drawn into a bitmap (captureToImage waits for a frame callback

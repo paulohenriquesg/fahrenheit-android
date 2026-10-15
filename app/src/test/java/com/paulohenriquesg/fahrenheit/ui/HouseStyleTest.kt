@@ -90,13 +90,13 @@ class HouseStyleTest {
     }
 
     /**
-     * Screens whose loading state is still a bare loading line or spinner, each
-     * with the issue that converts it. That lane takes its entry off. A key is
-     * a whole file, or a file and the one string it may still show.
+     * Screens whose loading state is still a bare loading line, each with the
+     * issue that converts it. That lane takes its entry off. A key is a whole
+     * file, or a file and the one string it may still show. A bare spinner is
+     * beyond this rule: AuthorDetailScreen's goes in #225.
      */
     private val bareLoadingAllowed = mapOf(
         "com/paulohenriquesg/fahrenheit/detail/DetailActivity.kt" to "#225",
-        "com/paulohenriquesg/fahrenheit/author/AuthorDetailScreen.kt" to "#225",
         "com/paulohenriquesg/fahrenheit/player/PlayerActivity.kt" to "#223",
         // Stats was not among #224's screens; it needs an issue of its own.
         "com/paulohenriquesg/fahrenheit/main/BrowseViews.kt R.string.loading_stats" to "none yet"
@@ -125,6 +125,20 @@ class HouseStyleTest {
             bareLoadingOffenders(file.relativeTo(File("src/main/java")).path, file.readLines())
         }
         assertEquals(emptyList<String>(), offenders)
+    }
+
+    @Test
+    fun `every loading allow-list entry still excuses something`() {
+        // The lane that converts a screen takes its entry off; one left behind
+        // would let that screen bring a loading line back unnoticed.
+        val uses = sources.flatMap { file ->
+            val path = file.relativeTo(File("src/main/java")).path
+            loadingTexts(path, file.readLines()).map { (use, _) -> use }
+        }
+        val stale = bareLoadingAllowed.keys.filter { key ->
+            uses.none { use -> use == key || use.startsWith("$key ") }
+        }
+        assertEquals(emptyList<String>(), stale)
     }
 
     @Test

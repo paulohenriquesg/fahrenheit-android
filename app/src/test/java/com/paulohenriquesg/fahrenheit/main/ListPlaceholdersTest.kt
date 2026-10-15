@@ -133,6 +133,19 @@ class ListPlaceholdersTest {
         compose.onNodeWithText("(1 books)", substring = true).assertIsDisplayed()
     }
 
+    @Test
+    fun `Library refreshing what it already shows keeps its items`() {
+        render {
+            LibraryBrowseView(
+                name = "An Invented Library", itemLabel = "books",
+                items = listOf(TestFixtures.createMockLibraryItemEntry()),
+                rowLayout = false, listState = rememberLazyListState(), loading = true
+            )
+        }
+        assertNoPlaceholders()
+        compose.onNodeWithText("(1 books)", substring = true).assertIsDisplayed()
+    }
+
     // Series
 
     @Test
