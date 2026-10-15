@@ -1,10 +1,5 @@
 package com.paulohenriquesg.fahrenheit.player
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.media3.common.Player
 import kotlinx.coroutines.CancellationException
 import android.os.Bundle
@@ -112,26 +107,4 @@ object FinishCommand {
     fun episodeOf(args: Bundle): String? = args.getString(EPISODE)
     fun keepAtOf(args: Bundle): Double? = if (args.containsKey(KEEP_AT)) args.getDouble(KEEP_AT) else null
     fun finishedOf(args: Bundle): Boolean = args.getBoolean(FINISHED)
-}
-
-/**
- * Whether the book is finished, as About shows it; null for an episode.
- *
- * Playing a finished book moves its position, which the server takes as
- * un-finishing it, so starting to play does the same here.
- */
-@Composable
-fun rememberFinished(player: Player?, initial: Boolean?): MutableState<Boolean?> {
-    // Kept across a new connection (Home and back): only new item facts reset it.
-    val finished = remember(initial) { mutableStateOf(initial) }
-    DisposableEffect(player, finished) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (isPlaying && finished.value == true) finished.value = false
-            }
-        }
-        player?.addListener(listener)
-        onDispose { player?.removeListener(listener) }
-    }
-    return finished
 }

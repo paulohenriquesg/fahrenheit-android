@@ -28,6 +28,7 @@ class ResumePromptTest {
     private val answered = mutableListOf<ResumeOffer>()
     private var checks = 0
     private var result: suspend () -> ResumeOffer? = { offer }
+    private val shown = mutableListOf<ResumeOffer?>()
 
     private fun prompt(timeoutMs: Long = 1_500) = ResumePrompt(
         scope = CoroutineScope(Dispatchers.Unconfined),
@@ -36,7 +37,8 @@ class ResumePromptTest {
         play = { plays++; playWhenReady = true },
         seek = { seeks += it },
         answered = { answered += it },
-        timeoutMs = timeoutMs
+        timeoutMs = timeoutMs,
+        shown = { shown += it }
     )
 
     // State written outside any composition; left pending, it kept later
@@ -69,6 +71,17 @@ class ResumePromptTest {
         assertEquals(1, plays)
         assertEquals(listOf(offer), answered)
         assertNull(p.offer)
+    }
+
+    // Told, so a screen state can carry the question (#221).
+    @Test
+    fun `the question is told as it appears and as it goes`() {
+        val p = prompt()
+
+        p.onPlay()
+        p.answer(moveThere = false)
+
+        assertEquals(listOf(offer, null), shown)
     }
 
     @Test
