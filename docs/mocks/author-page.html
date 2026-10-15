@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Author Page</title>
+<style>
+  :root { --bg:#121212; --on:#E6E1E5; --muted:#CAC4D0; --primary:#D0BCFF; --on-primary:#381E72; --chip:#3B3548; --card:#1f1e23; }
+  body { margin:0; background:#050506; color:var(--on); font-family:Roboto, system-ui, sans-serif; padding:32px 16px; }
+  .page { max-width:1240px; margin:0 auto; }
+  h1 { font-size:28px; margin:0 0 8px; } h2 { font-size:22px; margin:40px 0 8px; }
+  p.why { color:var(--muted); font-size:15px; line-height:1.55; max-width:920px; margin:0 0 14px; }
+  .shell { width:100%; aspect-ratio:16/9; container-type:inline-size; border-radius:12px; overflow:hidden; box-shadow:0 0 0 1px #333; }
+  .tv { position:relative; width:1920px; height:1080px; transform-origin:0 0; transform:scale(calc(100cqw / 1920px)); overflow:hidden; background:var(--bg); display:flex; }
+  .rail { width:120px; padding:46px 20px; flex:none; display:flex; flex-direction:column; gap:22px; align-items:center; }
+  .rail i { font-style:normal; width:72px; height:72px; border-radius:36px; display:grid; place-items:center; font-size:30px; color:var(--muted); }
+  .rail i.on { background:#3a3640; color:var(--on); }
+  .grid { flex:1; display:grid; grid-template-columns:400px 1fr; gap:64px; padding:56px 64px 0 40px; min-width:0; }
+  .photo { width:360px; height:360px; border-radius:50%; background:linear-gradient(150deg,#6B5A3D,#2A2217); display:grid; place-items:center; font-size:140px; font-weight:800; color:#fff; }
+  .name { font-size:48px; font-weight:500; margin:34px 0 10px; }
+  .by { font-size:28px; color:var(--muted); }
+  .pill { height:76px; border-radius:38px; background:#E6E1E5; color:#121212; display:inline-flex; align-items:center; padding:0 38px; font-size:28px; font-weight:600; margin-top:34px; outline:5px solid #fff; outline-offset:3px; }
+  .label { font-size:22px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin:0 0 18px; }
+  .bio { font-size:28px; line-height:1.55; background:rgba(255,255,255,.04); border-radius:16px; padding:22px 28px; height:150px; overflow:hidden; position:relative; }
+  .bio::after { content:"More ›"; position:absolute; right:22px; bottom:14px; font-size:22px; color:var(--primary); background:#1b1a1f; padding:2px 8px; }
+  .row { display:flex; gap:26px; margin-bottom:40px; }
+  .book { width:230px; flex:none; }
+  .book .c { height:230px; border-radius:12px; display:grid; place-items:center; color:#fff; font-weight:900; font-size:26px; text-align:center; }
+  .book .t { font-size:24px; margin-top:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .book .s { font-size:20px; color:var(--muted); margin-top:4px; }
+  .tag { display:inline-block; font-size:18px; font-weight:700; color:var(--on-primary); background:var(--primary); border-radius:6px; padding:1px 8px; margin-right:6px; }
+  .note { font-size:14px; color:var(--muted); margin-top:8px; }
+</style></head>
+<body><div class="page">
+<h1>Author page: the book page's layout, books you can tell apart</h1>
+<p class="why">Today the author page is its own screen without the side menu: a square photo, the bio as a block of text, and one row of covers with titles only, so two editions of the same book look identical. This version uses the book page's layout (#202/#225): the side menu stays, a round photo and the name on the left, the bio in a box that opens in full on OK, then the books <b>grouped by series in series order</b>, with the rest under "Other books". Each card says what tells it apart: series number, the subtitle when there is one (such as "Unabridged") and the length. It keeps #225's loading frame.</p>
+
+<h2>1. An author with two series and two editions of one book</h2>
+<div class="shell"><div class="tv">
+  <div class="rail"><i>⌂</i><i>▤</i><i>≡</i><i>◫</i><i class="on">✎</i><i>◉</i><i>▥</i></div>
+  <div class="grid">
+    <div><div class="photo">A</div><div class="name">An Author</div><div class="by">7 books · 2 series</div><div class="pill">▶ Continue Book Two</div></div>
+    <div style="min-width:0">
+      <div class="label">About</div>
+      <div class="bio">An author of science fiction and space adventure, best known for a long-running series about a school for young diplomats, and for tie-in novels set in two well-known universes. Her first novel began as a story written for fun…</div>
+      <div class="label" style="margin-top:40px">The Long Way · 3 books</div>
+      <div class="row">
+        <div class="book"><div class="c" style="background:linear-gradient(150deg,#3E6FB0,#14233D)">BOOK<br>ONE</div><div class="t">Book One</div><div class="s">#1 · 5 h 40 min</div></div>
+        <div class="book"><div class="c" style="background:linear-gradient(150deg,#6B3D4A,#301A1F)">BOOK<br>TWO</div><div class="t">Book Two</div><div class="s"><span class="tag">Unabridged</span>#2 · 14 h 40 min</div></div>
+        <div class="book"><div class="c" style="background:linear-gradient(150deg,#6B3D4A,#301A1F)">BOOK<br>TWO</div><div class="t">Book Two</div><div class="s">#2 · 3 h 01 min</div></div>
+        <div class="book"><div class="c" style="background:linear-gradient(150deg,#3D6B4A,#1A301F)">BOOK<br>THREE</div><div class="t">Book Three</div><div class="s">#3 · 1 h 29 min</div></div>
+      </div>
+      <div class="label">Other books · 2</div>
+      <div class="row">
+        <div class="book"><div class="c" style="background:linear-gradient(150deg,#6B5A3D,#2A2217)">A QUIET<br>SIGNAL</div><div class="t">A Quiet Signal</div><div class="s">2 h 30 min</div></div>
+        <div class="book"><div class="c" style="background:linear-gradient(150deg,#3D4A6B,#1A1F30)">FAR<br>HARBOUR</div><div class="t">Far Harbour</div><div class="s">2 h 51 min</div></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<h2>2. Narrators: the same page, for the books a person reads</h2>
+<p class="why">The Narrators section stops saying "coming soon": it is a grid like Authors (round initials, since the server keeps no narrator photos), and a narrator opens this same page with "Read by" books and no bio.</p>
+<div class="shell"><div class="tv">
+  <div class="rail"><i>⌂</i><i>▤</i><i>≡</i><i>◫</i><i>✎</i><i class="on">◉</i><i>▥</i></div>
+  <div class="grid">
+    <div><div class="photo" style="background:linear-gradient(150deg,#3D4A6B,#1A1F30)">R</div><div class="name">A Reader</div><div class="by">Reads 12 books</div></div>
+    <div style="min-width:0">
+      <div class="label">The Long Way · 3 books</div>
+      <div class="row">
+        <div class="book"><div class="c" style="background:linear-gradient(150deg,#3E6FB0,#14233D)">BOOK<br>ONE</div><div class="t">Book One</div><div class="s">#1 · An Author</div></div>
+        <div class="book"><div class="c" style="background:linear-gradient(150deg,#6B3D4A,#301A1F)">BOOK<br>TWO</div><div class="t">Book Two</div><div class="s">#2 · An Author</div></div>
+        <div class="book"><div class="c" style="background:linear-gradient(150deg,#3D6B4A,#1A301F)">BOOK<br>THREE</div><div class="t">Book Three</div><div class="s">#3 · An Author</div></div>
+      </div>
+      <div class="label">Other books · 9</div>
+      <div class="row">
+        <div class="book"><div class="c" style="background:linear-gradient(150deg,#6B5A3D,#2A2217)">A QUIET<br>SIGNAL</div><div class="t">A Quiet Signal</div><div class="s">Another Author</div></div>
+        <div class="book"><div class="c" style="background:linear-gradient(150deg,#3D4A6B,#1A1F30)">FAR<br>HARBOUR</div><div class="t">Far Harbour</div><div class="s">Another Author</div></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<p class="note">Names, titles and covers are invented.</p>
+</div></body></html>

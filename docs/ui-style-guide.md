@@ -341,6 +341,7 @@ palette (see `docs/mocks/README.md`).
 | `update-prompt.html` | the update question over Home (Ignore / No / Yes), the download in the same dialog, Android's installer |
 | `list-placeholders.html` | Home, the browse grids and Latest Episodes while they load: still grey cards in the shape of what is coming |
 | `detail-loading.html` | the book, podcast and author pages while they load: what the card showed, in place, and grey shapes for the rest |
+| `author-page.html` | the author page in the book page's layout, its books grouped by series and told apart, and a narrator's page |
 
 ## Colour
 
