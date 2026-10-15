@@ -108,13 +108,13 @@ the first frame.
 the layouts built from it - `ShelvesPlaceholder` (Home), `GridPlaceholder`
 (Library, Series, Collections, and Authors with round photos) and
 `RowsPlaceholder` (Latest Episodes). The book, podcast and author pages draw
-their own frame (`DetailLoading`, `AuthorStage`; #225) and Stats its board's
-shape (`StatsPlaceholder`).
+their own frame (`DetailLoading`, `PersonStage`; #225, #230) and Stats its
+board's shape (`StatsPlaceholder`).
 
 What is handed over travels in the intent as a `PlayerPreview` (title, line
 under it, cover URL): the player's (#223), the book and podcast pages'
 (`DetailActivity.intentFor` for a card) and the author page's, where the
-cover is the photo. A screen opened with nothing handed over draws grey
+cover is the photo; a narrator's page gets the name and draws initials. A screen opened with nothing handed over draws grey
 shapes for those too, never a blank screen.
 
 `HouseStyleTest` fails a screen that shows a `R.string.loading*` text; its
@@ -267,6 +267,23 @@ book screen and About (#137) draw Resume and Mark finished as the default TV
   one shows at the right edge (`SeriesRow.coverSize`), and each is labelled
   by its place, "Book 2.5", or its title when the server gives no sequence.
   The focused card reads "Book 2.5 · <title>" and scrolls it (#204).
+
+## The author's and a narrator's page
+
+The author page (#230, `PersonStage`) is the book page's layout with the side
+menu kept: it is its own screen, so Back leaves it as it leaves the book page,
+and it draws the main screen's rail with its section lit; a section chosen
+there brings the main screen back on it (`MainActivity.sectionIntent`).
+
+- The left column, at `BookColumn`'s width: a round photo, or initials where
+  there is none (narrators never have one), the name, the counts, and
+  **Continue** when one of the books is in progress (the shared store, #207).
+- The bio in a box clipped to a few lines with "More ›"; OK opens it in full
+  in the book page's description box (`DescriptionBox`), and Back closes it
+  onto the box. No bio, no box.
+- The books one row per series, by name, in series order; the rest under
+  "Other books". A card tells its book apart: the subtitle as a tag, then the
+  number and the length - or, on a narrator's page, the author.
 
 ## A question over Home
 
