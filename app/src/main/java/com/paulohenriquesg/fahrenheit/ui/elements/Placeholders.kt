@@ -108,11 +108,17 @@ enum class GridPlaceholderLook(val minSize: Dp, val spacing: Dp) {
     People(minSize = 180.dp, spacing = 16.dp)
 }
 
-/** A browse grid's first rows, in the grid's own columns. */
+/** A browse grid's first rows, in the grid's own columns: [columns] for a grid that does not fit [look]'s. */
 @Composable
-fun GridPlaceholder(look: GridPlaceholderLook, modifier: Modifier = Modifier) {
+fun GridPlaceholder(
+    look: GridPlaceholderLook,
+    modifier: Modifier = Modifier,
+    columns: GridCells = GridCells.Adaptive(minSize = look.minSize),
+    contentPadding: PaddingValues = PaddingValues()
+) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = look.minSize),
+        columns = columns,
+        contentPadding = contentPadding,
         userScrollEnabled = false,
         horizontalArrangement = Arrangement.spacedBy(look.spacing),
         verticalArrangement = Arrangement.spacedBy(look.spacing),

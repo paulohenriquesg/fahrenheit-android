@@ -45,7 +45,7 @@ class AuthorDetailActivity : ComponentActivity() {
                     colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
                     shape = RectangleShape,
                 ) {
-                    AuthorDetailScreen(authorId = authorId)
+                    AuthorDetailScreen(authorId = authorId, preview = previewOf(intent))
                 }
             }
         }
