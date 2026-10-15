@@ -2,12 +2,13 @@ package com.paulohenriquesg.fahrenheit.main
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithTag
 import com.paulohenriquesg.fahrenheit.api.Shelf
+import com.paulohenriquesg.fahrenheit.ui.elements.PlaceholderTags
 import com.paulohenriquesg.fahrenheit.ui.theme.FahrenheitTheme
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -16,7 +17,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Switching library showed the shelves of the library you had just left for a
- * second or two, until the new ones arrived. Home says it is loading instead.
+ * second or two, until the new ones arrived. Home draws placeholder shelves
+ * instead (#224), where it used to say "Loading…".
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -33,14 +35,14 @@ class HomeLoadingTest {
     )
 
     @Test
-    fun `while a library is loading, Home says so rather than showing the last one`() {
+    fun `while a library is loading, Home draws placeholders rather than the last one`() {
         compose.setContent {
             FahrenheitTheme {
                 PersonalizedHomeView(shelves = emptyList(), libraryId = "lib", isLoading = true)
             }
         }
 
-        compose.onNodeWithText("Loading", substring = true).assertIsDisplayed()
+        assertTrue(compose.onAllNodesWithTag(PlaceholderTags.SHAPE).fetchSemanticsNodes().isNotEmpty())
     }
 
     @Test

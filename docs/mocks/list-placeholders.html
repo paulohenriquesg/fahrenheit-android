@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>List Placeholders</title>
+<style>
+  :root { --bg:#121212; --on:#E6E1E5; --muted:#CAC4D0; --primary:#D0BCFF; --ghost:#2a2730; --card:#1f1e23; }
+  body { margin:0; background:#050506; color:var(--on); font-family:Roboto, system-ui, sans-serif; padding:32px 16px; }
+  .page { max-width:1240px; margin:0 auto; }
+  h1 { font-size:28px; margin:0 0 8px; } h2 { font-size:22px; margin:40px 0 8px; }
+  p.why { color:var(--muted); font-size:15px; line-height:1.55; max-width:920px; margin:0 0 14px; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .cap { font-size:14px; color:var(--muted); margin:6px 0 0; }
+  .shell { width:100%; aspect-ratio:16/9; container-type:inline-size; border-radius:12px; overflow:hidden; box-shadow:0 0 0 1px #333; }
+  .tv { position:relative; width:1920px; height:1080px; transform-origin:0 0; transform:scale(calc(100cqw / 1920px)); overflow:hidden; background:var(--bg); display:flex; }
+  .rail { width:500px; padding:46px 28px; flex:none; }
+  .ri { height:100px; border-radius:50px; display:flex; align-items:center; gap:30px; padding:0 40px; font-size:34px; margin-bottom:16px; }
+  .ri.on { background:#E6E1E5; color:#121212; }
+  .ri i { font-style:normal; width:44px; text-align:center; }
+  .main { flex:1; padding:46px 40px 0 30px; min-width:0; }
+  .h1 { font-size:58px; margin-bottom:40px; }
+  .g { background:var(--ghost); border-radius:10px; }
+  .shelf { margin-bottom:48px; }
+  .cards { display:flex; gap:44px; margin-top:26px; }
+  .card { width:390px; height:420px; border-radius:20px; background:var(--card); padding:34px; box-sizing:border-box; flex:none; }
+  .card .c { height:260px; border-radius:10px; } .card .l1 { height:30px; margin-top:24px; width:85%; } .card .l2 { height:24px; margin-top:12px; width:55%; }
+  .tiles { display:grid; grid-template-columns:repeat(4, 1fr); gap:40px; }
+  .tile .c { aspect-ratio:1; border-radius:14px; } .tile .l { height:28px; margin-top:16px; width:80%; } .tile .s { height:22px; margin-top:10px; width:50%; }
+  .row { display:flex; gap:28px; align-items:center; height:140px; border-radius:16px; background:var(--card); padding:0 26px; margin-bottom:18px; }
+  .row .t { width:96px; height:96px; border-radius:10px; flex:none; }
+  .tag { font-size:24px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin:10px 0 18px; }
+</style></head>
+<body><div class="page">
+<h1>Lists and grids: grey cards in the real shape while they load</h1>
+<p class="why">Today Home shows "Loading…" until its shelves arrive. Library, Series, Collections, Authors and Narrators show "Loading series…" and the like, and Latest Episodes shows "Loading episodes…". Instead, each screen draws grey cards in the shape of the cards it is about to show: shelves on Home, a grid on the browse screens, rows on Latest Episodes. They are still (no shimmer) and cannot take focus, so the side menu keeps focus until real cards arrive and replace them in place. The screen's own title is real from the first frame. One shared placeholder component serves all of them.</p>
+
+<h2>1. Home</h2>
+<div class="pair">
+<div><div class="shell"><div class="tv">
+  <div class="rail"><div class="ri on"><i>⌂</i>Home</div><div class="ri"><i>✦</i>Latest</div><div class="ri"><i>▤</i>Library</div><div class="ri" style="margin-top:50px"><i>⇄</i>Switch Library</div><div class="ri"><i>⚙</i>Settings</div><div class="ri"><i>⇥</i>Logout</div></div>
+  <div class="main"><div class="h1">Home</div>
+    <div class="shelf"><div class="g" style="height:34px;width:300px"></div><div class="cards"><div class="card"><div class="c g"></div><div class="l1 g"></div><div class="l2 g"></div></div><div class="card"><div class="c g"></div><div class="l1 g"></div><div class="l2 g"></div></div><div class="card"><div class="c g"></div><div class="l1 g"></div><div class="l2 g"></div></div></div></div>
+    <div class="shelf"><div class="g" style="height:34px;width:260px"></div><div class="cards"><div class="card"><div class="c g"></div></div><div class="card"><div class="c g"></div></div><div class="card"><div class="c g"></div></div></div></div>
+  </div></div></div><p class="cap">Loading: two shelves of grey cards; focus stays on Home in the side menu.</p></div>
+<div><div class="shell"><div class="tv" style="background:#000"><div style="font-size:30px;padding:24px 0 0 560px">Loading…</div></div></div><p class="cap">Today.</p></div>
+</div>
+
+<h2>2. Library, Series, Collections, Authors, Narrators</h2>
+<div class="pair">
+<div><div class="shell"><div class="tv">
+  <div class="rail"><div class="ri"><i>⌂</i>Home</div><div class="ri on"><i>▤</i>Library</div><div class="ri"><i>≡</i>Series</div><div class="ri"><i>◫</i>Collections</div><div class="ri"><i>✎</i>Authors</div><div class="ri"><i>◉</i>Narrators</div></div>
+  <div class="main"><div class="h1">Library</div>
+    <div class="tiles">
+      <div class="tile"><div class="c g"></div><div class="l g"></div><div class="s g"></div></div><div class="tile"><div class="c g"></div><div class="l g"></div><div class="s g"></div></div><div class="tile"><div class="c g"></div><div class="l g"></div><div class="s g"></div></div><div class="tile"><div class="c g"></div><div class="l g"></div><div class="s g"></div></div>
+      <div class="tile"><div class="c g"></div></div><div class="tile"><div class="c g"></div></div><div class="tile"><div class="c g"></div></div><div class="tile"><div class="c g"></div></div>
+    </div>
+  </div></div></div><p class="cap">Loading: the grid's first rows; Authors and Narrators use round photo shapes.</p></div>
+<div><div class="shell"><div class="tv">
+  <div class="rail"><div class="ri"><i>⌂</i>Home</div><div class="ri"><i>✦</i>Latest</div><div class="ri"><i>▤</i>Library</div></div>
+  <div class="main"><div class="h1">Latest episodes</div>
+    <div class="tag">Today</div>
+    <div class="row"><div class="t g"></div><div style="flex:1"><div class="g" style="height:30px;width:65%"></div><div class="g" style="height:22px;width:40%;margin-top:14px"></div></div></div>
+    <div class="row"><div class="t g"></div><div style="flex:1"><div class="g" style="height:30px;width:58%"></div><div class="g" style="height:22px;width:36%;margin-top:14px"></div></div></div>
+    <div class="row"><div class="t g"></div><div style="flex:1"><div class="g" style="height:30px;width:70%"></div><div class="g" style="height:22px;width:44%;margin-top:14px"></div></div></div>
+    <div class="row"><div class="t g"></div><div style="flex:1"><div class="g" style="height:30px;width:52%"></div><div class="g" style="height:22px;width:30%;margin-top:14px"></div></div></div>
+  </div></div></div><p class="cap">Latest Episodes, loading: grey rows. The "Today" heading is grey too until the data says which groups exist.</p></div>
+</div>
+<p class="why" style="margin-top:20px">Failure and empty states stay as they are: placeholders only stand in while a load is in flight.</p>
+</div></body></html>

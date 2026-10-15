@@ -70,12 +70,13 @@ class LibraryBrowseQueryTest {
         compose.onNodeWithText("Finished", substring = true).assertDoesNotExist()
     }
 
-    // An empty list while the fetch runs read as "nothing in progress".
+    // An empty list while the fetch runs read as "nothing in progress". It
+    // keeps its label and draws placeholders (#224), but counts nothing.
     @Test
-    fun `a view still loading says so rather than counting nothing`() {
+    fun `a view still loading keeps its label rather than counting nothing`() {
         render(LibraryQuery.InProgress, loading = true)
 
-        compose.onNodeWithText("Loading…", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("In progress", substring = true).assertIsDisplayed()
         compose.onNodeWithText("0 books", substring = true).assertDoesNotExist()
     }
 }

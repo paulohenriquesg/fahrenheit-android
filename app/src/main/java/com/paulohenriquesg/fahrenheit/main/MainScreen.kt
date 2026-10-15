@@ -85,6 +85,7 @@ import com.paulohenriquesg.fahrenheit.search.SearchActivity
 import com.paulohenriquesg.fahrenheit.storage.SharedPreferencesHandler
 import com.paulohenriquesg.fahrenheit.ui.elements.AuthorShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.SeriesShelfRow
+import com.paulohenriquesg.fahrenheit.ui.elements.ShelvesPlaceholder
 import com.paulohenriquesg.fahrenheit.ui.elements.ShelfRow
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverProgress
 import com.paulohenriquesg.fahrenheit.progress.ProgressStore
@@ -447,13 +448,7 @@ fun PersonalizedHomeView(
         )
 
         if (isLoading && nonEmptyShelves.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = stringResource(R.string.loading),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            ShelvesPlaceholder()
             return@Column
         }
 
