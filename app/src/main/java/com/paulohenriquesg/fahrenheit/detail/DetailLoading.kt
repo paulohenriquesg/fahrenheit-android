@@ -31,6 +31,7 @@ import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.player.PlayerPreview
 import com.paulohenriquesg.fahrenheit.podcast.PODCAST_COLUMN_GAP
 import com.paulohenriquesg.fahrenheit.podcast.PODCAST_COLUMN_WIDTH
+import com.paulohenriquesg.fahrenheit.podcast.PodcastSlots
 import com.paulohenriquesg.fahrenheit.ui.components.BookColumn
 import com.paulohenriquesg.fahrenheit.ui.components.TITLE_TAG
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverImage
@@ -81,7 +82,7 @@ fun DetailStage(
 
 /** A book's or a podcast's page before its item arrives. */
 @Composable
-fun DetailLoading(itemId: String, preview: PlayerPreview?, podcast: Boolean, margin: PaddingValues) {
+fun DetailLoading(itemId: String, preview: PlayerPreview?, podcast: Boolean, margin: PaddingValues, slots: PodcastSlots = PodcastSlots.NONE) {
     val frame = Modifier.fillMaxSize().padding(margin).testTag(DetailLoadingTags.FRAME)
     if (podcast) PodcastFrame(itemId, preview, frame) else BookFrame(itemId, preview, frame)
 }

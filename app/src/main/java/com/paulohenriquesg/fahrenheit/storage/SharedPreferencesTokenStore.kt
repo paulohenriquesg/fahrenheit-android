@@ -33,5 +33,7 @@ class SharedPreferencesTokenStore(
             dateFormat = credentials.dateFormat ?: preferences.getUserPreferences().dateFormat
         )
         preferences.saveUserPreferences(updated)
+        // A response that does not say keeps what is stored; the next launch reads it again.
+        credentials.role?.let { preferences.saveSessionRole(it) }
     }
 }

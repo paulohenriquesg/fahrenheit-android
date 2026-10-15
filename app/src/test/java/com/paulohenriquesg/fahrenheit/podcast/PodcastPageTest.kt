@@ -127,21 +127,29 @@ class PodcastPageTest {
         compose.waitForIdle()
     }
 
-    // #225: the loading frame keeps the cover and name where the page puts them.
+    // #225: the loading frame keeps the cover and name where the page puts them,
+    // for a listener and for an admin, whose buttons' places the frame keeps
+    // from the stored role.
     @Test
-    // Only for a listener: an admin's two more buttons depend on the server
-    // (the user's role, the feed), which the frame drawn before it cannot know,
-    // and under them the cover gives way.
-    fun `the cover and name do not move when the loading frame gives way to the page`() = assertFrameHolds(state(admin = false, settings = null))
+    fun `a listener's cover and name do not move when the frame gives way to the page`() =
+        assertFrameHolds(state(admin = false, settings = null), PodcastSlots.NONE)
 
-    private fun assertFrameHolds(page: PodcastUiState) {
+    @Test
+    fun `nor an admin's, with the feed check and downloads under Resume`() =
+        assertFrameHolds(state(), PodcastSlots(feedCheck = true, downloads = true))
+
+    @Test
+    fun `nor an admin's when the show has no feed, so no feed check, though its place was kept`() =
+        assertFrameHolds(state(admin = false), PodcastSlots(feedCheck = true, downloads = true))
+
+    private fun assertFrameHolds(page: PodcastUiState, slots: PodcastSlots) {
         var ready by mutableStateOf(false)
         compose.setContent {
             FahrenheitTheme {
                 if (ready) {
-                    PodcastPage(page, margin, {}, {}, {}, {}, { _, _ -> }, {}, {}, {})
+                    PodcastPage(page, margin, {}, {}, {}, {}, { _, _ -> }, {}, {}, {}, reserve = slots)
                 } else {
-                    DetailLoading("p1", PlayerPreview("The Show", coverUrl = "https://abs.test/api/items/p1/cover"), podcast = true, margin = margin)
+                    DetailLoading("p1", PlayerPreview("The Show", coverUrl = "https://abs.test/api/items/p1/cover"), podcast = true, margin = margin, slots = slots)
                 }
             }
         }

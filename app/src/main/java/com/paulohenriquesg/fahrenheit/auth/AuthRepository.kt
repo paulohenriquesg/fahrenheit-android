@@ -9,7 +9,9 @@ data class AuthSession(
     val refreshToken: String?,
     val username: String,
     /** How the server was configured to write dates, sent only at login. */
-    val dateFormat: String? = null
+    val dateFormat: String? = null,
+    /** The user's type and update permission, for screens drawn before their data (#225). */
+    val role: SessionRole? = null
 )
 
 /**
@@ -42,7 +44,8 @@ class AuthRepository(private val api: AuthApi) {
         return AuthSession(
             accessToken = apiKey,
             refreshToken = null,
-            username = response.user.username
+            username = response.user.username,
+            role = SessionRole.of(response.user)
         )
     }
 
@@ -65,5 +68,6 @@ fun LoginResponse.toAuthSession() = AuthSession(
     accessToken = user.accessToken ?: user.token,
     refreshToken = user.refreshToken,
     username = user.username,
-    dateFormat = serverSettings?.dateFormat
+    dateFormat = serverSettings?.dateFormat,
+    role = SessionRole.of(user)
 )

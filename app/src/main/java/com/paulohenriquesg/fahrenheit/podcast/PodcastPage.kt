@@ -103,7 +103,8 @@ fun PodcastPage(
     onDownloadsClosed: () -> Unit,
     onFavourite: (Episode) -> Unit = {},
     date: (EpisodeRow) -> String = { "" },
-    nowPlaying: @Composable () -> Unit = {}
+    nowPlaying: @Composable () -> Unit = {},
+    reserve: PodcastSlots = PodcastSlots.NONE
 ) {
     // Keyed on whether there is a primary action, not its label: the label
     // changes as episodes are heard, and focus must not jump onto it.

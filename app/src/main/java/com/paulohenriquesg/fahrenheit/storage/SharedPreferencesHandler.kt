@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.paulohenriquesg.fahrenheit.auth.SessionRole
 
 class SharedPreferencesHandler(context: Context) {
     private val sharedPreferences: SharedPreferences = try {
@@ -71,7 +72,7 @@ class SharedPreferencesHandler(context: Context) {
     /**
      * Signing out: the session goes, the settings stay (#63).
      *
-     * The tokens are the session. The host and username are settings, the theme
+     * The tokens are the session, and so is the user's role (#225). The host and username are settings, the theme
      * and layout are preferences, and retyping a server address on a TV keyboard
      * is the most expensive thing this app can ask for. The selected library does
      * go, because it belongs to the account that just left.
@@ -81,6 +82,8 @@ class SharedPreferencesHandler(context: Context) {
             remove("token")
             remove("refresh_token")
             remove("selected_library_id")
+            remove(KEY_USER_TYPE)
+            remove(KEY_MAY_UPDATE)
         }
     }
 
@@ -95,6 +98,27 @@ class SharedPreferencesHandler(context: Context) {
         sharedPreferences.edit {
             clear()
         }
+    }
+
+    /**
+     * The signed-in user's type and update permission (#225), written at sign-in
+     * and on every launch's check of the session; null before either.
+     */
+    fun getSessionRole(): SessionRole? {
+        if (!sharedPreferences.contains(KEY_MAY_UPDATE)) return null
+        return SessionRole(sharedPreferences.getString(KEY_USER_TYPE, null), sharedPreferences.getBoolean(KEY_MAY_UPDATE, false))
+    }
+
+    fun saveSessionRole(role: SessionRole) {
+        sharedPreferences.edit {
+            putString(KEY_USER_TYPE, role.type)
+            putBoolean(KEY_MAY_UPDATE, role.mayUpdate)
+        }
+    }
+
+    private companion object {
+        const val KEY_USER_TYPE = "user_type"
+        const val KEY_MAY_UPDATE = "may_update"
     }
 
     fun getSelectedLibraryId(): String? {

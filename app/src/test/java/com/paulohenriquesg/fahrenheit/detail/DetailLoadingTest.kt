@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.google.gson.Gson
 import com.paulohenriquesg.fahrenheit.api.LibraryItemResponse
 import com.paulohenriquesg.fahrenheit.player.PlayerPreview
+import com.paulohenriquesg.fahrenheit.podcast.PodcastSlots
 import com.paulohenriquesg.fahrenheit.ui.components.TITLE_TAG
 import com.paulohenriquesg.fahrenheit.ui.elements.CoverTags
 import com.paulohenriquesg.fahrenheit.ui.elements.PlaceholderTags
@@ -105,6 +106,24 @@ class DetailLoadingTest {
         compose.onNodeWithTag(DetailLoadingTags.EPISODE_ROWS).assertExists()
         compose.onNodeWithText("Loading…").assertDoesNotExist()
         assertNothingFocusable()
+    }
+
+    @Test
+    fun `a stored admin role reserves grey pills where the admin's buttons go, still and unfocusable`() {
+        compose.setContent {
+            FahrenheitTheme { DetailLoading("p1", PlayerPreview("An Invented Show"), podcast = true, margin = margin, slots = PodcastSlots(feedCheck = true, downloads = true)) }
+        }
+        compose.waitForIdle()
+
+        compose.onAllNodesWithTag(PodcastSlots.TAG).assertCountEquals(2)
+        assertNothingFocusable()
+    }
+
+    @Test
+    fun `a listener's frame reserves none`() {
+        show(PlayerPreview("An Invented Show"), podcast = true)
+
+        compose.onAllNodesWithTag(PodcastSlots.TAG).assertCountEquals(0)
     }
 
     @Test
