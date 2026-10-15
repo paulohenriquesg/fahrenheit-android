@@ -5,6 +5,8 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Looper
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -98,6 +100,9 @@ class PersonActivityTest {
     @After
     fun tearDown() {
         scenario?.close()
+        // Closing wrote the page's Now playing state outside a composition (#221).
+        Snapshot.sendApplyNotifications()
+        shadowOf(Looper.getMainLooper()).idle()
         service.destroy()
         ApiClient.clearSession()
         server.shutdown()

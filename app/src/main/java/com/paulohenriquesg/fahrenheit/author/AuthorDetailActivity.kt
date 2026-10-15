@@ -138,7 +138,7 @@ class AuthorDetailActivity : ComponentActivity() {
                             finish()
                         }
                     ) {
-                        Box(Modifier.fillMaxSize()) { PersonScreen(person, previewOf(intent)) }
+                        Box(Modifier.fillMaxSize()) { PersonScreen(person, previewOf(intent), rail) }
                     }
                 }
             }

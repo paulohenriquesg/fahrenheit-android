@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.paulohenriquesg.fahrenheit.api.ApiClient
@@ -23,10 +24,11 @@ sealed interface Person {
 
 /**
  * An author's or a narrator's page (#230). [preview] is the name and photo the
- * opening card showed, drawn in place while the rest loads (#225).
+ * opening card showed, drawn in place while the rest loads (#225); [rail], the
+ * side menu's section, takes focus when the page has nothing to.
  */
 @Composable
-fun PersonScreen(person: Person, preview: PlayerPreview? = null) {
+fun PersonScreen(person: Person, preview: PlayerPreview? = null, rail: FocusRequester? = null) {
     val context = LocalContext.current
     var page by remember { mutableStateOf<PersonPage?>(null) }
     var loading by remember { mutableStateOf(true) }
@@ -60,6 +62,7 @@ fun PersonScreen(person: Person, preview: PlayerPreview? = null) {
         page = page,
         resume = resume,
         onBook = { context.startActivity(DetailActivity.intentFor(context, it)) },
-        onContinue = { context.startActivity(DetailActivity.playBookIntent(context, it.id, PlayerPreview.of(it))) }
+        onContinue = { context.startActivity(DetailActivity.playBookIntent(context, it.id, PlayerPreview.of(it))) },
+        rail = rail
     )
 }

@@ -2,6 +2,19 @@ package com.paulohenriquesg.fahrenheit.author
 
 import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -43,19 +56,28 @@ class PersonPageTest {
     private val opened = mutableListOf<String>()
     private val continued = mutableListOf<String>()
 
-    private fun show(page: PersonPage, resume: LibraryItem? = null) {
+    private var resumeState by mutableStateOf<LibraryItem?>(null)
+
+    private fun show(page: PersonPage?, resume: LibraryItem? = null, error: String? = null) {
+        resumeState = resume
         compose.setContent {
             FahrenheitTheme {
-                PersonStage(
-                    preview = null,
-                    narrator = page.narrator,
-                    loading = false,
-                    error = null,
-                    page = page,
-                    resume = resume,
-                    onBook = { opened += it.id },
-                    onContinue = { continued += it.id }
-                )
+                val rail = remember { FocusRequester() }
+                Row {
+                    // Stands in for the side menu, which takes focus when the page has nothing to.
+                    Box(Modifier.size(10.dp).focusRequester(rail).focusable().testTag("rail"))
+                    PersonStage(
+                        preview = null,
+                        narrator = page?.narrator ?: false,
+                        loading = false,
+                        error = error,
+                        page = page,
+                        resume = resumeState,
+                        onBook = { opened += it.id },
+                        onContinue = { continued += it.id },
+                        rail = rail
+                    )
+                }
             }
         }
         compose.waitForIdle()
@@ -130,6 +152,62 @@ class PersonPageTest {
 
         compose.onNodeWithTag(PersonTags.FULL_BIO).assertDoesNotExist()
         compose.onNodeWithTag(PersonTags.BIO_BOX).assertIsFocused()
+    }
+
+    @Test
+    fun `a failed page leaves focus on the side menu`() {
+        show(null, error = "Failed to load")
+
+        compose.onNodeWithTag("rail").assertIsFocused()
+    }
+
+    @Test
+    fun `an author with a bio and no books lands on the bio`() {
+        show(PersonPage.author(author().copy(libraryItems = emptyList(), series = emptyList())))
+
+        compose.onNodeWithTag(PersonTags.BIO_BOX).assertIsFocused()
+    }
+
+    @Test
+    fun `an author with no bio and no books leaves focus on the side menu`() {
+        show(PersonPage.author(author(bio = null).copy(libraryItems = emptyList(), series = emptyList())))
+
+        compose.onNodeWithTag("rail").assertIsFocused()
+    }
+
+    @Test
+    fun `Continue arriving later does not take focus from the book that has it`() {
+        val page = PersonPage.author(author())
+        show(page)
+        compose.onAllNodesWithTag(PersonTags.BOOK)[0].assertIsFocused()
+
+        resumeState = page.items.first { it.id == "long" }
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(PersonTags.CONTINUE).assertExists()
+        compose.onAllNodesWithTag(PersonTags.BOOK)[0].assertIsFocused()
+    }
+
+    @Test
+    fun `a series named like the bio's row does not clash with it`() {
+        val author = author()
+        show(PersonPage.author(author.copy(series = author.series!!.map { it.copy(name = "about") })))
+
+        compose.onNodeWithTag(PersonTags.BIO_BOX).assertExists()
+    }
+
+    @Test
+    fun `a bio too long for the box says More`() {
+        show(PersonPage.author(author(bio = List(12) { "An invented line of the bio." }.joinToString(" "))))
+
+        compose.onNodeWithText("More ›", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `a bio that fits says no More`() {
+        show(PersonPage.author(author(bio = "Short.")))
+
+        compose.onNodeWithText("More ›", useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test

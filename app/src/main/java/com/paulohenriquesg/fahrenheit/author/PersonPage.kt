@@ -144,17 +144,22 @@ fun PersonStage(
     page: PersonPage?,
     resume: LibraryItem? = null,
     onBook: (LibraryItem) -> Unit = {},
-    onContinue: (LibraryItem) -> Unit = {}
+    onContinue: (LibraryItem) -> Unit = {},
+    rail: FocusRequester? = null
 ) {
     Box(Modifier.fillMaxSize()) {
         when {
             loading -> PersonLoading(preview, narrator)
-            error != null -> Text(
-                text = error,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.align(Alignment.Center).padding(16.dp)
-            )
-            page != null -> PersonContent(page, resume, onBook, onContinue)
+            error != null -> {
+                // Nothing here takes focus: the side menu does, or the remote does nothing (#53).
+                LaunchedEffect(rail) { rail?.requestFocusWhenAttached() }
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.align(Alignment.Center).padding(16.dp)
+                )
+            }
+            page != null -> PersonContent(page, resume, onBook, onContinue, rail)
         }
     }
 }
@@ -170,13 +175,23 @@ private fun PersonContent(
     page: PersonPage,
     resume: LibraryItem?,
     onBook: (LibraryItem) -> Unit,
-    onContinue: (LibraryItem) -> Unit
+    onContinue: (LibraryItem) -> Unit,
+    rail: FocusRequester?
 ) {
     var fullBio by remember { mutableStateOf(false) }
     var bioOpened by remember { mutableStateOf(false) }
     val bioBox = remember { FocusRequester() }
+    val landing = remember { FocusRequester() }
     val firstBook = page.shelves.firstOrNull()?.books?.firstOrNull()
-    val landing = rememberInitialFocus(enabled = resume != null || firstBook != null, page.name, resume?.id)
+    // Once, on arrival: Continue appearing later, as progress comes in, does
+    // not take focus from the book that has it. With no books, the bio; with
+    // neither, the side menu (#53).
+    val arrival = when {
+        resume != null || firstBook != null -> landing
+        page.bio != null -> bioBox
+        else -> rail
+    }
+    LaunchedEffect(page.name) { arrival?.requestFocusWhenAttached() }
     LaunchedEffect(fullBio) {
         // Back from the full bio, onto the box it opened from.
         if (!fullBio && bioOpened) bioBox.requestFocusWhenAttached()
@@ -214,7 +229,7 @@ private fun PersonContent(
                         }
                     }
                 }
-                val keys = StableKeys.of(page.shelves) { it.series ?: OTHER_BOOKS_KEY }
+                val keys = StableKeys.of(page.shelves) { "shelf:" + (it.series ?: OTHER_BOOKS_KEY) }
                 itemsIndexed(page.shelves, key = { index, _ -> keys[index] }) { index, shelf ->
                     Column {
                         Heading(
@@ -236,6 +251,7 @@ private fun PersonContent(
     }
 }
 
+// Apart from every series' name, which keys its shelf.
 private const val OTHER_BOOKS_KEY = "\u0000other"
 
 @Composable
